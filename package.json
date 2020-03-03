@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "webpack"
+    "prepare": "webpack",
+    "build": "tsc"
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +17,8 @@
     "typescript": "^3.2.2",
     "webpack": "^4.28.4",
     "webpack-cli": "^3.2.1"
+  },
+  "dependencies": {
+    "xml2js": "^0.4.23"
   }
 }
