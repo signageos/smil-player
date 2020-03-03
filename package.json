@@ -1,0 +1,20 @@
+{
+  "name": "@signageos/SMILePlayer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@signageos/front-applet": "^2.2.0-master.43287798",
+    "@types/node": "^10.12.18",
+    "awesome-typescript-loader": "^5.2.1",
+    "typescript": "^3.2.2",
+    "webpack": "^4.28.4",
+    "webpack-cli": "^3.2.1"
+  }
+}
