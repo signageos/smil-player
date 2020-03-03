@@ -1,11 +1,19 @@
 {
 	"compilerOptions": {
-		"moduleResolution": "classic",
-		"target": "es5",
-		"module": "es6",
-		"lib": ["es2015", "dom", "scripthost"],
-		"types": ["@signageos/front-applet"],
-		"outDir": "dist"
+		"module": "commonjs",
+		"target": "es2017",
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"outDir": "dist",
+		"baseUrl": ".",
+		"paths": {
+			"*": [
+				"node_modules/*",
+				"src/types/*"
+			]
+		}
 	},
-	"include": ["src/**/*.ts"]
+	"include": [
+		"src/**/*"
+	]
 }
