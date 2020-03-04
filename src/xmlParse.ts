@@ -1,7 +1,7 @@
-import xml2js from 'xml2js';
+import * as xml2js from 'xml2js';
 import { promises as fsPromise } from 'fs';
 import * as _ from 'lodash';
-import { RegionAttributes, RegionsObject, RootLayout, SMILPlaylist } from './models';
+import {RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILFileObject, SMILPlaylist} from './models';
 import { SMILEnemus } from './enums';
 import got from 'got';
 
@@ -19,22 +19,20 @@ export async function downloadFile(filePath: string): Promise<string> {
     return localPath;
 }
 
-async function parseXml(filePath: string) {
+async function parseXml(filePath: string): Promise<SMILFileObject> {
     const xmlFile: string = await fsPromise.readFile(filePath, 'utf8');
     const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
         mergeAttrs: true,
         explicitArray: false,
     });
 
-    const parsedRegionObject = extractRegionInfo(xmlObject.smil.head.layout);
-    const parsedBody: SMILPlaylist  = flatten(extractBodyContent(xmlObject.smil.body));
-    return _.merge(
-        {},
-        parsedRegionObject,
-        parsedBody);
+    const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
+    const videos = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
+    const smilFileObject: SMILFileObject = Object.assign({}, regions, videos);
+    return smilFileObject;
 }
 
-function extractRegionInfo(xmlObject: object): object {
+function extractRegionInfo(xmlObject: object): RegionsObject {
     const regionsObject: RegionsObject = {
         region: {},
     };
@@ -115,17 +113,21 @@ function pickDeep(collection, element, arr) {
     return arr;
 }
 
-function extractBodyContent(xmlObject: object) {
+function extractBodyContent(xmlObject: object): SMILPlaylist {
+    const playlist: SMILPlaylist = {
+      videos: [],
+    };
     const videoArr = [];
     const audioArr = [];
-    const videos = pickDeep(xmlObject, 'video', videoArr);
+    playlist.videos = <SMILVideo[]>flatten(pickDeep(xmlObject, 'video', videoArr));
     // const audios = pickDeep(xmlObject, ['audio'], audioArr);
-    return videos;
+    return playlist;
 }
 
 export async function processSmil(url: string) {
     const localFilePath = await downloadFile(url);
     const SmilObject = await parseXml(localFilePath);
+    console.log(SmilObject);
 }
 
 processSmil('http://butikstv.centrumkanalen.com/play/smil/234.smil');

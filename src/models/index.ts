@@ -28,3 +28,6 @@ export type SMILVideo = {
 export type SMILPlaylist = {
     videos: SMILVideo[],
 }
+
+export type SMILFileObject = SMILPlaylist & RegionsObject;
+
