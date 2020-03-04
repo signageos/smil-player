@@ -4,6 +4,12 @@ import * as _ from 'lodash';
 import { RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
 
+function flatten(arr) {
+    return arr.reduce(function (flat, toFlatten) {
+        return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
+    }, []);
+}
+
 async function parseXml(filePath: string) {
     const xmlFile: string = await fsPromise.readFile(filePath, 'utf8');
     const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
@@ -12,8 +18,7 @@ async function parseXml(filePath: string) {
     });
 
     const parsedRegionObject = extractRegionInfo(xmlObject.smil.head.layout);
-    const parsedBody = extractBodyContent(xmlObject.smil.body);
-    console.log('...');
+    const parsedBody = flatten(extractBodyContent(xmlObject.smil.body));
 }
 
 function extractRegionInfo(xmlObject: object): object {
@@ -67,35 +72,41 @@ function extractRegionInfo(xmlObject: object): object {
     return regionsObject;
 }
 
-function pickDeep(collection, identity) {
-    const picked = _.pick(collection, identity);
+function pickDeep(collection, element, arr) {
+    const picked = _.pick(collection, element);
+    if (!_.isEmpty(picked)) {
+        arr.push([picked[element]]);
+    }
     const collections = _.pickBy(collection, _.isObject);
 
     _.each(collections, function(item, key, collection) {
         let object;
         if (Array.isArray(item)) {
             object = _.reduce(item, function(result, value) {
-                const picked = pickDeep(value, identity);
+                const picked = pickDeep(value, element, arr);
                 if (!_.isEmpty(picked)) {
                     result.push(picked);
                 }
                 return result;
             }, []);
         } else {
-            object = pickDeep(item, identity);
+            object = pickDeep(item, element, arr);
         }
 
-        if (!_.isEmpty(object)) {
-            picked[key] = object;
-        }
+        // if (!_.isEmpty(object)) {
+        //     picked[key] = object;
+        // }
 
     });
-
-    return picked;
+    // return picked;
+    return arr;
 }
 
-function extractBodyContent(xmlObject: object): object {
-    const videos = pickDeep(xmlObject, ['video', 'audio']);
+function extractBodyContent(xmlObject: object) {
+    const videoArr = [];
+    const audioArr = [];
+    const videos = pickDeep(xmlObject, 'video', videoArr);
+    // const audios = pickDeep(xmlObject, ['audio'], audioArr);
     return videos;
 }
 
