@@ -1,13 +1,22 @@
-const xml2js = require('xml2js');
+import xml2js from 'xml2js';
 import { promises as fsPromise } from 'fs';
 import * as _ from 'lodash';
 import { RegionAttributes, RegionsObject, RootLayout, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
+import got from 'got';
 
 function flatten(arr) {
     return arr.reduce(function (flat, toFlatten) {
         return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
     }, []);
+}
+
+export async function downloadFile(filePath: string): Promise<string> {
+    const response = await got(filePath);
+    const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+    const localPath = `./SMIL/${fileName}`;
+    await fsPromise.writeFile(localPath, response.body, 'utf8');
+    return localPath;
 }
 
 async function parseXml(filePath: string) {
@@ -19,6 +28,10 @@ async function parseXml(filePath: string) {
 
     const parsedRegionObject = extractRegionInfo(xmlObject.smil.head.layout);
     const parsedBody: SMILPlaylist  = flatten(extractBodyContent(xmlObject.smil.body));
+    return _.merge(
+        {},
+        parsedRegionObject,
+        parsedBody);
 }
 
 function extractRegionInfo(xmlObject: object): object {
@@ -110,9 +123,9 @@ function extractBodyContent(xmlObject: object) {
     return videos;
 }
 
-function processXmlObject(xmlObject: object): object {
-    return {};
+export async function processSmil(url: string) {
+    const localFilePath = await downloadFile(url);
+    const SmilObject = await parseXml(localFilePath);
 }
 
-parseXml('./SMIL/234.smil');
-// parseXml('./SMIL/99.smil');
+processSmil('http://butikstv.centrumkanalen.com/play/smil/234.smil');

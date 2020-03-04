@@ -25,6 +25,7 @@
     "eslint-config-airbnb-base": "^14.0.0",
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-security": "^1.4.0",
+    "got": "^10.6.0",
     "lodash": "^4.17.15",
     "xml2js": "^0.4.23"
   }
