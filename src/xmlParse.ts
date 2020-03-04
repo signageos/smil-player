@@ -1,16 +1,18 @@
 const xml2js = require('xml2js');
 import { promises as fsPromise } from 'fs';
-import {RegionAttributes, RegionsObject, RootLayout} from './models';
+import * as _ from 'lodash';
+import { RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
 
 async function parseXml(filePath: string) {
     const xmlFile: string = await fsPromise.readFile(filePath, 'utf8');
-    const xmlObject: object = await xml2js.parseStringPromise(xmlFile, {
+    const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
         mergeAttrs: true,
         explicitArray: false,
     });
 
-    const parsedRegionObject = extractRegionInfo(xmlObject['smil'].head.layout);
+    const parsedRegionObject = extractRegionInfo(xmlObject.smil.head.layout);
+    const parsedBody = extractBodyContent(xmlObject.smil.body);
     console.log('...');
 }
 
@@ -65,8 +67,41 @@ function extractRegionInfo(xmlObject: object): object {
     return regionsObject;
 }
 
+function pickDeep(collection, identity) {
+    const picked = _.pick(collection, identity);
+    const collections = _.pickBy(collection, _.isObject);
+
+    _.each(collections, function(item, key, collection) {
+        let object;
+        if (Array.isArray(item)) {
+            object = _.reduce(item, function(result, value) {
+                const picked = pickDeep(value, identity);
+                if (!_.isEmpty(picked)) {
+                    result.push(picked);
+                }
+                return result;
+            }, []);
+        } else {
+            object = pickDeep(item, identity);
+        }
+
+        if (!_.isEmpty(object)) {
+            picked[key] = object;
+        }
+
+    });
+
+    return picked;
+}
+
+function extractBodyContent(xmlObject: object): object {
+    const videos = pickDeep(xmlObject, ['video', 'audio']);
+    return videos;
+}
+
 function processXmlObject(xmlObject: object): object {
     return {};
 }
 
 parseXml('./SMIL/234.smil');
+// parseXml('./SMIL/99.smil');

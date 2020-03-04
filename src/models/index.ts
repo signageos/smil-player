@@ -17,3 +17,14 @@ export type RegionAttributes = {
     "z-index": number,
 }
 
+export type SMILVideo = {
+    src: string,
+    id: string,
+    fit: string,
+    region: string,
+    etag: string,
+}
+
+export type SMILPlaylist = {
+    videos: SMILVideo[],
+}
