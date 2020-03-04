@@ -1,7 +1,7 @@
 import * as xml2js from 'xml2js';
 import { promises as fsPromise } from 'fs';
 import * as _ from 'lodash';
-import {RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILFileObject, SMILPlaylist} from './models';
+import { RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILFileObject, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
 import got from 'got';
 

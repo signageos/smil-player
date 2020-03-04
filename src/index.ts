@@ -1,4 +1,5 @@
 declare const jQuery: any;
+import { processSmil } from "./xmlParse";
 
 // You need to wait for this event always (https://docs.signageos.io/api/sos-applet-api/#Basics)
 window.addEventListener('sos.loaded', async function () {
@@ -7,7 +8,7 @@ window.addEventListener('sos.loaded', async function () {
 	const contentElement = document.getElementById('index');
 	console.log('sOS is loaded');
 	contentElement.innerHTML = 'sOS is loaded';
-
+    const res = await processSmil('aaa');
 
 	// Wait on sos data are ready (https://docs.signageos.io/api/sos-applet-api/#onReady)
 	await sos.onReady();
