@@ -1,7 +1,7 @@
 const xml2js = require('xml2js');
 import { promises as fsPromise } from 'fs';
 import * as _ from 'lodash';
-import { RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILPlaylist } from './models';
+import { RegionAttributes, RegionsObject, RootLayout, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
 
 function flatten(arr) {
@@ -18,7 +18,7 @@ async function parseXml(filePath: string) {
     });
 
     const parsedRegionObject = extractRegionInfo(xmlObject.smil.head.layout);
-    const parsedBody = flatten(extractBodyContent(xmlObject.smil.body));
+    const parsedBody: SMILPlaylist  = flatten(extractBodyContent(xmlObject.smil.body));
 }
 
 function extractRegionInfo(xmlObject: object): object {
