@@ -1,5 +1,4 @@
 import * as xml2js from 'xml2js';
-import { promises as fsPromise } from 'fs';
 import * as _ from 'lodash';
 import { RegionAttributes, RegionsObject, RootLayout, SMILVideo, SMILFileObject, SMILPlaylist } from './models';
 import { SMILEnemus } from './enums';
@@ -11,16 +10,17 @@ function flatten(arr) {
     }, []);
 }
 
-export async function downloadFile(filePath: string): Promise<string> {
-    const response = await got(filePath);
-    const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-    const localPath = `./SMIL/${fileName}`;
-    await fsPromise.writeFile(localPath, response.body, 'utf8');
-    return localPath;
-}
+// export async function downloadFile(filePath: string): Promise<string> {
+//     console.log('parsing file');
+//     const response = await got(filePath);
+//     const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+//     const localPath = `./SMIL/${fileName}`;
+//     await fsPromise.writeFile(localPath, response.body, 'utf8');
+//     return localPath;
+// }
 
-async function parseXml(filePath: string): Promise<SMILFileObject> {
-    const xmlFile: string = await fsPromise.readFile(filePath, 'utf8');
+async function parseXml(xmlFile: string): Promise<SMILFileObject> {
+    // const xmlFile: string = await fsPromise.readFile(filePath, 'utf8');
     const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
         mergeAttrs: true,
         explicitArray: false,
@@ -124,10 +124,11 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
     return playlist;
 }
 
-export async function processSmil(url: string) {
-    const localFilePath = await downloadFile(url);
-    const SmilObject = await parseXml(localFilePath);
-    console.log(SmilObject);
+export async function processSmil(localFilePath: string) {
+    console.log(localFilePath);
+    console.log('test');
+    // const smilObject = await parseXml(localFilePath);
+    // return smilObject;
 }
 
-processSmil('http://butikstv.centrumkanalen.com/play/smil/234.smil');
+// processSmil('http://butikstv.centrumkanalen.com/play/smil/234.smil');
