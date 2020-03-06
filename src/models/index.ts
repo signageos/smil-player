@@ -23,6 +23,7 @@ export type SMILVideo = {
     fit: string,
     region: string,
     etag: string,
+    localFilePath?: string,
 }
 
 export type SMILPlaylist = {

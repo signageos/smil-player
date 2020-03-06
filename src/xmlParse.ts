@@ -10,6 +10,10 @@ function flatten(arr) {
     }, []);
 }
 
+export function getFileName(filePath: string){
+    return filePath.substring(filePath.lastIndexOf('/') + 1);
+}
+
 // export async function downloadFile(filePath: string): Promise<string> {
 //     console.log('parsing file');
 //     const response = await got(filePath);
@@ -124,11 +128,7 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
     return playlist;
 }
 
-export async function processSmil(localFilePath: string) {
-    console.log(localFilePath);
-    console.log('test');
-    // const smilObject = await parseXml(localFilePath);
-    // return smilObject;
+export async function processSmil(xmlFile: string) {
+    const smilObject = await parseXml(xmlFile);
+    return smilObject;
 }
-
-// processSmil('http://butikstv.centrumkanalen.com/play/smil/234.smil');
