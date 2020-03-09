@@ -1,5 +1,5 @@
 declare const jQuery: any;
-import { processSmil, getFileName } from "./xmlParse";
+import { processSmil, getFileName, sleep } from "./xmlParse";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
@@ -113,22 +113,51 @@ import { FileStructure } from './enums';
 
     contentElement.innerHTML = '';
 
-    while (true) {
-        const promises = [];
-        for (let i = 0; i < smilObject.videos.length; i++) {
-            promises.push((async function() {
-                const currentVideo = smilObject.videos[i];
-                currentVideo.localFilePath = `filesystem:http://192.168.1.38:8090/persistent/${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`;
-                console.log(`configure video play ${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`);
-                // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
-                await sos.video.prepare(currentVideo.localFilePath, 0, 0, 500, 500);
-                await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
-                await sos.video.onceEnded(currentVideo.localFilePath, 0, 0, 500, 500);
-                await sos.video.stop(currentVideo.localFilePath, 0, 0, 500, 500);
-            })());
+    for (let i = 0; true; i = (i + 1) % smilObject.videos.length) {
+        const previousVideo = smilObject.videos[(i + smilObject.videos.length - 1) % smilObject.videos.length];
+        const currentVideo = smilObject.videos[i];
+        const nextVideo = smilObject.videos[(i + 1) % smilObject.videos.length];
+        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`});
+        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(previousVideo.src)}`});
+        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(nextVideo.src)}`});
+
+
+        currentVideo.localFilePath = currentVideoDetails.localUri;
+        previousVideo.localFilePath = previousVideoDetails.localUri;
+        nextVideo.localFilePath = nextVideoDetails.localUri;
+
+        console.log('playing');
+        // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
+        await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
+        currentVideo.playing = true;
+        if (previousVideo.playing) {
+            await sos.video.stop(previousVideo.localFilePath, 0, 0, 500, 500);
+            previousVideo.playing = false;
         }
-        console.log(`playing videos`);
-        await Promise.all(promises);
+        await sos.video.prepare(nextVideo.localFilePath, 0, 0, 500, 500);
+        await sos.video.onceEnded(currentVideo.localFilePath, 0, 0, 500, 500); // https://docs.signageos.io/api/sos-applet-api/#onceEnded
     }
+
+
+    //
+    // await sleep(5000);
+    //
+    // while (true) {
+    //     const promises = [];
+    //     for (let i = 5; i < smilObject.videos.length; i++) {
+    //         promises.push((async function() {
+    //             const currentVideo = smilObject.videos[i];
+    //             currentVideo.localFilePath = `filesystem:http://192.168.1.38:8090/persistent/${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`;
+    //             console.log(`configure video play ${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`);
+    //             // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
+    //             await sos.video.prepare(currentVideo.localFilePath, i*50, i*50, 500, 500);
+    //             await sos.video.play(currentVideo.localFilePath, i*50, i*50, 500, 500);
+    //             await sos.video.onceEnded(currentVideo.localFilePath, i*50, i*50, 500, 500);
+    //             await sos.video.stop(currentVideo.localFilePath, i*50, i*50, 500, 500);
+    //         })());
+    //     }
+    //     console.log(`playing videos`);
+    //     await Promise.all(promises);
+    // }
 
 })();

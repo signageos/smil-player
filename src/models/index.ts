@@ -24,10 +24,33 @@ export type SMILVideo = {
     region: string,
     etag: string,
     localFilePath?: string,
+    arguments?: [],
+    playing: boolean,
+}
+
+export type SMILAudio = {
+    src: string,
+    dur: number,
+}
+
+export type SMILImage = {
+    src: string,
+    region: string,
+    dur: number,
+
+}
+
+export type SMILWidget = {
+    src: string,
+    region: string,
+    dur: number,
 }
 
 export type SMILPlaylist = {
     videos: SMILVideo[],
+    audios: SMILAudio[],
+    images: SMILImage[],
+    widgets: SMILWidget[],
 }
 
 export type SMILFileObject = SMILPlaylist & RegionsObject;
