@@ -47,10 +47,10 @@ export type SMILWidget = {
 }
 
 export type SMILPlaylist = {
-    videos: SMILVideo[],
-    audios: SMILAudio[],
-    images: SMILImage[],
-    widgets: SMILWidget[],
+    videos?: SMILVideo[],
+    audios?: SMILAudio[],
+    images?: SMILImage[],
+    widgets?: SMILWidget[],
 }
 
 export type SMILFileObject = SMILPlaylist & RegionsObject;

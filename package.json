@@ -10,6 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "webpack",
     "build": "webpack --mode production",
+    "build-test": "tsc",
     "start": "webpack-dev-server --mode development --open-emulator"
   },
   "author": "",
@@ -32,6 +33,7 @@
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-security": "^1.4.0",
     "got": "^10.6.0",
+    "json-easy-filter": "^0.3.1",
     "lodash": "^4.17.15",
     "xml2js": "^0.4.23"
   }
