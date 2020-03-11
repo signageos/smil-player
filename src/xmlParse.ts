@@ -30,29 +30,10 @@ function flatten(arr) {
     }, []);
 }
 
-function mergeArrays(...arrays) {
-    let jointArray = [];
-
-    arrays.forEach(array => {
-        jointArray = [...jointArray, ...array]
-    });
-    return Array.from(new Set([...jointArray]))
-}
-
-function removeDuplicates(array) {
-    return Array.from(new Set([...array]))
-}
-
 const overwriteMerge = (destinationArray, sourceArray, options) => sourceArray;
 
 function mergeObjects(array) {
     return deepmerge.all(array, { arrayMerge: overwriteMerge });
-    // const finalObject = {};
-    // array.forEach((arr) => {
-    //     _.merge(finalObject, arr);
-    // });
-    //
-    // return finalObject;
 }
 
 export function getFileName(filePath: string){
@@ -75,9 +56,10 @@ async function parseXml(filePath: string): Promise<SMILFileObject> {
         explicitArray: false,
     });
 
-    const videos = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
+    const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
+    const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
 
-    const testing = new JefNode(videos).filter(function(node) {
+    const playlist = new JefNode(playableMedia).filter(function(node) {
         if (extractedElements.includes(node.key) && flowElements.includes(node.parent.key)) {
             let extractedNode = node.parent;
             if (flowElements.includes(node.parent.parent.key)) {
@@ -94,12 +76,12 @@ async function parseXml(filePath: string): Promise<SMILFileObject> {
         }
     });
 
-    const merged = mergeObjects(testing);
-    console.log(testing);
+    const mergedPlaylist = mergeObjects(playlist);
+    console.log(playlist);
 
-    const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
 
-    const smilFileObject: SMILFileObject = Object.assign({}, regions, videos);
+
+    const smilFileObject: SMILFileObject = Object.assign({}, regions, mergedPlaylist);
     return smilFileObject;
 }
 
@@ -154,25 +136,22 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
     return regionsObject;
 }
 
-function pickDeep(collection, element, arr) {
+function pickDeep(collection, element) {
     const picked = _.pick(collection, element);
-    // if (!_.isEmpty(picked)) {
-    //     arr.push([picked[element]]);
-    // }
     const collections = _.pickBy(collection, _.isObject);
 
     _.each(collections, function(item, key, collection) {
         let object;
         if (Array.isArray(item)) {
             object = _.reduce(item, function(result, value) {
-                const picked = pickDeep(value, element, arr);
+                const picked = pickDeep(value, element);
                 if (!_.isEmpty(picked)) {
                     result.push(picked);
                 }
                 return result;
             }, []);
         } else {
-            object = pickDeep(item, element, arr);
+            object = pickDeep(item, element);
         }
 
         if (!_.isEmpty(object)) {
@@ -181,7 +160,6 @@ function pickDeep(collection, element, arr) {
 
     });
     return picked;
-    // return arr;
 }
 
 function extractBodyContent(xmlObject: object): SMILPlaylist {
@@ -191,20 +169,12 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
         images: [],
         widgets: [],
     };
-    const videoArr = [];
-    const audioArr = [];
-    const imageArr = [];
-    const widgetArr = [];
-    // playlist.videos = <SMILVideo[]>flatten(pickDeep(xmlObject, 'video', videoArr));
-    playlist.videos = <SMILVideo[]>pickDeep(xmlObject, ['video', 'audio', 'img', 'ref'], videoArr);
-    // playlist.audios = <SMILAudio[]>flatten(pickDeep(xmlObject, 'audio', audioArr));
-    // playlist.images = <SMILImage[]>flatten(pickDeep(xmlObject, 'img', imageArr));
-    // playlist.widgets = <SMILWidget[]>flatten(pickDeep(xmlObject, 'ref', widgetArr));
+    playlist.videos = <SMILVideo[]>pickDeep(xmlObject, ['video', 'audio', 'img', 'ref']);
     return playlist;
 }
 
 export async function processSmil(xmlFile: string) {
-    const smilObject = await parseXml('./SMIL/234.smil');
+    const smilObject = await parseXml('./SMIL/99.smil');
     return smilObject;
 }
 
