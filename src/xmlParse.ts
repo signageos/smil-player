@@ -12,7 +12,11 @@ import {
 } from './models';
 import { SMILEnemus } from './enums';
 import { JefNode } from 'json-easy-filter';
+import * as deepmerge from 'deepmerge';
 import got from 'got';
+
+const extractedElements = ['video', 'audio', 'img', 'ref'];
+const flowElements = ['seq', 'par'];
 
 export async function sleep (ms: number){
     return new Promise((resolve) => {
@@ -24,6 +28,31 @@ function flatten(arr) {
     return arr.reduce(function (flat, toFlatten) {
         return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
     }, []);
+}
+
+function mergeArrays(...arrays) {
+    let jointArray = [];
+
+    arrays.forEach(array => {
+        jointArray = [...jointArray, ...array]
+    });
+    return Array.from(new Set([...jointArray]))
+}
+
+function removeDuplicates(array) {
+    return Array.from(new Set([...array]))
+}
+
+const overwriteMerge = (destinationArray, sourceArray, options) => sourceArray;
+
+function mergeObjects(array) {
+    return deepmerge.all(array, { arrayMerge: overwriteMerge });
+    // const finalObject = {};
+    // array.forEach((arr) => {
+    //     _.merge(finalObject, arr);
+    // });
+    //
+    // return finalObject;
 }
 
 export function getFileName(filePath: string){
@@ -49,11 +78,23 @@ async function parseXml(filePath: string): Promise<SMILFileObject> {
     const videos = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
 
     const testing = new JefNode(videos).filter(function(node) {
-        if (node.isLeaf) {
-            return node.path;
+        if (extractedElements.includes(node.key) && flowElements.includes(node.parent.key)) {
+            let extractedNode = node.parent;
+            if (flowElements.includes(node.parent.parent.key)) {
+                extractedNode = node.parent.parent;
+            }
+            if (!_.isNaN(parseInt(node.parent.parent.key))) {
+                extractedNode = node.parent.parent.parent;
+            }
+            const key = extractedNode.key;
+            const value = extractedNode.value;
+            const returnObject = {};
+            returnObject[key] = value;
+            return returnObject;
         }
     });
 
+    const merged = mergeObjects(testing);
     console.log(testing);
 
     const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
@@ -163,7 +204,7 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
 }
 
 export async function processSmil(xmlFile: string) {
-    const smilObject = await parseXml('./SMIL/99.smil');
+    const smilObject = await parseXml('./SMIL/234.smil');
     return smilObject;
 }
 
