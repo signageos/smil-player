@@ -102,29 +102,29 @@ import { FileStructure } from './enums';
     const smilObject = await processSmil(smilFileContent);
 
     // download smil videos to localstorage
-    for(let i = 0; i < smilObject.videos.length; i++) {
+    for(let i = 0; i < smilObject.video.length; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.folder}/videos/${getFileName(smilObject.videos[i].src)}`
+                filePath: `${FileStructure.folder}/videos/${getFileName(smilObject.video[i].src)}`
             },
-            smilObject.videos[i].src,
+            smilObject.video[i].src,
         );
     }
 
     console.log('videos downloaded');
 
     // download smil widgets to localstorage
-    for(let i = 0; i < smilObject.widgets.length; i++) {
+    for(let i = 0; i < smilObject.ref.length; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.widgets[i].src)}`
+                filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.ref[i].src)}`
             },
-            smilObject.widgets[i].src,
+            smilObject.ref[i].src,
         );
 
         await sos.fileSystem.extractFile(
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.widgets[i].src)}` },
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/extracted/${getFileName(smilObject.widgets[i].src)}` },
+            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.ref[i].src)}` },
+            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/extracted/${getFileName(smilObject.ref[i].src)}` },
             'zip',
         );
     }
@@ -180,10 +180,10 @@ import { FileStructure } from './enums';
 
     // console.log(JSON.stringify(smilObject));
 
-    for (let i = 0; true; i = (i + 1) % smilObject.videos.length) {
-        const previousVideo = smilObject.videos[(i + smilObject.videos.length - 1) % smilObject.videos.length];
-        const currentVideo = smilObject.videos[i];
-        const nextVideo = smilObject.videos[(i + 1) % smilObject.videos.length];
+    for (let i = 0; true; i = (i + 1) % smilObject.video.length) {
+        const previousVideo = smilObject.video[(i + smilObject.video.length - 1) % smilObject.video.length];
+        const currentVideo = smilObject.video[i];
+        const nextVideo = smilObject.video[(i + 1) % smilObject.video.length];
         const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`});
         const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(previousVideo.src)}`});
         const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(nextVideo.src)}`});

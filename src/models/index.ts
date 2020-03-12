@@ -22,7 +22,7 @@ export type SMILVideo = {
     id: string,
     fit: string,
     region: string,
-    etag: string,
+    etag?: string,
     localFilePath?: string,
     arguments?: [],
     playing: boolean,
@@ -31,27 +31,33 @@ export type SMILVideo = {
 export type SMILAudio = {
     src: string,
     dur: number,
+    etag?: string,
 }
 
 export type SMILImage = {
     src: string,
     region: string,
     dur: number,
-
+    etag?: string,
 }
 
 export type SMILWidget = {
     src: string,
     region: string,
     dur: number,
+    etag?: string,
+}
+
+export type DownloadsList = {
+    video: SMILVideo[],
+    img: SMILImage[],
+    ref: SMILWidget[],
+    audio: SMILAudio[],
 }
 
 export type SMILPlaylist = {
-    videos?: SMILVideo[],
-    audios?: SMILAudio[],
-    images?: SMILImage[],
-    widgets?: SMILWidget[],
+    playlist: { [key: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo },
 }
 
-export type SMILFileObject = SMILPlaylist & RegionsObject;
+export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
 
