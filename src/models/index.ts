@@ -30,21 +30,21 @@ export type SMILVideo = {
 
 export type SMILAudio = {
     src: string,
-    dur: number,
+    dur: string,
     etag?: string,
 }
 
 export type SMILImage = {
     src: string,
     region: string,
-    dur: number,
+    dur: string,
     etag?: string,
 }
 
 export type SMILWidget = {
     src: string,
     region: string,
-    dur: number,
+    dur: string,
     etag?: string,
 }
 

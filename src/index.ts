@@ -1,11 +1,13 @@
 declare const jQuery: any;
-import { processSmil, getFileName, sleep } from "./xmlParse";
+import { processSmil, getFileName } from "./xmlParse";
+import { playTimedMedia, sleep } from "./tools";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
 (async ()=> {
     const contentElement = document.getElementById('index');
     const iframeElement = document.getElementById('iframe');
+    const imageElement = document.getElementById('image');
 
     console.log('sOS is loaded');
     contentElement.innerHTML = 'sOS is loaded';
@@ -49,6 +51,12 @@ import { FileStructure } from './enums';
     // create directory for smil files
     await sos.fileSystem.createDirectory({
         storageUnit: internalStorageUnit,
+        filePath: `${FileStructure.folder}/images`
+    });
+
+    // create directory for smil files
+    await sos.fileSystem.createDirectory({
+        storageUnit: internalStorageUnit,
         filePath: `${FileStructure.folder}/widgets`
     });
 
@@ -62,12 +70,12 @@ import { FileStructure } from './enums';
 
     await sos.fileSystem.downloadFile({
             storageUnit: internalStorageUnit,
-            filePath: `${FileStructure.folder}/${getFileName('https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/234.smil')}`
+            filePath: `${FileStructure.folder}/${getFileName('https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil')}`
         },
-        'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/234.smil',
+        'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil',
     );
 
-    console.log(`smil downloaded ${FileStructure.folder}/${getFileName('https://butikstv.centrumkanalen.com/play/smil/234.smil')}`);
+    console.log(`smil downloaded ${FileStructure.folder}/${getFileName('https://butikstv.centrumkanalen.com/play/smil/99.smil')}`);
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     let rootDirectoryFilePaths = await sos.fileSystem.listFiles({
@@ -95,7 +103,7 @@ import { FileStructure } from './enums';
 
     const smilFileContent = await sos.fileSystem.readFile({
         storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/${getFileName('http://butikstv.centrumkanalen.com/play/smil/234.smil')}`
+        filePath: `${FileStructure.folder}/${getFileName('http://butikstv.centrumkanalen.com/play/smil/99.smil')}`
     });
 
 
@@ -113,8 +121,20 @@ import { FileStructure } from './enums';
 
     console.log('videos downloaded');
 
+    // download smil videos to localstorage
+    for(let i = 0; i < smilObject.img.length; i++) {
+        await sos.fileSystem.downloadFile({
+                storageUnit: internalStorageUnit,
+                filePath: `${FileStructure.folder}/images/${getFileName(smilObject.img[i].src)}`
+            },
+            smilObject.img[i].src,
+        );
+    }
+
+    console.log('images downloaded');
+
     // download smil widgets to localstorage
-    for(let i = 0; i < smilObject.ref.length; i++) {
+    for(let i = 0; i < smilObject.ref.length-1; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
                 filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.ref[i].src)}`
@@ -155,28 +175,32 @@ import { FileStructure } from './enums';
         contentElement.innerHTML += `- ${filePath.filePath} <br />`;
     }
 
-    // Empty string '' refers to root directory. Here is root directory of internal storage
-    rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: `${FileStructure.folder}/widgets/extracted/widget.wgt`,
-        storageUnit: internalStorageUnit
-    });
+    // // Empty string '' refers to root directory. Here is root directory of internal storage
+    // rootDirectoryFilePaths = await sos.fileSystem.listFiles({
+    //     filePath: `${FileStructure.folder}/widgets/extracted/widget.wgt`,
+    //     storageUnit: internalStorageUnit
+    // });
+    //
+    // contentElement.innerHTML += `Internal storage root directory listing: <br />`;
+    // for (const filePath of rootDirectoryFilePaths) {
+    //     // Property filePath.filePath contains string representation of path separated by slash / for nested files (or dirs)
+    //     contentElement.innerHTML += `- ${filePath.filePath} <br />`;
+    // }
+    //
+    // const extractedWidget = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/extracted/widget.wgt/index.html`});
+    //
+    //
+    // contentElement.innerHTML = '';
+    // (<HTMLImageElement>iframeElement).src = extractedWidget.localUri;
+    // iframeElement.style.display = 'block';
 
-    contentElement.innerHTML += `Internal storage root directory listing: <br />`;
-    for (const filePath of rootDirectoryFilePaths) {
-        // Property filePath.filePath contains string representation of path separated by slash / for nested files (or dirs)
-        contentElement.innerHTML += `- ${filePath.filePath} <br />`;
+    for (let i = 0; i < smilObject.img.length ; i += 1) {
+        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/images/${getFileName(smilObject.img[i].src)}`});
+        console.log(mediaFile.localUri + ' images urls');
+        await playTimedMedia(imageElement, mediaFile.localUri, parseInt(smilObject.img[i].dur, 10) * 1000);
     }
 
-    const extractedWidget = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/extracted/widget.wgt/index.html`})
-
-
-    contentElement.innerHTML = '';
-    (<HTMLImageElement>iframeElement).src = extractedWidget.localUri;
-    iframeElement.style.display = 'block';
-
-
-
-
+    await sleep(10000);
 
     // console.log(JSON.stringify(smilObject));
 

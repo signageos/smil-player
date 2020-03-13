@@ -17,12 +17,6 @@ import got from 'got';
 const extractedElements = ['video', 'audio', 'img', 'ref'];
 const flowElements = ['seq', 'par'];
 
-export async function sleep (ms: number){
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}
-
 function flatten(arr) {
     return arr.reduce(function (flat, toFlatten) {
         return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
