@@ -1,6 +1,6 @@
 declare const jQuery: any;
 import { processSmil, getFileName } from "./xmlParse";
-import { playTimedMedia, sleep, createFileStructure } from "./tools";
+import { playTimedMedia, sleep, createFileStructure, parallelDownloadAllFiles } from "./tools";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
@@ -20,8 +20,6 @@ import { FileStructure } from './enums';
 
     // Every platform has at least one not removable storage unit (internal storage unit)
     const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable);
-
-    console.log(`storage unit ${JSON.stringify(internalStorageUnit)}`);
 
     await createFileStructure(internalStorageUnit);
 
@@ -68,47 +66,58 @@ import { FileStructure } from './enums';
 
     const smilObject = await processSmil(smilFileContent);
 
-    // download smil videos to localstorage
-    for(let i = 0; i < smilObject.video.length; i++) {
-        await sos.fileSystem.downloadFile({
-                storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.rootFolder}/videos/${getFileName(smilObject.video[i].src)}`
-            },
-            smilObject.video[i].src,
-        );
-    }
+    let downloadPromises = [];
 
-    console.log('videos downloaded');
+    downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+    downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+    downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+    downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 
-    // download smil videos to localstorage
-    for(let i = 0; i < smilObject.img.length; i++) {
-        await sos.fileSystem.downloadFile({
-                storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`
-            },
-            smilObject.img[i].src,
-        );
-    }
+    await Promise.all(downloadPromises);
 
-    console.log('images downloaded');
+    console.log('media downloaded');
 
-    // download smil widgets to localstorage
-    for(let i = 0; i < smilObject.ref.length-1; i++) {
-        await sos.fileSystem.downloadFile({
-                storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}`
-            },
-            smilObject.ref[i].src,
-        );
-
-        await sos.fileSystem.extractFile(
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}` },
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/extracted/${getFileName(smilObject.ref[i].src)}` },
-            'zip',
-        );
-    }
-
-    console.log('widgets downloaded');
+    // // download smil videos to localstorage
+    // for(let i = 0; i < smilObject.video.length; i++) {
+    //     await sos.fileSystem.downloadFile({
+    //             storageUnit: internalStorageUnit,
+    //             filePath: `${FileStructure.rootFolder}/videos/${getFileName(smilObject.video[i].src)}`
+    //         },
+    //         smilObject.video[i].src,
+    //     );
+    // }
+    //
+    // console.log('videos downloaded');
+    //
+    // // download smil videos to localstorage
+    // for(let i = 0; i < smilObject.img.length; i++) {
+    //     await sos.fileSystem.downloadFile({
+    //             storageUnit: internalStorageUnit,
+    //             filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`
+    //         },
+    //         smilObject.img[i].src,
+    //     );
+    // }
+    //
+    // console.log('images downloaded');
+    //
+    // // download smil widgets to localstorage
+    // for(let i = 0; i < smilObject.ref.length-1; i++) {
+    //     await sos.fileSystem.downloadFile({
+    //             storageUnit: internalStorageUnit,
+    //             filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}`
+    //         },
+    //         smilObject.ref[i].src,
+    //     );
+    //
+    //     await sos.fileSystem.extractFile(
+    //         { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}` },
+    //         { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/extracted/${getFileName(smilObject.ref[i].src)}` },
+    //         'zip',
+    //     );
+    // }
+    //
+    // console.log('widgets downloaded');
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     rootDirectoryFilePaths = await sos.fileSystem.listFiles({

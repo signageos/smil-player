@@ -1,8 +1,9 @@
 import sos from '@signageos/front-applet';
 
-import { SMILFileObject, RegionAttributes } from '../models';
+import { SMILFileObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
 import { FileStructure } from '../enums';
-import {IStorageUnit} from "@signageos/front-applet/es6/FrontApplet/FileSystem/types";
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { getFileName } from '../xmlParse';
 
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
@@ -21,6 +22,23 @@ export function getRegionInfo(smilObject: SMILFileObject, regionName: string): R
     return smilObject.region[regionName];
 }
 
+export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
+    const promises = [];
+    for(let i = 0; i< filesList.length; i += 1) {
+        promises.push((async() => {
+             console.log('downloading');
+            await sos.fileSystem.downloadFile({
+                    storageUnit: internalStorageUnit,
+                    filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
+                },
+                filesList[i].src,
+            );
+        })());
+    }
+
+    return promises;
+}
+
 export async function createFileStructure(internalStorageUnit: IStorageUnit) {
     for ( const path of Object.values(FileStructure) ) {
         console.log(path);
@@ -34,13 +52,12 @@ export async function createFileStructure(internalStorageUnit: IStorageUnit) {
                 storageUnit: internalStorageUnit,
                 filePath: path
             }, true);
-        } else {
-            // create directory for smil files
-            await sos.fileSystem.createDirectory({
-                storageUnit: internalStorageUnit,
-                filePath: path
-            });
         }
 
+        // create directory for smil files
+        await sos.fileSystem.createDirectory({
+            storageUnit: internalStorageUnit,
+            filePath: path
+        });
     }
 }
