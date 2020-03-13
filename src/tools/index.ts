@@ -1,4 +1,5 @@
 import sos from '@signageos/front-applet';
+const isUrl = require('is-url-superb');
 
 import { SMILFileObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
 import { FileStructure } from '../enums';
@@ -25,17 +26,17 @@ export function getRegionInfo(smilObject: SMILFileObject, regionName: string): R
 export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
     const promises = [];
     for(let i = 0; i< filesList.length; i += 1) {
-        promises.push((async() => {
-             console.log('downloading');
-            await sos.fileSystem.downloadFile({
-                    storageUnit: internalStorageUnit,
-                    filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
-                },
-                filesList[i].src,
-            );
-        })());
+        if (isUrl(filesList[i].src)) {
+            promises.push((async() => {
+                await sos.fileSystem.downloadFile({
+                        storageUnit: internalStorageUnit,
+                        filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
+                    },
+                    filesList[i].src,
+                );
+            })());
+        }
     }
-
     return promises;
 }
 

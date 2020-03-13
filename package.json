@@ -34,8 +34,11 @@
     "eslint-plugin-import": "^2.20.1",
     "eslint-plugin-security": "^1.4.0",
     "got": "^10.6.0",
+    "install": "^0.13.0",
+    "is-url-superb": "^3.0.0",
     "json-easy-filter": "^0.3.1",
     "lodash": "^4.17.15",
+    "npm": "^6.14.2",
     "xml2js": "^0.4.23"
   }
 }
