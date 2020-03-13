@@ -4,5 +4,10 @@ export enum SMILEnemus {
 }
 
 export enum FileStructure {
-    folder = 'smil',
+    rootFolder = '/smil',
+    videos = '/smil/videos',
+    audios = '/smil/audios',
+    images = '/smil/images',
+    widgets = '/smil/widgets',
+    extracted = '/smil/widgets/extracted',
 }

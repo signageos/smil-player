@@ -1,6 +1,6 @@
 declare const jQuery: any;
 import { processSmil, getFileName } from "./xmlParse";
-import { playTimedMedia, sleep } from "./tools";
+import { playTimedMedia, sleep, createFileStructure } from "./tools";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
@@ -23,63 +23,22 @@ import { FileStructure } from './enums';
 
     console.log(`storage unit ${JSON.stringify(internalStorageUnit)}`);
 
+    await createFileStructure(internalStorageUnit);
 
-    // You can create directory in root directory of internal storage (not rescursive)
-    // First clean path if exists
-    if (await sos.fileSystem.exists({
-        storageUnit: internalStorageUnit,
-        filePath: FileStructure.folder
-    })) {
-        await sos.fileSystem.deleteFile({
-            storageUnit: internalStorageUnit,
-            filePath: FileStructure.folder
-        }, true);
-    }
-
-    // create directory for smil files
-    await sos.fileSystem.createDirectory({
-        storageUnit: internalStorageUnit,
-        filePath: FileStructure.folder
-    });
-
-    // create directory for smil files
-    await sos.fileSystem.createDirectory({
-        storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/videos`
-    });
-
-    // create directory for smil files
-    await sos.fileSystem.createDirectory({
-        storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/images`
-    });
-
-    // create directory for smil files
-    await sos.fileSystem.createDirectory({
-        storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/widgets`
-    });
-
-    // create directory for smil files
-    await sos.fileSystem.createDirectory({
-        storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/widgets/extracted`
-    });
-
-    console.log('directory created');
+    console.log('directory hierarchy created');
 
     await sos.fileSystem.downloadFile({
             storageUnit: internalStorageUnit,
-            filePath: `${FileStructure.folder}/${getFileName('https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil')}`
+            filePath: `${FileStructure.rootFolder}/${getFileName('https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil')}`
         },
         'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil',
     );
 
-    console.log(`smil downloaded ${FileStructure.folder}/${getFileName('https://butikstv.centrumkanalen.com/play/smil/99.smil')}`);
+    console.log(`smil downloaded ${FileStructure.rootFolder}/${getFileName('https://butikstv.centrumkanalen.com/play/smil/99.smil')}`);
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     let rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: FileStructure.folder,
+        filePath: FileStructure.rootFolder,
         storageUnit: internalStorageUnit
     });
 
@@ -103,7 +62,7 @@ import { FileStructure } from './enums';
 
     const smilFileContent = await sos.fileSystem.readFile({
         storageUnit: internalStorageUnit,
-        filePath: `${FileStructure.folder}/${getFileName('http://butikstv.centrumkanalen.com/play/smil/99.smil')}`
+        filePath: `${FileStructure.rootFolder}/${getFileName('http://butikstv.centrumkanalen.com/play/smil/99.smil')}`
     });
 
 
@@ -113,7 +72,7 @@ import { FileStructure } from './enums';
     for(let i = 0; i < smilObject.video.length; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.folder}/videos/${getFileName(smilObject.video[i].src)}`
+                filePath: `${FileStructure.rootFolder}/videos/${getFileName(smilObject.video[i].src)}`
             },
             smilObject.video[i].src,
         );
@@ -125,7 +84,7 @@ import { FileStructure } from './enums';
     for(let i = 0; i < smilObject.img.length; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.folder}/images/${getFileName(smilObject.img[i].src)}`
+                filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`
             },
             smilObject.img[i].src,
         );
@@ -137,14 +96,14 @@ import { FileStructure } from './enums';
     for(let i = 0; i < smilObject.ref.length-1; i++) {
         await sos.fileSystem.downloadFile({
                 storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.ref[i].src)}`
+                filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}`
             },
             smilObject.ref[i].src,
         );
 
         await sos.fileSystem.extractFile(
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/${getFileName(smilObject.ref[i].src)}` },
-            { storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/widgets/extracted/${getFileName(smilObject.ref[i].src)}` },
+            { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/${getFileName(smilObject.ref[i].src)}` },
+            { storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/widgets/extracted/${getFileName(smilObject.ref[i].src)}` },
             'zip',
         );
     }
@@ -153,7 +112,7 @@ import { FileStructure } from './enums';
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: `${FileStructure.folder}/videos`,
+        filePath: `${FileStructure.rootFolder}/videos`,
         storageUnit: internalStorageUnit
     });
 
@@ -165,7 +124,7 @@ import { FileStructure } from './enums';
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: `${FileStructure.folder}/widgets`,
+        filePath: `${FileStructure.rootFolder}/widgets`,
         storageUnit: internalStorageUnit
     });
 
@@ -195,7 +154,7 @@ import { FileStructure } from './enums';
     // iframeElement.style.display = 'block';
 
     for (let i = 0; i < smilObject.img.length ; i += 1) {
-        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/images/${getFileName(smilObject.img[i].src)}`});
+        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`});
         console.log(mediaFile.localUri + ' images urls');
         await playTimedMedia(imageElement, mediaFile.localUri, parseInt(smilObject.img[i].dur, 10) * 1000);
     }
@@ -208,9 +167,9 @@ import { FileStructure } from './enums';
         const previousVideo = smilObject.video[(i + smilObject.video.length - 1) % smilObject.video.length];
         const currentVideo = smilObject.video[i];
         const nextVideo = smilObject.video[(i + 1) % smilObject.video.length];
-        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(currentVideo.src)}`});
-        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(previousVideo.src)}`});
-        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.folder}/videos/${getFileName(nextVideo.src)}`});
+        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(currentVideo.src)}`});
+        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(previousVideo.src)}`});
+        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(nextVideo.src)}`});
 
 
         currentVideo.localFilePath = currentVideoDetails.localUri;
