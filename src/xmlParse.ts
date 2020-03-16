@@ -12,8 +12,6 @@ import {
 import { SMILEnemus } from './enums';
 import { JefNode } from 'json-easy-filter';
 import * as deepmerge from 'deepmerge';
-import sos from '@signageos/front-applet';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
 const extractedElements = ['video', 'audio', 'img', 'ref'];
 const flowElements = ['seq', 'par'];
@@ -28,92 +26,6 @@ function flatten(arr) {
     return arr.reduce(function (flat, toFlatten) {
         return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
     }, []);
-}
-
-export async function processPlaylist(playlist: object, parent?: string) {
-    for (let [key, value] of Object.entries(playlist)) {
-        const promises = [];
-        // console.log(`${key}: ${JSON.stringify(value)}`);
-        // console.log(Array.isArray(value));
-        // console.log(playlist);
-        if (key == 'seq') {
-            if (Array.isArray(value)) {
-                for (let i in value) {
-                    promises.push((async() => {
-                        await processPlaylist(value[i], 'seq');
-                    })());
-                }
-            } else {
-                promises.push((async() => {
-                    await processPlaylist(value, 'seq');
-                })());
-            }
-        }
-
-        if (key == 'par') {
-            // console.log(Array.isArray(value));
-            if (Array.isArray(value)) {
-
-            } else {
-
-            }
-
-            for (let i in value) {
-                if (Array.isArray(value[i])) {
-                    const wrapper = {
-                        par: value[i],
-                    };
-                    promises.push((async() => {
-                        await processPlaylist(wrapper, 'par');
-                    })());
-                } else {
-                    promises.push((async() => {
-                        await processPlaylist(value[i], i);
-                    })());
-
-                }
-            }
-        }
-
-        await Promise.all(promises);
-
-        if (extractedElements.includes(key)) {
-            switch (key) {
-                case 'video':
-                    if (Array.isArray(value)) {
-                        if (parent == 'seq') {
-                            for (let i = 0; i < value.length; i += 1) {
-                                console.log(`playing video seq: ${value[i].src}`);
-                            }
-                            break;
-                        } else {
-                            const promises = [];
-                            for (let i in value) {
-                                promises.push((async() => {
-                                    console.log(`playing video parallel: ${value[i].src}`);
-                                })())
-                            }
-                            await Promise.all(promises);
-                            break;
-                        }
-                    }
-                    console.log(`playing video seq: ${value.src}`);
-                    break;
-                case 'audio':
-                    console.log(`playing audio: ${value.src}`);
-                    break;
-                case 'ref':
-                    await sleep(5000);
-                    console.log(`playing ref: ${value.src}`);
-                    break;
-                case 'img':
-                    console.log(`playing img: ${value.src}`);
-                    break;
-                default:
-                    console.log('Sorry, we are out of ' + key + '.');
-            }
-        }
-    }
 }
 
 const overwriteMerge = (destinationArray, sourceArray, options) => sourceArray;
@@ -135,14 +47,14 @@ export function getFileName(filePath: string) {
 //     return localPath;
 // }
 
-async function parseXml(xmlFile2: string): Promise<SMILFileObject> {
+async function parseXml(xmlFile: string): Promise<SMILFileObject> {
     const downloads: DownloadsList = {
         video: [],
         img: [],
         ref: [],
         audio: [],
     };
-    const xmlFile: string = await fsPromise.readFile('./SMIL/234.smil', 'utf8');
+    // const xmlFile: string = await fsPromise.readFile('./SMIL/234.smil', 'utf8');
     const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
         mergeAttrs: true,
         explicitArray: false,
@@ -182,8 +94,6 @@ async function parseXml(xmlFile2: string): Promise<SMILFileObject> {
         playlist: {},
     };
     mergedPlaylist.playlist = <SMILPlaylist>mergeObjects(playlist);
-
-    await processPlaylist(mergedPlaylist.playlist);
 
     return Object.assign({}, regions, mergedPlaylist, downloads);
 }
@@ -277,5 +187,3 @@ export async function processSmil(xmlFile: string): Promise<SMILFileObject> {
     const smilObject = await parseXml(xmlFile);
     return smilObject;
 }
-
-processSmil('');
