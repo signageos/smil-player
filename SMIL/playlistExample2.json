@@ -3,74 +3,16 @@
     {
       "seq": {
         "video": {
-          "src": "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"
+          "src": "http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4"
         }
       }
-    }
-  ],
-  "par": {
-    "par": [
-      {
-        "seq": {
-          "ref": {
-            "src": "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt",
-            "type": "application/widget",
-            "region": "widget11",
-            "dur": "60s",
-            "param": {
-              "name": "cacheControl",
-              "value": "onlyIfCached"
-            }
-          }
-        }
-      },
-      {
-        "seq": {
-          "ref": {
-            "src": "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt",
-            "type": "application/widget",
-            "region": "widget12",
-            "dur": "60s",
-            "param": {
-              "name": "cacheControl",
-              "value": "onlyIfCached"
-            }
-          }
-        }
-      },
-      {
-        "seq": {
-          "img": {
-            "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png",
-            "region": "widget13",
-            "dur": "60s",
-            "param": {
-              "name": "cacheControl",
-              "value": "onlyIfCached"
-            }
-          }
-        }
-      },
-      {
-        "seq": {
-          "img": {
-            "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png",
-            "region": "widget14",
-            "dur": "60s",
-            "param": {
-              "name": "cacheControl",
-              "value": "onlyIfCached"
-            }
-          }
-        }
-      }
-    ],
-    "seq": {
+    },
+    {
       "video": [
         {
-          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/9820.mp4",
+          "src": "http://butikstv.centrumkanalen.com/play/media/filmer/staende.mp4",
           "id": "annons0",
-          "fit": "hidden",
+          "fit": "meetBest",
           "region": "video",
           "param": {
             "name": "cacheControl",
@@ -78,9 +20,9 @@
           }
         },
         {
-          "src": "http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4",
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10359_2.mp4",
           "id": "annons1",
-          "fit": "hidden",
+          "fit": "meetBest",
           "region": "video",
           "param": {
             "name": "cacheControl",
@@ -88,9 +30,59 @@
           }
         },
         {
-          "src": "http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4",
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10361_2.mp4",
           "id": "annons2",
-          "fit": "hidden",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10363_2.mp4",
+          "id": "annons3",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10372_2.mp4",
+          "id": "annons4",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10396_2.mp4",
+          "id": "annons5",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10398_2.mp4",
+          "id": "annons6",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/10055.mp4",
+          "id": "annons11",
+          "fit": "meetBest",
           "region": "video",
           "param": {
             "name": "cacheControl",
@@ -98,21 +90,64 @@
           }
         }
       ],
-      "img": {
-        "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png",
-        "id": "annons3",
-        "dur": "40s",
-        "fit": "hidden",
-        "region": "video",
-        "param": {
-          "name": "cacheControl",
-          "value": "auto"
+      "img": [
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/9955.png",
+          "id": "annons7",
+          "dur": "20s",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/9953.png",
+          "id": "annons8",
+          "dur": "20s",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/9954.png",
+          "id": "annons9",
+          "dur": "15s",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
+        },
+        {
+          "src": "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/9958.png",
+          "id": "annons10",
+          "dur": "20s",
+          "fit": "meetBest",
+          "region": "video",
+          "param": {
+            "name": "cacheControl",
+            "value": "auto"
+          }
         }
-      },
-      "ref": {
-        "dur": "indefinite",
-        "src": "adapi:blankScreen"
+      ],
+      "par": {
+        "audio": {
+          "src": "http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3",
+          "dur": "20"
+        },
+        "ref": {
+          "src": "http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt",
+          "type": "application/widget",
+          "dur": "20",
+          "region": "video"
+        }
       }
     }
-  }
+  ]
 }

@@ -4,6 +4,7 @@ import { playTimedMedia, sleep, createFileStructure, parallelDownloadAllFiles } 
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
+
 (async ()=> {
     const contentElement = document.getElementById('index');
     const iframeElement = document.getElementById('iframe');
@@ -31,8 +32,6 @@ import { FileStructure } from './enums';
         },
         'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil',
     );
-
-    console.log(`smil downloaded ${FileStructure.rootFolder}/${getFileName('https://butikstv.centrumkanalen.com/play/smil/99.smil')}`);
 
     // Empty string '' refers to root directory. Here is root directory of internal storage
     let rootDirectoryFilePaths = await sos.fileSystem.listFiles({
@@ -79,13 +78,10 @@ import { FileStructure } from './enums';
 
     for (let i = 0; i < smilObject.img.length ; i += 1) {
         const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`});
-        console.log(mediaFile.localUri + ' images urls');
         await playTimedMedia(imageElement, mediaFile.localUri, parseInt(smilObject.img[i].dur, 10) * 1000);
     }
 
     await sleep(10000);
-
-    // console.log(JSON.stringify(smilObject));
 
     for (let i = 0; true; i = (i + 1) % smilObject.video.length) {
         const previousVideo = smilObject.video[(i + smilObject.video.length - 1) % smilObject.video.length];

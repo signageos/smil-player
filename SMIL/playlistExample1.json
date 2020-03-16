@@ -6,6 +6,13 @@
           "src": "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"
         }
       }
+    },
+    {
+      "seq": {
+        "video": {
+          "src": "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"
+        }
+      }
     }
   ],
   "par": {
