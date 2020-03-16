@@ -80,6 +80,10 @@ import { FileStructure } from './enums';
 
     console.log('widgets extracted');
 
+    // const extractedWidget = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `/smil/widgets/extracted/top.wgt/index.html`});
+    // (<HTMLImageElement>iframeElement).src = extractedWidget.localUri;
+    // iframeElement.style.display = 'block';
+
     await processPlaylist(smilObject.playlist, internalStorageUnit);
 
     // for (let i = 0; i < smilObject.img.length ; i += 1) {

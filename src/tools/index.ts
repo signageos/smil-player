@@ -17,17 +17,19 @@ export async function sleep(ms: number): Promise<void> {
 
 export async function extractWidgets(widgets, internalStorageUnit) {
     for(let i = 0; i < widgets.length; i++) {
-        await sos.fileSystem.extractFile(
-            {
-                storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`
-            },
-            {
-                storageUnit: internalStorageUnit,
-                filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`
-            },
-            'zip',
-        );
+        if (isUrl(widgets[i].src)) {
+            await sos.fileSystem.extractFile(
+                {
+                    storageUnit: internalStorageUnit,
+                    filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`
+                },
+                {
+                    storageUnit: internalStorageUnit,
+                    filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`
+                },
+                'zip',
+            );
+        }
     }
 }
 
@@ -150,6 +152,30 @@ export async function playElement(value, key, internalStorageUnit, parent) {
             break;
         case 'ref':
             const iframeElement = document.getElementById('iframe');
+            if (!Array.isArray(value)) {
+                value = [value];
+            }
+            if (parent == 'seq') {
+                for (let i = 0; i < value.length ; i += 1) {
+                    if (isUrl(value[i].src)) {
+                        console.log(`playing ref seq: ${value[i].src}`);
+                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.extracted}${getFileName(value[i].src)}/index.html`});
+                        await playTimedMedia(iframeElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 1000);
+                    }
+                }
+                break;
+            } else {
+                const promises = [];
+                for (let i = 0; i < value.length ; i += 1) {
+                    promises.push((async() => {
+                        console.log(`playing ref par: ${value[i].src}`);
+                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.extracted}${getFileName(value[i].src)}/index.html`});
+                        await playTimedMedia(iframeElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 1000);
+                    })())
+                }
+                await Promise.all(promises);
+                break;
+            }
             console.log(`playing ref: ${value.src}`);
             break;
         case 'img':
