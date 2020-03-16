@@ -33,35 +33,10 @@ import { FileStructure } from './enums';
         'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil',
     );
 
-    // Empty string '' refers to root directory. Here is root directory of internal storage
-    let rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: FileStructure.rootFolder,
-        storageUnit: internalStorageUnit
-    });
-
-    contentElement.innerHTML += `Internal storage root directory listing: <br />`;
-    for (const filePath of rootDirectoryFilePaths) {
-        // Property filePath.filePath contains string representation of path separated by slash / for nested files (or dirs)
-        contentElement.innerHTML += `- ${filePath.filePath} <br />`;
-    }
-
-    // Empty string '' refers to root directory. Here is root directory of internal storage
-    rootDirectoryFilePaths = await sos.fileSystem.listFiles({
-        filePath: '',
-        storageUnit: internalStorageUnit
-    });
-
-    contentElement.innerHTML += `Internal storage root directory listing2: <br />`;
-    for (const filePath of rootDirectoryFilePaths) {
-        // Property filePath.filePath contains string representation of path separated by slash / for nested files (or dirs)
-        contentElement.innerHTML += `- ${filePath.filePath} <br />`;
-    }
-
     const smilFileContent = await sos.fileSystem.readFile({
         storageUnit: internalStorageUnit,
         filePath: `${FileStructure.rootFolder}/${getFileName('http://butikstv.centrumkanalen.com/play/smil/99.smil')}`
     });
-
 
     const smilObject = await processSmil(smilFileContent);
 
@@ -84,7 +59,7 @@ import { FileStructure } from './enums';
     // (<HTMLImageElement>iframeElement).src = extractedWidget.localUri;
     // iframeElement.style.display = 'block';
 
-    await processPlaylist(smilObject.playlist, internalStorageUnit);
+    await processPlaylist(smilObject.playlist, smilObject.region, internalStorageUnit);
 
     // for (let i = 0; i < smilObject.img.length ; i += 1) {
     //     const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`});

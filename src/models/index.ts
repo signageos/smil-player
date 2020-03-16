@@ -26,12 +26,14 @@ export type SMILVideo = {
     localFilePath?: string,
     arguments?: [],
     playing: boolean,
+    regionInfo?: object,
 }
 
 export type SMILAudio = {
     src: string,
     dur: string,
     etag?: string,
+    regionInfo?: object,
 }
 
 export type SMILImage = {
@@ -39,6 +41,7 @@ export type SMILImage = {
     region: string,
     dur: string,
     etag?: string,
+    regionInfo?: object,
 }
 
 export type SMILWidget = {
@@ -46,6 +49,7 @@ export type SMILWidget = {
     region: string,
     dur: string,
     etag?: string,
+    regionInfo?: object,
 }
 
 export type DownloadsList = {
