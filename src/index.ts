@@ -6,12 +6,6 @@ import { FileStructure } from './enums';
 
 
 (async ()=> {
-    const contentElement = document.getElementById('index');
-    const iframeElement = document.getElementById('iframe');
-    const imageElement = document.getElementById('image');
-
-    console.log('sOS is loaded');
-    contentElement.innerHTML = 'sOS is loaded';
     // Wait on sos data are ready (https://docs.signageos.io/api/sos-applet-api/#onReady)
     await sos.onReady();
     console.log('sOS is ready');
@@ -55,41 +49,6 @@ import { FileStructure } from './enums';
 
     console.log('widgets extracted');
 
-    // const extractedWidget = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `/smil/widgets/extracted/top.wgt/index.html`});
-    // (<HTMLImageElement>iframeElement).src = extractedWidget.localUri;
-    // iframeElement.style.display = 'block';
-
     await processPlaylist(smilObject.playlist, smilObject.region, internalStorageUnit);
 
-    // for (let i = 0; i < smilObject.img.length ; i += 1) {
-    //     const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(smilObject.img[i].src)}`});
-    //     await playTimedMedia(imageElement, mediaFile.localUri, parseInt(smilObject.img[i].dur, 10) * 1000);
-    // }
-    //
-    // await sleep(10000);
-    //
-    // for (let i = 0; true; i = (i + 1) % smilObject.video.length) {
-    //     const previousVideo = smilObject.video[(i + smilObject.video.length - 1) % smilObject.video.length];
-    //     const currentVideo = smilObject.video[i];
-    //     const nextVideo = smilObject.video[(i + 1) % smilObject.video.length];
-    //     const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(currentVideo.src)}`});
-    //     const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(previousVideo.src)}`});
-    //     const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(nextVideo.src)}`});
-    //
-    //
-    //     currentVideo.localFilePath = currentVideoDetails.localUri;
-    //     previousVideo.localFilePath = previousVideoDetails.localUri;
-    //     nextVideo.localFilePath = nextVideoDetails.localUri;
-    //
-    //     console.log('playing');
-    //     // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
-    //     await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
-    //     currentVideo.playing = true;
-    //     if (previousVideo.playing) {
-    //         await sos.video.stop(previousVideo.localFilePath, 0, 0, 500, 500);
-    //         previousVideo.playing = false;
-    //     }
-    //     await sos.video.prepare(nextVideo.localFilePath, 0, 0, 500, 500);
-    //     await sos.video.onceEnded(currentVideo.localFilePath, 0, 0, 500, 500); // https://docs.signageos.io/api/sos-applet-api/#onceEnded
-    // }
 })();

@@ -1,4 +1,5 @@
 import sos from '@signageos/front-applet';
+import * as _ from 'lodash';
 const isUrl = require('is-url-superb');
 
 import { RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
@@ -43,13 +44,20 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
             element.style[attr] = regionInfo[attr];
         }
     });
+    element.style['position'] = 'fixed';
     document.body.appendChild(element);
     await sleep(duration*1000);
-    element.src = '';
+    element.remove();
 }
 
 export function getRegionInfo(regionObject: object, regionName: string): RegionAttributes {
-    return regionObject[regionName];
+    const defaultRegion = {
+        left: 0,
+        top: 0,
+        width: '100%',
+        height: '100%',
+    };
+    return _.get(regionObject, regionName, defaultRegion);
 }
 
 export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
@@ -106,16 +114,15 @@ export async function playVideosSeq(videos, internalStorageUnit) {
         previousVideo.localFilePath = previousVideoDetails.localUri;
         nextVideo.localFilePath = nextVideoDetails.localUri;
 
-        console.log('playing');
         // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
-        await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
+        await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
         currentVideo.playing = true;
         if (previousVideo.playing) {
-            await sos.video.stop(previousVideo.localFilePath, 0, 0, 500, 500);
+            await sos.video.stop(previousVideo.localFilePath, previousVideo.regionInfo.left, previousVideo.regionInfo.top, previousVideo.regionInfo.width, previousVideo.regionInfo.height);
             previousVideo.playing = false;
         }
-        await sos.video.prepare(nextVideo.localFilePath, 0, 0, 500, 500);
-        await sos.video.onceEnded(currentVideo.localFilePath, 0, 0, 500, 500); // https://docs.signageos.io/api/sos-applet-api/#onceEnded
+        await sos.video.prepare(nextVideo.localFilePath, nextVideo.regionInfo.left, nextVideo.regionInfo.top, nextVideo.regionInfo.width, nextVideo.regionInfo.height);
+        await sos.video.onceEnded(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
     }
 }
 
@@ -133,10 +140,10 @@ export async function playVideo(video, internalStorageUnit) {
     const currentVideo = video;
     const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`});
     currentVideo.localFilePath = currentVideoDetails.localUri;
-    await sos.video.prepare(currentVideo.localFilePath, 0, 0, 500, 500);
-    await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
-    await sos.video.onceEnded(currentVideo.localFilePath, 0, 0, 500, 500);
-    await sos.video.stop(currentVideo.localFilePath, 0, 0, 500, 500);
+    await sos.video.prepare(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
+    await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
+    await sos.video.onceEnded(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
+    await sos.video.stop(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
 }
 
 export async function playElement(value, key, internalStorageUnit, parent) {
@@ -144,7 +151,6 @@ export async function playElement(value, key, internalStorageUnit, parent) {
         case 'video':
             if (Array.isArray(value)) {
                 if (parent == 'seq') {
-                    console.log(`playing videos seq: ${JSON.stringify(value)}`);
                     await playVideosSeq(value, internalStorageUnit);
                     break;
                 } else {
@@ -154,7 +160,6 @@ export async function playElement(value, key, internalStorageUnit, parent) {
             } else {
                 await playVideo(value, internalStorageUnit);
             }
-            console.log(`playing video seq: ${value.src}`);
             break;
         case 'audio':
             // console.log(`playing audio: ${value.src}`);
@@ -182,7 +187,6 @@ export async function playElement(value, key, internalStorageUnit, parent) {
                 await Promise.all(promises);
                 break;
             }
-            console.log(`playing ref: ${value.src}`);
             break;
         case 'img':
             if (!Array.isArray(value)) {
@@ -249,7 +253,13 @@ export async function processPlaylist(playlist: object, region: object, internal
         await Promise.all(promises);
 
         if (extractedElements.includes(key)) {
-            value.regionInfo = getRegionInfo(region, value.region);
+            if (Array.isArray(value)) {
+                for (let i in value) {
+                    value[i].regionInfo = getRegionInfo(region, value[i].region);
+                }
+            } else {
+                value.regionInfo = getRegionInfo(region, value.region);
+            }
             await playElement(value, key, internalStorageUnit, parent);
         }
     }

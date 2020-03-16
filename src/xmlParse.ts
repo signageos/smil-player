@@ -38,15 +38,6 @@ export function getFileName(filePath: string) {
     return filePath.substring(filePath.lastIndexOf('/') + 1);
 }
 
-// export async function downloadFile(filePath: string): Promise<string> {
-//     console.log('parsing file');
-//     const response = await got(filePath);
-//     const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-//     const localPath = `./SMIL/${fileName}`;
-//     await fsPromise.writeFile(localPath, response.body, 'utf8');
-//     return localPath;
-// }
-
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
     const downloads: DownloadsList = {
         video: [],
