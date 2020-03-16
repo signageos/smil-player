@@ -1,6 +1,6 @@
 declare const jQuery: any;
 import { processSmil, getFileName } from "./xmlParse";
-import { playTimedMedia, sleep, createFileStructure, parallelDownloadAllFiles, processPlaylist } from "./tools";
+import { playTimedMedia, sleep, createFileStructure, parallelDownloadAllFiles, processPlaylist, extractWidgets } from "./tools";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 
@@ -75,6 +75,10 @@ import { FileStructure } from './enums';
     await Promise.all(downloadPromises);
 
     console.log('media downloaded');
+
+    await extractWidgets(smilObject.ref, internalStorageUnit);
+
+    console.log('widgets extracted');
 
     await processPlaylist(smilObject.playlist, internalStorageUnit);
 

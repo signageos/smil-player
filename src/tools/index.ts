@@ -15,6 +15,21 @@ export async function sleep(ms: number): Promise<void> {
     });
 }
 
+export async function extractWidgets(widgets, internalStorageUnit) {
+    for(let i = 0; i < widgets.length; i++) {
+        await sos.fileSystem.extractFile(
+            {
+                storageUnit: internalStorageUnit,
+                filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`
+            },
+            {
+                storageUnit: internalStorageUnit,
+                filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`
+            },
+            'zip',
+        );
+    }
+}
 
 export async function playTimedMedia(htmlElement, filepath: string, duration: number): Promise<void> {
     htmlElement.src = filepath;
@@ -113,7 +128,7 @@ export async function playVideo(video, internalStorageUnit) {
     await sos.video.stop(currentVideo.localFilePath, 0, 0, 500, 500);
 }
 
-export async function playElement(value, key, internalStorageUnit, parent, htmlElement?) {
+export async function playElement(value, key, internalStorageUnit, parent) {
     switch (key) {
         case 'video':
             if (Array.isArray(value)) {
@@ -134,12 +149,34 @@ export async function playElement(value, key, internalStorageUnit, parent, htmlE
             console.log(`playing audio: ${value.src}`);
             break;
         case 'ref':
-            await sleep(5000);
+            const iframeElement = document.getElementById('iframe');
             console.log(`playing ref: ${value.src}`);
             break;
         case 'img':
-            console.log(`playing img: ${value.src}`);
-            break;
+            const imageElement = document.getElementById('image');
+            if (!Array.isArray(value)) {
+                value = [value];
+            }
+            if (parent == 'seq') {
+                for (let i = 0; i < value.length ; i += 1) {
+                    console.log(`playing img seq: ${value[i].src}`);
+                    const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(value[i].src)}`});
+                    await playTimedMedia(imageElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 100);
+                }
+                break;
+            } else {
+                const promises = [];
+                for (let i = 0; i < value.length ; i += 1) {
+                    promises.push((async() => {
+                        console.log(`playing img par: ${value[i].src}`);
+                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(value[i].src)}`});
+                        await playTimedMedia(imageElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 100);
+                    })())
+
+                }
+                await Promise.all(promises);
+                break;
+            }
         default:
             console.log('Sorry, we are out of ' + key + '.');
     }
