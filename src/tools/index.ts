@@ -86,9 +86,9 @@ export async function playVideosSeq(videos, internalStorageUnit) {
         const previousVideo = videos[(i + videos.length - 1) % videos.length];
         const currentVideo = videos[i];
         const nextVideo = videos[(i + 1) % videos.length];
-        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(currentVideo.src)}`});
-        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(previousVideo.src)}`});
-        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(nextVideo.src)}`});
+        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`});
+        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`});
+        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`});
 
 
         currentVideo.localFilePath = currentVideoDetails.localUri;
@@ -120,7 +120,7 @@ export async function playVideosPar(videos, internalStorageUnit) {
 
 export async function playVideo(video, internalStorageUnit) {
     const currentVideo = video;
-    const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/videos/${getFileName(currentVideo.src)}`});
+    const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`});
     currentVideo.localFilePath = currentVideoDetails.localUri;
     await sos.video.prepare(currentVideo.localFilePath, 0, 0, 500, 500);
     await sos.video.play(currentVideo.localFilePath, 0, 0, 500, 500);
@@ -160,7 +160,7 @@ export async function playElement(value, key, internalStorageUnit, parent) {
             if (parent == 'seq') {
                 for (let i = 0; i < value.length ; i += 1) {
                     console.log(`playing img seq: ${value[i].src}`);
-                    const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(value[i].src)}`});
+                    const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.images}${getFileName(value[i].src)}`});
                     await playTimedMedia(imageElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 100);
                 }
                 break;
@@ -169,7 +169,7 @@ export async function playElement(value, key, internalStorageUnit, parent) {
                 for (let i = 0; i < value.length ; i += 1) {
                     promises.push((async() => {
                         console.log(`playing img par: ${value[i].src}`);
-                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.rootFolder}/images/${getFileName(value[i].src)}`});
+                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.images}${getFileName(value[i].src)}`});
                         await playTimedMedia(imageElement, mediaFile.localUri, parseInt(value[i].dur, 10) * 100);
                     })())
 
