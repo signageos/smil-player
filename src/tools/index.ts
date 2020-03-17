@@ -156,7 +156,30 @@ export async function playIntroVideo(video, internalStorageUnit) {
     await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
 
-export async function playElement(value, key, internalStorageUnit, parent) {
+export async function playOtherMedia(value: any, key: string, internalStorageUnit: IStorageUnit, parent: string, fileStructure: string, htmlElement: string, widgetRootFile: string) {
+    if (!Array.isArray(value)) {
+        value = [value];
+    }
+    if (parent == 'seq') {
+        for (let i = 0; i < value.length ; i += 1) {
+            if (isUrl(value[i].src)) {
+                const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`});
+                await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10) );
+            }
+        }
+    } else {
+        const promises = [];
+        for (let i = 0; i < value.length ; i += 1) {
+            promises.push((async() => {
+                const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`});
+                await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
+            })())
+        }
+        await Promise.all(promises);
+    }
+}
+
+export async function playElement(value: object | any[], key: string, internalStorageUnit: IStorageUnit, parent: string) {
     switch (key) {
         case 'video':
             if (Array.isArray(value)) {
@@ -175,51 +198,11 @@ export async function playElement(value, key, internalStorageUnit, parent) {
             // console.log(`playing audio: ${value.src}`);
             break;
         case 'ref':
-            if (!Array.isArray(value)) {
-                value = [value];
-            }
-            if (parent == 'seq') {
-                for (let i = 0; i < value.length ; i += 1) {
-                    if (isUrl(value[i].src)) {
-                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.extracted}${getFileName(value[i].src)}/index.html`});
-                        await playTimedMedia('iframe', mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10) );
-                    }
-                }
-                break;
-            } else {
-                const promises = [];
-                for (let i = 0; i < value.length ; i += 1) {
-                    promises.push((async() => {
-                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.extracted}${getFileName(value[i].src)}/index.html`});
-                        await playTimedMedia('iframe', mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
-                    })())
-                }
-                await Promise.all(promises);
-                break;
-            }
+            await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');
             break;
         case 'img':
-            if (!Array.isArray(value)) {
-                value = [value];
-            }
-            if (parent == 'seq') {
-                for (let i = 0; i < value.length ; i += 1) {
-                    const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.images}${getFileName(value[i].src)}`});
-                    await playTimedMedia('img', mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
-                }
-                break;
-            } else {
-                const promises = [];
-                for (let i = 0; i < value.length ; i += 1) {
-                    promises.push((async() => {
-                        const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.images}${getFileName(value[i].src)}`});
-                        await playTimedMedia('img', mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
-                    })())
-
-                }
-                await Promise.all(promises);
-                break;
-            }
+            await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.images, 'img', '');
+            break;
         default:
             console.log('Sorry, we are out of ' + key + '.');
     }
