@@ -34,10 +34,6 @@ function mergeObjects(array) {
     return deepmerge.all(array, { arrayMerge: overwriteMerge });
 }
 
-export function getFileName(filePath: string) {
-    return filePath.substring(filePath.lastIndexOf('/') + 1);
-}
-
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
     const downloads: DownloadsList = {
         video: [],

@@ -1,12 +1,15 @@
 declare const jQuery: any;
-import { processSmil, getFileName } from "./xmlParse";
+import { processSmil } from "./xmlParse";
 import {
     createFileStructure,
     parallelDownloadAllFiles,
-    processPlaylist,
     extractWidgets,
+    getFileName,
+} from "./tools/files";
+import {
+    processPlaylist,
     getRegionInfo, playIntroVideo
-} from "./tools";
+} from "./tools/playlist";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 

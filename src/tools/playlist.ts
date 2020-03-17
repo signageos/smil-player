@@ -5,10 +5,9 @@ const isUrl = require('is-url-superb');
 import { RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
 import { FileStructure } from '../enums';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName } from '../xmlParse';
+import { getFileName, getFileDetails } from './files';
 
 const extractedElements = ['video', 'audio', 'img', 'ref'];
-const flowElements = ['seq', 'par'];
 const positionElements = ['left', 'top', 'bottom', 'width', 'height'];
 
 export async function sleep(ms: number): Promise<void> {
@@ -17,23 +16,7 @@ export async function sleep(ms: number): Promise<void> {
     });
 }
 
-export async function extractWidgets(widgets, internalStorageUnit) {
-    for(let i = 0; i < widgets.length; i++) {
-        if (isUrl(widgets[i].src)) {
-            await sos.fileSystem.extractFile(
-                {
-                    storageUnit: internalStorageUnit,
-                    filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`
-                },
-                {
-                    storageUnit: internalStorageUnit,
-                    filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`
-                },
-                'zip',
-            );
-        }
-    }
-}
+
 
 export async function playTimedMedia(htmlElement, filepath: string, regionInfo: RegionAttributes, duration: number): Promise<void> {
     const element = document.createElement(htmlElement);
@@ -60,50 +43,6 @@ export function getRegionInfo(regionObject: object, regionName: string): RegionA
     return _.get(regionObject, regionName, defaultRegion);
 }
 
-export async function getFileDetails(media, internalStorageUnit, fileStructure) {
-    return sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(media.src)}`})
-}
-
-export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
-    const promises = [];
-    for(let i = 0; i< filesList.length; i += 1) {
-        if (isUrl(filesList[i].src)) {
-            promises.push((async() => {
-                await sos.fileSystem.downloadFile({
-                        storageUnit: internalStorageUnit,
-                        filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
-                    },
-                    filesList[i].src,
-                );
-            })());
-        }
-    }
-    return promises;
-}
-
-export async function createFileStructure(internalStorageUnit: IStorageUnit) {
-    for ( const path of Object.values(FileStructure) ) {
-        console.log(path);
-        // You can create directory in root directory of internal storage (not rescursive)
-        // First clean path if exists
-        if (await sos.fileSystem.exists({
-            storageUnit: internalStorageUnit,
-            filePath: path
-        })) {
-            await sos.fileSystem.deleteFile({
-                storageUnit: internalStorageUnit,
-                filePath: path
-            }, true);
-        }
-
-        // create directory for smil files
-        await sos.fileSystem.createDirectory({
-            storageUnit: internalStorageUnit,
-            filePath: path
-        });
-    }
-}
-
 export async function playVideosSeq(videos, internalStorageUnit) {
     for (let i = 0; i < videos.length; i += 1) {
         const previousVideo = videos[(i + videos.length - 1) % videos.length];
@@ -118,7 +57,6 @@ export async function playVideosSeq(videos, internalStorageUnit) {
         previousVideo.localFilePath = previousVideoDetails.localUri;
         nextVideo.localFilePath = nextVideoDetails.localUri;
 
-        // Videos are identificated by URI & coordination together (https://docs.signageos.io/api/sos-applet-api/#Play_video)
         await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
         currentVideo.playing = true;
         if (previousVideo.playing) {
@@ -134,7 +72,7 @@ export async function playVideosPar(videos, internalStorageUnit) {
     const promises = [];
     for (let i = 0; i < videos.length; i += 1) {
         promises.push((async() => {
-           await playVideo(videos[i], internalStorageUnit);
+            await playVideo(videos[i], internalStorageUnit);
         })())
     }
     await Promise.all(promises);
