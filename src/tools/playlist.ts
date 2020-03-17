@@ -16,8 +16,6 @@ export async function sleep(ms: number): Promise<void> {
     });
 }
 
-
-
 export async function playTimedMedia(htmlElement, filepath: string, regionInfo: RegionAttributes, duration: number): Promise<void> {
     const element = document.createElement(htmlElement);
     element.src = filepath;
@@ -30,7 +28,6 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
     element.style['position'] = 'fixed';
     document.body.appendChild(element);
     await sleep(duration*1000);
-    element.remove();
 }
 
 export function getRegionInfo(regionObject: object, regionName: string): RegionAttributes {
@@ -78,6 +75,12 @@ export async function playVideosPar(videos, internalStorageUnit) {
     await Promise.all(promises);
 }
 
+export async function runEndlessLoop(fn: Function) {
+    while (true) {
+        await fn();
+    }
+}
+
 export async function playVideo(video, internalStorageUnit) {
     const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
     video.localFilePath = currentVideoDetails.localUri;
@@ -102,7 +105,9 @@ export async function playOtherMedia(value: any, key: string, internalStorageUni
         for (let i = 0; i < value.length ; i += 1) {
             if (isUrl(value[i].src)) {
                 const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`});
-                await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10) );
+                await runEndlessLoop(async () => {
+                    await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10) );
+                });
             }
         }
     } else {
@@ -122,10 +127,14 @@ export async function playElement(value: object | any[], key: string, internalSt
         case 'video':
             if (Array.isArray(value)) {
                 if (parent == 'seq') {
-                    await playVideosSeq(value, internalStorageUnit);
+                    await runEndlessLoop(async () => {
+                        await playVideosSeq(value, internalStorageUnit);
+                    });
                     break;
                 } else {
-                    await playVideosPar(value, internalStorageUnit);
+                    await runEndlessLoop(async () => {
+                        await playVideosPar(value, internalStorageUnit);
+                    });
                     break;
                 }
             } else {
