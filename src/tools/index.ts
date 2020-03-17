@@ -54,10 +54,14 @@ export function getRegionInfo(regionObject: object, regionName: string): RegionA
     const defaultRegion = {
         left: 0,
         top: 0,
-        width: '100%',
-        height: '100%',
+        width: '1280',
+        height: '720',
     };
     return _.get(regionObject, regionName, defaultRegion);
+}
+
+export async function getFileDetails(media, internalStorageUnit, fileStructure) {
+    return sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(media.src)}`})
 }
 
 export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
@@ -137,13 +141,19 @@ export async function playVideosPar(videos, internalStorageUnit) {
 }
 
 export async function playVideo(video, internalStorageUnit) {
-    const currentVideo = video;
-    const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`});
-    currentVideo.localFilePath = currentVideoDetails.localUri;
-    await sos.video.prepare(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
-    await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
-    await sos.video.onceEnded(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
-    await sos.video.stop(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
+    const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
+    video.localFilePath = currentVideoDetails.localUri;
+    await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
+    await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
+    await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
+    await sos.video.stop(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
+}
+
+export async function playIntroVideo(video, internalStorageUnit) {
+    const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
+    video.localFilePath = currentVideoDetails.localUri;
+    await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
+    await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
 
 export async function playElement(value, key, internalStorageUnit, parent) {
