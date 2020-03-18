@@ -77,7 +77,13 @@ export async function playVideosPar(videos, internalStorageUnit) {
 
 export async function runEndlessLoop(fn: Function) {
     while (true) {
-        await fn();
+        try {
+            await fn();
+
+        } catch (err) {
+            console.log(err);
+            return err;
+        }
     }
 }
 
