@@ -1,15 +1,15 @@
 declare const jQuery: any;
-import { processSmil } from "./xmlParse";
+import { processSmil } from './xmlParse';
 import {
     createFileStructure,
     parallelDownloadAllFiles,
     extractWidgets,
     getFileName,
-} from "./tools/files";
+} from './tools/files';
 import {
     processPlaylist,
     getRegionInfo, playIntroVideo
-} from "./tools/playlist";
+} from './tools/playlist';
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
 import { defaults as config } from './config';
@@ -54,6 +54,18 @@ import { defaults as config } from './config';
     downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
     downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
     downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+
+    // const response = await fetch(smilObject.video[0].src, {
+    //     method: 'HEAD',
+    //     headers: {
+    //         Accept: 'application/json',
+    //     },
+    // });
+    //
+    // const info = await response.headers.get('Content-Type');
+    // const info2 = await response.headers.get('ETag');
+    // console.log(info);
+    // console.log(info2);
 
     while (playingIntro) {
         smilObject.video[0].regionInfo = getRegionInfo(smilObject.region, smilObject.video[0].region);
