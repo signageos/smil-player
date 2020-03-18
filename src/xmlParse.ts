@@ -12,9 +12,7 @@ import {
 import { SMILEnemus } from './enums';
 import { JefNode } from 'json-easy-filter';
 import * as deepmerge from 'deepmerge';
-
-const extractedElements = ['video', 'audio', 'img', 'ref'];
-const flowElements = ['seq', 'par'];
+import { defaults as config } from './config';
 
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
@@ -51,7 +49,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
     const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
 
     const playlist = new JefNode(playableMedia.playlist).filter(function(node) {
-        if (extractedElements.includes(node.key) && (flowElements.includes(node.parent.key) || !_.isNaN(parseInt(node.parent.key)))) {
+        if (config.constants.extractedElements.includes(node.key) && (config.constants.flowElements.includes(node.parent.key) || !_.isNaN(parseInt(node.parent.key)))) {
             // create media arrays for easy download/update check
             if (Array.isArray(node.value)) {
                 downloads[node.key] = downloads[node.key].concat(node.value)
@@ -61,7 +59,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
             let extractedNode = node.parent;
 
-            if (flowElements.includes(node.parent.parent.key)) {
+            if (config.constants.flowElements.includes(node.parent.parent.key)) {
                 extractedNode = node.parent.parent;
             }
 

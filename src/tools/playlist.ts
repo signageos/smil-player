@@ -8,9 +8,6 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import { getFileName, getFileDetails } from './files';
 import { defaults as config } from '../config';
 
-const extractedElements = ['video', 'audio', 'img', 'ref'];
-const cssElements = ['left', 'top', 'bottom', 'width', 'height', 'z-index', 'backgroundColor'];
-
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
@@ -22,7 +19,7 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
     element.src = filepath;
     element.id = getFileName(filepath);
     Object.keys(regionInfo).forEach((attr) => {
-        if (cssElements.includes(attr)) {
+        if (config.constants.cssElements.includes(attr)) {
             element.style[attr] = regionInfo[attr];
         }
     });
@@ -201,7 +198,7 @@ export async function processPlaylist(playlist: object, region: object, internal
 
         await Promise.all(promises);
 
-        if (extractedElements.includes(key)) {
+        if (config.constants.extractedElements.includes(key)) {
             if (Array.isArray(value)) {
                 for (let i in value) {
                     value[i].regionInfo = getRegionInfo(region, value[i].region);

@@ -12,10 +12,11 @@ import {
 } from "./tools/playlist";
 import sos from '@signageos/front-applet';
 import { FileStructure } from './enums';
+import { defaults as config } from './config';
 
 
 (async ()=> {
-    const smilLocation = 'https://butikstv.centrumkanalen.com/play/smil/99.smil';
+    const smilLocation = config.smil.smilLocation;
     let downloadPromises = [];
     let playingIntro = true;
     await sos.onReady();
