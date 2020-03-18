@@ -89,8 +89,8 @@
 			</par>
 			
 
-					<par>
-						<seq repeatCount="indefinite">
+<					<par>
+>						<seq repeatCount="indefinite">
 							
 								<ref src="http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt" type="application/widget" region="widget11" dur="60s">
 									<param name="cacheControl" value="onlyIfCached" />

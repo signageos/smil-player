@@ -8,7 +8,7 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import { getFileName, getFileDetails } from './files';
 
 const extractedElements = ['video', 'audio', 'img', 'ref'];
-const positionElements = ['left', 'top', 'bottom', 'width', 'height'];
+const cssElements = ['left', 'top', 'bottom', 'width', 'height', 'z-index', 'backgroundColor'];
 
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
@@ -21,11 +21,11 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
     element.src = filepath;
     element.id = getFileName(filepath);
     Object.keys(regionInfo).forEach((attr) => {
-        if (positionElements.includes(attr)) {
+        if (cssElements.includes(attr)) {
             element.style[attr] = regionInfo[attr];
         }
     });
-    element.style['position'] = 'fixed';
+    element.style['position'] = 'absolute';
     document.body.appendChild(element);
     await sleep(duration*1000);
 }
