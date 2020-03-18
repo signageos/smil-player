@@ -6,6 +6,7 @@ import { RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILW
 import { FileStructure } from '../enums';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getFileDetails } from './files';
+import { defaults as config } from '../config';
 
 const extractedElements = ['video', 'audio', 'img', 'ref'];
 const cssElements = ['left', 'top', 'bottom', 'width', 'height', 'z-index', 'backgroundColor'];
@@ -54,13 +55,14 @@ export async function playVideosSeq(videos, internalStorageUnit) {
         previousVideo.localFilePath = previousVideoDetails.localUri;
         nextVideo.localFilePath = nextVideoDetails.localUri;
 
+        await sos.video.prepare(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height, config.videoOptions);
         await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
         currentVideo.playing = true;
         if (previousVideo.playing) {
             await sos.video.stop(previousVideo.localFilePath, previousVideo.regionInfo.left, previousVideo.regionInfo.top, previousVideo.regionInfo.width, previousVideo.regionInfo.height);
             previousVideo.playing = false;
         }
-        await sos.video.prepare(nextVideo.localFilePath, nextVideo.regionInfo.left, nextVideo.regionInfo.top, nextVideo.regionInfo.width, nextVideo.regionInfo.height, { background: true });
+        await sos.video.prepare(nextVideo.localFilePath, nextVideo.regionInfo.left, nextVideo.regionInfo.top, nextVideo.regionInfo.width, nextVideo.regionInfo.height, config.videoOptions);
         await sos.video.onceEnded(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
     }
 }
@@ -90,7 +92,7 @@ export async function runEndlessLoop(fn: Function) {
 export async function playVideo(video, internalStorageUnit) {
     const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
     video.localFilePath = currentVideoDetails.localUri;
-    await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, { background: true });
+    await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
     await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
     await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
     await sos.video.stop(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
@@ -99,6 +101,7 @@ export async function playVideo(video, internalStorageUnit) {
 export async function playIntroVideo(video, internalStorageUnit) {
     const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
     video.localFilePath = currentVideoDetails.localUri;
+    await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
     await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
     await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
