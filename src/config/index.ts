@@ -3,7 +3,7 @@ export const defaults = {
         background: true
     },
     smil: {
-        smilLocation: 'https://butikstv.centrumkanalen.com/play/smil/99.smil',
+        smilLocation: 'https://butikstv.centrumkanalen.com/play/smil/234.smil',
     },
     constants: {
         extractedElements: ['video', 'audio', 'img', 'ref'],

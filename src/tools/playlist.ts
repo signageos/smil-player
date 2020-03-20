@@ -1,12 +1,13 @@
 import sos from '@signageos/front-applet';
 import * as _ from 'lodash';
+
 const isUrl = require('is-url-superb');
 
-import { RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
-import { FileStructure } from '../enums';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getFileDetails } from './files';
-import { defaults as config } from '../config';
+import {RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget} from '../models';
+import {FileStructure} from '../enums';
+import {IStorageUnit} from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import {getFileName, getFileDetails} from './files';
+import {defaults as config} from '../config';
 
 let cancelFunction = false;
 
@@ -31,7 +32,7 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
     });
     element.style['position'] = 'absolute';
     document.body.appendChild(element);
-    await sleep(duration*1000);
+    await sleep(duration * 1000);
     element.remove();
 }
 
@@ -50,9 +51,18 @@ export async function playVideosSeq(videos, internalStorageUnit) {
         const previousVideo = videos[(i + videos.length - 1) % videos.length];
         const currentVideo = videos[i];
         const nextVideo = videos[(i + 1) % videos.length];
-        const currentVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`});
-        const previousVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`});
-        const nextVideoDetails = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`});
+        const currentVideoDetails = await sos.fileSystem.getFile({
+            storageUnit: internalStorageUnit,
+            filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`
+        });
+        const previousVideoDetails = await sos.fileSystem.getFile({
+            storageUnit: internalStorageUnit,
+            filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`
+        });
+        const nextVideoDetails = await sos.fileSystem.getFile({
+            storageUnit: internalStorageUnit,
+            filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`
+        });
 
 
         currentVideo.localFilePath = currentVideoDetails.localUri;
@@ -74,7 +84,7 @@ export async function playVideosSeq(videos, internalStorageUnit) {
 export async function playVideosPar(videos, internalStorageUnit) {
     const promises = [];
     for (let i = 0; i < videos.length; i += 1) {
-        promises.push((async() => {
+        promises.push((async () => {
             await playVideo(videos[i], internalStorageUnit);
         })())
     }
@@ -114,19 +124,25 @@ export async function playOtherMedia(value: any, key: string, internalStorageUni
         value = [value];
     }
     if (parent == 'seq') {
-        for (let i = 0; i < value.length ; i += 1) {
-            if (isUrl(value[i].src)) {
-                const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`});
-                await runEndlessLoop(async () => {
-                    await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10) );
-                });
+        await runEndlessLoop(async () => {
+            for (let i = 0; i < value.length; i += 1) {
+                if (isUrl(value[i].src)) {
+                    const mediaFile = await sos.fileSystem.getFile({
+                        storageUnit: internalStorageUnit,
+                        filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`
+                    });
+                    await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
+                }
             }
-        }
+        });
     } else {
         const promises = [];
-        for (let i = 0; i < value.length ; i += 1) {
-            promises.push((async() => {
-                const mediaFile = await sos.fileSystem.getFile({ storageUnit: internalStorageUnit, filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`});
+        for (let i = 0; i < value.length; i += 1) {
+            promises.push((async () => {
+                const mediaFile = await sos.fileSystem.getFile({
+                    storageUnit: internalStorageUnit,
+                    filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`
+                });
                 await playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
             })())
         }
@@ -173,12 +189,12 @@ export async function processPlaylist(playlist: object, region: object, internal
         if (key == 'seq') {
             if (Array.isArray(value)) {
                 for (let i in value) {
-                    promises.push((async() => {
+                    promises.push((async () => {
                         await processPlaylist(value[i], region, internalStorageUnit, 'seq');
                     })());
                 }
             } else {
-                promises.push((async() => {
+                promises.push((async () => {
                     await processPlaylist(value, region, internalStorageUnit, 'seq');
                 })());
             }
@@ -190,11 +206,11 @@ export async function processPlaylist(playlist: object, region: object, internal
                     const wrapper = {
                         par: value[i],
                     };
-                    promises.push((async() => {
+                    promises.push((async () => {
                         await processPlaylist(wrapper, region, internalStorageUnit, 'par');
                     })());
                 } else {
-                    promises.push((async() => {
+                    promises.push((async () => {
                         await processPlaylist(value[i], region, internalStorageUnit, i);
                     })());
 
