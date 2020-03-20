@@ -8,6 +8,12 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import { getFileName, getFileDetails } from './files';
 import { defaults as config } from '../config';
 
+let cancelFunction = false;
+
+export function disableLoop(value: boolean) {
+    cancelFunction = value;
+}
+
 export async function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
@@ -26,6 +32,7 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
     element.style['position'] = 'absolute';
     document.body.appendChild(element);
     await sleep(duration*1000);
+    element.remove();
 }
 
 export function getRegionInfo(regionObject: object, regionName: string): RegionAttributes {
@@ -75,10 +82,9 @@ export async function playVideosPar(videos, internalStorageUnit) {
 }
 
 export async function runEndlessLoop(fn: Function) {
-    while (true) {
+    while (!cancelFunction) {
         try {
             await fn();
-
         } catch (err) {
             console.log(err);
             return err;

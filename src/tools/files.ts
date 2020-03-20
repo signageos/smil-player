@@ -57,18 +57,20 @@ export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, file
 export async function checkFileEtag(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> {
     let promises = [];
     for(let i = 0; i< filesList.length; i += 1) {
-        const response = await fetch(filesList[i].src, {
-            method: 'HEAD',
-            headers: {
-                Accept: 'application/json',
-            },
-        });
-        const newEtag = await response.headers.get('ETag');
-        if (_.isNil(filesList[i].etag)) {
-            filesList[i].etag = newEtag;
-        }
-        if (filesList[i].etag != newEtag) {
-            promises = promises.concat(parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath));
+        if (isUrl(filesList[i].src)) {
+            const response = await fetch(filesList[i].src, {
+                method: 'HEAD',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+            const newEtag = await response.headers.get('ETag');
+            if (_.isNil(filesList[i].etag)) {
+                filesList[i].etag = newEtag;
+            }
+            if (filesList[i].etag != newEtag) {
+                promises = promises.concat(parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath));
+            }
         }
     }
     return promises;
@@ -76,7 +78,6 @@ export async function checkFileEtag(internalStorageUnit: IStorageUnit, filesList
 
 export async function createFileStructure(internalStorageUnit: IStorageUnit) {
     for ( const path of Object.values(FileStructure) ) {
-        console.log(path);
         if (await sos.fileSystem.exists({
             storageUnit: internalStorageUnit,
             filePath: path
