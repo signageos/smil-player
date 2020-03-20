@@ -9,6 +9,7 @@ import {
     extractWidgets,
     getFileName,
     checkFileEtag,
+    sleep,
 } from './tools/files';
 import {
     processPlaylist,
@@ -20,7 +21,6 @@ import { defaults as config } from './config';
 async function main(internalStorageUnit: IStorageUnit) {
     const SMILFile = {
         src: config.smil.smilLocation,
-        etag: '',
     };
     let downloadPromises = [];
     let fileEtagPromisesMedia = [];
@@ -78,11 +78,11 @@ async function main(internalStorageUnit: IStorageUnit) {
         parallel([
             async () => {
                 while (checkFilesLoop) {
-                    // await sleep(20000);
-                    if (fileEtagPromisesSMIL.length > 0) {
+                    await sleep(120000);
+                    const response = await Promise.all(fileEtagPromisesSMIL);
+                    if (response[0].length > 0) {
+                        // console.log('repeat');
                         disableLoop(true);
-                        checkFilesLoop = false;
-                        await Promise.all(fileEtagPromisesSMIL);
                         return;
                     }
                     await Promise.all(fileEtagPromisesMedia);
@@ -99,7 +99,7 @@ async function main(internalStorageUnit: IStorageUnit) {
         });
     });
 
-    console.log('function end');
+    // console.log('function end');
 }
 
 (async ()=> {
@@ -115,6 +115,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 
     console.log('directory hierarchy created');
     while (true) {
+        // disable internal endless loops for playing media
         disableLoop(false);
         await main(internalStorageUnit);
     }

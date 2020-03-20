@@ -68,6 +68,7 @@ export async function checkFileEtag(internalStorageUnit: IStorageUnit, filesList
             if (_.isNil(filesList[i].etag)) {
                 filesList[i].etag = newEtag;
             }
+
             if (filesList[i].etag != newEtag) {
                 promises = promises.concat(parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath));
             }

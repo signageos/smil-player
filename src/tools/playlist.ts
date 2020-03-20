@@ -154,7 +154,7 @@ export async function playElement(value: object | any[], key: string, internalSt
             }
             break;
         case 'audio':
-            // console.log(`playing audio: ${value.src}`);
+            await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
             break;
         case 'ref':
             await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');

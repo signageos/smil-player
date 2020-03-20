@@ -11,3 +11,4 @@ export const defaults = {
         flowElements: ['seq', 'par'],
     }
 };
+
