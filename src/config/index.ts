@@ -3,7 +3,7 @@ export const defaults = {
 		background: true
 	},
 	smil: {
-		smilLocation: 'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/234.smil',
+		smilLocation: 'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/99.smil',
 	},
 	constants: {
 		extractedElements: ['video', 'audio', 'img', 'ref'],

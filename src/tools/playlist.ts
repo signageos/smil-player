@@ -35,17 +35,18 @@ export async function playTimedMedia(htmlElement, filepath: string, regionInfo: 
 	await sleep(duration * 1000);
 }
 
-export function getRegionInfo(regionObject: object, regionName: string): RegionAttributes {
+export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
 	const defaultRegion = {
+		regionName: 'default',
 		left: 0,
 		top: 0,
-		width: '1280',
-		height: '720',
+		width: 1280,
+		height: 720,
 	};
-	return _.get(regionObject, regionName, defaultRegion);
+	return _.get(regionObject.region, regionName, defaultRegion);
 }
 
-export async function playVideosSeq(videos, internalStorageUnit) {
+export async function playVideosSeq(videos: SMILVideo[], internalStorageUnit: IStorageUnit) {
 	for (let i = 0; i < videos.length; i += 1) {
 		const previousVideo = videos[(i + videos.length - 1) % videos.length];
 		const currentVideo = videos[i];
@@ -79,7 +80,7 @@ export async function playVideosSeq(videos, internalStorageUnit) {
 	}
 }
 
-export async function playVideosPar(videos, internalStorageUnit) {
+export async function playVideosPar(videos: SMILVideo[], internalStorageUnit: IStorageUnit) {
 	const promises = [];
 	for (let i = 0; i < videos.length; i += 1) {
 		promises.push((async () => {
@@ -100,7 +101,7 @@ export async function runEndlessLoop(fn: Function) {
 	}
 }
 
-export async function playVideo(video, internalStorageUnit) {
+export async function playVideo(video: SMILVideo, internalStorageUnit: IStorageUnit) {
 	const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.localFilePath = currentVideoDetails.localUri;
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
@@ -109,7 +110,7 @@ export async function playVideo(video, internalStorageUnit) {
 	await sos.video.stop(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
 
-export async function setupIntroVideo(video, internalStorageUnit, region) {
+export async function setupIntroVideo(video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) {
 	const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.regionInfo = getRegionInfo(region, video.region);
 	video.localFilePath = currentVideoDetails.localUri;
@@ -165,7 +166,7 @@ export async function playElement(value: object | any[], key: string, internalSt
 					break;
 				}
 			} else {
-				await playVideo(value, internalStorageUnit);
+				await playVideo(<SMILVideo>value, internalStorageUnit);
 			}
 			break;
 		case 'audio':
@@ -182,7 +183,7 @@ export async function playElement(value: object | any[], key: string, internalSt
 	}
 }
 
-export async function getRegionPlayElement(value: any, key: string, internalStorageUnit: IStorageUnit, parent: string, region: object) {
+export async function getRegionPlayElement(value: any, key: string, internalStorageUnit: IStorageUnit, parent: string, region: RegionsObject) {
 	if (!_.isNaN(parseInt(parent))) {
 		parent = 'seq';
 	}
@@ -196,7 +197,7 @@ export async function getRegionPlayElement(value: any, key: string, internalStor
 	await playElement(value, key, internalStorageUnit, parent);
 }
 
-export async function processPlaylist(playlist: object, region: object, internalStorageUnit, parent?: string) {
+export async function processPlaylist(playlist: object, region: RegionsObject, internalStorageUnit, parent?: string) {
 	for (let [key, value] of Object.entries(playlist)) {
 		// console.log(`${key}: ${value}`);
 		const promises = [];

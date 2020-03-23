@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 const isUrl = require('is-url-superb');
 
 import { FileStructure } from '../enums';
-import { CheckETagFunctions, SMILFileObject, SMILFile } from '../models';
+import { CheckETagFunctions, SMILFileObject, SMILFile, SMILVideo, SMILImage, SMILWidget, SMILAudio } from '../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
 export async function sleep(ms: number): Promise<void> {
@@ -17,7 +17,7 @@ export function getFileName(filePath: string) {
 	return filePath.substring(filePath.lastIndexOf('/') + 1);
 }
 
-export async function extractWidgets(widgets, internalStorageUnit) {
+export async function extractWidgets(widgets: SMILWidget[], internalStorageUnit: IStorageUnit) {
 	for (let i = 0; i < widgets.length; i++) {
 		if (isUrl(widgets[i].src)) {
 			await sos.fileSystem.extractFile(
@@ -35,7 +35,7 @@ export async function extractWidgets(widgets, internalStorageUnit) {
 	}
 }
 
-export async function getFileDetails(media, internalStorageUnit: IStorageUnit, fileStructure: string) {
+export async function getFileDetails(media: SMILVideo | SMILImage | SMILWidget | SMILAudio, internalStorageUnit: IStorageUnit, fileStructure: string) {
 	return sos.fileSystem.getFile({
 		storageUnit: internalStorageUnit,
 		filePath: `${fileStructure}${getFileName(media.src)}`

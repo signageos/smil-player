@@ -48,7 +48,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 	await Promise.all(downloadPromises);
 
 	const introVideo = smilObject.video[0];
-	await setupIntroVideo(introVideo, internalStorageUnit, smilObject.region);
+	await setupIntroVideo(introVideo, internalStorageUnit, smilObject);
 
 	downloadPromises = await prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
@@ -58,7 +58,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 	        playingIntro = false;
 	    });
 	}
-	
+
 	await extractWidgets(smilObject.ref, internalStorageUnit);
 
 	const {
@@ -81,7 +81,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 			},
 			async () => {
 				await runEndlessLoop(async () => {
-					await processPlaylist(smilObject.playlist, smilObject.region, internalStorageUnit);
+					await processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
 				});
 			},
 		], async (err) => {

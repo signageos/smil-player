@@ -14,7 +14,7 @@ export type RegionAttributes = {
 	top: number,
 	width: number,
 	height: number,
-	"z-index": number,
+	"z-index"?: number,
 }
 
 export type SMILVideo = {
@@ -26,7 +26,7 @@ export type SMILVideo = {
 	localFilePath?: string,
 	arguments?: [],
 	playing: boolean,
-	regionInfo?: object,
+	regionInfo?: RegionAttributes,
 }
 
 export type SMILAudio = {
