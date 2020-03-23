@@ -1,6 +1,5 @@
 declare const jQuery: any;
 import sos from '@signageos/front-applet';
-import { parallel } from 'async';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './xmlParse';
 import {
@@ -8,14 +7,12 @@ import {
 	parallelDownloadAllFiles,
 	extractWidgets,
 	getFileName,
-	sleep,
 	prepareETagSetup,
 	prepareDownloadMediaSetup,
 } from './tools/files';
 import {
-	processPlaylist,
 	playIntroVideo, disableLoop,
-	runEndlessLoop, setupIntroVideo,
+	setupIntroVideo,
 	processingLoop,
 } from './tools/playlist';
 import { FileStructure } from './enums';
@@ -26,9 +23,8 @@ async function main(internalStorageUnit: IStorageUnit) {
 	const SMILFile: SMILFile = {
 		src: config.smil.smilLocation,
 	};
-	let downloadPromises;
+	let downloadPromises: Function[];
 	let playingIntro = true;
-	let checkFilesLoop = true;
 
 	// download SMIL file
 	downloadPromises = parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
@@ -76,7 +72,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 
 	const storageUnits = await sos.fileSystem.listStorageUnits();
 
-	const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable);
+	const internalStorageUnit = <IStorageUnit>storageUnits.find((storageUnit) => !storageUnit.removable);
 
 	await createFileStructure(internalStorageUnit);
 

@@ -1,6 +1,6 @@
 import * as xml2js from 'xml2js';
 import * as _ from 'lodash';
-import { promises as fsPromise } from 'fs';
+// import { promises as fsPromise } from 'fs';
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -10,26 +10,14 @@ import {
 	SMILPlaylist,
 } from './models';
 import { SMILEnemus } from './enums';
+// @ts-ignore
 import { JefNode } from 'json-easy-filter';
-import * as deepmerge from 'deepmerge';
 import { defaults as config } from './config';
 
 export async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => {
 		setTimeout(resolve, ms);
 	});
-}
-
-function flatten(arr) {
-	return arr.reduce(function (flat, toFlatten) {
-		return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
-	}, []);
-}
-
-const overwriteMerge = (destinationArray, sourceArray, options) => sourceArray;
-
-function mergeObjects(array) {
-	return deepmerge.all(array, {arrayMerge: overwriteMerge});
 }
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
@@ -48,12 +36,14 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
 	const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
 
-	new JefNode(playableMedia.playlist).filter(function (node) {
+	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; }) {
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
 			if (Array.isArray(node.value)) {
+				// @ts-ignore
 				downloads[node.key] = downloads[node.key].concat(node.value)
 			} else {
+				// @ts-ignore
 				downloads[node.key].push(node.value);
 			}
 		}
@@ -68,8 +58,10 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 	};
 	Object.keys(xmlObject).forEach((rootKey) => {
 		// multiple regions in layout element
+		// @ts-ignore
 		if (Array.isArray(xmlObject[rootKey])) {
 			// iterate over array of objects
+			// @ts-ignore
 			Object.keys(xmlObject[rootKey]).forEach((index) => {
 				//creates structure like this
 				// {
@@ -96,15 +88,18 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 				//         }
 				//     }
 				// }
+				// @ts-ignore
 				regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes>xmlObject[rootKey][index];
 			});
 		} else {
-			// only one region/root-layout in layout element
+			// only one region/rootLayout in layout element
 			if (rootKey === SMILEnemus.rootLayout) {
-				regionsObject[rootKey] = <RootLayout>xmlObject[rootKey];
+				// @ts-ignore
+				regionsObject.rootLayout = <RootLayout>xmlObject[rootKey];
 			}
 
 			if (rootKey === SMILEnemus.region) {
+				// @ts-ignore
 				regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey];
 			}
 		}
@@ -113,14 +108,14 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 	return regionsObject;
 }
 
-function pickDeep(collection, element) {
+function pickDeep(collection: object, element: string[]) {
 	const picked = _.pick(collection, element);
 	const collections = _.pickBy(collection, _.isObject);
 
-	_.each(collections, function (item, key, collection) {
+	_.each(collections, function (item, key) {
 		let object;
 		if (Array.isArray(item)) {
-			object = _.reduce(item, function (result, value) {
+			object = _.reduce(item, function (result: any[], value) {
 				const picked = pickDeep(value, element);
 				if (!_.isEmpty(picked)) {
 					result.push(picked);
@@ -132,6 +127,7 @@ function pickDeep(collection, element) {
 		}
 
 		if (!_.isEmpty(object)) {
+			// @ts-ignore
 			picked[key] = object;
 		}
 
@@ -140,10 +136,10 @@ function pickDeep(collection, element) {
 }
 
 function extractBodyContent(xmlObject: object): SMILPlaylist {
-	const playlist: SMILPlaylist = {
+	const playlist = {
 		playlist: {},
 	};
-	playlist.playlist = pickDeep(xmlObject, config.constants.extractedElements);
+	playlist.playlist = <SMILPlaylist>pickDeep(xmlObject, config.constants.extractedElements);
 	return playlist;
 }
 

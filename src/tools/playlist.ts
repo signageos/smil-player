@@ -6,7 +6,7 @@ const isUrl = require('is-url-superb');
 
 import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../models';
 import { FileStructure } from '../enums';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getFileDetails } from './files';
 import { defaults as config } from '../config';
 
@@ -23,12 +23,13 @@ export async function sleep(ms: number): Promise<void> {
 	});
 }
 
-export async function playTimedMedia(htmlElement, filepath: string, regionInfo: RegionAttributes, duration: number): Promise<void> {
-	const element = document.createElement(htmlElement);
-	element.src = filepath;
+export async function playTimedMedia(htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number): Promise<void> {
+	const element: HTMLElement = document.createElement(htmlElement);
+	element.setAttribute('src', filepath);
 	element.id = getFileName(filepath);
-	Object.keys(regionInfo).forEach((attr) => {
+	Object.keys(regionInfo).forEach((attr: string) => {
 		if (config.constants.cssElements.includes(attr)) {
+			// @ts-ignore
 			element.style[attr] = regionInfo[attr];
 		}
 	});
@@ -53,15 +54,15 @@ export async function playVideosSeq(videos: SMILVideo[], internalStorageUnit: IS
 		const previousVideo = videos[(i + videos.length - 1) % videos.length];
 		const currentVideo = videos[i];
 		const nextVideo = videos[(i + 1) % videos.length];
-		const currentVideoDetails = await sos.fileSystem.getFile({
+		const currentVideoDetails = <IFile>await sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
 			filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`
 		});
-		const previousVideoDetails = await sos.fileSystem.getFile({
+		const previousVideoDetails = <IFile>await sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
 			filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`
 		});
-		const nextVideoDetails = await sos.fileSystem.getFile({
+		const nextVideoDetails = <IFile>await sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
 			filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`
 		});
@@ -104,7 +105,7 @@ export async function runEndlessLoop(fn: Function) {
 }
 
 export async function playVideo(video: SMILVideo, internalStorageUnit: IStorageUnit) {
-	const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
+	const currentVideoDetails = <IFile>await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.localFilePath = currentVideoDetails.localUri;
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 	await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
@@ -113,18 +114,18 @@ export async function playVideo(video: SMILVideo, internalStorageUnit: IStorageU
 }
 
 export async function setupIntroVideo(video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) {
-	const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
+	const currentVideoDetails = <IFile>await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.regionInfo = getRegionInfo(region, video.region);
 	video.localFilePath = currentVideoDetails.localUri;
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 }
 
-export async function playIntroVideo(video) {
+export async function playIntroVideo(video: SMILVideo) {
 	await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 	await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
 
-export async function playOtherMedia(value: any, key: string, internalStorageUnit: IStorageUnit, parent: string, fileStructure: string, htmlElement: string, widgetRootFile: string) {
+export async function playOtherMedia(value: any, internalStorageUnit: IStorageUnit, parent: string, fileStructure: string, htmlElement: string, widgetRootFile: string) {
 	if (!Array.isArray(value)) {
 		if (_.isNil(value.src) || !isUrl(value.src)) {
 			return;
@@ -134,7 +135,7 @@ export async function playOtherMedia(value: any, key: string, internalStorageUni
 	if (parent == 'seq') {
 		for (let i = 0; i < value.length; i += 1) {
 			if (isUrl(value[i].src)) {
-				const mediaFile = await sos.fileSystem.getFile({
+				const mediaFile = <IFile>await sos.fileSystem.getFile({
 					storageUnit: internalStorageUnit,
 					filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`
 				});
@@ -145,7 +146,7 @@ export async function playOtherMedia(value: any, key: string, internalStorageUni
 		const promises = [];
 		for (let i = 0; i < value.length; i += 1) {
 			promises.push((async () => {
-				const mediaFile = await sos.fileSystem.getFile({
+				const mediaFile = <IFile>await sos.fileSystem.getFile({
 					storageUnit: internalStorageUnit,
 					filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`
 				});
@@ -172,20 +173,20 @@ export async function playElement(value: object | any[], key: string, internalSt
 			}
 			break;
 		case 'audio':
-			await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
+			await playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
 			break;
 		case 'ref':
-			await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');
+			await playOtherMedia(value, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');
 			break;
 		case 'img':
-			await playOtherMedia(value, key, internalStorageUnit, parent, FileStructure.images, 'img', '');
+			await playOtherMedia(value, internalStorageUnit, parent, FileStructure.images, 'img', '');
 			break;
 		default:
 			console.log('Sorry, we are out of ' + key + '.');
 	}
 }
 
-export async function getRegionPlayElement(value: any, key: string, internalStorageUnit: IStorageUnit, parent: string, region: RegionsObject) {
+export async function getRegionPlayElement(value: any, key: string, internalStorageUnit: IStorageUnit, region: RegionsObject, parent: string = '0') {
 	if (!_.isNaN(parseInt(parent))) {
 		parent = 'seq';
 	}
@@ -227,7 +228,7 @@ export async function processingLoop(internalStorageUnit: IStorageUnit, smilObje
 	});
 }
 
-export async function processPlaylist(playlist: object, region: RegionsObject, internalStorageUnit, parent?: string) {
+export async function processPlaylist(playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) {
 	for (let [key, value] of Object.entries(playlist)) {
 		// console.log(`${key}: ${value}`);
 		const promises = [];
@@ -264,7 +265,7 @@ export async function processPlaylist(playlist: object, region: RegionsObject, i
 			if (Array.isArray(value)) {
 				for (let i in value) {
 					if (config.constants.extractedElements.includes(i)) {
-						await getRegionPlayElement(value[i], i, internalStorageUnit, 'seq', region);
+						await getRegionPlayElement(value[i], i, internalStorageUnit, region, 'seq');
 						continue;
 					}
 					promises.push((async () => {
@@ -281,7 +282,7 @@ export async function processPlaylist(playlist: object, region: RegionsObject, i
 		if (key == 'par') {
 			for (let i in value) {
 				if (config.constants.extractedElements.includes(i)) {
-					await getRegionPlayElement(value[i], i, internalStorageUnit, parent, region);
+					await getRegionPlayElement(value[i], i, internalStorageUnit, region, parent);
 					continue;
 				}
 				if (Array.isArray(value[i])) {
@@ -303,7 +304,7 @@ export async function processPlaylist(playlist: object, region: RegionsObject, i
 		await Promise.all(promises);
 
 		if (config.constants.extractedElements.includes(key)) {
-			await getRegionPlayElement(value, key, internalStorageUnit, parent, region);
+			await getRegionPlayElement(value, key, internalStorageUnit, region, parent);
 		}
 	}
 }

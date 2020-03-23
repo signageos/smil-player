@@ -23,10 +23,10 @@ export type SMILVideo = {
 	fit: string,
 	region: string,
 	etag?: string,
-	localFilePath?: string,
+	localFilePath: string,
 	arguments?: [],
-	playing: boolean,
-	regionInfo?: RegionAttributes,
+	playing?: boolean,
+	regionInfo: RegionAttributes,
 }
 
 export type SMILAudio = {

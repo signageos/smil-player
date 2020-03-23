@@ -43,7 +43,7 @@ export async function getFileDetails(media: SMILVideo | SMILImage | SMILWidget |
 }
 
 export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] {
-	const promises = [];
+	const promises: Promise<void>[] = [];
 	for (let i = 0; i < filesList.length; i += 1) {
 		if (isUrl(filesList[i].src)) {
 			promises.push((async () => {
@@ -60,7 +60,7 @@ export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, file
 }
 
 export async function checkFileEtag(internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> {
-	let promises = [];
+	let promises: Promise<void>[] = [];
 	for (let i = 0; i < filesList.length; i += 1) {
 		if (isUrl(filesList[i].src)) {
 			const response = await fetch(filesList[i].src, {
@@ -101,19 +101,19 @@ export async function createFileStructure(internalStorageUnit: IStorageUnit) {
 }
 
 export async function prepareDownloadMediaSetup(internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> {
-	let downloadPromises = [];
+	let downloadPromises: Promise<void>[] = [];
 	// remove intro video, it was already downloaded
 	smilObject.video.splice(0, 1);
 	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
 	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
 	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets))
+	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 	return downloadPromises;
 }
 
 export async function prepareETagSetup(internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, SMILFile: SMILFile): Promise<CheckETagFunctions> {
-	let fileEtagPromisesMedia = [];
-	let fileEtagPromisesSMIL = [];
+	let fileEtagPromisesMedia: Promise<any>[] = [];
+	let fileEtagPromisesSMIL: Promise<any>[] = [];
 	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.video, FileStructure.videos));
 	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.audio, FileStructure.audios));
 	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.img, FileStructure.images));
