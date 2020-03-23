@@ -68,5 +68,9 @@ export type SMILPlaylist = {
 	playlist: { [key: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo },
 }
 
+export type SMILFile = {
+	src: string,
+}
+
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
 

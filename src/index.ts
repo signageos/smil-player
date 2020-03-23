@@ -8,9 +8,9 @@ import {
 	parallelDownloadAllFiles,
 	extractWidgets,
 	getFileName,
-	checkFileEtag,
 	sleep,
 	prepareETagSetup,
+	prepareDownloadMediaSetup,
 } from './tools/files';
 import {
 	processPlaylist,
@@ -18,13 +18,14 @@ import {
 	runEndlessLoop, setupIntroVideo,
 } from './tools/playlist';
 import { FileStructure } from './enums';
+import { SMILFile } from './models';
 import { defaults as config } from './config';
 
 async function main(internalStorageUnit: IStorageUnit) {
-	const SMILFile = {
+	const SMILFile: SMILFile = {
 		src: config.smil.smilLocation,
 	};
-	let downloadPromises = [];
+	let downloadPromises;
 	let playingIntro = true;
 	let checkFilesLoop = true;
 
@@ -49,14 +50,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 	const introVideo = smilObject.video[0];
 	await setupIntroVideo(introVideo, internalStorageUnit, smilObject.region);
 
-	downloadPromises = [];
-
-	smilObject.video.splice(0, 1);
-
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+	downloadPromises = await prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
 	while (playingIntro) {
 	    await playIntroVideo(introVideo);
@@ -64,12 +58,8 @@ async function main(internalStorageUnit: IStorageUnit) {
 	        playingIntro = false;
 	    });
 	}
-
-	console.log('media downloaded');
-
+	
 	await extractWidgets(smilObject.ref, internalStorageUnit);
-
-	console.log('widgets extracted');
 
 	const {
 		fileEtagPromisesMedia: fileEtagPromisesMedia,
@@ -101,8 +91,6 @@ async function main(internalStorageUnit: IStorageUnit) {
 			resolve();
 		});
 	});
-
-	console.log('function end');
 }
 
 (async () => {
@@ -115,8 +103,6 @@ async function main(internalStorageUnit: IStorageUnit) {
 	const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable);
 
 	await createFileStructure(internalStorageUnit);
-
-	console.log('directory hierarchy created');
 
 	while (true) {
 		// disable internal endless loops for playing media

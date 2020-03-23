@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 const isUrl = require('is-url-superb');
 
 import { FileStructure } from '../enums';
-import { CheckETagFunctions } from '../models';
+import { CheckETagFunctions, SMILFileObject, SMILFile } from '../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
 export async function sleep(ms: number): Promise<void> {
@@ -100,7 +100,18 @@ export async function createFileStructure(internalStorageUnit: IStorageUnit) {
 	}
 }
 
-export async function prepareETagSetup(internalStorageUnit, smilObject, SMILFile): Promise<CheckETagFunctions> {
+export async function prepareDownloadMediaSetup(internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> {
+	let downloadPromises = [];
+	// remove intro video, it was already downloaded
+	smilObject.video.splice(0, 1);
+	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets))
+	return downloadPromises;
+}
+
+export async function prepareETagSetup(internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, SMILFile: SMILFile): Promise<CheckETagFunctions> {
 	let fileEtagPromisesMedia = [];
 	let fileEtagPromisesSMIL = [];
 	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.video, FileStructure.videos));
