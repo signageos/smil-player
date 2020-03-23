@@ -8,11 +8,11 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
-} from './models';
-import { SMILEnemus } from './enums';
+} from '../models';
+import { SMILEnemus } from '../enums';
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
-import { defaults as config } from './config';
+import { defaults as config } from '../config';
 
 export async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => {

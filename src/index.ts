@@ -1,7 +1,7 @@
 declare const jQuery: any;
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { processSmil } from './xmlParse';
+import { processSmil } from './tools/xmlParse';
 import {
 	createFileStructure,
 	parallelDownloadAllFiles,
@@ -65,6 +65,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 
 	await processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
 }
+
 (async () => {
 
 	await sos.onReady();
