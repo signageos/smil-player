@@ -16,6 +16,7 @@ import {
 	processPlaylist,
 	playIntroVideo, disableLoop,
 	runEndlessLoop, setupIntroVideo,
+	processingLoop,
 } from './tools/playlist';
 import { FileStructure } from './enums';
 import { SMILFile } from './models';
@@ -66,33 +67,8 @@ async function main(internalStorageUnit: IStorageUnit) {
 		fileEtagPromisesSMIL: fileEtagPromisesSMIL
 	} = await prepareETagSetup(internalStorageUnit, smilObject, SMILFile);
 
-	await new Promise((resolve, reject) => {
-		parallel([
-			async () => {
-				while (checkFilesLoop) {
-					await sleep(120000);
-					const response = await Promise.all(fileEtagPromisesSMIL);
-					if (response[0].length > 0) {
-						disableLoop(true);
-						return;
-					}
-					await Promise.all(fileEtagPromisesMedia);
-				}
-			},
-			async () => {
-				await runEndlessLoop(async () => {
-					await processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
-				});
-			},
-		], async (err) => {
-			if (err) {
-				reject(err);
-			}
-			resolve();
-		});
-	});
+	await processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
 }
-
 (async () => {
 
 	await sos.onReady();

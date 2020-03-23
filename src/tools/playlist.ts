@@ -1,15 +1,17 @@
 import sos from '@signageos/front-applet';
 import * as _ from 'lodash';
+import { parallel } from 'async';
 
 const isUrl = require('is-url-superb');
 
-import { RegionsObject, RegionAttributes, SMILVideo, SMILAudio, SMILImage, SMILWidget } from '../models';
+import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../models';
 import { FileStructure } from '../enums';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getFileDetails } from './files';
 import { defaults as config } from '../config';
 
 let cancelFunction = false;
+let checkFilesLoop = true;
 
 export function disableLoop(value: boolean) {
 	cancelFunction = value;
@@ -195,6 +197,34 @@ export async function getRegionPlayElement(value: any, key: string, internalStor
 		value.regionInfo = getRegionInfo(region, value.region);
 	}
 	await playElement(value, key, internalStorageUnit, parent);
+}
+
+export async function processingLoop(internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, fileEtagPromisesMedia: any[], fileEtagPromisesSMIL: any[]) {
+	return new Promise((resolve, reject) => {
+		parallel([
+			async () => {
+				while (checkFilesLoop) {
+					await sleep(120000);
+					const response = await Promise.all(fileEtagPromisesSMIL);
+					if (response[0].length > 0) {
+						disableLoop(true);
+						return;
+					}
+					await Promise.all(fileEtagPromisesMedia);
+				}
+			},
+			async () => {
+				await runEndlessLoop(async () => {
+					await processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
+				});
+			},
+		], async (err) => {
+			if (err) {
+				reject(err);
+			}
+			resolve();
+		});
+	});
 }
 
 export async function processPlaylist(playlist: object, region: RegionsObject, internalStorageUnit, parent?: string) {
