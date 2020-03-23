@@ -4,6 +4,7 @@ import * as _ from 'lodash';
 const isUrl = require('is-url-superb');
 
 import { FileStructure } from '../enums';
+import { CheckETagFunctions } from '../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
 export async function sleep(ms: number): Promise<void> {
@@ -96,5 +97,21 @@ export async function createFileStructure(internalStorageUnit: IStorageUnit) {
 			storageUnit: internalStorageUnit,
 			filePath: path
 		});
+	}
+}
+
+export async function prepareETagSetup(internalStorageUnit, smilObject, SMILFile): Promise<CheckETagFunctions> {
+	let fileEtagPromisesMedia = [];
+	let fileEtagPromisesSMIL = [];
+	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.video, FileStructure.videos));
+	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.audio, FileStructure.audios));
+	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.img, FileStructure.images));
+	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+
+	fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(checkFileEtag(internalStorageUnit, [SMILFile], FileStructure.rootFolder));
+
+	return {
+		fileEtagPromisesMedia,
+		fileEtagPromisesSMIL,
 	}
 }

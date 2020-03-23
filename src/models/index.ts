@@ -59,6 +59,11 @@ export type DownloadsList = {
 	audio: SMILAudio[],
 }
 
+export type CheckETagFunctions = {
+	fileEtagPromisesMedia: any[],
+	fileEtagPromisesSMIL: any[],
+}
+
 export type SMILPlaylist = {
 	playlist: { [key: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo },
 }

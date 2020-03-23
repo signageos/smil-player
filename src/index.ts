@@ -10,6 +10,7 @@ import {
 	getFileName,
 	checkFileEtag,
 	sleep,
+	prepareETagSetup,
 } from './tools/files';
 import {
 	processPlaylist,
@@ -24,8 +25,6 @@ async function main(internalStorageUnit: IStorageUnit) {
 		src: config.smil.smilLocation,
 	};
 	let downloadPromises = [];
-	let fileEtagPromisesMedia = [];
-	let fileEtagPromisesSMIL = [];
 	let playingIntro = true;
 	let checkFilesLoop = true;
 
@@ -69,14 +68,13 @@ async function main(internalStorageUnit: IStorageUnit) {
 	console.log('media downloaded');
 
 	await extractWidgets(smilObject.ref, internalStorageUnit);
+
 	console.log('widgets extracted');
 
-	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.video, FileStructure.videos));
-	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.audio, FileStructure.audios));
-	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.img, FileStructure.images));
-	fileEtagPromisesMedia = fileEtagPromisesMedia.concat(checkFileEtag(internalStorageUnit, smilObject.ref, FileStructure.widgets));
-
-	fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(checkFileEtag(internalStorageUnit, [SMILFile], FileStructure.rootFolder));
+	const {
+		fileEtagPromisesMedia: fileEtagPromisesMedia,
+		fileEtagPromisesSMIL: fileEtagPromisesSMIL
+	} = await prepareETagSetup(internalStorageUnit, smilObject, SMILFile);
 
 	await new Promise((resolve, reject) => {
 		parallel([

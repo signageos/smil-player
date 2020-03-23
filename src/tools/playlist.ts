@@ -113,7 +113,6 @@ export async function setupIntroVideo(video, internalStorageUnit, region) {
 	const currentVideoDetails = await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.regionInfo = getRegionInfo(region, video.region);
 	video.localFilePath = currentVideoDetails.localUri;
-	// @ts-ignore
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 }
 
