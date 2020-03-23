@@ -48,8 +48,6 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
 	const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
 
-	// console.log(JSON.stringify(playableMedia.playlist));
-
 	new JefNode(playableMedia.playlist).filter(function (node) {
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
@@ -145,7 +143,7 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
 	const playlist: SMILPlaylist = {
 		playlist: {},
 	};
-	playlist.playlist = pickDeep(xmlObject, ['video', 'audio', 'img', 'ref']);
+	playlist.playlist = pickDeep(xmlObject, config.constants.extractedElements);
 	return playlist;
 }
 
