@@ -28,6 +28,8 @@
     "webpack-cli": "^3.2.1"
   },
   "dependencies": {
+    "@signageos/codestyle": "0.0.15",
+    "@types/lodash": "^4.14.149",
     "async": "^3.2.0",
     "deepmerge": "^4.2.2",
     "eslint": "^6.8.0",
