@@ -1,0 +1,20 @@
+{
+    "lines": 100,
+    "statements": 100,
+    "functions": 100,
+    "branches": 100,
+    "include": [
+        "src/**/*.ts"
+    ],
+    "exclude": [
+    ],
+    "all": true,
+    "extension": [
+        ".ts"
+    ],
+    "reporter": [
+        "lcov",
+        "text-summary",
+        "clover"
+    ]
+}

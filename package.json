@@ -7,7 +7,7 @@
     "node": "^12.16.1"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "nyc --check-coverage mocha",
     "prepare": "webpack",
     "build": "webpack --mode production",
     "build-test": "tsc",
@@ -30,9 +30,13 @@
   "dependencies": {
     "@signageos/codestyle": "0.0.15",
     "@types/async": "^3.0.8",
+    "@types/chai": "^4.2.11",
     "@types/lodash": "^4.14.149",
+    "@types/mocha": "^7.0.2",
     "@types/xml2js": "^0.4.5",
     "async": "^3.2.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
     "deepmerge": "^4.2.2",
     "eslint": "^6.8.0",
     "eslint-config-airbnb-base": "^14.0.0",
@@ -42,7 +46,9 @@
     "is-url-superb": "^3.0.0",
     "json-easy-filter": "^0.3.1",
     "lodash": "^4.17.15",
+    "mocha": "^7.1.1",
     "npm": "^6.14.2",
+    "nyc": "^15.0.0",
     "xml2js": "^0.4.23"
   }
 }
