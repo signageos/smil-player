@@ -14,12 +14,6 @@ import { SMILEnemus } from '../enums';
 import { JefNode } from 'json-easy-filter';
 import { defaults as config } from '../config';
 
-export async function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
-
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {
 		video: [],

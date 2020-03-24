@@ -7,12 +7,6 @@ import { FileStructure } from '../enums';
 import { CheckETagFunctions, SMILFileObject, SMILFile, SMILVideo, SMILImage, SMILWidget, SMILAudio } from '../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
-export async function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
-
 export function getFileName(filePath: string) {
 	return filePath.substring(filePath.lastIndexOf('/') + 1);
 }
