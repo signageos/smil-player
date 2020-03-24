@@ -17,6 +17,7 @@
 		"noUnusedLocals": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
+		"esModuleInterop": true,
 		"lib": ["es2017", "scripthost", "dom"],
 		"typeRoots": [
 			"node_modules/@types/",
