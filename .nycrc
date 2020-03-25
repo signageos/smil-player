@@ -1,8 +1,8 @@
 {
-    "lines": 0,
-    "statements": 0,
-    "functions": 0,
-    "branches": 0,
+    "lines": 70,
+    "statements": 70,
+    "functions": 70,
+    "branches": 70,
     "include": [
         "src/**/*.ts"
     ],

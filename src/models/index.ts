@@ -1,11 +1,12 @@
 export type RegionsObject = {
-	region: { [regionName: string]: RegionAttributes },
+	region: object,
 	rootLayout?: RootLayout;
 };
 
 export type RootLayout = {
-	width: number,
-	height: number,
+	width: string,
+	height: string,
+	backgroundColor: string,
 };
 
 export type RegionAttributes = {
