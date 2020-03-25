@@ -18,6 +18,9 @@ import {
 import { FileStructure } from './enums';
 import { SMILFile } from './models';
 import { defaults as config } from './config';
+import Debug from 'debug';
+
+const debug = Debug('main');
 
 async function main(internalStorageUnit: IStorageUnit) {
 	const SMILFile: SMILFile = {
@@ -30,6 +33,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 	downloadPromises = parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
 
 	await Promise.all(downloadPromises);
+	debug('SMIL file downloaded');
 	downloadPromises = [];
 
 	const smilFileContent = await sos.fileSystem.readFile({
@@ -39,6 +43,8 @@ async function main(internalStorageUnit: IStorageUnit) {
 
 	const smilObject = await processSmil(smilFileContent);
 
+	debug('SMIL file parsed: %O', smilObject);
+
 	// download intro file
 	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos));
 
@@ -47,29 +53,38 @@ async function main(internalStorageUnit: IStorageUnit) {
 	const introVideo = smilObject.video[0];
 	await setupIntroVideo(introVideo, internalStorageUnit, smilObject);
 
+	debug('Intro video downloaded: %O', introVideo);
+
 	downloadPromises = await prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
 	while (playingIntro) {
-	    await playIntroVideo(introVideo);
+		debug('Playing intro');
+		await playIntroVideo(introVideo);
 	    Promise.all(downloadPromises).then(() => {
-	        playingIntro = false;
+			debug('SMIL media files download finished, stopping intro');
+			playingIntro = false;
 	    });
 	}
 
 	await extractWidgets(smilObject.ref, internalStorageUnit);
+
+	debug('Widgets extracted');
 
 	const {
 		fileEtagPromisesMedia: fileEtagPromisesMedia,
 		fileEtagPromisesSMIL: fileEtagPromisesSMIL
 	} = await prepareETagSetup(internalStorageUnit, smilObject, SMILFile);
 
+	debug('ETag check for smil media files prepared');
+
+	debug('Starting to process parsed smil file');
 	await processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
 }
 
 (async () => {
 
 	await sos.onReady();
-	console.log('sOS is ready');
+	debug('sOS is ready');
 
 	const storageUnits = await sos.fileSystem.listStorageUnits();
 
@@ -77,9 +92,12 @@ async function main(internalStorageUnit: IStorageUnit) {
 
 	await createFileStructure(internalStorageUnit);
 
+	debug('file structure created');
+
 	while (true) {
 		// disable internal endless loops for playing media
 		disableLoop(false);
 		await main(internalStorageUnit);
+		debug('one smil iteration finished');
 	}
 })();

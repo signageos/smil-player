@@ -1,7 +1,9 @@
 import sos from '@signageos/front-applet';
 import * as _ from 'lodash';
 import { parallel } from 'async';
+import Debug from 'debug';
 
+const debug = Debug('playlistModule');
 const isUrl = require('is-url-superb');
 
 import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../models';
@@ -34,6 +36,7 @@ export async function playTimedMedia(htmlElement: string, filepath: string, regi
 		}
 	});
 	element.style['position'] = 'absolute';
+	debug('Creating htmlElement: %O with duration', element, duration);
 	document.body.appendChild(element);
 	await sleep(duration * 1000);
 }
@@ -46,7 +49,9 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 		width: 1280,
 		height: 720,
 	};
-	return _.get(regionObject.region, regionName, defaultRegion);
+	const regionInfo = _.get(regionObject.region, regionName, defaultRegion);
+	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
+	return regionInfo;
 }
 
 export async function playVideosSeq(videos: SMILVideo[], internalStorageUnit: IStorageUnit) {
@@ -71,10 +76,15 @@ export async function playVideosSeq(videos: SMILVideo[], internalStorageUnit: IS
 		previousVideo.localFilePath = previousVideoDetails.localUri;
 		nextVideo.localFilePath = nextVideoDetails.localUri;
 
+		debug('Playing videos in loop, currentVideo: %O,' +
+			' previousVideo: %O' +
+			'nextVideo: %O', currentVideo, previousVideo, nextVideo);
+
 		await sos.video.prepare(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height, config.videoOptions);
 		await sos.video.play(currentVideo.localFilePath, currentVideo.regionInfo.left, currentVideo.regionInfo.top, currentVideo.regionInfo.width, currentVideo.regionInfo.height);
 		currentVideo.playing = true;
 		if (previousVideo.playing) {
+			debug('Stopping video: %O', previousVideo);
 			await sos.video.stop(previousVideo.localFilePath, previousVideo.regionInfo.left, previousVideo.regionInfo.top, previousVideo.regionInfo.width, previousVideo.regionInfo.height);
 			previousVideo.playing = false;
 		}
@@ -107,6 +117,7 @@ export async function runEndlessLoop(fn: Function) {
 export async function playVideo(video: SMILVideo, internalStorageUnit: IStorageUnit) {
 	const currentVideoDetails = <IFile>await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.localFilePath = currentVideoDetails.localUri;
+	debug('Playing video: %O', video);
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 	await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 	await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
@@ -117,10 +128,12 @@ export async function setupIntroVideo(video: SMILVideo, internalStorageUnit: ISt
 	const currentVideoDetails = <IFile>await getFileDetails(video, internalStorageUnit, FileStructure.videos);
 	video.regionInfo = getRegionInfo(region, video.region);
 	video.localFilePath = currentVideoDetails.localUri;
+	debug('Setting-up intro video: %O', video);
 	await sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 }
 
 export async function playIntroVideo(video: SMILVideo) {
+	debug('Playing intro video: %O', video);
 	await sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 	await sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 }
@@ -128,11 +141,13 @@ export async function playIntroVideo(video: SMILVideo) {
 export async function playOtherMedia(value: any, internalStorageUnit: IStorageUnit, parent: string, fileStructure: string, htmlElement: string, widgetRootFile: string) {
 	if (!Array.isArray(value)) {
 		if (_.isNil(value.src) || !isUrl(value.src)) {
+			debug('Invalid element values: %O', value);
 			return;
 		}
 		value = [value];
 	}
 	if (parent == 'seq') {
+		debug('Playing media sequentially: %O', value);
 		for (let i = 0; i < value.length; i += 1) {
 			if (isUrl(value[i].src)) {
 				const mediaFile = <IFile>await sos.fileSystem.getFile({
@@ -144,6 +159,7 @@ export async function playOtherMedia(value: any, internalStorageUnit: IStorageUn
 		}
 	} else {
 		const promises = [];
+		debug('Playing media in parallel: %O', value);
 		for (let i = 0; i < value.length; i += 1) {
 			promises.push((async () => {
 				const mediaFile = <IFile>await sos.fileSystem.getFile({
@@ -158,6 +174,7 @@ export async function playOtherMedia(value: any, internalStorageUnit: IStorageUn
 }
 
 export async function playElement(value: object | any[], key: string, internalStorageUnit: IStorageUnit, parent: string) {
+	debug('Playing element with key: %O, value: %O', key, value);
 	switch (key) {
 		case 'video':
 			if (Array.isArray(value)) {
@@ -208,6 +225,7 @@ export async function processingLoop(internalStorageUnit: IStorageUnit, smilObje
 					await sleep(120000);
 					const response = await Promise.all(fileEtagPromisesSMIL);
 					if (response[0].length > 0) {
+						debug('SMIL file changed, restarting loop');
 						disableLoop(true);
 						return;
 					}
@@ -230,7 +248,7 @@ export async function processingLoop(internalStorageUnit: IStorageUnit, smilObje
 
 export async function processPlaylist(playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) {
 	for (let [key, value] of Object.entries(playlist)) {
-		// console.log(`${key}: ${value}`);
+		debug('Processing playlist element with key: %O, value: %O', key, value);
 		const promises = [];
 
 		if (key == 'excl') {

@@ -1,5 +1,7 @@
 import * as xml2js from 'xml2js';
 import * as _ from 'lodash';
+// @ts-ignore
+import { JefNode } from 'json-easy-filter';
 // import { promises as fsPromise } from 'fs';
 import {
 	RegionAttributes,
@@ -10,9 +12,10 @@ import {
 	SMILPlaylist,
 } from '../models';
 import { SMILEnemus } from '../enums';
-// @ts-ignore
-import { JefNode } from 'json-easy-filter';
 import { defaults as config } from '../config';
+import Debug from 'debug';
+
+const debug = Debug('xmlParseModule');
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {
@@ -26,6 +29,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		mergeAttrs: true,
 		explicitArray: false,
 	});
+
+	debug('Xml file parsed to json object: %O', xmlObject);
 
 	const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
 	const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
@@ -42,6 +47,9 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 			}
 		}
 	});
+
+	debug('Extracted regions object: %O', regions);
+	debug('Extracted playableMedia object: %O', playableMedia);
 
 	return Object.assign({}, regions, playableMedia, downloads);
 }
