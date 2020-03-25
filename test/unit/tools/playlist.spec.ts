@@ -1,5 +1,6 @@
 import * as chai from 'chai';
 import * as playlist from '../../../src/tools/playlist';
+import { defaults as config } from '../../../src/config';
 const expect = chai.expect;
 
 describe('Playlist tools component', () => {
@@ -9,15 +10,8 @@ describe('Playlist tools component', () => {
 			const testingRegionObject = {
 				region: {},
 			};
-			const defaultRegion = {
-				regionName: 'default',
-				left: 0,
-				top: 0,
-				width: 1280,
-				height: 720,
-			};
 			const response = playlist.getRegionInfo(testingRegionObject, 'InvalidRegionName');
-			expect(response).to.be.equal(defaultRegion);
+			expect(response).to.be.equal(config.constants.defaultRegion);
 		});
 	});
 });

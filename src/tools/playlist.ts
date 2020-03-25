@@ -42,14 +42,7 @@ export async function playTimedMedia(htmlElement: string, filepath: string, regi
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	const defaultRegion = {
-		regionName: 'default',
-		left: 0,
-		top: 0,
-		width: 1280,
-		height: 720,
-	};
-	const regionInfo = _.get(regionObject.region, regionName, defaultRegion);
+	const regionInfo = _.get(regionObject.region, regionName, config.constants.defaultRegion);
 	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
 	return regionInfo;
 }
