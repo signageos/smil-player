@@ -6,11 +6,11 @@ import Debug from 'debug';
 const debug = Debug('playlistModule');
 const isUrl = require('is-url-superb');
 
-import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../models';
-import { FileStructure } from '../enums';
+import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../../models';
+import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getFileDetails } from './files';
-import { defaults as config } from '../config';
+import { getFileName, getFileDetails } from '../files/files';
+import { defaults as config } from '../../config';
 
 let cancelFunction = false;
 let checkFilesLoop = true;

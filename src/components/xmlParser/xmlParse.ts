@@ -10,9 +10,9 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
-} from '../models';
-import { SMILEnemus } from '../enums';
-import { defaults as config } from '../config';
+} from '../../models';
+import { SMILEnemus } from '../../enums';
+import { defaults as config } from '../../config';
 import Debug from 'debug';
 
 const debug = Debug('xmlParseModule');

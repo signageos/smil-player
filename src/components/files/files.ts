@@ -5,8 +5,8 @@ import Debug from 'debug';
 const debug = Debug('filesModule');
 const isUrl = require('is-url-superb');
 
-import { FileStructure } from '../enums';
-import { CheckETagFunctions, SMILFileObject, SMILFile, SMILVideo, SMILImage, SMILWidget, SMILAudio } from '../models';
+import { FileStructure } from '../../enums';
+import { CheckETagFunctions, SMILFileObject, SMILFile, SMILVideo, SMILImage, SMILWidget, SMILAudio } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 
 export function getFileName(filePath: string) {

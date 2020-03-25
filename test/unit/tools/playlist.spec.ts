@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import * as playlist from '../../../src/tools/playlist';
+import * as playlist from '../../../src/components/playlist/playlist';
 import { defaults as config } from '../../../src/config';
 const expect = chai.expect;
 

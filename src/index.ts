@@ -1,7 +1,7 @@
 // declare const jQuery: any;
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { processSmil } from './tools/xmlParse';
+import { processSmil } from './components/xmlParser/xmlParse';
 import {
 	createFileStructure,
 	parallelDownloadAllFiles,
@@ -9,12 +9,12 @@ import {
 	getFileName,
 	prepareETagSetup,
 	prepareDownloadMediaSetup,
-} from './tools/files';
+} from './components/files/files';
 import {
 	playIntroVideo, disableLoop,
 	setupIntroVideo,
 	processingLoop,
-} from './tools/playlist';
+} from './components/playlist/playlist';
 import { FileStructure } from './enums';
 import { SMILFile } from './models';
 import { defaults as config } from './config';
