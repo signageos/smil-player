@@ -19,7 +19,7 @@ export function disableLoop(value: boolean) {
 	cancelFunction = value;
 }
 
-export async function sleep(ms: number): Promise<void> {
+export async function sleep(ms: number): Promise<object> {
 	return new Promise((resolve) => {
 		setTimeout(resolve, ms);
 	});

@@ -1,4 +1,4 @@
-declare const jQuery: any;
+// declare const jQuery: any;
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './tools/xmlParse';

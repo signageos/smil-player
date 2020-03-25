@@ -24,7 +24,7 @@ export type SMILVideo = {
 	region: string,
 	etag?: string,
 	localFilePath: string,
-	arguments?: [],
+	arguments?: any[],
 	playing?: boolean,
 	regionInfo: RegionAttributes,
 }
