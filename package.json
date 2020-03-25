@@ -7,7 +7,7 @@
     "node": "^12.16.1"
   },
   "scripts": {
-    "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require jsdom-global/register --require ts-node/register -P tsconfig.json",
+    "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
     "prepare": "webpack",
     "build": "webpack --mode production",
     "build-test": "tsc",
@@ -23,8 +23,6 @@
     "awesome-typescript-loader": "^5.2.1",
     "html-webpack-inline-source-plugin": "0.0.10",
     "html-webpack-plugin": "^3.2.0",
-    "jsdom": "16.2.1",
-    "jsdom-global": "3.0.2",
     "typescript": "^3.6.4",
     "webpack": "^4.28.4",
     "webpack-cli": "^3.2.1"
