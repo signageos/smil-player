@@ -1,6 +1,7 @@
 import * as chai from 'chai';
-import * as playlist from '../../../src/components/playlist/playlist';
-import { defaults as config } from '../../../src/config';
+import {defaults as config} from '../../../src/config';
+import {getRegionInfo} from "../../../src/components/playlist/tools";
+
 const expect = chai.expect;
 
 describe('Playlist tools component', () => {
@@ -10,7 +11,7 @@ describe('Playlist tools component', () => {
 			const testingRegionObject = {
 				region: {},
 			};
-			const response = playlist.getRegionInfo(testingRegionObject, 'InvalidRegionName');
+			const response = getRegionInfo(testingRegionObject, 'InvalidRegionName');
 			expect(response).to.be.equal(config.constants.defaultRegion);
 		});
 	});

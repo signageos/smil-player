@@ -6,19 +6,19 @@ import {
 	createFileStructure,
 	parallelDownloadAllFiles,
 	extractWidgets,
-	getFileName,
 	prepareETagSetup,
 	prepareDownloadMediaSetup,
 } from './components/files/files';
 import {
-	playIntroVideo, disableLoop,
-	setupIntroVideo,
+	playIntroVideo, setupIntroVideo,
 	processingLoop,
 } from './components/playlist/playlist';
 import { FileStructure } from './enums';
 import { SMILFile } from './models';
 import { defaults as config } from './config';
 import Debug from 'debug';
+import {getFileName} from "./components/files/tools";
+import {disableLoop} from "./components/playlist/tools";
 
 const debug = Debug('main');
 

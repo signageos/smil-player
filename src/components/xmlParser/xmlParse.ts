@@ -13,9 +13,8 @@ import {
 } from '../../models';
 import { SMILEnemus } from '../../enums';
 import { defaults as config } from '../../config';
-import Debug from 'debug';
+import { debug } from './tools';
 
-const debug = Debug('xmlParseModule');
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {

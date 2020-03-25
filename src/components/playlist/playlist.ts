@@ -1,29 +1,17 @@
 import sos from '@signageos/front-applet';
 import * as _ from 'lodash';
 import { parallel } from 'async';
-import Debug from 'debug';
-
-const debug = Debug('playlistModule');
-const isUrl = require('is-url-superb');
-
-import { RegionsObject, RegionAttributes, SMILVideo, SMILFileObject } from '../../models';
+import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo } from '../../models';
 import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getFileDetails } from '../files/files';
+import { getFileDetails } from '../files/files';
 import { defaults as config } from '../../config';
+import { getFileName } from '../files/tools';
+import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep } from './tools';
 
-let cancelFunction = false;
+const isUrl = require('is-url-superb');
+
 let checkFilesLoop = true;
-
-export function disableLoop(value: boolean) {
-	cancelFunction = value;
-}
-
-export async function sleep(ms: number): Promise<object> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
-	});
-}
 
 export async function playTimedMedia(htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number): Promise<void> {
 	const element: HTMLElement = document.createElement(htmlElement);
@@ -39,12 +27,6 @@ export async function playTimedMedia(htmlElement: string, filepath: string, regi
 	debug('Creating htmlElement: %O with duration', element, duration);
 	document.body.appendChild(element);
 	await sleep(duration * 1000);
-}
-
-export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	const regionInfo = _.get(regionObject.region, regionName, config.constants.defaultRegion);
-	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
-	return regionInfo;
 }
 
 export async function playVideosSeq(videos: SMILVideo[], internalStorageUnit: IStorageUnit) {
@@ -94,17 +76,6 @@ export async function playVideosPar(videos: SMILVideo[], internalStorageUnit: IS
 		})())
 	}
 	await Promise.all(promises);
-}
-
-export async function runEndlessLoop(fn: Function) {
-	while (!cancelFunction) {
-		try {
-			await fn();
-		} catch (err) {
-			console.log(err);
-			return err;
-		}
-	}
 }
 
 export async function playVideo(video: SMILVideo, internalStorageUnit: IStorageUnit) {

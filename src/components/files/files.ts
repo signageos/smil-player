@@ -1,17 +1,12 @@
 import sos from '@signageos/front-applet';
 import * as _ from 'lodash';
-import Debug from 'debug';
-
-const debug = Debug('filesModule');
-const isUrl = require('is-url-superb');
-
 import { FileStructure } from '../../enums';
-import { CheckETagFunctions, SMILFileObject, SMILFile, SMILVideo, SMILImage, SMILWidget, SMILAudio } from '../../models';
+import { CheckETagFunctions, SMILAudio, SMILFile, SMILFileObject, SMILImage, SMILVideo, SMILWidget } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { getFileName } from "./tools";
+import { debug } from './tools';
 
-export function getFileName(filePath: string) {
-	return filePath.substring(filePath.lastIndexOf('/') + 1);
-}
+const isUrl = require('is-url-superb');
 
 export async function extractWidgets(widgets: SMILWidget[], internalStorageUnit: IStorageUnit) {
 	for (let i = 0; i < widgets.length; i++) {
