@@ -73,5 +73,11 @@ export type SMILFile = {
 	src: string,
 }
 
+export type SosModule = {
+	fileSystem: any,
+	video: any,
+
+}
+
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
 
