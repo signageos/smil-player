@@ -23,8 +23,8 @@ export async function runEndlessLoop(fn: Function) {
 		try {
 			await fn();
 		} catch (err) {
-			console.log(err);
-			return err;
+			debug('Error: %O occured during processing function %s', err, fn.name);
+			throw err;
 		}
 	}
 }

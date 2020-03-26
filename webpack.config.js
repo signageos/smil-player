@@ -5,7 +5,7 @@ const SignageOSPlugin = require('@signageos/cli/dist/Webpack/Plugin');
 
 module.exports = {
     target: 'web',
-    entry: './src/index.ts',
+    entry: './src/mock234.ts',
     output: {
         filename: 'index.js',
     },

@@ -95,9 +95,15 @@ async function main(internalStorageUnit: IStorageUnit) {
 	debug('file structure created');
 
 	while (true) {
-		// disable internal endless loops for playing media
-		disableLoop(false);
-		await main(internalStorageUnit);
-		debug('one smil iteration finished');
+		try {
+			// disable internal endless loops for playing media
+			disableLoop(false);
+			await main(internalStorageUnit);
+			debug('one smil iteration finished');
+		} catch (err) {
+			debug('Unexpected error : %O', err);
+			throw err;
+		}
+
 	}
 })();

@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/SMILePlayer.iml" filepath="$PROJECT_DIR$/.idea/SMILePlayer.iml" />
-      <module fileurl="file://$USER_HOME$/MassiveCode/Repo/service-google-billing-web-api/.idea/service-google-billing-web-api.iml" filepath="$USER_HOME$/MassiveCode/Repo/service-google-billing-web-api/.idea/service-google-billing-web-api.iml" />
     </modules>
   </component>
 </project>
