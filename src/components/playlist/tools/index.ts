@@ -1,7 +1,6 @@
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models';
 import * as _ from 'lodash';
-import { defaults as config } from '../../../config';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
@@ -30,7 +29,7 @@ export async function runEndlessLoop(fn: Function) {
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	const regionInfo = _.get(regionObject.region, regionName, config.constants.defaultRegion);
+	const regionInfo = _.get(regionObject.region, regionName, regionObject.rootLayout);
 	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
 	return regionInfo;
 }

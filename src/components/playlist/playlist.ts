@@ -45,13 +45,13 @@ export class Playlist {
 				storageUnit: internalStorageUnit,
 				filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`
 			});
-			const previousVideoDetails = <IFile>await this.sos.fileSystem.getFile({
-				storageUnit: internalStorageUnit,
-				filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`
-			});
 			const nextVideoDetails = <IFile>await this.sos.fileSystem.getFile({
 				storageUnit: internalStorageUnit,
 				filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`
+			});
+			const previousVideoDetails = <IFile>await this.sos.fileSystem.getFile({
+				storageUnit: internalStorageUnit,
+				filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`
 			});
 
 			currentVideo.localFilePath = currentVideoDetails.localUri;
