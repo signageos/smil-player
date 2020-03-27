@@ -13,7 +13,7 @@ import Debug from 'debug';
 import { getFileName } from "./components/files/tools";
 import { disableLoop } from "./components/playlist/tools";
 const files = new Files(sos);
-const playlist = new Playlist(sos);
+const playlist = new Playlist(sos, files);
 
 const debug = Debug('@signageos/smil-player:main');
 
@@ -21,11 +21,11 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 	const SMILFile: SMILFile = {
 		src: config.smil.smilLocation,
 	};
-	let downloadPromises: Promise<Function>[];
+	let downloadPromises: Promise<Function[]>[];
 	let playingIntro = true;
 
 	// download SMIL file
-	downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
+	downloadPromises = files.parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
 
 	await Promise.all(downloadPromises);
 	debug('SMIL file downloaded');
@@ -41,7 +41,7 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 	debug('SMIL file parsed: %O', smilObject);
 
 	// download intro file
-	downloadPromises = downloadPromises.concat(await files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos));
+	downloadPromises = downloadPromises.concat(files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos));
 
 	await Promise.all(downloadPromises);
 

@@ -3,7 +3,6 @@ import { parallel } from 'async';
 import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo, SosModule } from '../../models';
 import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { Files } from '../files/files';
 import { defaults as config } from '../../config';
 import { getFileName } from '../files/tools';
 import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep } from './tools';
@@ -15,9 +14,9 @@ export class Playlist {
 	private files: object;
 	private sos: SosModule;
 
-	constructor (sos: SosModule) {
+	constructor (sos: SosModule, files: object) {
 		this.sos = sos;
-		this.files = new Files(sos);
+		this.files = files;
 	}
 
 	playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
@@ -55,8 +54,8 @@ export class Playlist {
 			});
 
 			currentVideo.localFilePath = currentVideoDetails.localUri;
-			previousVideo.localFilePath = previousVideoDetails.localUri;
 			nextVideo.localFilePath = nextVideoDetails.localUri;
+			previousVideo.localFilePath = previousVideoDetails.localUri;
 
 			debug('Playing videos in loop, currentVideo: %O,' +
 				' previousVideo: %O' +
