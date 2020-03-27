@@ -18,7 +18,7 @@ import { corsAnywhere } from '../../../config/parameters';
 const isUrl = require('is-url-superb');
 
 export class Files {
-	sos: SosModule;
+	private sos: SosModule;
 
 	constructor(sos: SosModule) {
 		this.sos = sos;
