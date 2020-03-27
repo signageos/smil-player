@@ -3,7 +3,7 @@ export const defaults = {
 		background: true
 	},
 	smil: {
-		smilLocation: 'https://butikstv.centrumkanalen.com/play/smil/99.smil',
+		smilLocation: 'https://files.slack.com/files-pri/T0P0388T1-F010K56LCKD/download/storever_fhd_blackscreen_qbic_modified.smil',
 	},
 	constants: {
 		extractedElements: ['video', 'audio', 'img', 'ref'],

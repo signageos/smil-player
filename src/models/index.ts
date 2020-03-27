@@ -9,6 +9,15 @@ export type RootLayout = {
 	backgroundColor: string,
 };
 
+export type XmlSmilObject = {
+	smil: {
+		head: {
+			layout: RegionsObject,
+		},
+		body: object,
+	}
+}
+
 export type RegionAttributes = {
 	regionName: string,
 	left: number,

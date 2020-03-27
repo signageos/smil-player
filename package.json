@@ -35,6 +35,7 @@
     "@types/lodash": "^4.14.149",
     "@types/mocha": "^7.0.2",
     "@types/xml2js": "^0.4.5",
+    "@types/xmldom": "^0.1.29",
     "async": "^3.2.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
@@ -52,6 +53,7 @@
     "npm": "^6.14.2",
     "nyc": "^15.0.0",
     "ts-node": "^8.8.1",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.4.23",
+    "xmldom": "^0.3.0"
   }
 }

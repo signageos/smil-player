@@ -36,6 +36,8 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 		filePath: `${FileStructure.rootFolder}/${getFileName(SMILFile.src)}`
 	});
 
+	console.log(JSON.stringify(smilFileContent));
+
 	const smilObject = await processSmil(smilFileContent);
 
 	debug('SMIL file parsed: %O', smilObject);
