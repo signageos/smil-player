@@ -51,7 +51,7 @@ export class Files {
 		})
 	};
 
-	parallelDownloadAllFiles = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> => {
+	parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
