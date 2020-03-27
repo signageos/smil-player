@@ -28,8 +28,8 @@ export async function runEndlessLoop(fn: Function) {
 	}
 }
 
-export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
+export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes | any {
 	const regionInfo = _.get(regionObject.region, regionName, regionObject.rootLayout);
 	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
-	return regionInfo;
+	return regionObject.rootLayout;
 }
