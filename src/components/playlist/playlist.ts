@@ -11,9 +11,9 @@ import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep } from './tool
 const isUrl = require('is-url-superb');
 
 export class Playlist {
-	checkFilesLoop = true;
-	files: object;
-	sos: SosModule;
+	private checkFilesLoop = true;
+	private files: object;
+	private sos: SosModule;
 
 	constructor (sos: SosModule) {
 		this.sos = sos;
