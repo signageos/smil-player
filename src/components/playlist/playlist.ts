@@ -25,6 +25,20 @@ export class Playlist {
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
 			if (config.constants.cssElements.includes(attr)) {
+				// sos video does not support values in %
+				if ((attr == 'width' || attr == 'height') && attr.indexOf('%') > 0) {
+					switch (attr) {
+						case 'width':
+							// @ts-ignore
+							element.style[attr] = document.offsetWidth;
+							break;
+						case "height":
+							// @ts-ignore
+							element.style[attr] = document.offsetHeight;
+							break;
+					}
+					return;
+				}
 				// @ts-ignore
 				element.style[attr] = regionInfo[attr];
 			}

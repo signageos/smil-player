@@ -114,10 +114,10 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 				// @ts-ignore
 				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey];
 				} else {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes>xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes>xmlObject[rootKey];
 
 				}
 			}
