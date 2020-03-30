@@ -8,7 +8,7 @@ import { Files } from './components/files/files';
 import { Playlist } from './components/playlist/playlist';
 import { FileStructure } from './enums';
 import { SMILFile, SosModule } from './models';
-import { defaults as config } from './config';
+// import { defaults as config } from './config';
 import Debug from 'debug';
 import { getFileName } from "./components/files/tools";
 import { disableLoop } from "./components/playlist/tools";
@@ -17,9 +17,9 @@ const playlist = new Playlist(sos, files);
 
 const debug = Debug('@signageos/smil-player:main');
 
-async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
+async function main(internalStorageUnit: IStorageUnit, smilUrl: string, sos: SosModule) {
 	const SMILFile: SMILFile = {
-		src: config.smil.smilLocation,
+		src: smilUrl,
 	};
 	let downloadPromises: Promise<Function[]>[];
 	let playingIntro = true;
@@ -76,8 +76,10 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 	await playlist.processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
 }
 
-(async () => {
-
+async function startSmil(smilUrl: string) {
+	// reset body
+	document.body.innerHTML = '';
+	document.body.style.backgroundColor = '';
 	await sos.onReady();
 	debug('sOS is ready');
 
@@ -93,7 +95,7 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 		try {
 			// disable internal endless loops for playing media
 			disableLoop(false);
-			await main(internalStorageUnit, sos);
+			await main(internalStorageUnit, smilUrl, sos);
 			debug('one smil iteration finished');
 		} catch (err) {
 			debug('Unexpected error : %O', err);
@@ -101,4 +103,12 @@ async function main(internalStorageUnit: IStorageUnit, sos: SosModule) {
 		}
 
 	}
-})();
+}
+
+const smilForm = <HTMLElement>document.getElementById('SMILForm');
+smilForm.onsubmit = async function () {
+	// @ts-ignore
+	const smilUrl = <string>document.getElementById("SMILUrl").value;
+	debug('Smil file url is: %s', smilUrl);
+	await startSmil(smilUrl);
+};
