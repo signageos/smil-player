@@ -232,7 +232,7 @@ export class Playlist {
 			});
 		});
 	};
-
+	// processing parsed playlist, will change in future
 	processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) => {
 		for (let [key, value] of Object.entries(playlist)) {
 			debug('Processing playlist element with key: %O, value: %O', key, value);
