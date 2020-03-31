@@ -1,9 +1,30 @@
-# signageOS sandbox Applet
+# SMIL player PoC
 
-- The purpose of this repository is to show very simple project sandbox for creation of an applet with usage of front-applet lib sos API.
+- This solution is alpha version of signageOs SMIL player applet.
 
-## Webpack + TypeScript
-- Look at `package.json` devDependencies to see what is necessary to install using npm
-- Look at `webpack.config.js` to see basic configuration of webpack using `awesome-typescript-loader` to transpile all code into one javascript file.
-- Look at `tsconfig.json` to see basic configuration of typescript project. At least compilerOptions.types must contains @signageos/front-applet. Library is using @signageos/front-applet only for types declaration for typescript. In real applet is used sos API (front-applet) selected in BOX > Applet Detail > sos API select box
-- To build applet use `npm run prepare`. Output file will appear as index.js in project root. The built content of this javascript file copy to BOX > Applet Detail editor inside `<script type="application/javascript"></script>` tag instead of sample JS code. Do not forgot change type `application/ecmascript` to `application/javascript` because TypeScript automatically transpile code to ES5, so you don't need to transpile it twice.
+## Necessary attributes in SMIL file
+- region name has to be specified in one of there two ways
+```
+<region regionName="widget12"..../>
+<region xml:id="widget12" .... />
+```
+- accepts only url to SMIL file ( form input at main page ), local storage is not supported
+- all files ( audio, video.. ) must be stored on remote server,  local storage is not supported
+
+## Supported features
+- sequential and parallel play of audio, video, image and widget
+- supports simple layering with videos always played on background ( lowest level ) 
+- pairs all media with proper regions from layout part of SMIL, you no region specified, uses values from root-layout tag
+- plays media in endless loops if necessary ( one element as well as multiple )
+- supports prefetch event ( plays intro while downloading rest of the files )
+- downloads all necessary files from remote server, stores files in local storage
+- downloads and extracts of widgets into local storage
+- checks for changes in provided SMIL file as well as checks for all files linked in SMIL
+- ability to restart on SMIL file change
+
+## NOT supported features
+- priority playlist, timings
+- not able to process files stored in local storage
+
+### Used technology
+- webpack, typescript, mocha

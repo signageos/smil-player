@@ -25,20 +25,6 @@ export class Playlist {
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
 			if (config.constants.cssElements.includes(attr)) {
-				// sos video does not support values in %
-				if ((attr == 'width' || attr == 'height') && attr.indexOf('%') > 0) {
-					switch (attr) {
-						case 'width':
-							// @ts-ignore
-							element.style[attr] = document.offsetWidth;
-							break;
-						case "height":
-							// @ts-ignore
-							element.style[attr] = document.offsetHeight;
-							break;
-					}
-					return;
-				}
 				// @ts-ignore
 				element.style[attr] = regionInfo[attr];
 			}
@@ -71,6 +57,10 @@ export class Playlist {
 			nextVideo.localFilePath = nextVideoDetails.localUri;
 			previousVideo.localFilePath = previousVideoDetails.localUri;
 
+			this.fixVideoDimension(<SMILVideo>currentVideo);
+			this.fixVideoDimension(<SMILVideo>nextVideo);
+			this.fixVideoDimension(<SMILVideo>previousVideo);
+
 			debug('Playing videos in loop, currentVideo: %O,' +
 				' previousVideo: %O' +
 				'nextVideo: %O', currentVideo, previousVideo, nextVideo);
@@ -98,11 +88,31 @@ export class Playlist {
 		await Promise.all(promises);
 	};
 
+	fixVideoDimension = (video: SMILVideo) => {
+		Object.keys(video.regionInfo).forEach((attr: string) => {
+			if (config.constants.cssElements.includes(attr)) {
+				// sos video does not support values in %
+				// @ts-ignore
+				if ((attr == 'width' || attr == 'height') && video.regionInfo[attr].indexOf('%') > 0) {
+					switch (attr) {
+						case 'width':
+							video.regionInfo.width = document.body.clientWidth;
+							break;
+						case 'height':
+							video.regionInfo.height = document.body.clientHeight;
+							break;
+					}
+				}
+			}
+		});
+	};
+
 	playVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit) => {
 		// @ts-ignore
 		const currentVideoDetails = <IFile>await this.files.getFileDetails(video, internalStorageUnit, FileStructure.videos);
 		video.localFilePath = currentVideoDetails.localUri;
 		debug('Playing video: %O', video);
+		this.fixVideoDimension(<SMILVideo>video);
 		await this.sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 		await this.sos.video.play(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
 		await this.sos.video.onceEnded(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height);
@@ -114,6 +124,7 @@ export class Playlist {
 		const currentVideoDetails = <IFile>await this.files.getFileDetails(video, internalStorageUnit, FileStructure.videos);
 		video.regionInfo = getRegionInfo(region, video.region);
 		video.localFilePath = currentVideoDetails.localUri;
+		this.fixVideoDimension(<SMILVideo>video);
 		debug('Setting-up intro video: %O', video);
 		await this.sos.video.prepare(video.localFilePath, video.regionInfo.left, video.regionInfo.top, video.regionInfo.width, video.regionInfo.height, config.videoOptions);
 
