@@ -24,7 +24,7 @@
 - priorityClass and excl are treated as seq tags in this PoC version
 
 ## Necessary attributes in SMIL file
-- region name has to be specified in one of there two ways
+- region name has to be specified in one of these two ways
 ```
 <region regionName="widget12"..../>
 <region xml:id="widget12" .... />
