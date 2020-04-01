@@ -1,4 +1,6 @@
 // declare const jQuery: any;
+import { applyFetchPolyfill } from '@signageos/front-display/es6/polyfills/fetch';
+applyFetchPolyfill();
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './components/xmlParser/xmlParse';
