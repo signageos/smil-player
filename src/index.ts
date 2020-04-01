@@ -22,7 +22,7 @@ import Debug from 'debug';
 import {getFileName} from "./components/files/tools";
 import {disableLoop} from "./components/playlist/tools";
 
-const debug = Debug('main');
+const debug = Debug('@signageos/smil-player:main');
 
 async function main(internalStorageUnit: IStorageUnit) {
 	const SMILFile: SMILFile = {
