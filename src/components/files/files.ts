@@ -5,6 +5,7 @@ import { CheckETagFunctions, SMILAudio, SMILFile, SMILFileObject, SMILImage, SMI
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName } from "./tools";
 import { debug } from './tools';
+import { corsAnywhere } from '../../../config/parameters';
 
 const isUrl = require('is-url-superb');
 
@@ -45,7 +46,7 @@ export function parallelDownloadAllFiles(internalStorageUnit: IStorageUnit, file
 						storageUnit: internalStorageUnit,
 						filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
 					},
-					filesList[i].src,
+					corsAnywhere + filesList[i].src,
 				);
 			})());
 		}
@@ -57,7 +58,7 @@ export async function checkFileEtag(internalStorageUnit: IStorageUnit, filesList
 	let promises: Promise<void>[] = [];
 	for (let i = 0; i < filesList.length; i += 1) {
 		if (isUrl(filesList[i].src)) {
-			const response = await fetch(filesList[i].src, {
+			const response = await fetch(corsAnywhere + filesList[i].src, {
 				method: 'HEAD',
 				headers: {
 					Accept: 'application/json',
