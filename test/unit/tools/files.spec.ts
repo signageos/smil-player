@@ -8,8 +8,8 @@ describe('Files tools component', () => {
 	describe('Files tools component getFileName tests', () => {
 		it('Should return correct file name for vairous strings', () => {
 			const filesPaths = [
-				'https://cors-anywhere.herokuapp.com/https://butikstv.centrumkanalen.com/play/smil/234.smil',
-				'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png',
+				`https://butikstv.centrumkanalen.com/play/smil/234.smil`,
+				`http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png`,
 				'localFile/inFolder/something//myfile.txt',
 				'../file.png',
 				'./../../../idontknow.mp3',
