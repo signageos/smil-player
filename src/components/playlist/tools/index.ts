@@ -3,7 +3,7 @@ import { RegionAttributes, RegionsObject } from '../../../models';
 import * as _ from 'lodash';
 import { defaults as config } from '../../../config';
 
-export const debug = Debug('playlistModule');
+export const debug = Debug('@signageos/smil-player:playlistModule');
 
 
 let cancelFunction = false;
