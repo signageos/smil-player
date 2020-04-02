@@ -1,4 +1,6 @@
 // declare const jQuery: any;
+import { applyFetchPolyfill } from '@signageos/front-display/es6/polyfills/fetch';
+applyFetchPolyfill();
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './components/xmlParser/xmlParse';
@@ -20,7 +22,7 @@ import Debug from 'debug';
 import {getFileName} from "./components/files/tools";
 import {disableLoop} from "./components/playlist/tools";
 
-const debug = Debug('main');
+const debug = Debug('@signageos/smil-player:main');
 
 async function main(internalStorageUnit: IStorageUnit) {
 	const SMILFile: SMILFile = {

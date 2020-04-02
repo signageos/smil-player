@@ -1,6 +1,5 @@
 const { CheckerPlugin } = require('awesome-typescript-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
 const SignageOSPlugin = require('@signageos/cli/dist/Webpack/Plugin');
 
 module.exports = {
@@ -26,7 +25,6 @@ module.exports = {
             template: 'public/index.html',
             inlineSource: '.(js|css)$', // embed all javascript and css inline
         }),
-        new HtmlWebpackInlineSourcePlugin(),
         new SignageOSPlugin()
     ],
 };
