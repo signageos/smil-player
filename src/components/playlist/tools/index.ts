@@ -4,11 +4,10 @@ import * as _ from 'lodash';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
-
 let cancelFunction = false;
 
 export function disableLoop(value: boolean) {
-    cancelFunction = value;
+	cancelFunction = value;
 }
 
 export async function sleep(ms: number): Promise<object> {

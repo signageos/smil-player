@@ -1,7 +1,7 @@
 import * as chai from 'chai';
 import { defaults as config } from '../../../src/config';
 import { getRegionInfo, sleep, runEndlessLoop, disableLoop } from "../../../src/components/playlist/tools";
-import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234'
+import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
 
 const expect = chai.expect;
 

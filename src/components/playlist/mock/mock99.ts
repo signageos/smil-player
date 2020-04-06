@@ -8,7 +8,7 @@ export const mockSMILFileParsed99 = {
 			height: "720",
 			"z-index": "1",
 			backgroundColor: "#FFFFFF",
-			mediaAlign: "topLeft"
+			mediaAlign: "topLeft",
 		},
 		widget11: {
 			regionName: "widget11",
@@ -17,7 +17,7 @@ export const mockSMILFileParsed99 = {
 			width: "1920",
 			height: "68",
 			"z-index": "9",
-			backgroundColor: "transparent"
+			backgroundColor: "transparent",
 		},
 		widget12: {
 			regionName: "widget12",
@@ -26,7 +26,7 @@ export const mockSMILFileParsed99 = {
 			width: "1280",
 			height: "360",
 			"z-index": "1",
-			backgroundColor: "transparent"
+			backgroundColor: "transparent",
 		},
 		widget13: {
 			regionName: "widget13",
@@ -35,7 +35,7 @@ export const mockSMILFileParsed99 = {
 			width: "640",
 			height: "506",
 			"z-index": "1",
-			backgroundColor: "transparent"
+			backgroundColor: "transparent",
 		},
 		widget14: {
 			regionName: "widget14",
@@ -44,13 +44,13 @@ export const mockSMILFileParsed99 = {
 			width: "640",
 			height: "574",
 			"z-index": "1",
-			backgroundColor: "transparent"
-		}
+			backgroundColor: "transparent",
+		},
 	},
 	rootLayout: {
 		width: "1920",
 		height: "1080",
-		backgroundColor: "#FFFFFF"
+		backgroundColor: "#FFFFFF",
 	},
 	playlist: {
 		par: {
@@ -58,10 +58,10 @@ export const mockSMILFileParsed99 = {
 				{
 					seq: {
 						video: {
-							src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"
-						}
-					}
-				}
+							src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4",
+						},
+					},
+				},
 			],
 			par: {
 				excl: {
@@ -82,10 +82,10 @@ export const mockSMILFileParsed99 = {
 																dur: "60s",
 																param: {
 																	name: "cacheControl",
-																	value: "onlyIfCached"
-																}
-															}
-														}
+																	value: "onlyIfCached",
+																},
+															},
+														},
 													},
 													{
 														seq: {
@@ -96,10 +96,10 @@ export const mockSMILFileParsed99 = {
 																dur: "60s",
 																param: {
 																	name: "cacheControl",
-																	value: "onlyIfCached"
-																}
-															}
-														}
+																	value: "onlyIfCached",
+																},
+															},
+														},
 													},
 													{
 														seq: {
@@ -109,10 +109,10 @@ export const mockSMILFileParsed99 = {
 																dur: "60s",
 																param: {
 																	name: "cacheControl",
-																	value: "onlyIfCached"
-																}
-															}
-														}
+																	value: "onlyIfCached",
+																},
+															},
+														},
 													},
 													{
 														seq: {
@@ -122,11 +122,11 @@ export const mockSMILFileParsed99 = {
 																dur: "60s",
 																param: {
 																	name: "cacheControl",
-																	value: "onlyIfCached"
-																}
-															}
-														}
-													}
+																	value: "onlyIfCached",
+																},
+															},
+														},
+													},
 												],
 												seq: {
 													video: [
@@ -137,8 +137,8 @@ export const mockSMILFileParsed99 = {
 															region: "video",
 															param: {
 																name: "cacheControl",
-																value: "auto"
-															}
+																value: "auto",
+															},
 														},
 														{
 															src: "http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4",
@@ -147,8 +147,8 @@ export const mockSMILFileParsed99 = {
 															region: "video",
 															param: {
 																name: "cacheControl",
-																value: "auto"
-															}
+																value: "auto",
+															},
 														},
 														{
 															src: "http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4",
@@ -157,9 +157,9 @@ export const mockSMILFileParsed99 = {
 															region: "video",
 															param: {
 																name: "cacheControl",
-																value: "auto"
-															}
-														}
+																value: "auto",
+															},
+														},
 													],
 													img: {
 														src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png",
@@ -169,34 +169,34 @@ export const mockSMILFileParsed99 = {
 														region: "video",
 														param: {
 															name: "cacheControl",
-															value: "auto"
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
+															value: "auto",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 						{
 							par: {
 								seq: {
 									ref: {
 										dur: "indefinite",
-										src: "adapi:blankScreen"
-									}
-								}
-							}
-						}
-					]
-				}
-			}
-		}
+										src: "adapi:blankScreen",
+									},
+								},
+							},
+						},
+					],
+				},
+			},
+		},
 	},
 	video: [
 		{
-			src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"
+			src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4",
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/9820.mp4",
@@ -205,8 +205,8 @@ export const mockSMILFileParsed99 = {
 			region: "video",
 			param: {
 				name: "cacheControl",
-				value: "auto"
-			}
+				value: "auto",
+			},
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4",
@@ -215,8 +215,8 @@ export const mockSMILFileParsed99 = {
 			region: "video",
 			param: {
 				name: "cacheControl",
-				value: "auto"
-			}
+				value: "auto",
+			},
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4",
@@ -225,9 +225,9 @@ export const mockSMILFileParsed99 = {
 			region: "video",
 			param: {
 				name: "cacheControl",
-				value: "auto"
-			}
-		}
+				value: "auto",
+			},
+		},
 	],
 	img: [
 		{
@@ -236,8 +236,8 @@ export const mockSMILFileParsed99 = {
 			dur: "60s",
 			param: {
 				name: "cacheControl",
-				value: "onlyIfCached"
-			}
+				value: "onlyIfCached",
+			},
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png",
@@ -245,8 +245,8 @@ export const mockSMILFileParsed99 = {
 			dur: "60s",
 			param: {
 				name: "cacheControl",
-				value: "onlyIfCached"
-			}
+				value: "onlyIfCached",
+			},
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png",
@@ -256,9 +256,9 @@ export const mockSMILFileParsed99 = {
 			region: "video",
 			param: {
 				name: "cacheControl",
-				value: "auto"
-			}
-		}
+				value: "auto",
+			},
+		},
 	],
 	ref: [
 		{
@@ -268,8 +268,8 @@ export const mockSMILFileParsed99 = {
 			dur: "60s",
 			param: {
 				name: "cacheControl",
-				value: "onlyIfCached"
-			}
+				value: "onlyIfCached",
+			},
 		},
 		{
 			src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt",
@@ -278,13 +278,13 @@ export const mockSMILFileParsed99 = {
 			dur: "60s",
 			param: {
 				name: "cacheControl",
-				value: "onlyIfCached"
-			}
+				value: "onlyIfCached",
+			},
 		},
 		{
 			dur: "indefinite",
-			src: "adapi:blankScreen"
-		}
+			src: "adapi:blankScreen",
+		},
 	],
-	audio: []
+	audio: [],
 };

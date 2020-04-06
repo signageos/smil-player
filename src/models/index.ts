@@ -15,8 +15,8 @@ export type XmlSmilObject = {
 			layout: RegionsObject,
 		},
 		body: object,
-	}
-}
+	},
+};
 
 export type RegionAttributes = {
 	regionName: string,
@@ -25,7 +25,7 @@ export type RegionAttributes = {
 	width: number,
 	height: number,
 	"z-index"?: number,
-}
+};
 
 export type SMILVideo = {
 	src: string,
@@ -37,14 +37,14 @@ export type SMILVideo = {
 	arguments?: any[],
 	playing?: boolean,
 	regionInfo: RegionAttributes,
-}
+};
 
 export type SMILAudio = {
 	src: string,
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
-}
+};
 
 export type SMILImage = {
 	src: string,
@@ -52,7 +52,7 @@ export type SMILImage = {
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
-}
+};
 
 export type SMILWidget = {
 	src: string,
@@ -60,33 +60,32 @@ export type SMILWidget = {
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
-}
+};
 
 export type DownloadsList = {
 	video: SMILVideo[],
 	img: SMILImage[],
 	ref: SMILWidget[],
 	audio: SMILAudio[],
-}
+};
 
 export type CheckETagFunctions = {
 	fileEtagPromisesMedia: any[],
 	fileEtagPromisesSMIL: any[],
-}
+};
 
 export type SMILPlaylist = {
 	playlist: { [key: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo },
-}
+};
 
 export type SMILFile = {
 	src: string,
-}
+};
 
 export type SosModule = {
 	fileSystem: any,
 	video: any,
 
-}
+};
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
-
