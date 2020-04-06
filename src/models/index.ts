@@ -9,6 +9,15 @@ export type RootLayout = {
 	backgroundColor: string,
 };
 
+export type XmlSmilObject = {
+	smil: {
+		head: {
+			layout: RegionsObject,
+		},
+		body: object,
+	}
+}
+
 export type RegionAttributes = {
 	regionName: string,
 	left: number,
@@ -71,6 +80,12 @@ export type SMILPlaylist = {
 
 export type SMILFile = {
 	src: string,
+}
+
+export type SosModule = {
+	fileSystem: any,
+	video: any,
+
 }
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;

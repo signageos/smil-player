@@ -2,6 +2,7 @@ import * as xml2js from 'xml2js';
 import * as _ from 'lodash';
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
+import { DOMParser } from 'xmldom';
 // import { promises as fsPromise } from 'fs';
 import {
 	RegionAttributes,
@@ -10,6 +11,7 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
+	XmlSmilObject,
 } from '../../models';
 import { SMILEnemus } from '../../enums';
 import { defaults as config } from '../../config';
@@ -24,7 +26,9 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		audio: [],
 	};
 	// const xmlFile: string = await fsPromise.readFile('./SMIL/99.smil', 'utf8');
-	const xmlObject: any = await xml2js.parseStringPromise(xmlFile, {
+	const xmlFileSerialized: Document = new DOMParser().parseFromString(xmlFile, "text/xml");
+	debug('Xml string serialized : %O', xmlFileSerialized);
+	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFileSerialized, {
 		mergeAttrs: true,
 		explicitArray: false,
 	});
@@ -90,7 +94,14 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 				//     }
 				// }
 				// @ts-ignore
-				regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes>xmlObject[rootKey][index];
+				if (xmlObject[rootKey][index].hasOwnProperty('regionName')) {
+					// @ts-ignore
+					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes>xmlObject[rootKey][index];
+				} else {
+					// @ts-ignore
+					regionsObject.region[xmlObject[rootKey][index]['xml:id']] = <RegionAttributes>xmlObject[rootKey][index];
+
+				}
 			});
 		} else {
 			// only one region/rootLayout in layout element
@@ -101,7 +112,14 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 
 			if (rootKey === SMILEnemus.region) {
 				// @ts-ignore
-				regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey];
+				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
+					// @ts-ignore
+					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey];
+				} else {
+					// @ts-ignore
+					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes>xmlObject[rootKey];
+
+				}
 			}
 		}
 	});
