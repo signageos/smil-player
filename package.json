@@ -15,6 +15,8 @@
   },
   "scripts": {
     "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
+    "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
+    "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
     "prepare": "webpack",
     "build": "webpack --mode production",
     "build-test": "tsc",
@@ -32,18 +34,19 @@
   "license": "ISC",
   "devDependencies": {
     "@signageos/cli": "0.6.2",
+    "@signageos/codestyle": "0.0.15",
     "@signageos/front-applet": "^4.0.0-beta.11",
     "@signageos/front-display": "7.1.2-master.3607",
     "@types/node": "^10.17.18",
     "awesome-typescript-loader": "^5.2.1",
     "cors-anywhere": "0.4.1",
     "html-webpack-plugin": "^3.2.0",
-    "typescript": "^3.6.4",
+    "tslint": "6.1.1",
+    "typescript": "3.8.3",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "@signageos/codestyle": "0.0.15",
     "@types/async": "^3.2.0",
     "@types/chai": "4.1.7",
     "@types/debug": "^4.1.5",
