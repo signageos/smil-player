@@ -4,35 +4,28 @@ applyFetchPolyfill();
 import sos from '@signageos/front-applet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './components/xmlParser/xmlParse';
-import {
-	createFileStructure,
-	parallelDownloadAllFiles,
-	extractWidgets,
-	prepareETagSetup,
-	prepareDownloadMediaSetup,
-} from './components/files/files';
-import {
-	playIntroVideo, setupIntroVideo,
-	processingLoop,
-} from './components/playlist/playlist';
+import { Files } from './components/files/files';
+import { Playlist } from './components/playlist/playlist';
 import { FileStructure } from './enums';
-import { SMILFile } from './models';
-import { defaults as config } from './config';
+import { SMILFile, SosModule } from './models';
+// import { defaults as config } from './config';
 import Debug from 'debug';
-import {getFileName} from "./components/files/tools";
-import {disableLoop} from "./components/playlist/tools";
+import { getFileName } from "./components/files/tools";
+import { disableLoop } from "./components/playlist/tools";
+const files = new Files(sos);
+const playlist = new Playlist(sos, files);
 
 const debug = Debug('@signageos/smil-player:main');
 
-async function main(internalStorageUnit: IStorageUnit) {
+async function main(internalStorageUnit: IStorageUnit, smilUrl: string, sos: SosModule) {
 	const SMILFile: SMILFile = {
-		src: config.smil.smilLocation,
+		src: smilUrl,
 	};
-	let downloadPromises: Function[];
+	let downloadPromises: Promise<Function[]>[];
 	let playingIntro = true;
 
 	// download SMIL file
-	downloadPromises = parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
+	downloadPromises = files.parallelDownloadAllFiles(internalStorageUnit, [SMILFile], FileStructure.rootFolder);
 
 	await Promise.all(downloadPromises);
 	debug('SMIL file downloaded');
@@ -48,43 +41,45 @@ async function main(internalStorageUnit: IStorageUnit) {
 	debug('SMIL file parsed: %O', smilObject);
 
 	// download intro file
-	downloadPromises = downloadPromises.concat(parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos));
+	downloadPromises = downloadPromises.concat(files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos));
 
 	await Promise.all(downloadPromises);
 
 	const introVideo = smilObject.video[0];
-	await setupIntroVideo(introVideo, internalStorageUnit, smilObject);
+	await playlist.setupIntroVideo(introVideo, internalStorageUnit, smilObject);
 
 	debug('Intro video downloaded: %O', introVideo);
 
-	downloadPromises = await prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+	downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
 	while (playingIntro) {
 		debug('Playing intro');
-		await playIntroVideo(introVideo);
+		await playlist.playIntroVideo(introVideo);
 	    Promise.all(downloadPromises).then(() => {
 			debug('SMIL media files download finished, stopping intro');
 			playingIntro = false;
 	    });
 	}
 
-	await extractWidgets(smilObject.ref, internalStorageUnit);
+	await files.extractWidgets(smilObject.ref, internalStorageUnit);
 
 	debug('Widgets extracted');
 
 	const {
 		fileEtagPromisesMedia: fileEtagPromisesMedia,
 		fileEtagPromisesSMIL: fileEtagPromisesSMIL
-	} = await prepareETagSetup(internalStorageUnit, smilObject, SMILFile);
+	} = await files.prepareETagSetup(internalStorageUnit, smilObject, SMILFile);
 
 	debug('ETag check for smil media files prepared');
 
 	debug('Starting to process parsed smil file');
-	await processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
+	await playlist.processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
 }
 
-(async () => {
-
+async function startSmil(smilUrl: string) {
+	// reset body
+	document.body.innerHTML = '';
+	document.body.style.backgroundColor = '';
 	await sos.onReady();
 	debug('sOS is ready');
 
@@ -92,7 +87,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 
 	const internalStorageUnit = <IStorageUnit>storageUnits.find((storageUnit) => !storageUnit.removable);
 
-	await createFileStructure(internalStorageUnit);
+	await files.createFileStructure(internalStorageUnit);
 
 	debug('file structure created');
 
@@ -100,7 +95,7 @@ async function main(internalStorageUnit: IStorageUnit) {
 		try {
 			// disable internal endless loops for playing media
 			disableLoop(false);
-			await main(internalStorageUnit);
+			await main(internalStorageUnit, smilUrl, sos);
 			debug('one smil iteration finished');
 		} catch (err) {
 			debug('Unexpected error : %O', err);
@@ -108,4 +103,12 @@ async function main(internalStorageUnit: IStorageUnit) {
 		}
 
 	}
-})();
+}
+
+// get values from form onSubmit
+const smilForm = <HTMLElement>document.getElementById('SMILForm');
+smilForm.onsubmit = async function () {
+	const smilUrl = (<HTMLInputElement>document.getElementById("SMILUrl")).value;
+	debug('Smil file url is: %s', smilUrl);
+	await startSmil(smilUrl);
+};
