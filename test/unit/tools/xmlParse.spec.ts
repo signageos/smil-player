@@ -1,7 +1,7 @@
 import { promises as fsPromise } from 'fs';
-import { processSmil } from '../../../src/components/xmlParser/xmlParse'
-import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234'
-import { mockSMILFileParsed99 } from '../../../src/components/playlist/mock/mock99'
+import { processSmil } from '../../../src/components/xmlParser/xmlParse';
+import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
+import { mockSMILFileParsed99 } from '../../../src/components/playlist/mock/mock99';
 
 import * as chai from 'chai';
 

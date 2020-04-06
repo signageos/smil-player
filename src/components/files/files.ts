@@ -8,7 +8,7 @@ import {
 	SMILImage,
 	SMILVideo,
 	SMILWidget,
-	SosModule
+	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName } from "./tools";
@@ -24,42 +24,47 @@ export class Files {
 		this.sos = sos;
 	}
 
-	extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
+	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < widgets.length; i++) {
 			if (isUrl(widgets[i].src)) {
 				debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}${getFileName(widgets[i].src)}`);
 				await this.sos.fileSystem.extractFile(
 					{
 						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`
+						filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`,
 					},
 					{
 						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`
+						filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`,
 					},
 					'zip',
 				);
 			}
 		}
-	};
+	}
 
-	getFileDetails = async (media: SMILVideo | SMILImage | SMILWidget | SMILAudio, internalStorageUnit: IStorageUnit, fileStructure: string) => {
+	public getFileDetails = async (
+		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
+		internalStorageUnit: IStorageUnit,
+		fileStructure: string,
+	) => {
 		debug(`Getting file details for file: %O`, media);
 		return this.sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
-			filePath: `${fileStructure}${getFileName(media.src)}`
-		})
-	};
+			filePath: `${fileStructure}${getFileName(media.src)}`,
+		});
+	}
 
-	parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
+	public parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
 				promises.push((async () => {
 					debug(`Downloading file: %O`, filesList[i].src);
-					await this.sos.fileSystem.downloadFile({
+					await this.sos.fileSystem.downloadFile(
+						{
 							storageUnit: internalStorageUnit,
-							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`
+							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
 						},
 						corsAnywhere + filesList[i].src,
 					);
@@ -67,9 +72,9 @@ export class Files {
 			}
 		}
 		return promises;
-	};
+	}
 
-	checkFileEtag = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> => {
+	public checkFileEtag = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
@@ -84,36 +89,36 @@ export class Files {
 					filesList[i].etag = newEtag;
 				}
 
-				if (filesList[i].etag != newEtag) {
+				if (filesList[i].etag !== newEtag) {
 					debug(`New version of file detected: %O`, filesList[i].src);
 					promises = promises.concat(this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath));
 				}
 			}
 		}
 		return promises;
-	};
+	}
 
-	createFileStructure = async (internalStorageUnit: IStorageUnit) => {
+	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
 		for (const path of Object.values(FileStructure)) {
 			if (await this.sos.fileSystem.exists({
 				storageUnit: internalStorageUnit,
-				filePath: path
+				filePath: path,
 			})) {
 				debug(`Filepath already exists, deleting: %O`, path);
 				await this.sos.fileSystem.deleteFile({
 					storageUnit: internalStorageUnit,
-					filePath: path
-				}, true);
+					filePath: path,
+				},                                   true);
 			}
 			debug(`Create directory structure: %O`, path);
 			await this.sos.fileSystem.createDirectory({
 				storageUnit: internalStorageUnit,
-				filePath: path
+				filePath: path,
 			});
 		}
-	};
+	}
 
-	prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
+	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
 		// remove intro video, it was already downloaded
 		smilObject.video.splice(0, 1);
@@ -123,9 +128,13 @@ export class Files {
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 		return downloadPromises;
-	};
+	}
 
-	prepareETagSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, SMILFile: SMILFile): Promise<CheckETagFunctions>  => {
+	public prepareETagSetup = async (
+		internalStorageUnit: IStorageUnit,
+		smilObject: SMILFileObject,
+		smilFile: SMILFile,
+	): Promise<CheckETagFunctions>  => {
 		let fileEtagPromisesMedia: Promise<any>[] = [];
 		let fileEtagPromisesSMIL: Promise<any>[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
@@ -135,11 +144,11 @@ export class Files {
 		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.img, FileStructure.images));
 		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 
-		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkFileEtag(internalStorageUnit, [SMILFile], FileStructure.rootFolder));
+		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkFileEtag(internalStorageUnit, [smilFile], FileStructure.rootFolder));
 
 		return {
 			fileEtagPromisesMedia,
 			fileEtagPromisesSMIL,
-		}
-	};
+		};
+	}
 }

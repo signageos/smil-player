@@ -24,7 +24,7 @@ describe('Files tools component', () => {
 				'fileName.mp4',
 			];
 
-			for (let i = 0; i < filesPaths.length; i+= 1) {
+			for (let i = 0; i < filesPaths.length; i += 1) {
 				const response = getFileName(filesPaths[i]);
 				expect(response).to.be.equal(fileNames[i]);
 			}

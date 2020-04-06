@@ -17,7 +17,6 @@ import { SMILEnemus } from '../../enums';
 import { defaults as config } from '../../config';
 import { debug } from './tools';
 
-
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {
 		video: [],
@@ -35,15 +34,15 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	debug('Xml file parsed to json object: %O', xmlObject);
 
-	const regions = <RegionsObject>extractRegionInfo(xmlObject.smil.head.layout);
-	const playableMedia = <SMILPlaylist>extractBodyContent(xmlObject.smil.body);
+	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
+	const playableMedia = <SMILPlaylist> extractBodyContent(xmlObject.smil.body);
 
 	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; }) {
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
 			if (Array.isArray(node.value)) {
 				// @ts-ignore
-				downloads[node.key] = downloads[node.key].concat(node.value)
+				downloads[node.key] = downloads[node.key].concat(node.value);
 			} else {
 				// @ts-ignore
 				downloads[node.key].push(node.value);
@@ -96,10 +95,10 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 				// @ts-ignore
 				if (xmlObject[rootKey][index].hasOwnProperty('regionName')) {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes>xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes> xmlObject[rootKey][index];
 				} else {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey][index]['xml:id']] = <RegionAttributes>xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey][index]['xml:id']] = <RegionAttributes> xmlObject[rootKey][index];
 
 				}
 			});
@@ -107,17 +106,17 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 			// only one region/rootLayout in layout element
 			if (rootKey === SMILEnemus.rootLayout) {
 				// @ts-ignore
-				regionsObject.rootLayout = <RootLayout>xmlObject[rootKey];
+				regionsObject.rootLayout = <RootLayout> xmlObject[rootKey];
 			}
 
 			if (rootKey === SMILEnemus.region) {
 				// @ts-ignore
 				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes>xmlObject[rootKey];
+					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes> xmlObject[rootKey];
 				} else {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes>xmlObject[rootKey];
+					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes> xmlObject[rootKey];
 
 				}
 			}
@@ -131,16 +130,20 @@ function pickDeep(collection: object, element: string[]) {
 	const picked = _.pick(collection, element);
 	const collections = _.pickBy(collection, _.isObject);
 
-	_.each(collections, function (item, key) {
+	_.each(collections, (item, key) => {
 		let object;
 		if (Array.isArray(item)) {
-			object = _.reduce(item, function (result: any[], value) {
-				const picked = pickDeep(value, element);
-				if (!_.isEmpty(picked)) {
-					result.push(picked);
-				}
-				return result;
-			}, []);
+			object = _.reduce(
+				item,
+				(result: any[], value) => {
+					const pickedDeep = pickDeep(value, element);
+					if (!_.isEmpty(pickedDeep)) {
+						result.push(pickedDeep);
+					}
+					return result;
+				},
+				[],
+			);
 		} else {
 			object = pickDeep(item, element);
 		}
@@ -158,7 +161,7 @@ function extractBodyContent(xmlObject: object): SMILPlaylist {
 	const playlist = {
 		playlist: {},
 	};
-	playlist.playlist = <SMILPlaylist>pickDeep(xmlObject, config.constants.extractedElements);
+	playlist.playlist = <SMILPlaylist> pickDeep(xmlObject, config.constants.extractedElements);
 	return playlist;
 }
 
