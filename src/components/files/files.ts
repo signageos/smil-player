@@ -41,7 +41,7 @@ export class Files {
 				);
 			}
 		}
-	};
+	}
 
 	public getFileDetails = async (
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
@@ -53,7 +53,7 @@ export class Files {
 			storageUnit: internalStorageUnit,
 			filePath: `${fileStructure}${getFileName(media.src)}`,
 		});
-	};
+	}
 
 	public parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
 		const promises: Promise<any>[] = [];
@@ -72,7 +72,7 @@ export class Files {
 			}
 		}
 		return promises;
-	};
+	}
 
 	public checkFileEtag = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
@@ -96,7 +96,7 @@ export class Files {
 			}
 		}
 		return promises;
-	};
+	}
 
 	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
 		for (const path of Object.values(FileStructure)) {
@@ -116,7 +116,7 @@ export class Files {
 				filePath: path,
 			});
 		}
-	};
+	}
 
 	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
@@ -128,7 +128,7 @@ export class Files {
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 		return downloadPromises;
-	};
+	}
 
 	public prepareETagSetup = async (
 		internalStorageUnit: IStorageUnit,
@@ -149,6 +149,6 @@ export class Files {
 		return {
 			fileEtagPromisesMedia,
 			fileEtagPromisesSMIL,
-		};
+		}
 	}
 }
