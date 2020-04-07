@@ -22,6 +22,7 @@
     "build": "webpack --display-modules",
     "build-test": "tsc",
     "start": "webpack-dev-server --mode development --open-emulator",
+    "escheck": "es-check --module es5 dist/index.js",
     "check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc'"
   },
   "author": "signageOS <dev@signageos.io>",
@@ -46,6 +47,7 @@
     "cache-loader": "4.1.0",
     "cors-anywhere": "0.4.1",
     "depcheck": "0.8.3",
+    "es-check": "5.1.0",
     "html-webpack-plugin": "^3.2.0",
     "tslint": "6.1.1",
     "typescript": "3.8.3",
