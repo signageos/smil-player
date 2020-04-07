@@ -17,6 +17,7 @@
     "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
     "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
     "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
+    "upload-applet": "sos applet upload --applet-path dist --entry-file-path dist/index.html",
     "prepare": "webpack",
     "build": "webpack --mode production",
     "build-test": "tsc",
@@ -67,5 +68,8 @@
     "ts-node": "^8.8.1",
     "xml2js": "^0.4.23",
     "xmldom": "^0.3.0"
+  },
+  "sos": {
+    "appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2"
   }
 }
