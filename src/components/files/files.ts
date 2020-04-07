@@ -149,6 +149,6 @@ export class Files {
 		return {
 			fileEtagPromisesMedia,
 			fileEtagPromisesSMIL,
-		}
+		};
 	}
 }

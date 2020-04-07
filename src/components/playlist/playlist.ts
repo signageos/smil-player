@@ -259,7 +259,7 @@ export class Playlist {
 			}
 			await Promise.all(promises);
 		}
-	};
+	}
 
 	public playElement = async (value: object | any[], key: string, internalStorageUnit: IStorageUnit, parent: string) => {
 		debug('Playing element with key: %O, value: %O', key, value);
