@@ -1,5 +1,10 @@
 import * as xml2js from 'xml2js';
-import * as _ from 'lodash';
+import pick = require('lodash/pick');
+import pickBy = require('lodash/pickBy');
+import isObject = require('lodash/isObject');
+import each = require('lodash/each');
+import reduce = require('lodash/reduce');
+import isEmpty = require('lodash/isEmpty');
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
 import { DOMParser } from 'xmldom';
@@ -127,17 +132,17 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 }
 
 function pickDeep(collection: object, element: string[]) {
-	const picked = _.pick(collection, element);
-	const collections = _.pickBy(collection, _.isObject);
+	const picked = pick(collection, element);
+	const collections = pickBy(collection, isObject);
 
-	_.each(collections, (item, key) => {
+	each(collections, (item, key) => {
 		let object;
 		if (Array.isArray(item)) {
-			object = _.reduce(
+			object = reduce(
 				item,
 				(result: any[], value) => {
 					const pickedDeep = pickDeep(value, element);
-					if (!_.isEmpty(pickedDeep)) {
+					if (!isEmpty(pickedDeep)) {
 						result.push(pickedDeep);
 					}
 					return result;
@@ -148,7 +153,7 @@ function pickDeep(collection: object, element: string[]) {
 			object = pickDeep(item, element);
 		}
 
-		if (!_.isEmpty(object)) {
+		if (!isEmpty(object)) {
 			// @ts-ignore
 			picked[key] = object;
 		}

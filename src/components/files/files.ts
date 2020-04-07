@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import isNil = require('lodash/isNil');
 import { FileStructure } from '../../enums';
 import {
 	CheckETagFunctions,
@@ -85,7 +85,7 @@ export class Files {
 					},
 				});
 				const newEtag = await response.headers.get('ETag');
-				if (_.isNil(filesList[i].etag)) {
+				if (isNil(filesList[i].etag)) {
 					filesList[i].etag = newEtag;
 				}
 
