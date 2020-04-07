@@ -198,7 +198,6 @@ export class Playlist {
 			video.regionInfo.height,
 			config.videoOptions,
 		);
-
 	}
 
 	public playIntroVideo = async (video: SMILVideo) => {
