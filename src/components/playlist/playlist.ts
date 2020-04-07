@@ -1,4 +1,5 @@
-import * as _ from 'lodash';
+import isNil = require('lodash/isNil');
+import isNaN = require('lodash/isNaN');
 import { parallel } from 'async';
 import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo, SosModule } from '../../models';
 import { FileStructure } from '../../enums';
@@ -227,7 +228,7 @@ export class Playlist {
 		widgetRootFile: string,
 	) => {
 		if (!Array.isArray(value)) {
-			if (_.isNil(value.src) || !isUrl(value.src)) {
+			if (isNil(value.src) || !isUrl(value.src)) {
 				debug('Invalid element values: %O', value);
 				return;
 			}
@@ -291,7 +292,7 @@ export class Playlist {
 	}
 
 	public getRegionPlayElement = async (value: any, key: string, internalStorageUnit: IStorageUnit, region: RegionsObject, parent: string = '0') => {
-		if (!_.isNaN(parseInt(parent))) {
+		if (!isNaN(parseInt(parent))) {
 			parent = 'seq';
 		}
 		if (Array.isArray(value)) {
