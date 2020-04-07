@@ -1,5 +1,4 @@
 import * as chai from 'chai';
-import { defaults as config } from '../../../src/config';
 import { getRegionInfo, sleep, runEndlessLoop, disableLoop } from "../../../src/components/playlist/tools";
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
 
@@ -11,7 +10,7 @@ describe('Playlist tools component', () => {
 		it('Should return default region for non-existing region name', () => {
 
 			const response = getRegionInfo(mockSMILFileParsed234, 'InvalidRegionName');
-			expect(response).to.be.equal(config.constants.defaultRegion);
+			expect(response).to.be.equal(mockSMILFileParsed234.rootLayout);
 		});
 
 		it('Should return correct region for existing region name', () => {
