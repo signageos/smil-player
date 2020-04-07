@@ -5,11 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="theme-color" content="#000000" />
     <title>test</title>
+    <style>
+        body {
+            background-color: wheat;
+            text-align: center;
+            font-family: Corbel, Arial;
+        }
+        .smilPlay {
+            margin: 10px;
+            padding: 5px 10px;
+            font-size: 120%;
+            font-weight: bold;
+            font-family: Corbel, Arial;
+        }
+    </style>
 </head>
-<body style="background-color: wheat">
+<body>
 <form id="SMILForm">
-    Enter SMIL url: <input type="text" autofocus id="SMILUrl">
-    <input type="submit">
+    Enter SMIL url: <input type="text" autofocus id="SMILUrl" value="">
+    <br />
+    <input class="smilPlay" type="submit" value="Play">
 </form>
 </body>
 </html>
