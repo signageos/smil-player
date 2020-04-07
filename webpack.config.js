@@ -1,4 +1,5 @@
 const webpack = require('webpack');
+const path = require('path');
 const { CheckerPlugin } = require('awesome-typescript-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const SignageOSPlugin = require('@signageos/cli/dist/Webpack/Plugin');
@@ -11,6 +12,7 @@ module.exports = (_env, argv) => {
     }
 
     return {
+        mode: !process.env.NODE_ENV ? 'development' : process.env.NODE_ENV,
         target: 'web',
         entry: './src/index.ts',
         output: {
@@ -24,6 +26,39 @@ module.exports = (_env, argv) => {
                 {
                     test: /\.tsx?$/,
                     loader: 'awesome-typescript-loader',
+                    include: path.resolve(__dirname, 'src'),
+                    options: {
+                        useCache: true,
+                        cacheDirectory: 'cache/awesome-typescript',
+                        forceIsolatedModules: true,
+                        reportFiles: [
+                            "src/**/*.{ts,tsx}",
+                            "test/**/*.{ts,tsx}",
+                        ],
+                    },
+                },
+                {
+                    test: /\.m?(t|j)sx?$/,
+                    include: [/.+/],
+                    exclude: [],
+                    //exclude: new RegExp(`node_modules(?!${path.delimiter}(lodash|debug|async|@signageos${path.delimiter}.+))`),
+                    use: [
+                        {
+                            loader: 'cache-loader',
+                            options: {
+                                cacheDirectory: 'cache/babel',
+                            },
+                        },
+                        {
+                            loader: 'babel-loader',
+                            options: {
+                                presets: [
+                                    '@babel/preset-env',
+                                ],
+                            },
+                        },
+                    ],
+                    enforce: "post"
                 },
             ],
         },
