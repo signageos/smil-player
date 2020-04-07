@@ -34,7 +34,7 @@ export class Playlist {
 		debug('Creating htmlElement: %O with duration', element, duration);
 		document.body.appendChild(element);
 		await sleep(duration * 1000);
-	}
+	};
 
 	public playVideosSeq = async (videos: SMILVideo[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < videos.length; i += 1) {
@@ -114,7 +114,7 @@ export class Playlist {
 				currentVideo.regionInfo.height,
 			);
 		}
-	}
+	};
 
 	public playVideosPar = async (videos: SMILVideo[], internalStorageUnit: IStorageUnit) => {
 		const promises = [];
@@ -124,7 +124,7 @@ export class Playlist {
 			})());
 		}
 		await Promise.all(promises);
-	}
+	};
 
 	public fixVideoDimension = (video: SMILVideo) => {
 		Object.keys(video.regionInfo).forEach((attr: string) => {
@@ -145,7 +145,7 @@ export class Playlist {
 				}
 			}
 		});
-	}
+	};
 
 	public playVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit) => {
 		// @ts-ignore
@@ -182,7 +182,7 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
-	}
+	};
 
 	public setupIntroVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) => {
 		// @ts-ignore
@@ -199,7 +199,8 @@ export class Playlist {
 			video.regionInfo.height,
 			config.videoOptions,
 		);
-	}
+
+	};
 
 	public playIntroVideo = async (video: SMILVideo) => {
 		debug('Playing intro video: %O', video);
@@ -217,7 +218,7 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
-	}
+	};
 
 	public playOtherMedia = async (
 		value: any,
@@ -259,7 +260,7 @@ export class Playlist {
 			}
 			await Promise.all(promises);
 		}
-	}
+	};
 
 	public playElement = async (value: object | any[], key: string, internalStorageUnit: IStorageUnit, parent: string) => {
 		debug('Playing element with key: %O, value: %O', key, value);
@@ -289,7 +290,7 @@ export class Playlist {
 			default:
 				console.log('Sorry, we are out of ' + key + '.');
 		}
-	}
+	};
 
 	public getRegionPlayElement = async (value: any, key: string, internalStorageUnit: IStorageUnit, region: RegionsObject, parent: string = '0') => {
 		if (!isNaN(parseInt(parent))) {
@@ -303,7 +304,7 @@ export class Playlist {
 			value.regionInfo = getRegionInfo(region, value.region);
 		}
 		await this.playElement(value, key, internalStorageUnit, parent);
-	}
+	};
 
 	public processingLoop = async (
 		internalStorageUnit: IStorageUnit,
@@ -337,7 +338,7 @@ export class Playlist {
 				resolve();
 			});
 		});
-	}
+	};
 	// processing parsed playlist, will change in future
 	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) => {
 		for (let [key, value] of Object.entries(playlist)) {
