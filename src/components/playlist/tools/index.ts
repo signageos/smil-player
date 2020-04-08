@@ -29,6 +29,6 @@ export async function runEndlessLoop(fn: Function) {
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
 	const regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
-	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
+	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
 	return regionInfo;
 }
