@@ -75,15 +75,18 @@ export class Playlist {
 				previousVideo,
 				nextVideo,
 			);
+			
+			if (i == 0) {
+				await this.sos.video.prepare(
+					currentVideo.localFilePath,
+					currentVideo.regionInfo.left,
+					currentVideo.regionInfo.top,
+					currentVideo.regionInfo.width,
+					currentVideo.regionInfo.height,
+					config.videoOptions,
+				);
+			}
 
-			await this.sos.video.prepare(
-				currentVideo.localFilePath,
-				currentVideo.regionInfo.left,
-				currentVideo.regionInfo.top,
-				currentVideo.regionInfo.width,
-				currentVideo.regionInfo.height,
-				config.videoOptions,
-			);
 			await this.sos.video.play(
 				currentVideo.localFilePath,
 				currentVideo.regionInfo.left,
