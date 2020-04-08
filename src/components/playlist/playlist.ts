@@ -26,12 +26,17 @@ export class Playlist {
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
 			if (config.constants.cssElements.includes(attr)) {
+				if(attr == 'width' || attr == 'height') {
+					// @ts-ignore
+					element.style[attr] = `${regionInfo[attr]}px`;
+					return;
+				}
 				// @ts-ignore
 				element.style[attr] = regionInfo[attr];
 			}
 		});
 		element.style.position = 'absolute';
-		debug('Creating htmlElement: %O with duration', element, duration);
+		debug('Creating htmlElement: %O with duration %s', element, duration);
 		document.body.appendChild(element);
 		await sleep(duration * 1000);
 	}
