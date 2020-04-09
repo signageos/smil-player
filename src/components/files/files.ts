@@ -66,7 +66,7 @@ export class Files {
 							storageUnit: internalStorageUnit,
 							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
 						},
-						 filesList[i].src,
+						filesList[i].src,
 					);
 				})());
 			}
