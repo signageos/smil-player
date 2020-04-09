@@ -21,7 +21,14 @@ export class Playlist {
 	}
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
-		const element: HTMLElement = document.createElement(htmlElement);
+		let exist = false;
+		let oldElement: HTMLElement;
+		if (document.getElementById(getFileName(filepath)) != null) {
+			exist = true;
+			oldElement = <HTMLElement>document.getElementById(getFileName(filepath));
+		}
+		const element: HTMLElement = <HTMLElement>document.createElement(htmlElement);
+
 		element.setAttribute('src', filepath);
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
@@ -37,6 +44,10 @@ export class Playlist {
 		});
 		element.style.position = 'absolute';
 		debug('Creating htmlElement: %O with duration %s', element, duration);
+		if (exist) {
+			// @ts-ignore
+			oldElement.remove();
+		}
 		document.body.appendChild(element);
 		await sleep(duration * 1000);
 	}
@@ -70,12 +81,13 @@ export class Playlist {
 			debug(
 				'Playing videos in loop, currentVideo: %O,' +
 				' previousVideo: %O' +
-				'nextVideo: %O',
+				' nextVideo: %O',
 				currentVideo,
 				previousVideo,
 				nextVideo,
 			);
 
+			// prepare video only once ( was double prepare current and next video )
 			if (i == 0) {
 				await this.sos.video.prepare(
 					currentVideo.localFilePath,
@@ -285,15 +297,15 @@ export class Playlist {
 					await this.playVideo(<SMILVideo> value, internalStorageUnit);
 				}
 				break;
-			case 'audio':
-				await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
-				break;
 			case 'ref':
 				await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');
 				break;
 			case 'img':
 				await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.images, 'img', '');
 				break;
+			// case 'audio':
+			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
+			// 	break;
 			default:
 				console.log('Sorry, we are out of ' + key + '.');
 		}

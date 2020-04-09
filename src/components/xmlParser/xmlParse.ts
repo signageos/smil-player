@@ -1,10 +1,10 @@
 import * as xml2js from 'xml2js';
-import pick = require('lodash/pick');
-import pickBy = require('lodash/pickBy');
-import isObject = require('lodash/isObject');
-import each = require('lodash/each');
-import reduce = require('lodash/reduce');
-import isEmpty = require('lodash/isEmpty');
+//import pick = require('lodash/pick');
+//import pickBy = require('lodash/pickBy');
+//import isObject = require('lodash/isObject');
+//import each = require('lodash/each');
+//import reduce = require('lodash/reduce');
+//import isEmpty = require('lodash/isEmpty');
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
 import { DOMParser } from 'xmldom';
@@ -41,7 +41,6 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
 	const playableMedia = <SMILPlaylist> extractBodyContent(xmlObject.smil.body);
-
 	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; }) {
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
@@ -57,6 +56,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	debug('Extracted regions object: %O', regions);
 	debug('Extracted playableMedia object: %O', playableMedia);
+
+	console.log(JSON.stringify(playableMedia.playlist));
 
 	return Object.assign({}, regions, playableMedia, downloads);
 }
@@ -131,42 +132,43 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 	return regionsObject;
 }
 
-function pickDeep(collection: object, element: string[]) {
-	const picked = pick(collection, element);
-	const collections = pickBy(collection, isObject);
-
-	each(collections, (item, key) => {
-		let object;
-		if (Array.isArray(item)) {
-			object = reduce(
-				item,
-				(result: any[], value) => {
-					const pickedDeep = pickDeep(value, element);
-					if (!isEmpty(pickedDeep)) {
-						result.push(pickedDeep);
-					}
-					return result;
-				},
-				[],
-			);
-		} else {
-			object = pickDeep(item, element);
-		}
-
-		if (!isEmpty(object)) {
-			// @ts-ignore
-			picked[key] = object;
-		}
-
-	});
-	return picked;
-}
+// function pickDeep(collection: object, element: string[]) {
+// 	const picked = pick(collection, element);
+// 	const collections = pickBy(collection, isObject);
+//
+// 	each(collections, (item, key) => {
+// 		let object;
+// 		if (Array.isArray(item)) {
+// 			object = reduce(
+// 				item,
+// 				(result: any[], value) => {
+// 					const pickedDeep = pickDeep(value, element);
+// 					if (!isEmpty(pickedDeep)) {
+// 						result.push(pickedDeep);
+// 					}
+// 					return result;
+// 				},
+// 				[],
+// 			);
+// 		} else {
+// 			object = pickDeep(item, element);
+// 		}
+//
+// 		if (!_.isEmpty(object)) {
+// 			// @ts-ignore
+// 			picked[key] = object;
+// 		}
+//
+// 	});
+// 	return picked;
+// }
 
 function extractBodyContent(xmlObject: object): SMILPlaylist {
 	const playlist = {
 		playlist: {},
 	};
-	playlist.playlist = <SMILPlaylist> pickDeep(xmlObject, config.constants.extractedElements);
+	// playlist.playlist = <SMILPlaylist> pickDeep(xmlObject, config.constants.extractedElements);
+	playlist.playlist = <SMILPlaylist> xmlObject;
 	return playlist;
 }
 
