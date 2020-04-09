@@ -23,7 +23,7 @@
     "build-test": "tsc",
     "start": "webpack-dev-server --mode development --open-emulator",
     "escheck": "es-check --module es5 dist/index.js",
-    "check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc'"
+    "check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc,@babel/preset-env,babel-loader,cache-loader,es-check'"
   },
   "author": "signageOS <dev@signageos.io>",
   "repository": {
