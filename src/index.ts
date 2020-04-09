@@ -37,7 +37,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	});
 
 	const smilObject = await processSmil(smilFileContent);
-
 	debug('SMIL file parsed: %O', smilObject);
 
 	// download intro file

@@ -1,6 +1,6 @@
 export const defaults = {
 	videoOptions: {
-		background: false,
+		background: true,
 	},
 	smil: {
 		smilLocation: 'https://butikstv.centrumkanalen.com/play/smil/234.smil',
