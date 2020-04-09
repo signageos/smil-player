@@ -25,15 +25,15 @@ export class Playlist {
 		let oldElement: HTMLElement;
 		if (document.getElementById(getFileName(filepath)) != null) {
 			exist = true;
-			oldElement = <HTMLElement>document.getElementById(getFileName(filepath));
+			oldElement = <HTMLElement> document.getElementById(getFileName(filepath));
 		}
-		const element: HTMLElement = <HTMLElement>document.createElement(htmlElement);
+		const element: HTMLElement = <HTMLElement> document.createElement(htmlElement);
 
 		element.setAttribute('src', filepath);
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
 			if (config.constants.cssElements.includes(attr)) {
-				if(attr == 'width' || attr == 'height') {
+				if (attr === 'width' || attr === 'height') {
 					// @ts-ignore
 					element.style[attr] = `${regionInfo[attr]}px`;
 					return;
@@ -88,7 +88,7 @@ export class Playlist {
 			);
 
 			// prepare video only once ( was double prepare current and next video )
-			if (i == 0) {
+			if (i === 0) {
 				await this.sos.video.prepare(
 					currentVideo.localFilePath,
 					currentVideo.regionInfo.left,
