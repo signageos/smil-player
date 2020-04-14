@@ -13,7 +13,7 @@ import {
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName } from "./tools";
 import { debug } from './tools';
-// import { corsAnywhere } from '../../../config/parameters';
+import { corsAnywhere } from '../../../config/parameters';
 
 const isUrl = require('is-url-superb');
 
@@ -66,7 +66,7 @@ export class Files {
 							storageUnit: internalStorageUnit,
 							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
 						},
-						filesList[i].src,
+						corsAnywhere + filesList[i].src,
 					);
 				})());
 			}
@@ -78,7 +78,7 @@ export class Files {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
-				const response = await fetch(filesList[i].src, {
+				const response = await fetch(corsAnywhere + filesList[i].src, {
 					method: 'HEAD',
 					headers: {
 						Accept: 'application/json',
