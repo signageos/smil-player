@@ -55,6 +55,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	while (playingIntro) {
 		debug('Playing intro');
+		// set intro url in playlist to exclude it from further playing
+		playlist.setIntroUrl(introVideo.src);
 		await playlist.playIntroVideo(introVideo);
 		await Promise.all(downloadPromises).then(async () =>  {
 			debug('SMIL media files download finished, stopping intro');

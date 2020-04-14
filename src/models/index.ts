@@ -95,7 +95,7 @@ export type SosModule = {
 };
 
 export type CurrentlyPlaying = {
-	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo
+	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
 };
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;

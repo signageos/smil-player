@@ -1,10 +1,4 @@
 import * as xml2js from 'xml2js';
-//import pick = require('lodash/pick');
-//import pickBy = require('lodash/pickBy');
-//import isObject = require('lodash/isObject');
-//import each = require('lodash/each');
-//import reduce = require('lodash/reduce');
-//import isEmpty = require('lodash/isEmpty');
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
 import { DOMParser } from 'xmldom';
