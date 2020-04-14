@@ -51,8 +51,6 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	debug('Extracted regions object: %O', regions);
 	debug('Extracted playableMedia object: %O', playableMedia);
 
-	console.log(JSON.stringify(playableMedia.playlist));
-
 	return Object.assign({}, regions, playableMedia, downloads);
 }
 
