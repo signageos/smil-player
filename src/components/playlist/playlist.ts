@@ -15,10 +15,15 @@ export class Playlist {
 	private files: object;
 	private sos: SosModule;
 	private currentlyPlaying: CurrentlyPlaying = {};
+	private introUrl: string;
 
 	constructor (sos: SosModule, files: object) {
 		this.sos = sos;
 		this.files = files;
+	}
+
+	public setIntroUrl(url : string) {
+		this.introUrl = url;
 	}
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
@@ -50,7 +55,7 @@ export class Playlist {
 		}
 		document.body.appendChild(element);
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
-			console.log('previous video playing');
+			debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
 			await this.sos.video.stop(
 				this.currentlyPlaying[regionInfo.regionName].localFilePath,
 				// @ts-ignore
@@ -63,7 +68,7 @@ export class Playlist {
 				this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
 			);
 			this.currentlyPlaying[regionInfo.regionName].playing = false;
-			console.log('previous video stopped');
+			debug('previous video stopped');
 		}
 		await sleep(duration * 1000);
 	}
@@ -186,6 +191,11 @@ export class Playlist {
 	}
 
 	public playVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit) => {
+		// dont play intro video in each loop
+		if (video.src == this.introUrl) {
+			debug('Intro video detected, not playing: %O', video);
+			return;
+		}
 		// @ts-ignore
 		const currentVideoDetails = <IFile> await this.files.getFileDetails(video, internalStorageUnit, FileStructure.videos);
 		video.localFilePath = currentVideoDetails.localUri;
