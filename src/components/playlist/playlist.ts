@@ -1,7 +1,7 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
 import { parallel } from 'async';
-import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo, SosModule } from '../../models';
+import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo, SosModule, CurrentlyPlaying } from '../../models';
 import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config';
@@ -14,6 +14,7 @@ export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private files: object;
 	private sos: SosModule;
+	private currentlyPlaying: CurrentlyPlaying = {};
 
 	constructor (sos: SosModule, files: object) {
 		this.sos = sos;
@@ -32,12 +33,11 @@ export class Playlist {
 		element.setAttribute('src', filepath);
 		element.id = getFileName(filepath);
 		Object.keys(regionInfo).forEach((attr: string) => {
+			if (config.constants.cssElementsPosition.includes(attr)) {
+				// @ts-ignore
+				element.style[attr] = `${regionInfo[attr]}px`;
+			}
 			if (config.constants.cssElements.includes(attr)) {
-				if (attr === 'width' || attr === 'height') {
-					// @ts-ignore
-					element.style[attr] = `${regionInfo[attr]}px`;
-					return;
-				}
 				// @ts-ignore
 				element.style[attr] = regionInfo[attr];
 			}
@@ -49,6 +49,22 @@ export class Playlist {
 			oldElement.remove();
 		}
 		document.body.appendChild(element);
+		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
+			console.log('previous video playing');
+			await this.sos.video.stop(
+				this.currentlyPlaying[regionInfo.regionName].localFilePath,
+				// @ts-ignore
+				this.currentlyPlaying[regionInfo.regionName].regionInfo.left,
+				// @ts-ignore
+				this.currentlyPlaying[regionInfo.regionName].regionInfo.top,
+				// @ts-ignore
+				this.currentlyPlaying[regionInfo.regionName].regionInfo.width,
+				// @ts-ignore
+				this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
+			);
+			this.currentlyPlaying[regionInfo.regionName].playing = false;
+			console.log('previous video stopped');
+		}
 		await sleep(duration * 1000);
 	}
 
@@ -98,6 +114,8 @@ export class Playlist {
 					config.videoOptions,
 				);
 			}
+
+			this.currentlyPlaying[currentVideo.regionInfo.regionName] = currentVideo;
 
 			await this.sos.video.play(
 				currentVideo.localFilePath,
@@ -173,6 +191,9 @@ export class Playlist {
 		video.localFilePath = currentVideoDetails.localUri;
 		debug('Playing video: %O', video);
 		this.fixVideoDimension(<SMILVideo> video);
+
+		this.currentlyPlaying[video.regionInfo.regionName] = video;
+
 		await this.sos.video.prepare(
 			video.localFilePath,
 			video.regionInfo.left,
@@ -231,6 +252,17 @@ export class Playlist {
 			video.regionInfo.height,
 		);
 		await this.sos.video.onceEnded(
+			video.localFilePath,
+			video.regionInfo.left,
+			video.regionInfo.top,
+			video.regionInfo.width,
+			video.regionInfo.height,
+		);
+	}
+
+	public endIntroVideo = async (video: SMILVideo) => {
+		debug('Ending intro video: %O', video);
+		await this.sos.video.stop(
 			video.localFilePath,
 			video.regionInfo.left,
 			video.regionInfo.top,
