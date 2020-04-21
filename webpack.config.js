@@ -74,6 +74,6 @@ module.exports = (_env, argv) => {
                 inlineSource: '.(js|css)$', // embed all javascript and css inline
             }),
             new SignageOSPlugin()
-        ],
+		],
     };
 };

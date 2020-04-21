@@ -80,15 +80,15 @@ export class Playlist {
 			const nextVideo = videos[(i + 1) % videos.length];
 			const currentVideoDetails = <IFile> await this.sos.fileSystem.getFile({
 				storageUnit: internalStorageUnit,
-				filePath: `${FileStructure.videos}${getFileName(currentVideo.src)}`,
+				filePath: `${FileStructure.videos}/${getFileName(currentVideo.src)}`,
 			});
 			const nextVideoDetails = <IFile> await this.sos.fileSystem.getFile({
 				storageUnit: internalStorageUnit,
-				filePath: `${FileStructure.videos}${getFileName(nextVideo.src)}`,
+				filePath: `${FileStructure.videos}/${getFileName(nextVideo.src)}`,
 			});
 			const previousVideoDetails = <IFile> await this.sos.fileSystem.getFile({
 				storageUnit: internalStorageUnit,
-				filePath: `${FileStructure.videos}${getFileName(previousVideo.src)}`,
+				filePath: `${FileStructure.videos}/${getFileName(previousVideo.src)}`,
 			});
 
 			currentVideo.localFilePath = currentVideoDetails.localUri;
@@ -302,7 +302,7 @@ export class Playlist {
 				if (isUrl(value[i].src)) {
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
-						filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`,
+						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
 					});
 					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
 				}
@@ -314,7 +314,7 @@ export class Playlist {
 				promises.push((async () => {
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
-						filePath: `${fileStructure}${getFileName(value[i].src)}${widgetRootFile}`,
+						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
 					});
 					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
 				})());
