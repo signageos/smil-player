@@ -27,15 +27,15 @@ export class Files {
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < widgets.length; i++) {
 			if (isUrl(widgets[i].src)) {
-				debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}${getFileName(widgets[i].src)}`);
+				debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
 				await this.sos.fileSystem.extractFile(
 					{
 						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.widgets}${getFileName(widgets[i].src)}`,
+						filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
 					},
 					{
 						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.extracted}${getFileName(widgets[i].src)}`,
+						filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
 					},
 					'zip',
 				);
@@ -51,7 +51,7 @@ export class Files {
 		debug(`Getting file details for file: %O`, media);
 		return this.sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
-			filePath: `${fileStructure}${getFileName(media.src)}`,
+			filePath: `${fileStructure}/${getFileName(media.src)}`,
 		});
 	}
 
