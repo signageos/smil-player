@@ -40,7 +40,7 @@
     "@signageos/cli": "0.6.2",
     "@signageos/codestyle": "0.0.15",
     "@signageos/front-applet": "^4.0.0-beta.11",
-    "@signageos/front-display": "7.1.2-master.3607",
+    "@signageos/front-display": "7.2.0-mz-fix-fs.3642",
     "@types/node": "^10.17.18",
     "awesome-typescript-loader": "^5.2.1",
     "babel-loader": "8.1.0",
