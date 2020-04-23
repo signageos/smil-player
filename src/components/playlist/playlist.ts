@@ -22,7 +22,7 @@ export class Playlist {
 		this.files = files;
 	}
 
-	public setIntroUrl(url : string) {
+	public setIntroUrl(url: string) {
 		this.introUrl = url;
 	}
 
@@ -192,7 +192,7 @@ export class Playlist {
 
 	public playVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit) => {
 		// dont play intro video in each loop
-		if (video.src == this.introUrl) {
+		if (video.src === this.introUrl) {
 			debug('Intro video detected, not playing: %O', video);
 			return;
 		}
