@@ -28,7 +28,14 @@ export async function runEndlessLoop(fn: Function) {
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	const regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
+	let regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
 	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
+	regionInfo = {
+		...regionInfo,
+		x: parseInt(regionInfo.x ?? 0),
+		y: parseInt(regionInfo.y ?? 0),
+		width: parseInt(regionInfo.width),
+		height: parseInt(regionInfo.height),
+	};
 	return regionInfo;
 }
