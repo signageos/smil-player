@@ -1,4 +1,5 @@
 import * as chai from 'chai';
+import isNil = require('lodash/isNil');
 import { getRegionInfo, sleep, runEndlessLoop, disableLoop } from "../../../src/components/playlist/tools";
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
 
@@ -9,14 +10,32 @@ describe('Playlist tools component', () => {
 	describe('Playlist tools component getRegionInfo tests', () => {
 		it('Should return default region for non-existing region name', () => {
 
+			let expectedRegion: any = mockSMILFileParsed234.rootLayout;
+			expectedRegion = {
+				...expectedRegion,
+				...(!isNil(expectedRegion.top) && { top: parseInt(expectedRegion.top)}),
+				...(!isNil(expectedRegion.left) && { left: parseInt(expectedRegion.left)}),
+				width: parseInt(expectedRegion.width),
+				height: parseInt(expectedRegion.height),
+			};
+
 			const response = getRegionInfo(mockSMILFileParsed234, 'InvalidRegionName');
-			expect(response).to.be.equal(mockSMILFileParsed234.rootLayout);
+			expect(response).to.eql(expectedRegion);
 		});
 
 		it('Should return correct region for existing region name', () => {
 
+			let expectedRegion: any = mockSMILFileParsed234.region.video;
+			expectedRegion = {
+				...expectedRegion,
+				...(!isNil(expectedRegion.top) && { top: parseInt(expectedRegion.top)}),
+				...(!isNil(expectedRegion.left) && { left: parseInt(expectedRegion.left)}),
+				width: parseInt(expectedRegion.width),
+				height: parseInt(expectedRegion.height),
+			};
+
 			const response = getRegionInfo(mockSMILFileParsed234, 'video');
-			expect(response).to.be.equal(mockSMILFileParsed234.region.video);
+			expect(response).to.eql(expectedRegion);
 		});
 	});
 
