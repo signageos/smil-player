@@ -44,6 +44,8 @@ export type SMILAudio = {
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
+	localFilePath: string,
+	playing?: boolean,
 };
 
 export type SMILImage = {
@@ -52,6 +54,8 @@ export type SMILImage = {
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
+	localFilePath: string,
+	playing?: boolean,
 };
 
 export type SMILWidget = {
@@ -60,6 +64,8 @@ export type SMILWidget = {
 	dur: string,
 	etag?: string,
 	regionInfo?: object,
+	localFilePath: string,
+	playing?: boolean,
 };
 
 export type DownloadsList = {
@@ -86,6 +92,10 @@ export type SosModule = {
 	fileSystem: any,
 	video: any,
 
+};
+
+export type CurrentlyPlaying = {
+	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
 };
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;

@@ -37,7 +37,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	});
 
 	const smilObject = await processSmil(smilFileContent);
-
 	debug('SMIL file parsed: %O', smilObject);
 
 	// download intro file
@@ -56,9 +55,12 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	while (playingIntro) {
 		debug('Playing intro');
+		// set intro url in playlist to exclude it from further playing
+		playlist.setIntroUrl(introVideo.src);
 		await playlist.playIntroVideo(introVideo);
-		Promise.all(downloadPromises).then(() => {
+		await Promise.all(downloadPromises).then(async () =>  {
 			debug('SMIL media files download finished, stopping intro');
+			await playlist.endIntroVideo(introVideo);
 			playingIntro = false;
 		});
 	}
@@ -81,7 +83,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 async function startSmil(smilUrl: string) {
 	// reset body
 	document.body.innerHTML = '';
-	document.body.style.backgroundColor = '';
+	document.body.style.backgroundColor = 'transparent';
 	await sos.onReady();
 	debug('sOS is ready');
 

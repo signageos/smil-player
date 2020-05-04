@@ -1,5 +1,6 @@
 import Debug from 'debug';
 import get = require('lodash/get');
+import isNil = require('lodash/isNil');
 import { RegionAttributes, RegionsObject } from '../../../models';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
@@ -28,7 +29,14 @@ export async function runEndlessLoop(fn: Function) {
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	const regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
-	debug('Getting region info: %O for region name: %O', regionInfo, regionName);
+	let regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
+	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
+	regionInfo = {
+		...regionInfo,
+		...(!isNil(regionInfo.top) && { top: parseInt(regionInfo.top)}),
+		...(!isNil(regionInfo.left) && { left: parseInt(regionInfo.left)}),
+		width: parseInt(regionInfo.width),
+		height: parseInt(regionInfo.height),
+	};
 	return regionInfo;
 }
