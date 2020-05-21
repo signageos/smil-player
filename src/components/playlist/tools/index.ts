@@ -28,8 +28,42 @@ export async function runEndlessLoop(fn: Function) {
 	}
 }
 
+export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
+	const resultObject: any = cloneDeep(regionInfo);
+	Object.keys(resultObject).forEach((attr: string) => {
+		// sos video does not support values in %
+		if (config.constants.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
+			switch (attr) {
+				case 'width':
+					resultObject.width = Math.floor(document.body.clientWidth * parseInt(resultObject.width) / 100);
+					break;
+				case 'height':
+					resultObject.height = Math.floor(document.body.clientHeight * parseInt(resultObject.height) / 100);
+					break;
+				case 'left':
+					resultObject.left = Math.floor(document.body.clientWidth * parseInt(resultObject.left) / 100);
+					break;
+				case 'top':
+					resultObject.top = Math.floor(document.body.clientHeight * parseInt(resultObject.top) / 100);
+					break;
+				default:
+				// unhandled attribute
+			}
+		}
+	});
+
+	return resultObject;
+}
+
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
 	let regionInfo = get(regionObject.region, regionName, regionObject.rootLayout);
+	// unify regionName for further uses in code
+	if (regionInfo.hasOwnProperty(config.constants.regionNameAlias)) {
+		regionInfo.regionName = regionInfo[config.constants.regionNameAlias];
+		delete regionInfo[config.constants.regionNameAlias];
+	}
+
+	regionInfo = fixVideoDimension(regionInfo);
 	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
 	regionInfo = {
 		...regionInfo,
