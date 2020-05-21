@@ -100,6 +100,16 @@ export type SosModule = {
 
 };
 
+export type PrefetchObject = {
+	prefetch: {
+		src: string,
+	},
+};
+
+export type InfiniteLoopObject = {
+	[key in 'seq' | 'par']: PrefetchObject[];
+};
+
 export type CurrentlyPlaying = {
 	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
 };
