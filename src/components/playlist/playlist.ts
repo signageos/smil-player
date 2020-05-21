@@ -39,13 +39,9 @@ export class Playlist {
 		debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
 		await this.sos.video.stop(
 			this.currentlyPlaying[regionInfo.regionName].localFilePath,
-			// @ts-ignore
 			this.currentlyPlaying[regionInfo.regionName].regionInfo.left,
-			// @ts-ignore
 			this.currentlyPlaying[regionInfo.regionName].regionInfo.top,
-			// @ts-ignore
 			this.currentlyPlaying[regionInfo.regionName].regionInfo.width,
-			// @ts-ignore
 			this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
 		);
 		this.currentlyPlaying[regionInfo.regionName].playing = false;
@@ -54,7 +50,7 @@ export class Playlist {
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
 		let exist = false;
-		let oldElement: HTMLElement;
+		let oldElement: HTMLElement = new HTMLElement();
 		if (document.getElementById(getFileName(filepath)) != null) {
 			exist = true;
 			oldElement = <HTMLElement> document.getElementById(getFileName(filepath));
@@ -63,20 +59,17 @@ export class Playlist {
 
 		element.setAttribute('src', filepath);
 		element.id = getFileName(filepath);
-		Object.keys(regionInfo).forEach((attr: string) => {
+		Object.keys(regionInfo).forEach((attr: any) => {
 			if (config.constants.cssElementsPosition.includes(attr)) {
-				// @ts-ignore
 				element.style[attr] = `${regionInfo[attr]}px`;
 			}
 			if (config.constants.cssElements.includes(attr)) {
-				// @ts-ignore
-				element.style[attr] = regionInfo[attr];
+				element.style[attr] = <string> regionInfo[attr];
 			}
 		});
 		element.style.position = 'absolute';
 		debug('Creating htmlElement: %O with duration %s', element, duration);
 		if (exist) {
-			// @ts-ignore
 			oldElement.remove();
 		}
 		document.body.appendChild(element);
@@ -328,7 +321,7 @@ export class Playlist {
 			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
 			// 	break;
 			default:
-			// console.log('Sorry, we are out of ' + key + '.');
+				debug(`Sorry, we are out of ${key}.`);
 		}
 	}
 
@@ -380,7 +373,7 @@ export class Playlist {
 		});
 	}
 	// processing parsed playlist, will change in future
-	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: any) => {
+	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) => {
 		for (let [key, value] of Object.entries(playlist)) {
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			const promises = [];

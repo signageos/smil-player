@@ -45,7 +45,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	// download intro file if exists
 	if (smilObject.intro.length > 0) {
 		downloadPromises = downloadPromises.concat(
-			// @ts-ignore
 			files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0].video], FileStructure.videos),
 		);
 
