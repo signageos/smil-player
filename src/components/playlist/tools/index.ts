@@ -1,7 +1,9 @@
 import Debug from 'debug';
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
+import cloneDeep = require('lodash/cloneDeep');
 import { RegionAttributes, RegionsObject } from '../../../models';
+import { defaults as config } from "../../../config";
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
@@ -9,6 +11,39 @@ let cancelFunction = false;
 
 export function disableLoop(value: boolean) {
 	cancelFunction = value;
+}
+
+function checkPrefetchObject(obj: object, path: string): boolean {
+	return get(obj, path, 'notFound') === 'notFound';
+}
+
+export function detectPrefetchLoop(obj: object): boolean {
+	let result = true;
+	if (Array.isArray(get(obj, 'seq', 'notFound'))) {
+		get(obj, 'seq', 'notFound').forEach((elem: object) => {
+			result = checkPrefetchObject(elem, 'prefetch');
+		});
+	}
+
+	if (Array.isArray(get(obj, 'par', 'notFound'))) {
+		get(obj, 'par', 'notFound').forEach((elem: object) => {
+			result = checkPrefetchObject(elem, 'prefetch');
+		});
+	}
+	if (get(obj, 'seq.prefetch', 'notFound') !== 'notFound') {
+		result = false;
+	}
+
+	if (get(obj, 'par.prefetch', 'notFound') !== 'notFound') {
+		result = false;
+	}
+
+	// black screen check, will be removed in future versions
+	if (get(obj, 'seq.ref.src', 'notFound') === 'adapi:blankScreen') {
+		result = false;
+	}
+
+	return result;
 }
 
 export async function sleep(ms: number): Promise<object> {
