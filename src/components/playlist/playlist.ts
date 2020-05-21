@@ -14,24 +14,42 @@ import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config';
 import { getFileName } from '../files/tools';
-import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep } from './tools';
+import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep, detectPrefetchLoop } from './tools';
+import { Files } from "../files/files";
 
 const isUrl = require('is-url-superb');
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
-	private files: object;
+	private files: Files;
 	private sos: SosModule;
 	private currentlyPlaying: CurrentlyPlaying = {};
-	private introUrl: string;
+	private introObject: object;
 
-	constructor (sos: SosModule, files: object) {
+	constructor(sos: SosModule, files: Files) {
 		this.sos = sos;
 		this.files = files;
 	}
 
-	public setIntroUrl(url: string) {
-		this.introUrl = url;
+	public setIntroUrl(introObject: object) {
+		this.introObject = introObject;
+	}
+
+	public cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
+		debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+		await this.sos.video.stop(
+			this.currentlyPlaying[regionInfo.regionName].localFilePath,
+			// @ts-ignore
+			this.currentlyPlaying[regionInfo.regionName].regionInfo.left,
+			// @ts-ignore
+			this.currentlyPlaying[regionInfo.regionName].regionInfo.top,
+			// @ts-ignore
+			this.currentlyPlaying[regionInfo.regionName].regionInfo.width,
+			// @ts-ignore
+			this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
+		);
+		this.currentlyPlaying[regionInfo.regionName].playing = false;
+		debug('previous video stopped');
 	}
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
@@ -63,22 +81,10 @@ export class Playlist {
 		}
 		document.body.appendChild(element);
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
-			debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
-			await this.sos.video.stop(
-				this.currentlyPlaying[regionInfo.regionName].localFilePath,
-				// @ts-ignore
-				this.currentlyPlaying[regionInfo.regionName].regionInfo.left,
-				// @ts-ignore
-				this.currentlyPlaying[regionInfo.regionName].regionInfo.top,
-				// @ts-ignore
-				this.currentlyPlaying[regionInfo.regionName].regionInfo.width,
-				// @ts-ignore
-				this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
-			);
-			this.currentlyPlaying[regionInfo.regionName].playing = false;
-			debug('previous video stopped');
+			await this.cancelPreviousVideo(regionInfo);
 		}
 		await sleep(duration * 1000);
+		debug('element playing finished');
 	}
 
 	public playVideosSeq = async (videos: SMILVideo[], internalStorageUnit: IStorageUnit) => {
@@ -186,6 +192,14 @@ export class Playlist {
 			video.regionInfo.height,
 			config.videoOptions,
 		);
+
+		if (!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].playing) {
+			await this.cancelPreviousVideo(video.regionInfo);
+		}
+
+		this.currentlyPlaying[video.regionInfo.regionName] = video;
+		video.playing = true;
+
 		await this.sos.video.play(
 			video.localFilePath,
 			video.regionInfo.left,
@@ -215,6 +229,7 @@ export class Playlist {
 			video.regionInfo.height,
 			config.videoOptions,
 		);
+		debug('Intro video prepared: %O', video);
 	}
 
 	public playIntroVideo = async (video: SMILVideo) => {
