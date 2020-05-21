@@ -22,6 +22,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		img: [],
 		ref: [],
 		audio: [],
+		intro: [],
 	};
 	// const xmlFile: string = await fsPromise.readFile('./SMIL/99.smil', 'utf8');
 	const xmlFileSerialized: Document = new DOMParser().parseFromString(xmlFile, "text/xml");
@@ -36,6 +37,18 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
 	const playableMedia = <SMILPlaylist> extractBodyContent(xmlObject.smil.body);
 	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; }) {
+		// detect intro element, may not exist
+		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
+			// @ts-ignore
+			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; }) {
+				if (config.constants.extractedElements.includes(introNode.key)) {
+					// @ts-ignore
+					debug('Intro element found: %O', introNode.parent.value);
+					// @ts-ignore
+					downloads.intro.push(introNode.parent.value);
+				}
+			});
+		}
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
 			if (Array.isArray(node.value)) {
@@ -50,6 +63,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	debug('Extracted regions object: %O', regions);
 	debug('Extracted playableMedia object: %O', playableMedia);
+	debug('Extracted downloads object: %O', downloads);
 
 	return Object.assign({}, regions, playableMedia, downloads);
 }
@@ -96,7 +110,7 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes> xmlObject[rootKey][index];
 				} else {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey][index]['xml:id']] = <RegionAttributes> xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey][index][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey][index];
 
 				}
 			});
@@ -114,7 +128,7 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes> xmlObject[rootKey];
 				} else {
 					// @ts-ignore
-					regionsObject.region[xmlObject[rootKey]['xml:id']] = <RegionAttributes> xmlObject[rootKey];
+					regionsObject.region[xmlObject[rootKey][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey];
 
 				}
 			}
