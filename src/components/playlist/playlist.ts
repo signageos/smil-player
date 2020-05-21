@@ -50,7 +50,7 @@ export class Playlist {
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
 		let exist = false;
-		let oldElement: HTMLElement = new HTMLElement();
+		let oldElement: HTMLElement;
 		if (document.getElementById(getFileName(filepath)) != null) {
 			exist = true;
 			oldElement = <HTMLElement> document.getElementById(getFileName(filepath));
@@ -70,6 +70,7 @@ export class Playlist {
 		element.style.position = 'absolute';
 		debug('Creating htmlElement: %O with duration %s', element, duration);
 		if (exist) {
+			// @ts-ignore
 			oldElement.remove();
 		}
 		document.body.appendChild(element);
@@ -207,6 +208,9 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
+
+		// no video.stop function so one video can be played gapless in infinite loop
+		// stopping is handled by cancelPreviousVideo function
 	}
 
 	public setupIntroVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) => {
@@ -420,6 +424,7 @@ export class Playlist {
 					if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& detectPrefetchLoop(value)) {
+						// TODO: will be updated in future version to have terminate condition
 						promises.push((async () => {
 							while (true) {
 								await this.processPlaylist(value, region, internalStorageUnit, 'seq');
@@ -448,6 +453,7 @@ export class Playlist {
 						})());
 					} else {
 						if (value[i].repeatCount === 'indefinite' && detectPrefetchLoop(value[i])) {
+							// TODO: will be updated in future version to have terminate condition
 							promises.push((async () => {
 								while (true) {
 									await this.processPlaylist(value[i], region, internalStorageUnit, i);

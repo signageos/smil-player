@@ -2,7 +2,7 @@ import Debug from 'debug';
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import cloneDeep = require('lodash/cloneDeep');
-import { RegionAttributes, RegionsObject } from '../../../models';
+import { RegionAttributes, RegionsObject, InfiniteLoopObject, PrefetchObject } from '../../../models';
 import { defaults as config } from "../../../config";
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
@@ -12,21 +12,37 @@ let cancelFunction = false;
 export function disableLoop(value: boolean) {
 	cancelFunction = value;
 }
-
-function checkPrefetchObject(obj: object, path: string): boolean {
+// checks if given object contains prefetch element
+function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
 	return get(obj, path, 'notFound') === 'notFound';
 }
-
-export function detectPrefetchLoop(obj: object): boolean {
+/*	used for detection infinite loops in SMIL file
+	these are seq or par section which does not contain any media files:
+	example:
+	seq: [{
+		dur: "60s"
+	}, {
+		prefetch: [{
+			src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"
+		}, {
+			src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"
+		}, {
+			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"
+		}, {
+			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"
+		}]
+	}]
+*/
+export function detectPrefetchLoop(obj: InfiniteLoopObject): boolean {
 	let result = true;
 	if (Array.isArray(get(obj, 'seq', 'notFound'))) {
-		get(obj, 'seq', 'notFound').forEach((elem: object) => {
+		(<PrefetchObject[]> get(obj, 'seq', 'notFound')).forEach((elem: PrefetchObject) => {
 			result = checkPrefetchObject(elem, 'prefetch');
 		});
 	}
 
 	if (Array.isArray(get(obj, 'par', 'notFound'))) {
-		get(obj, 'par', 'notFound').forEach((elem: object) => {
+		(<PrefetchObject[]> get(obj, 'par', 'notFound')).forEach((elem: PrefetchObject) => {
 			result = checkPrefetchObject(elem, 'prefetch');
 		});
 	}
