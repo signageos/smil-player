@@ -73,6 +73,7 @@ export type DownloadsList = {
 	img: SMILImage[],
 	ref: SMILWidget[],
 	audio: SMILAudio[],
+	intro: SMILVideo[],
 };
 
 export type CheckETagFunctions = {
