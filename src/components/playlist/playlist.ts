@@ -1,7 +1,15 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
+import get = require('lodash/get');
 import { parallel } from 'async';
-import { RegionAttributes, RegionsObject, SMILFileObject, SMILVideo, SosModule, CurrentlyPlaying } from '../../models';
+import {
+	RegionAttributes,
+	RegionsObject,
+	SMILFileObject,
+	SMILVideo,
+	SosModule,
+	CurrentlyPlaying,
+} from '../../models';
 import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config';
@@ -95,10 +103,6 @@ export class Playlist {
 			nextVideo.localFilePath = nextVideoDetails.localUri;
 			previousVideo.localFilePath = previousVideoDetails.localUri;
 
-			this.fixVideoDimension(<SMILVideo> currentVideo);
-			this.fixVideoDimension(<SMILVideo> nextVideo);
-			this.fixVideoDimension(<SMILVideo> previousVideo);
-
 			debug(
 				'Playing videos in loop, currentVideo: %O,' +
 				' previousVideo: %O' +
@@ -169,40 +173,10 @@ export class Playlist {
 		await Promise.all(promises);
 	}
 
-	public fixVideoDimension = (video: SMILVideo) => {
-		Object.keys(video.regionInfo).forEach((attr: string) => {
-			if (config.constants.cssElements.includes(attr)) {
-				// sos video does not support values in %
-				// @ts-ignore
-				if ((attr === 'width' || attr === 'height') && video.regionInfo[attr].indexOf('%') > 0) {
-					switch (attr) {
-						case 'width':
-							video.regionInfo.width = document.body.clientWidth;
-							break;
-						case 'height':
-							video.regionInfo.height = document.body.clientHeight;
-							break;
-						default:
-							// unhandled attribute
-					}
-				}
-			}
-		});
-	}
-
 	public playVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit) => {
-		// dont play intro video in each loop
-		if (video.src === this.introUrl) {
-			debug('Intro video detected, not playing: %O', video);
-			return;
-		}
-		// @ts-ignore
 		const currentVideoDetails = <IFile> await this.files.getFileDetails(video, internalStorageUnit, FileStructure.videos);
 		video.localFilePath = currentVideoDetails.localUri;
 		debug('Playing video: %O', video);
-		this.fixVideoDimension(<SMILVideo> video);
-
-		this.currentlyPlaying[video.regionInfo.regionName] = video;
 
 		await this.sos.video.prepare(
 			video.localFilePath,
@@ -226,21 +200,12 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
-		await this.sos.video.stop(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-		);
 	}
 
 	public setupIntroVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) => {
-		// @ts-ignore
 		const currentVideoDetails = <IFile> await this.files.getFileDetails(video, internalStorageUnit, FileStructure.videos);
 		video.regionInfo = getRegionInfo(region, video.region);
 		video.localFilePath = currentVideoDetails.localUri;
-		this.fixVideoDimension(<SMILVideo> video);
 		debug('Setting-up intro video: %O', video);
 		await this.sos.video.prepare(
 			video.localFilePath,
@@ -331,10 +296,9 @@ export class Playlist {
 					if (parent === 'seq') {
 						await this.playVideosSeq(value, internalStorageUnit);
 						break;
-					} else {
-						await this.playVideosPar(value, internalStorageUnit);
-						break;
 					}
+					await this.playVideosPar(value, internalStorageUnit);
+					break;
 				} else {
 					await this.playVideo(<SMILVideo> value, internalStorageUnit);
 				}
@@ -349,7 +313,7 @@ export class Playlist {
 			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
 			// 	break;
 			default:
-				console.log('Sorry, we are out of ' + key + '.');
+			// console.log('Sorry, we are out of ' + key + '.');
 		}
 	}
 
@@ -401,11 +365,10 @@ export class Playlist {
 		});
 	}
 	// processing parsed playlist, will change in future
-	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) => {
+	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: any) => {
 		for (let [key, value] of Object.entries(playlist)) {
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			const promises = [];
-
 			if (key === 'excl') {
 				if (Array.isArray(value)) {
 					for (let i in value) {
@@ -446,9 +409,19 @@ export class Playlist {
 						})());
 					}
 				} else {
-					promises.push((async () => {
-						await this.processPlaylist(value, region, internalStorageUnit, 'seq');
-					})());
+					if (value.repeatCount === 'indefinite'
+						&& value !== this.introObject
+						&& detectPrefetchLoop(value)) {
+						promises.push((async () => {
+							while (true) {
+								await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+							}
+						})());
+					} else {
+						promises.push((async () => {
+							await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+						})());
+					}
 				}
 			}
 
@@ -466,17 +439,26 @@ export class Playlist {
 							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par');
 						})());
 					} else {
-						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, i);
-						})());
-
+						if (value[i].repeatCount === 'indefinite' && detectPrefetchLoop(value[i])) {
+							promises.push((async () => {
+								while (true) {
+									await this.processPlaylist(value[i], region, internalStorageUnit, i);
+								}
+							})());
+						} else {
+							promises.push((async () => {
+								await this.processPlaylist(value[i], region, internalStorageUnit, i);
+							})());
+						}
 					}
 				}
 			}
 
 			await Promise.all(promises);
 
-			if (config.constants.extractedElements.includes(key)) {
+			if (config.constants.extractedElements.includes(key)
+				&& value !== get(this.introObject, 'video', 'default')
+			) {
 				await this.getRegionPlayElement(value, key, internalStorageUnit, region, parent);
 			}
 		}
