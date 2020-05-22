@@ -11,7 +11,7 @@ import {
 	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isLocalUrl } from "./tools";
+import { getFileName, getPath, isValidLocalPath } from "./tools";
 import { debug } from './tools';
 import { corsAnywhere } from '../../../config/parameters';
 
@@ -64,7 +64,7 @@ export class Files {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			// check for local urls to files (media/file.mp4)
-			if (!isUrl(filesList[i].src) && isLocalUrl(filesList[i].src)) {
+			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
 				filesList[i].src = `${getPath(this.smilFileUrl)}${filesList[i].src}`;
 			}
 			if (isUrl(filesList[i].src)) {
