@@ -1,12 +1,13 @@
 import Debug from 'debug';
+import * as path from 'path';
 export const debug = Debug('@signageos/smil-player:filesModule');
 
 export function getFileName(filePath: string) {
-	return filePath.substring(filePath.lastIndexOf('/') + 1);
+	return path.basename(filePath);
 }
 
 export function getPath(filePath: string) {
-	return filePath.substring(0, filePath.lastIndexOf('/') + 1);
+	return path.dirname(filePath);
 }
 
 export function isLocalUrl(filePath: string) {
