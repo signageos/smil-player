@@ -10,6 +10,7 @@ export const defaults = {
 		cssElementsPosition: ['left', 'top', 'bottom', 'width', 'height'],
 		cssElements: ['z-index', 'backgroundColor'],
 		flowElements: ['seq', 'par'],
+		regionNameAlias: 'xml:id',
 		defaultRegion: {
 			regionName: 'default',
 			left: 0,

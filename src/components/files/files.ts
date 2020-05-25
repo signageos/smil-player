@@ -11,7 +11,7 @@ import {
 	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName } from "./tools";
+import { getFileName, getPath, isValidLocalPath } from "./tools";
 import { debug } from './tools';
 import { corsAnywhere } from '../../../config/parameters';
 
@@ -19,9 +19,14 @@ const isUrl = require('is-url-superb');
 
 export class Files {
 	private sos: SosModule;
+	private smilFileUrl: string;
 
 	constructor(sos: SosModule) {
 		this.sos = sos;
+	}
+
+	public setSmilUrl(url: string) {
+		this.smilFileUrl = url;
 	}
 
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
@@ -58,6 +63,10 @@ export class Files {
 	public parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
+			// check for local urls to files (media/file.mp4)
+			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
+				filesList[i].src = `${getPath(this.smilFileUrl)}${filesList[i].src}`;
+			}
 			if (isUrl(filesList[i].src)) {
 				promises.push((async () => {
 					debug(`Downloading file: %O`, filesList[i].src);
@@ -120,8 +129,6 @@ export class Files {
 
 	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
-		// remove intro video, it was already downloaded
-		smilObject.video.splice(0, 1);
 		debug(`Starting to download files %O:`, smilObject);
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
 		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
