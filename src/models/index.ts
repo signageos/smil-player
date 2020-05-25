@@ -25,6 +25,7 @@ export type RegionAttributes = {
 	width: number,
 	height: number,
 	"z-index"?: number,
+	[key: string]: string | number | undefined,
 };
 
 export type SMILVideo = {
@@ -43,7 +44,7 @@ export type SMILAudio = {
 	src: string,
 	dur: string,
 	etag?: string,
-	regionInfo?: object,
+	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 };
@@ -53,7 +54,7 @@ export type SMILImage = {
 	region: string,
 	dur: string,
 	etag?: string,
-	regionInfo?: object,
+	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 };
@@ -63,9 +64,13 @@ export type SMILWidget = {
 	region: string,
 	dur: string,
 	etag?: string,
-	regionInfo?: object,
+	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
+};
+
+export type SMILIntro = {
+	video: SMILVideo[],
 };
 
 export type DownloadsList = {
@@ -73,6 +78,7 @@ export type DownloadsList = {
 	img: SMILImage[],
 	ref: SMILWidget[],
 	audio: SMILAudio[],
+	intro: SMILIntro[],
 };
 
 export type CheckETagFunctions = {
@@ -92,6 +98,16 @@ export type SosModule = {
 	fileSystem: any,
 	video: any,
 
+};
+
+export type PrefetchObject = {
+	prefetch: {
+		src: string,
+	},
+};
+
+export type InfiniteLoopObject = {
+	[key in 'seq' | 'par']: PrefetchObject[];
 };
 
 export type CurrentlyPlaying = {

@@ -374,4 +374,11 @@ export const mockSMILFileParsed99 = {
 		},
 	],
 	audio: [],
+	intro: [{
+		repeatCount: "indefinite",
+		video: {
+			src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4",
+		},
+	},
+	],
 };

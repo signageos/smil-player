@@ -436,4 +436,12 @@ export const mockSMILFileParsed234 = {
 			dur: "20",
 		},
 	],
+	intro: [
+		{
+			repeatCount: "indefinite",
+			video: {
+				src: "http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4",
+			},
+		},
+	],
 };

@@ -24,6 +24,9 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	let downloadPromises: Promise<Function[]>[];
 	let playingIntro = true;
 
+	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
+	files.setSmilUrl(smilUrl);
+
 	// download SMIL file
 	downloadPromises = files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder);
 
@@ -39,30 +42,38 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	const smilObject = await processSmil(smilFileContent);
 	debug('SMIL file parsed: %O', smilObject);
 
-	// download intro file
-	downloadPromises = downloadPromises.concat(
-		files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.video[0]], FileStructure.videos),
-	);
+	// download intro file if exists
+	if (smilObject.intro.length > 0) {
+		downloadPromises = downloadPromises.concat(
+			files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0].video], FileStructure.videos),
+		);
 
-	await Promise.all(downloadPromises);
+		await Promise.all(downloadPromises);
 
-	const introVideo = smilObject.video[0];
-	await playlist.setupIntroVideo(introVideo, internalStorageUnit, smilObject);
+		const introVideo: any = smilObject.intro[0];
+		await playlist.setupIntroVideo(introVideo.video, internalStorageUnit, smilObject);
 
-	debug('Intro video downloaded: %O', introVideo);
+		debug('Intro video downloaded: %O', introVideo);
 
-	downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
-	while (playingIntro) {
-		debug('Playing intro');
-		// set intro url in playlist to exclude it from further playing
-		playlist.setIntroUrl(introVideo.src);
-		await playlist.playIntroVideo(introVideo);
-		await Promise.all(downloadPromises).then(async () =>  {
-			debug('SMIL media files download finished, stopping intro');
-			await playlist.endIntroVideo(introVideo);
-			playingIntro = false;
-		});
+		while (playingIntro) {
+			debug('Playing intro');
+			// set intro url in playlist to exclude it from further playing
+			playlist.setIntroUrl(introVideo);
+			await playlist.playIntroVideo(introVideo.video);
+			await Promise.all(downloadPromises).then(async () =>  {
+				debug('SMIL media files download finished, stopping intro');
+				await playlist.endIntroVideo(introVideo.video);
+				playingIntro = false;
+			});
+		}
+	} else {
+		// no intro
+		debug('No intro video found');
+		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+		await Promise.all(downloadPromises);
+		debug('SMIL media files download finished');
 	}
 
 	await files.extractWidgets(smilObject.ref, internalStorageUnit);
