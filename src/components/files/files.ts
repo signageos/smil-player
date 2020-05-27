@@ -65,7 +65,7 @@ export class Files {
 		for (let i = 0; i < filesList.length; i += 1) {
 			// check for local urls to files (media/file.mp4)
 			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
-				filesList[i].src = `${getPath(this.smilFileUrl)}${filesList[i].src}`;
+				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
 			}
 			if (isUrl(filesList[i].src)) {
 				promises.push((async () => {
