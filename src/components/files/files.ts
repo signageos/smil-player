@@ -11,7 +11,7 @@ import {
 	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isValidLocalPath } from "./tools";
+import { getFileName, getPath, isValidLocalPath } from './tools';
 import { debug } from './tools';
 import { corsAnywhere } from '../../../config/parameters';
 
