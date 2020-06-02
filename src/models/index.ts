@@ -110,6 +110,11 @@ export type InfiniteLoopObject = {
 	[key in 'seq' | 'par']: PrefetchObject[];
 };
 
+export type SmilScheduleObject = {
+	timeToStart: number,
+	timeToEnd: number,
+};
+
 export type CurrentlyPlaying = {
 	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
 };
