@@ -9,3 +9,12 @@ export function formatWeekDate(dateString: string, weekDay: string): string {
 	const strArray = dateString.split('T');
 	return `${strArray[0]}${weekDay}T${strArray[1]}`;
 }
+
+export function computeWaitInteral(weekToday: number, weekScheduled: number): number {
+	if (weekToday <= weekScheduled) {
+		// 24 hours in ms
+		return ((weekScheduled - weekToday) * 86400000);
+	}
+
+	return (7 - (weekToday - weekScheduled)) * 86400000;
+}
