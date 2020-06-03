@@ -2,7 +2,7 @@ import * as chai from 'chai';
 import moment from 'moment';
 import isNil = require('lodash/isNil');
 import { getRegionInfo, sleep, runEndlessLoop, disableLoop, parseSmilSchedule, extractDayInfo } from '../../../src/components/playlist/tools';
-import { formatDate, formatWeekDate } from '../../testTools/testTools';
+import { formatDate, formatWeekDate, computeWaitInteral } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
 
 const expect = chai.expect;
@@ -200,13 +200,15 @@ describe('Playlist tools component', () => {
 
 			mediaDuration = 8;
 			dayOfWeek = Math.abs(moment().isoWeekday() - 5);
+			let waitMilis = computeWaitInteral(moment().isoWeekday(), dayOfWeek);
+			let waitDays = waitMilis / 86400000;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-			// scheduled in  24 hours
-			expect(Math.abs(86399813 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
-			expect(Math.abs(moment().add(1, 'day').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
+			expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			expect(Math.abs(moment().add(waitDays, 'day').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd))
+				.to.be.lessThan(1000);
 
 			mediaDuration = 3;
 			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
@@ -243,13 +245,15 @@ describe('Playlist tools component', () => {
 
 			mediaDuration = 7;
 			dayOfWeek = Math.abs(moment().isoWeekday() - 5);
+			let waitMilis = computeWaitInteral(moment().isoWeekday(), dayOfWeek);
+			let waitDays = waitMilis / 86400000;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-			// should play in 1 days
-			expect(Math.abs(86399813 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
-			expect(Math.abs(moment().add(1, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
+			expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			expect(Math.abs(moment().add(waitDays, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd))
+				.to.be.lessThan(1000);
 
 			mediaDuration = 7;
 			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
