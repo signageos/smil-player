@@ -17,6 +17,7 @@ describe('XmlParse tools component', () => {
 			expect(smilObject.audio.length).to.be.eql(1);
 			expect(smilObject.ref.length).to.be.eql(1);
 			expect(smilObject.img.length).to.be.eql(14);
+			expect(smilObject.intro.length).to.be.eql(1);
 			//checking playlist
 			expect(smilObject.playlist).to.be.eql(mockSMILFileParsed234.playlist);
 			//checking regions object
@@ -33,6 +34,7 @@ describe('XmlParse tools component', () => {
 			expect(smilObject.audio.length).to.be.eql(0);
 			expect(smilObject.ref.length).to.be.eql(3);
 			expect(smilObject.img.length).to.be.eql(3);
+			expect(smilObject.intro.length).to.be.eql(1);
 			//checking playlist
 			expect(smilObject.playlist).to.be.eql(mockSMILFileParsed99.playlist);
 			//checking regions object

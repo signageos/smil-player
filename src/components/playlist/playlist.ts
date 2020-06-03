@@ -14,8 +14,8 @@ import { FileStructure } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config';
 import { getFileName } from '../files/tools';
-import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep, detectPrefetchLoop } from './tools';
-import { Files } from "../files/files";
+import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep, detectPrefetchLoop, parseSmilSchedule } from './tools';
+import { Files } from '../files/files';
 
 const isUrl = require('is-url-superb');
 
@@ -366,6 +366,7 @@ export class Playlist {
 				async () => {
 					await runEndlessLoop(async () => {
 						await this.processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
+						debug('One iteration of playlist finished');
 					});
 				},
 			],       async (err) => {
@@ -377,7 +378,8 @@ export class Playlist {
 		});
 	}
 	// processing parsed playlist, will change in future
-	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent?: string) => {
+	// tslint:disable-next-line:max-line-length
+	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0) => {
 		for (let [key, value] of Object.entries(playlist)) {
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			const promises = [];
@@ -385,12 +387,12 @@ export class Playlist {
 				if (Array.isArray(value)) {
 					for (let i in value) {
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq');
+							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
 					promises.push((async () => {
-						await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+						await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
 					})());
 				}
 			}
@@ -399,12 +401,12 @@ export class Playlist {
 				if (Array.isArray(value)) {
 					for (let i in value) {
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq');
+							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
 					promises.push((async () => {
-						await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+						await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
 					})());
 				}
 			}
@@ -417,22 +419,35 @@ export class Playlist {
 							continue;
 						}
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq');
+							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
+					if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock')) {
+						const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin, value.end);
+						promises.push((async () => {
+							await sleep(timeToStart);
+							await this.processPlaylist(value, region, internalStorageUnit, 'seq', timeToEnd);
+						})());
+					} else
 					if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& detectPrefetchLoop(value)) {
-						// TODO: will be updated in future version to have terminate condition
 						promises.push((async () => {
-							while (true) {
-								await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+							// when endTime is not set, play indefinitely
+							if (endTime === 0) {
+								await runEndlessLoop(async () => {
+									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+								});
+							} else {
+								while (Date.now() < endTime) {
+									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+								}
 							}
 						})());
 					} else {
 						promises.push((async () => {
-							await this.processPlaylist(value, region, internalStorageUnit, 'seq');
+							await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				}
@@ -449,21 +464,35 @@ export class Playlist {
 							par: value[i],
 						};
 						promises.push((async () => {
-							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par');
+							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par', endTime);
 						})());
 					} else {
-						if (value[i].repeatCount === 'indefinite' && detectPrefetchLoop(value[i])) {
-							// TODO: will be updated in future version to have terminate condition
+						if (value.hasOwnProperty('begin') && value.hasOwnProperty('end')) {
+							const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin, value.end);
 							promises.push((async () => {
-								while (true) {
-									await this.processPlaylist(value[i], region, internalStorageUnit, i);
+								await sleep(timeToStart);
+								await this.processPlaylist(value[i], region, internalStorageUnit, i, timeToEnd);
+							})());
+						} else
+						if (value[i].repeatCount === 'indefinite' && detectPrefetchLoop(value[i])) {
+							promises.push((async () => {
+								// when endTime is not set, play indefinitely
+								if (endTime === 0) {
+									await runEndlessLoop(async () => {
+										await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
+									});
+								} else {
+									while (Date.now() < endTime) {
+										await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
+									}
 								}
 							})());
 						} else {
 							promises.push((async () => {
-								await this.processPlaylist(value[i], region, internalStorageUnit, i);
+								await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
 							})());
 						}
+
 					}
 				}
 			}

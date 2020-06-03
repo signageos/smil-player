@@ -22,7 +22,7 @@
     "prepare": "npm run clean && npm run build",
     "build": "webpack --display-modules",
     "build-test": "tsc",
-    "start": "webpack-dev-server --mode development --open-emulator",
+    "start": "webpack-dev-server --mode development --open-emulator --hot",
     "escheck": "es-check --module es5 dist/index.js",
     "check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc,@babel/preset-env,babel-loader,cache-loader,es-check'"
   },
@@ -70,6 +70,7 @@
     "json-easy-filter": "^0.3.1",
     "lodash": "^4.17.15",
     "mocha": "^7.1.1",
+    "moment": "^2.26.0",
     "nyc": "^15.0.0",
     "ts-node": "^8.8.1",
     "xml2js": "^0.4.23",
