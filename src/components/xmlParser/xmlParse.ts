@@ -12,7 +12,7 @@ import {
 	SMILPlaylist,
 	XmlSmilObject,
 } from '../../models';
-import { SMILEnemus } from '../../enums';
+import { SMILEnums } from '../../enums';
 import { defaults as config } from '../../config';
 import { debug } from './tools';
 
@@ -116,12 +116,12 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 			});
 		} else {
 			// only one region/rootLayout in layout element
-			if (rootKey === SMILEnemus.rootLayout) {
+			if (rootKey === SMILEnums.rootLayout) {
 				// @ts-ignore
 				regionsObject.rootLayout = <RootLayout> xmlObject[rootKey];
 			}
 
-			if (rootKey === SMILEnemus.region) {
+			if (rootKey === SMILEnums.region) {
 				// @ts-ignore
 				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
 					// @ts-ignore
