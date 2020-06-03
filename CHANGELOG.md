@@ -8,6 +8,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Handling of SMIL schedules, ability to play media in certain time or day in the week
 
-## [Unreleased]
+## [0.0.1]
 ### Added
 - Initial PoC release of SMIL player
