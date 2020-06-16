@@ -130,6 +130,7 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 // default endTime for infinite duration when there is no endTime specified, example string wallclock(R/2100-01-01T00:00:00/P1D)
 export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endTimeFuture): SmilScheduleObject {
 	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
+
 	// remove extra characters, wallclock, ( and )
 	const dateStringStart = startTime.replace(/wallclock|\(|\)/g, '');
 	const dateStringEnd = endTime.replace(/wallclock|\(|\)/g, '');
