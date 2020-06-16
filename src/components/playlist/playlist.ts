@@ -423,7 +423,7 @@ export class Playlist {
 						})());
 					}
 				} else {
-					if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock')) {
+					if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock') > -1) {
 						const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin, value.end);
 						promises.push((async () => {
 							await sleep(timeToStart);
