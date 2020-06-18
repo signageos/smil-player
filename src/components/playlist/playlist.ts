@@ -68,6 +68,7 @@ export class Playlist {
 			}
 		});
 		element.style.position = 'absolute';
+		element.style.backgroundColor = 'transparent';
 		debug('Creating htmlElement: %O with duration %s', element, duration);
 		if (exist) {
 			// @ts-ignore
