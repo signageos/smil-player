@@ -88,16 +88,16 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 		if (config.constants.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
 			switch (attr) {
 				case 'width':
-					resultObject.width = Math.floor(document.body.clientWidth * parseInt(resultObject.width) / 100);
+					resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
 					break;
 				case 'height':
-					resultObject.height = Math.floor(document.body.clientHeight * parseInt(resultObject.height) / 100);
+					resultObject.height = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.height) / 100);
 					break;
 				case 'left':
-					resultObject.left = Math.floor(document.body.clientWidth * parseInt(resultObject.left) / 100);
+					resultObject.left = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.left) / 100);
 					break;
 				case 'top':
-					resultObject.top = Math.floor(document.body.clientHeight * parseInt(resultObject.top) / 100);
+					resultObject.top = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.top) / 100);
 					break;
 				default:
 				// unhandled attribute

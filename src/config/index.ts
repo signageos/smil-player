@@ -8,7 +8,7 @@ export const defaults = {
 	constants: {
 		extractedElements: ['video', 'audio', 'img', 'ref'],
 		cssElementsPosition: ['left', 'top', 'bottom', 'width', 'height'],
-		cssElements: ['z-index', 'backgroundColor'],
+		cssElements: ['z-index'],
 		flowElements: ['seq', 'par'],
 		regionNameAlias: 'xml:id',
 		defaultRegion: {
