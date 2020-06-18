@@ -2,7 +2,7 @@
   "name": "@signageos/smil-player",
   "version": "0.0.2",
   "description": "SMIL player",
-  "main": "dist/index.js",
+  "main": "index.html",
   "files": [
     "dist",
     "README.md",
@@ -17,7 +17,7 @@
     "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
     "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
     "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
-    "upload-applet": "sos applet upload --applet-path dist --entry-file-path dist/index.html",
+    "upload-applet": "cp package.json dist/package.json && sos applet upload --applet-path dist --entry-file-path dist/index.html",
     "clean": "rm -rf cache dist",
     "prepare": "npm run clean && npm run build",
     "build": "webpack --display-modules",
