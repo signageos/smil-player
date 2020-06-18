@@ -92,12 +92,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 }
 
 async function startSmil(smilUrl: string) {
-	// reset body
-	document.body.innerHTML = '';
-	document.body.style.backgroundColor = 'transparent';
-	await sos.onReady();
-	debug('sOS is ready');
-
 	const storageUnits = await sos.fileSystem.listStorageUnits();
 
 	const internalStorageUnit = <IStorageUnit> storageUnits.find((storageUnit) => !storageUnit.removable);
@@ -124,7 +118,15 @@ async function startSmil(smilUrl: string) {
 const smilForm = <HTMLElement> document.getElementById('SMILForm');
 smilForm.onsubmit = async function (event: Event) {
 	event.preventDefault();
-	const smilUrl = (<HTMLInputElement> document.getElementById("SMILUrl")).value;
-	debug('Smil file url is: %s', smilUrl);
-	await startSmil(smilUrl);
+	// const smilUrl = (<HTMLInputElement> document.getElementById("SMILUrl")).value;
+	// debug('Smil file url is: %s', sos.config.smilUrl);
+	// debug('Smil file url is: %s', smilUrl);
+	// await startSmil(smilUrl);
+	// reset body
+	document.body.innerHTML = '';
+	document.body.style.backgroundColor = 'transparent';
+	await sos.onReady();
+	debug('sOS is ready');
+	debug('Smil file url is: %s', sos.config.smilUrl);
+	await startSmil(sos.config.smilUrl);
 };
