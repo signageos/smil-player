@@ -40,7 +40,7 @@
     "@babel/preset-env": "7.9.0",
     "@signageos/cli": "0.6.2",
     "@signageos/codestyle": "0.0.15",
-    "@signageos/front-applet": "5.0.0-mz-memory-leak-fix.497",
+    "@signageos/front-applet": "5.0.0-beta.2",
     "@signageos/front-display": "7.4.0-master.3732",
     "@types/node": "^10.17.18",
     "awesome-typescript-loader": "^5.2.1",
