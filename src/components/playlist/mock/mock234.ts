@@ -14,6 +14,8 @@ export const mockSMILFileParsed234 = {
 	rootLayout: {
 		width: "1080",
 		height: "1920",
+		left: "0",
+		top: "0",
 		backgroundColor: "#FFFFFF",
 	},
 	playlist: {
