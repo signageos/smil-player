@@ -83,6 +83,7 @@ export async function runEndlessLoop(fn: Function) {
 
 export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
 	const resultObject: any = cloneDeep(regionInfo);
+
 	Object.keys(resultObject).forEach((attr: string) => {
 		// sos video does not support values in %
 		if (config.constants.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
