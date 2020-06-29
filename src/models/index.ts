@@ -6,6 +6,8 @@ export type RegionsObject = {
 export type RootLayout = {
 	width: string,
 	height: string,
+	left: string,
+	top: string,
 	backgroundColor: string,
 };
 

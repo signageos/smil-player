@@ -119,6 +119,9 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 			if (rootKey === SMILEnums.rootLayout) {
 				// @ts-ignore
 				regionsObject.rootLayout = <RootLayout> xmlObject[rootKey];
+				// add left and top values for intro play
+				regionsObject.rootLayout.top = '0';
+				regionsObject.rootLayout.left = '0';
 			}
 
 			if (rootKey === SMILEnums.region) {
