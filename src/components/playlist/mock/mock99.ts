@@ -150,7 +150,6 @@ export const mockSMILFileParsed99 = {
 														],
 													},
 													{
-														_: "\n                                                >\n                                                \n                                            ",
 														seq: {
 															repeatCount: "indefinite",
 															ref: {
