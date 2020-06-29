@@ -114,19 +114,27 @@ async function startSmil(smilUrl: string) {
 	}
 }
 
+(async() => {
+	await sos.onReady();
+	if (sos.config.smilUrl) {
+		// reset body
+		document.body.innerHTML = '';
+		document.body.style.backgroundColor = 'transparent';
+		debug('sOS is ready');
+		debug('Smil file url is: %s', sos.config.smilUrl);
+		// await startSmil('https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/zones.smil');
+		await startSmil(sos.config.smilUrl);
+	}
+})();
+
 // get values from form onSubmit
 const smilForm = <HTMLElement> document.getElementById('SMILForm');
 smilForm.onsubmit = async function (event: Event) {
 	event.preventDefault();
-	// const smilUrl = (<HTMLInputElement> document.getElementById("SMILUrl")).value;
-	// debug('Smil file url is: %s', sos.config.smilUrl);
-	// debug('Smil file url is: %s', smilUrl);
-	// await startSmil(smilUrl);
+	const smilUrl = (<HTMLInputElement> document.getElementById("SMILUrl")).value;
+	debug('Smil file url is: %s', smilUrl);
 	// reset body
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
-	await sos.onReady();
-	debug('sOS is ready');
-	debug('Smil file url is: %s', sos.config.smilUrl);
-	await startSmil(sos.config.smilUrl);
+	await startSmil(smilUrl);
 };
