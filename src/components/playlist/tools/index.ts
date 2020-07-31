@@ -340,10 +340,10 @@ export function extractDayInfo(timeRecord: string): any {
 }
 
 export function setDuration(dur: any): number {
-	// leave only digits in duration string ( can contain s character )
 	if (dur === 'indefinite') {
 		return 999999;
 	}
+	// leave only digits in duration string ( can contain s character )
 	dur = dur.replace(/[^0-9]/g, "");
 	// empty string or NaN
 	if (isNaN(dur) || dur.length === 0) {

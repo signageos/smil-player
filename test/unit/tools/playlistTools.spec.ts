@@ -325,7 +325,7 @@ describe('Playlist tools component', () => {
 				.to.be.lessThan(1000);
 
 			mediaDuration = 3;
-			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
+			dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
@@ -370,7 +370,7 @@ describe('Playlist tools component', () => {
 				.to.be.lessThan(1000);
 
 			mediaDuration = 7;
-			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
+			dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
