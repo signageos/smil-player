@@ -1,0 +1,133 @@
+{
+  "region": {
+    "main": {
+      "regionName": "main",
+      "left": "0",
+      "top": "0",
+      "width": "1920",
+      "height": "1080",
+      "z-index": "1",
+      "backgroundColor": "#18182c"
+    }
+  },
+  "rootLayout": {
+    "width": "1920",
+    "height": "1080",
+    "backgroundColor": "#18182c",
+    "top": "0",
+    "left": "0"
+  },
+  "playlist": {
+    "par": {
+      "seq": [
+        {
+          "end": "__prefetchEnd.endEvent",
+          "seq": {
+            "repeatCount": "indefinite",
+            "video": {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"
+            }
+          }
+        },
+        {
+          "prefetch": [
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg"
+            }
+          ],
+          "seq": {
+            "id": "__prefetchEnd",
+            "dur": "1s"
+          }
+        }
+      ],
+      "par": {
+        "begin": "__prefetchEnd.endEvent",
+        "repeatCount": "indefinite",
+        "seq": {
+          "repeatCount": "indefinite",
+          "video": {
+            "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4",
+            "region": "main",
+            "soundLevel": "0%"
+          },
+          "seq": [
+            {
+              "repeatCount": "2",
+              "img": [
+                {
+                  "dur": "3s",
+                  "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg",
+                  "region": "main",
+                  "fit": "fill"
+                },
+                {
+                  "dur": "3s",
+                  "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg",
+                  "region": "main",
+                  "fit": "fill"
+                }
+              ]
+            },
+            {
+              "repeatCount": "2",
+              "video": {
+                "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4",
+                "region": "main",
+                "soundLevel": "0%"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "video": [
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4",
+      "region": "main",
+      "soundLevel": "0%"
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4",
+      "region": "main",
+      "soundLevel": "0%"
+    }
+  ],
+  "img": [
+    {
+      "dur": "3s",
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg",
+      "region": "main",
+      "fit": "fill"
+    },
+    {
+      "dur": "3s",
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg",
+      "region": "main",
+      "fit": "fill"
+    }
+  ],
+  "ref": [],
+  "audio": [],
+  "intro": [
+    {
+      "repeatCount": "indefinite",
+      "video": {
+        "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"
+      }
+    }
+  ]
+}
