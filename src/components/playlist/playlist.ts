@@ -1,6 +1,8 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
+import isObject = require('lodash/isObject');
 import get = require('lodash/get');
+import { isEqual } from "lodash";
 import { parallel } from 'async';
 import {
 	RegionAttributes,
@@ -8,19 +10,22 @@ import {
 	SMILFileObject,
 	SMILVideo,
 	SosModule,
-	CurrentlyPlaying,
+	CurrentlyPlaying, SMILFile,
 } from '../../models';
-import { FileStructure } from '../../enums';
+import { FileStructure, SMILScheduleEnum } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config';
 import { getFileName } from '../files/tools';
-import { debug, disableLoop, getRegionInfo, runEndlessLoop, sleep, detectPrefetchLoop, parseSmilSchedule } from './tools';
+import {
+	debug, getRegionInfo, sleep, detectPrefetchLoop, parseSmilSchedule,
+	setDuration, extractAdditionalInfo, createHtmlElement, setDefaultAwait,
+} from './tools';
 import { Files } from '../files/files';
-
 const isUrl = require('is-url-superb');
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
+	private cancelFunction: boolean = false;
 	private files: Files;
 	private sos: SosModule;
 	private currentlyPlaying: CurrentlyPlaying = {};
@@ -33,6 +38,29 @@ export class Playlist {
 
 	public setIntroUrl(introObject: object) {
 		this.introObject = introObject;
+	}
+
+	public setCheckFilesLoop(checkFilesLoop: boolean) {
+		this.checkFilesLoop = checkFilesLoop;
+	}
+
+	public getCancelFunction(): boolean {
+		return this.cancelFunction;
+	}
+
+	public disableLoop(value: boolean) {
+		this.cancelFunction = value;
+	}
+
+	public runEndlessLoop = async (fn: Function) => {
+		while (!this.cancelFunction) {
+			try {
+				await fn();
+			} catch (err) {
+				debug('Error: %O occured during processing function %s', err, fn.name);
+				throw err;
+			}
+		}
 	}
 
 	public cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
@@ -161,6 +189,11 @@ export class Playlist {
 				currentVideo.regionInfo.width,
 				currentVideo.regionInfo.height,
 			);
+
+			// force stop video only when reloading smil file due to new version of smil
+			if (this.getCancelFunction()) {
+				await this.cancelPreviousVideo(currentVideo.regionInfo);
+			}
 		}
 	}
 
@@ -202,6 +235,7 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
+
 		await this.sos.video.onceEnded(
 			video.localFilePath,
 			video.regionInfo.left,
@@ -209,9 +243,14 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
+		debug('Playing video finished: %O', video);
 
 		// no video.stop function so one video can be played gapless in infinite loop
 		// stopping is handled by cancelPreviousVideo function
+		// force stop video only when reloading smil file due to new version of smil
+		if (this.getCancelFunction()) {
+			await this.cancelPreviousVideo(video.regionInfo);
+		}
 	}
 
 	public setupIntroVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) => {
@@ -287,10 +326,11 @@ export class Playlist {
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
 					});
-					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
+					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, value[i].dur);
 				}
 			}
-		} else {
+		}
+		if (parent === 'par') {
 			const promises = [];
 			debug('Playing media in parallel: %O', value);
 			for (let i = 0; i < value.length; i += 1) {
@@ -306,7 +346,7 @@ export class Playlist {
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
 					});
-					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, parseInt(value[i].dur, 10));
+					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, value[i].dur);
 				})());
 			}
 			await Promise.all(promises);
@@ -326,8 +366,8 @@ export class Playlist {
 					break;
 				} else {
 					await this.playVideo(<SMILVideo> value, internalStorageUnit);
+					break;
 				}
-				break;
 			case 'ref':
 				await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.extracted, 'iframe', '/index.html');
 				break;
@@ -349,9 +389,11 @@ export class Playlist {
 		if (Array.isArray(value)) {
 			for (let i in value) {
 				value[i].regionInfo = getRegionInfo(region, value[i].region);
+				extractAdditionalInfo(value[i]);
 			}
 		} else {
 			value.regionInfo = getRegionInfo(region, value.region);
+			extractAdditionalInfo(value);
 		}
 		await this.playElement(value, key, internalStorageUnit, parent);
 	}
@@ -401,14 +443,19 @@ export class Playlist {
 	// processing parsed playlist, will change in future
 	// tslint:disable-next-line:max-line-length
 	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0) => {
-		for (let [key, value] of Object.entries(playlist)) {
+		for (let [key, loopValue] of Object.entries(playlist)) {
+			if (!isObject(loopValue)) {
+				debug('Playlist element with key is not object: %O, value: %O, skipping', key, loopValue);
+				continue;
+			}
+			let value: any = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			const promises = [];
 			if (key === 'excl') {
 				if (Array.isArray(value)) {
-					for (let i in value) {
+					for (let elem of value) {
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
+							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
@@ -420,9 +467,9 @@ export class Playlist {
 
 			if (key === 'priorityClass') {
 				if (Array.isArray(value)) {
-					for (let i in value) {
+					for (let elem of value) {
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
+							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
@@ -434,38 +481,105 @@ export class Playlist {
 
 			if (key === 'seq') {
 				if (Array.isArray(value)) {
-					for (let i in value) {
-						if (config.constants.extractedElements.includes(i)) {
-							await this.getRegionPlayElement(value[i], i, internalStorageUnit, region, 'seq');
+					let arrayIndex = 0;
+					for (const elem of value) {
+						if (elem.hasOwnProperty('begin') && elem.begin.indexOf('wallclock') > -1
+							&& !isEqual(elem, this.introObject)
+							&& detectPrefetchLoop(elem)) {
+							const {timeToStart, timeToEnd} = parseSmilSchedule(elem.begin, elem.end);
+							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
+							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
+								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+								await sleep(SMILScheduleEnum.defaultAwait);
+							}
+
+							if (timeToEnd === SMILScheduleEnum.neverPlay) {
+								arrayIndex += 1;
+								continue;
+							}
+
+							if (elem.hasOwnProperty('repeatCount') && elem.repeatCount !== 'indefinite') {
+								const repeatCount = elem.repeatCount;
+								let counter = 0;
+								if (timeToStart <= 0) {
+									promises.push((async () => {
+										await sleep(timeToStart);
+										while (counter < repeatCount) {
+											await this.processPlaylist(elem, region, internalStorageUnit, 'seq', timeToEnd);
+											counter += 1;
+										}
+									})());
+								}
+								await Promise.all(promises);
+								arrayIndex += 1;
+								continue;
+							}
+							// play at least one from array to avoid infinite loop
+							if (value.length === 1 || timeToStart <= 0) {
+								promises.push((async () => {
+									await sleep(timeToStart);
+									await this.processPlaylist(elem, region, internalStorageUnit, 'seq', timeToEnd);
+								})());
+							}
+							await Promise.all(promises);
+							arrayIndex += 1;
+							continue;
+						}
+
+						if (elem.hasOwnProperty('repeatCount') && elem.repeatCount !== 'indefinite') {
+							const repeatCount = elem.repeatCount;
+							let counter = 0;
+							promises.push((async () => {
+								while (counter < repeatCount) {
+									await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
+									counter += 1;
+								}
+							})());
+							await Promise.all(promises);
 							continue;
 						}
 						promises.push((async () => {
-							await this.processPlaylist(value[i], region, internalStorageUnit, 'seq', endTime);
+							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
 						})());
 					}
 				} else {
 					if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock') > -1) {
-						const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin, value.end);
+						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin, value.end);
+						if (timeToEnd === SMILScheduleEnum.neverPlay) {
+							return;
+						}
 						promises.push((async () => {
 							await sleep(timeToStart);
 							await this.processPlaylist(value, region, internalStorageUnit, 'seq', timeToEnd);
 						})());
-					} else
-					if (value.repeatCount === 'indefinite'
+					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& detectPrefetchLoop(value)) {
 						promises.push((async () => {
 							// when endTime is not set, play indefinitely
 							if (endTime === 0) {
-								await runEndlessLoop(async () => {
+								await this.runEndlessLoop(async () => {
 									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
 								});
 							} else {
 								while (Date.now() < endTime) {
 									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+									if (this.getCancelFunction()) {
+										return;
+									}
 								}
 							}
 						})());
+					} else if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
+						const repeatCount = value.repeatCount;
+						let counter = 0;
+						promises.push((async () => {
+							while (counter < repeatCount) {
+								await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+								counter += 1;
+							}
+						})());
+						await Promise.all(promises);
 					} else {
 						promises.push((async () => {
 							await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
@@ -475,49 +589,69 @@ export class Playlist {
 			}
 
 			if (key === 'par') {
-				for (let i in value) {
-					if (config.constants.extractedElements.includes(i)) {
-						await this.getRegionPlayElement(value[i], i, internalStorageUnit, region, parent);
+				for (let [parKey, parValue] of Object.entries(<object> value)) {
+					if (config.constants.extractedElements.includes(parKey)) {
+						await this.getRegionPlayElement(parValue, parKey, internalStorageUnit, region, parent);
 						continue;
 					}
-					if (Array.isArray(value[i])) {
+					if (Array.isArray(parValue)) {
+						const controlTag = parKey === 'seq' ? parKey : 'par';
 						const wrapper = {
-							par: value[i],
+							[controlTag]: parValue,
 						};
 						promises.push((async () => {
 							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par', endTime);
 						})());
 					} else {
-						if (value.hasOwnProperty('begin') && value.hasOwnProperty('end')) {
-							const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin, value.end);
+						if (parValue.hasOwnProperty('begin') && parValue.begin.indexOf('wallclock') > -1) {
+							const {timeToStart, timeToEnd} = parseSmilSchedule(parValue.begin, parValue.end);
+							if (timeToEnd === SMILScheduleEnum.neverPlay) {
+								return;
+							}
 							promises.push((async () => {
 								await sleep(timeToStart);
-								await this.processPlaylist(value[i], region, internalStorageUnit, i, timeToEnd);
+								await this.processPlaylist(parValue, region, internalStorageUnit, parKey, timeToEnd);
 							})());
-						} else
-						if (value[i].repeatCount === 'indefinite' && detectPrefetchLoop(value[i])) {
+							continue;
+						}
+						if (parValue.repeatCount === 'indefinite' && detectPrefetchLoop(parValue)) {
 							promises.push((async () => {
 								// when endTime is not set, play indefinitely
 								if (endTime === 0) {
-									await runEndlessLoop(async () => {
-										await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
+									await this.runEndlessLoop(async () => {
+										await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
 									});
 								} else {
 									while (Date.now() < endTime) {
-										await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
+										await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+										if (this.getCancelFunction()) {
+											return;
+										}
 									}
 								}
 							})());
-						} else {
-							promises.push((async () => {
-								await this.processPlaylist(value[i], region, internalStorageUnit, i, endTime);
-							})());
+							continue;
 						}
 
+						if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
+							const repeatCount = parValue.repeatCount;
+							let counter = 0;
+							promises.push((async () => {
+								while (counter < repeatCount) {
+									await this.processPlaylist(parValue, region, internalStorageUnit, 'par', endTime);
+									counter += 1;
+								}
+							})());
+							await Promise.all(promises);
+							continue;
+						}
+
+						promises.push((async () => {
+							await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+						})());
 					}
 				}
 			}
-
 			await Promise.all(promises);
 
 			if (config.constants.extractedElements.includes(key)
