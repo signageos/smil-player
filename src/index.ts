@@ -26,7 +26,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	files.setSmilUrl(smilUrl);
 
 	// download SMIL file
-	downloadPromises = files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder);
+	downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder);
 
 	await Promise.all(downloadPromises);
 	debug('SMIL file downloaded');
@@ -37,13 +37,13 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		filePath: `${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
 	});
 
-	const smilObject = await processSmil(smilFileContent);
+	const smilObject: SMILFileObject = await processSmil(smilFileContent);
 	debug('SMIL file parsed: %O', smilObject);
 
 	// download intro file if exists
 	if (smilObject.intro.length > 0) {
 		downloadPromises = downloadPromises.concat(
-			files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0].video], FileStructure.videos),
+			await files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0].video], FileStructure.videos),
 		);
 
 		await Promise.all(downloadPromises);
@@ -78,15 +78,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	debug('Widgets extracted');
 
-	const {
-		fileEtagPromisesMedia: fileEtagPromisesMedia,
-		fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-	} = await files.prepareETagSetup(internalStorageUnit, smilObject, smilFile);
-
-	debug('ETag check for smil media files prepared');
-
 	debug('Starting to process parsed smil file');
-	await playlist.processingLoop(internalStorageUnit, smilObject, fileEtagPromisesMedia, fileEtagPromisesSMIL);
+	await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
 }
 
 async function startSmil(smilUrl: string) {
