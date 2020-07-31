@@ -9,6 +9,7 @@ export const defaults = {
 		extractedElements: ['video', 'audio', 'img', 'ref'],
 		cssElementsPosition: ['left', 'top', 'bottom', 'width', 'height'],
 		cssElements: ['z-index'],
+		additionalCssExtract: ['fit'],
 		flowElements: ['seq', 'par'],
 		regionNameAlias: 'xml:id',
 		defaultRegion: {
