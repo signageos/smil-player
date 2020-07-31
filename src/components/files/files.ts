@@ -60,14 +60,21 @@ export class Files {
 		});
 	}
 
-	public parallelDownloadAllFiles = (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): any[] => {
+	// tslint:disable-next-line:max-line-length
+	public parallelDownloadAllFiles = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string, forceDownload: boolean = false): Promise<any[]> => {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			// check for local urls to files (media/file.mp4)
 			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
 				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
 			}
-			if (isUrl(filesList[i].src)) {
+			// check if file is already downloaded or is forcedDownload to update existing file with new version
+			if (isUrl(filesList[i].src) && (forceDownload || !await this.sos.fileSystem.exists(
+				{
+					storageUnit: internalStorageUnit,
+					filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
+				},
+			))) {
 				promises.push((async () => {
 					debug(`Downloading file: %O`, filesList[i].src);
 					await this.sos.fileSystem.downloadFile(
@@ -130,10 +137,14 @@ export class Files {
 	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
-		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
-		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
-		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
-		downloadPromises = downloadPromises.concat(this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 		return downloadPromises;
 	}
 
