@@ -1,0 +1,512 @@
+{
+  "region": {
+    "video": {
+      "regionName": "video",
+      "left": "0",
+      "top": "0",
+      "width": "1280",
+      "height": "720",
+      "z-index": "1",
+      "backgroundColor": "#FFFFFF",
+      "mediaAlign": "topLeft"
+    },
+    "topOverlay": {
+      "regionName": "topOverlay",
+      "left": "0",
+      "top": "0",
+      "width": "1920",
+      "height": "68",
+      "z-index": "9",
+      "backgroundColor": "transparent"
+    },
+    "bottomWidget": {
+      "regionName": "bottomWidget",
+      "left": "0",
+      "bottom": "0",
+      "width": "1280",
+      "height": "360",
+      "z-index": "1",
+      "backgroundColor": "transparent"
+    },
+    "topRightWidget": {
+      "regionName": "topRightWidget",
+      "left": "1280",
+      "top": "0",
+      "width": "640",
+      "height": "506",
+      "z-index": "1",
+      "backgroundColor": "transparent"
+    },
+    "bottomRightWidget": {
+      "regionName": "bottomRightWidget",
+      "left": "1280",
+      "top": "506",
+      "width": "640",
+      "height": "574",
+      "z-index": "1",
+      "backgroundColor": "transparent"
+    }
+  },
+  "rootLayout": {
+    "width": "1920",
+    "height": "1080",
+    "backgroundColor": "#FFFFFF",
+    "top": "0",
+    "left": "0"
+  },
+  "playlist": {
+    "systemComponent": "http://www.w3.org/1999/xhtml",
+    "style": "background-color:#FFFFFF",
+    "par": {
+      "seq": [
+        {
+          "end": "__prefetchEnd.endEvent",
+          "seq": {
+            "repeatCount": "indefinite",
+            "video": {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/loader.mp4"
+            }
+          }
+        },
+        {
+          "prefetch": [
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_1.mp4"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_2.mp4"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_7.jpg"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt"
+            },
+            {
+              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt"
+            }
+          ],
+          "seq": {
+            "id": "__prefetchEnd",
+            "dur": "1s"
+          }
+        }
+      ],
+      "par": {
+        "begin": "__prefetchEnd.endEvent",
+        "repeatCount": "indefinite",
+        "excl": {
+          "repeatCount": "indefinite",
+          "priorityClass": [
+            {
+              "lower": "never",
+              "peer": "stop",
+              "higher": "stop",
+              "par": {
+                "begin": "wallclock(R/2011-01-01T07:00:00/P1D)",
+                "end": "wallclock(R/2011-01-01T23:00:00/P1D)",
+                "seq": {
+                  "repeatCount": "indefinite",
+                  "excl": {
+                    "begin": "0",
+                    "repeatCount": "indefinite",
+                    "priorityClass": {
+                      "higher": "stop",
+                      "pauseDisplay": "hide",
+                      "par": {
+                        "begin": "0",
+                        "par": [
+                          {
+                            "repeatCount": "indefinite",
+                            "seq": [
+                              {
+                                "dur": "60s"
+                              },
+                              {
+                                "prefetch": [
+                                  {
+                                    "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt"
+                                  },
+                                  {
+                                    "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt"
+                                  },
+                                  {
+                                    "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png"
+                                  },
+                                  {
+                                    "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "seq": {
+                              "repeatCount": "indefinite",
+                              "ref": {
+                                "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt",
+                                "type": "application/widget",
+                                "region": "topOverlay",
+                                "dur": "60s",
+                                "param": {
+                                  "name": "cacheControl",
+                                  "value": "onlyIfCached"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "seq": {
+                              "repeatCount": "indefinite",
+                              "ref": {
+                                "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt",
+                                "type": "application/widget",
+                                "region": "bottomWidget",
+                                "dur": "60s",
+                                "param": {
+                                  "name": "cacheControl",
+                                  "value": "onlyIfCached"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "seq": {
+                              "repeatCount": "indefinite",
+                              "img": {
+                                "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png",
+                                "region": "topRightWidget",
+                                "dur": "60s",
+                                "param": {
+                                  "name": "cacheControl",
+                                  "value": "onlyIfCached"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "seq": {
+                              "repeatCount": "indefinite",
+                              "img": {
+                                "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png",
+                                "region": "bottomRightWidget",
+                                "dur": "60s",
+                                "param": {
+                                  "name": "cacheControl",
+                                  "value": "onlyIfCached"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "seq": {
+                          "repeatCount": "indefinite",
+                          "video": [
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_1.mp4",
+                              "id": "annons0",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_2.mp4",
+                              "id": "annons0",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            }
+                          ],
+                          "img": [
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_6.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            },
+                            {
+                              "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_7.jpg",
+                              "id": "annons1",
+                              "dur": "5s",
+                              "fit": "hidden",
+                              "region": "video",
+                              "param": {
+                                "name": "cacheControl",
+                                "value": "auto"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "lower": "never",
+              "peer": "stop",
+              "higher": "stop",
+              "par": {
+                "begin": "wallclock(R/2011-01-01T00:00:00/P1D)",
+                "end": "wallclock(R/2011-01-01T23:59:59/P1D)",
+                "seq": {
+                  "begin": "0",
+                  "dur": "indefinite",
+                  "ref": {
+                    "dur": "indefinite",
+                    "src": "adapi:blankScreen"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "video": [
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/loader.mp4"
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_1.mp4",
+      "id": "annons0",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_2.mp4",
+      "id": "annons0",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    }
+  ],
+  "img": [
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png",
+      "region": "topRightWidget",
+      "dur": "60s",
+      "param": {
+        "name": "cacheControl",
+        "value": "onlyIfCached"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png",
+      "region": "bottomRightWidget",
+      "dur": "60s",
+      "param": {
+        "name": "cacheControl",
+        "value": "onlyIfCached"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_6.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_7.jpg",
+      "id": "annons1",
+      "dur": "5s",
+      "fit": "hidden",
+      "region": "video",
+      "param": {
+        "name": "cacheControl",
+        "value": "auto"
+      }
+    }
+  ],
+  "ref": [
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt",
+      "type": "application/widget",
+      "region": "topOverlay",
+      "dur": "60s",
+      "param": {
+        "name": "cacheControl",
+        "value": "onlyIfCached"
+      }
+    },
+    {
+      "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt",
+      "type": "application/widget",
+      "region": "bottomWidget",
+      "dur": "60s",
+      "param": {
+        "name": "cacheControl",
+        "value": "onlyIfCached"
+      }
+    },
+    {
+      "dur": "indefinite",
+      "src": "adapi:blankScreen"
+    }
+  ],
+  "audio": [],
+  "intro": [
+    {
+      "repeatCount": "indefinite",
+      "video": {
+        "src": "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/loader.mp4"
+      }
+    }
+  ]
+}

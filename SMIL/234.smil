@@ -1,134 +1,134 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1080" height="1920" z-index="1" backgroundColor="#FFFFFF"
+                    mediaAlign="center"/>
+        </layout>
 
-		<smil>
-			<head>
-			<meta http-equiv="Refresh" content="90"/>
-			<layout>
-			<root-layout width="1080" height="1920" backgroundColor="#FFFFFF" />
-			<region regionName="video" left="0" top="0" width="1080" height="1920" z-index="1" backgroundColor="#FFFFFF" mediaAlign="center" />
-		</layout>
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
 
-		<metadata>
-			<x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+                <subscriptionList>
 
-			<subscriptionList>
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>http://butikstv.centrumkanalen.com/play/report/?player=234</action>
+                        <method>put</method>
+                    </subscription>
 
-				<subscription>
-				<type>SystemReport</type>
-				<action>http://butikstv.centrumkanalen.com/play/report/?player=234</action>
-				<method>put</method> 
-				</subscription>
+                </subscriptionList>
 
-			</subscriptionList>
-
-			</x-server>
-		</metadata>
-
-
-			</head>
-			<body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
-
-				<par> <!-- 1 -->
-
-					<seq end="__prefetchEnd.endEvent">
-						<seq repeatCount="indefinite">
-							<!-- Play waiting prompt -->
-							<video src="http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4"/>
-						</seq>
-					</seq>
+            </x-server>
+        </metadata>
 
 
-					<seq>
-						<!-- Laddar in bilder och filmer innan spellistan börjar spelas-->
-						<prefetch src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10813.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10814.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10815.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10816.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10817.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10818.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10819.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10820.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10821.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10822.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10823.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10824.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10825.png"/>
-						<prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png"/>
+    </head>
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
 
-						<seq id="__prefetchEnd" dur="1s"/>
-					</seq>
+        <par> <!-- 1 -->
 
-					<!-- Spellistan startar -->
-					<seq begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4"/>
+                </seq>
+            </seq>
 
 
-						<par>
-							<ref src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt"
-								 type="application/widget" dur="20" region="video"/>
-							<audio src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3"
-								   dur="20"/>
-						</par>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10813.png" id="annons1"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10814.png" id="annons2"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10815.png" id="annons3"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10816.png" id="annons4"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10817.png" id="annons5"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10818.png" id="annons6"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10819.png" id="annons7"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10820.png" id="annons8"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10821.png" id="annons9"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10822.png" id="annons10"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10823.png" id="annons11"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10824.png" id="annons12"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10825.png" id="annons13"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
-						<img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png" id="annons14"
-							 dur="20s" fit="meetBest" region="video">
-							<param name="cacheControl" value="auto"/>
-						</img>
+            <seq>
+                <!-- Laddar in bilder och filmer innan spellistan börjar spelas-->
+                <prefetch src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10813.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10814.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10815.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10816.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10817.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10818.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10819.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10820.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10821.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10822.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10823.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10824.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10825.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png"/>
+
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+
+            <!-- Spellistan startar -->
+            <seq begin="__prefetchEnd.endEvent" repeatCount="indefinite">
 
 
-					</seq> <!-- Spellistan slut -->
+                <par>
+                    <ref src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt"
+                         type="application/widget" dur="20" region="video"/>
+                    <audio src="http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3"
+                           dur="20"/>
+                </par>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10813.png" id="annons1"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10814.png" id="annons2"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10815.png" id="annons3"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10816.png" id="annons4"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10817.png" id="annons5"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10818.png" id="annons6"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10819.png" id="annons7"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10820.png" id="annons8"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10821.png" id="annons9"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10822.png" id="annons10"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10823.png" id="annons11"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10824.png" id="annons12"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10825.png" id="annons13"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <img src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png" id="annons14"
+                     dur="20s" fit="meetBest" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
 
-				</par> <!-- /1 -->
-			</body>
-		</smil>
+
+            </seq> <!-- Spellistan slut -->
+
+        </par> <!-- /1 -->
+    </body>
+</smil>
