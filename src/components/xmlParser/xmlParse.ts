@@ -2,7 +2,6 @@ import * as xml2js from 'xml2js';
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
 import { DOMParser } from 'xmldom';
-// import { promises as fsPromise } from 'fs';
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -24,7 +23,6 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		audio: [],
 		intro: [],
 	};
-	// const xmlFile: string = await fsPromise.readFile('./SMIL/99.smil', 'utf8');
 	const xmlFileSerialized: Document = new DOMParser().parseFromString(xmlFile, "text/xml");
 	debug('Xml string serialized : %O', xmlFileSerialized);
 	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFileSerialized, {
@@ -141,42 +139,10 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 	return regionsObject;
 }
 
-// function pickDeep(collection: object, element: string[]) {
-// 	const picked = pick(collection, element);
-// 	const collections = pickBy(collection, isObject);
-//
-// 	each(collections, (item, key) => {
-// 		let object;
-// 		if (Array.isArray(item)) {
-// 			object = reduce(
-// 				item,
-// 				(result: any[], value) => {
-// 					const pickedDeep = pickDeep(value, element);
-// 					if (!isEmpty(pickedDeep)) {
-// 						result.push(pickedDeep);
-// 					}
-// 					return result;
-// 				},
-// 				[],
-// 			);
-// 		} else {
-// 			object = pickDeep(item, element);
-// 		}
-//
-// 		if (!_.isEmpty(object)) {
-// 			// @ts-ignore
-// 			picked[key] = object;
-// 		}
-//
-// 	});
-// 	return picked;
-// }
-
 function extractBodyContent(xmlObject: object): SMILPlaylist {
 	const playlist = {
 		playlist: {},
 	};
-	// playlist.playlist = <SMILPlaylist> pickDeep(xmlObject, config.constants.extractedElements);
 	playlist.playlist = <SMILPlaylist> xmlObject;
 	return playlist;
 }
