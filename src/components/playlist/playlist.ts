@@ -76,38 +76,31 @@ export class Playlist {
 		debug('previous video stopped');
 	}
 
-	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number) => {
+	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number | string) => {
 		let exist = false;
-		let oldElement: HTMLElement;
+		let oldElement: HTMLElement | undefined;
 		if (document.getElementById(getFileName(filepath)) != null) {
 			exist = true;
-			oldElement = <HTMLElement> document.getElementById(getFileName(filepath));
+			oldElement = <HTMLElement> document.getElementById(`${getFileName(filepath)}-${regionInfo.regionName}`);
 		}
-		const element: HTMLElement = <HTMLElement> document.createElement(htmlElement);
+		const element: HTMLElement = createHtmlElement(htmlElement, filepath, regionInfo);
 
-		element.setAttribute('src', filepath);
-		element.id = getFileName(filepath);
-		Object.keys(regionInfo).forEach((attr: any) => {
-			if (config.constants.cssElementsPosition.includes(attr)) {
-				element.style[attr] = `${regionInfo[attr]}px`;
-			}
-			if (config.constants.cssElements.includes(attr)) {
-				element.style[attr] = <string> regionInfo[attr];
-			}
-		});
-		element.style.position = 'absolute';
-		element.style.backgroundColor = 'transparent';
+		// set corerct duration
+		duration = setDuration(duration);
+
 		debug('Creating htmlElement: %O with duration %s', element, duration);
-		if (exist) {
-			// @ts-ignore
+
+		document.body.appendChild(element);
+
+		if (exist && oldElement !== undefined) {
 			oldElement.remove();
 		}
-		document.body.appendChild(element);
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
 			await this.cancelPreviousVideo(regionInfo);
 		}
+
 		await sleep(duration * 1000);
-		debug('element playing finished');
+		debug('element playing finished: %O', element);
 	}
 
 	public playVideosSeq = async (videos: SMILVideo[], internalStorageUnit: IStorageUnit) => {
@@ -212,16 +205,21 @@ export class Playlist {
 		video.localFilePath = currentVideoDetails.localUri;
 		debug('Playing video: %O', video);
 
-		await this.sos.video.prepare(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-			config.videoOptions,
-		);
-
-		if (!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].playing) {
+		// prepare if video is not same as previous one played
+		if (isNil(this.currentlyPlaying[video.regionInfo.regionName]) ||
+			(!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].src !== video.src)) {
+			await this.sos.video.prepare(
+				video.localFilePath,
+				video.regionInfo.left,
+				video.regionInfo.top,
+				video.regionInfo.width,
+				video.regionInfo.height,
+				config.videoOptions,
+			);
+		}
+		// cancel if video is not same as previous one played
+		if (!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].playing
+			&& this.currentlyPlaying[video.regionInfo.regionName].src !== video.src) {
 			await this.cancelPreviousVideo(video.regionInfo);
 		}
 

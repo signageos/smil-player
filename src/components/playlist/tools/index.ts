@@ -2,18 +2,24 @@ import Debug from 'debug';
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import cloneDeep = require('lodash/cloneDeep');
-import { RegionAttributes, RegionsObject, InfiniteLoopObject, PrefetchObject, SmilScheduleObject } from '../../../models';
+import {
+	RegionAttributes,
+	RegionsObject,
+	InfiniteLoopObject,
+	PrefetchObject,
+	SmilScheduleObject,
+	SMILVideo,
+	SMILImage,
+	SMILAudio,
+	SMILWidget,
+} from '../../../models';
 import { defaults as config } from '../../../config';
-import { SMILScheduleEnum } from '../../../enums';
+import { ObjectFitEnum, SMILScheduleEnum } from '../../../enums';
 import moment from 'moment';
+import { getFileName } from '../../files/tools';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
-let cancelFunction = false;
-
-export function disableLoop(value: boolean) {
-	cancelFunction = value;
-}
 // checks if given object contains prefetch element
 function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
 	return get(obj, path, 'notFound') === 'notFound';
@@ -69,16 +75,18 @@ export async function sleep(ms: number): Promise<object> {
 		setTimeout(resolve, ms);
 	});
 }
-
-export async function runEndlessLoop(fn: Function) {
-	while (!cancelFunction) {
-		try {
-			await fn();
-		} catch (err) {
-			debug('Error: %O occured during processing function %s', err, fn.name);
-			throw err;
+// function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
+export function setDefaultAwait(elementsArray: any[]): number {
+	const nowMillis: number = moment().valueOf();
+	// found element which can be player right now
+	for (const loopElem of elementsArray) {
+		const { timeToStart, timeToEnd } = parseSmilSchedule(loopElem.begin, loopElem.end);
+		if (timeToStart <= 0 && timeToEnd > nowMillis) {
+			return 0;
 		}
 	}
+
+	return SMILScheduleEnum.defaultAwait;
 }
 
 export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
@@ -129,12 +137,17 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	return regionInfo;
 }
 // default endTime for infinite duration when there is no endTime specified, example string wallclock(R/2100-01-01T00:00:00/P1D)
-export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endTimeFuture): SmilScheduleObject {
+export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endDateAndTimeFuture): SmilScheduleObject {
 	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
 
 	// remove extra characters, wallclock, ( and )
-	const dateStringStart = startTime.replace(/wallclock|\(|\)/g, '');
-	const dateStringEnd = endTime.replace(/wallclock|\(|\)/g, '');
+	let dateStringStart = startTime.replace(/wallclock|\(|\)/g, '');
+	let dateStringEnd = endTime.replace(/wallclock|\(|\)/g, '');
+
+	// normalize date string in case its only date and time 2100-01-01T00:00:00 -> Q/2100-01-01T00:00:00/NoRepeat
+	// purpose is to have same format for all strings, but preserve repeating rules of strings like 2100-01-01T00:00:00
+	dateStringStart = dateStringStart.indexOf('/') !== -1 ? dateStringStart : `W/${dateStringStart}/NoRepeat`;
+	dateStringEnd = dateStringEnd.indexOf('/') !== -1 ? dateStringEnd : `W/${dateStringEnd}/NoRepeat`;
 
 	const splitStringStart = dateStringStart.split('/');
 	const splitStringEnd = dateStringEnd.split('/');
@@ -170,9 +183,44 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	// scheduled time to start is in the past
 	if (timeToStart < 0) {
 		// startTime is in the past, endTime in the future and scheduled week day is same as todays week day ( or no weekday specified )
-		if ((dateAndTimeStart[1] <= nowTime) && (nowTime <= dateAndTimeEnd[1]) && (dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)) {
+		if (((dateAndTimeStart[1] <= nowTime || dateAndTimeStart[0] < nowDay)
+			&& ((nowTime <= dateAndTimeEnd[1]) || (dateAndTimeStart[0] < dateAndTimeEnd[0])))
+			&& (dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)) {
 			timeToStart = 0;
 			timeToEnd = moment(`${datePart}T${timePartEnd}`).valueOf();
+			// when endTime is in future and content should be played without stop overnight for several days
+			if (dateAndTimeStart[0] < dateAndTimeEnd[0]) {
+				timeToEnd = moment(`${dateAndTimeEnd[0]}T${timePartEnd}`).valueOf();
+			}
+
+			// repeat once every day, startTime in future, dayTime in past
+			if (dateAndTimeStart[1] >= nowTime && dateAndTimeStart[0] < nowDay && splitStringEnd[2] === 'P1D') {
+				// startTime and endTime both in the past, or its scheduled for different weekDay
+				datePart = computeScheduledDate(moment(), nowTime, dateAndTimeStart[1], dateAndTimeStart[0], dayInfoStart);
+				timeToStart = moment(`${datePart}T${timePartStart}`).valueOf() - nowMillis;
+
+				datePart = computeScheduledDate(moment(nowDay), nowTime, dateAndTimeEnd[1], dateAndTimeStart[0], dayInfoStart);
+				timeToEnd = moment(`${datePart}T${timePartEnd}`).valueOf();
+
+				debug('schedule for tomorrow');
+				debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+				return {
+					timeToStart,
+					timeToEnd,
+				};
+			}
+
+			if (dateAndTimeEnd[0] < nowDay && splitStringEnd[2] !== 'P1D') {
+				timeToStart = 0;
+				timeToEnd = SMILScheduleEnum.neverPlay;
+				debug('wallclock completely in the past, will not be played');
+				debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+				return {
+					timeToStart,
+					timeToEnd,
+				};
+			}
+
 			debug('play immediately');
 			debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
 			return {
@@ -189,8 +237,19 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 		timeToEnd = moment(`${datePart}T${timePartEnd}`).valueOf();
 
 		// no endTime specified, SMIL element has only begin tag
-		if (endTime === SMILScheduleEnum.endTimeFuture) {
+		if (endTime === SMILScheduleEnum.endDateAndTimeFuture) {
 			timeToEnd = moment(`${dateAndTimeEnd[0]}T${timePartEnd}`).valueOf();
+		}
+
+		if ((dateAndTimeEnd[0] < nowDay || dateAndTimeEnd[1] < nowTime) && splitStringEnd[2] !== 'P1D') {
+			timeToStart = 0;
+			timeToEnd = SMILScheduleEnum.neverPlay;
+			debug('wallclock completely in the past, will not be played');
+			debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+			return {
+				timeToStart,
+				timeToEnd,
+			};
 		}
 
 		debug('schedule for tomorrow');
@@ -234,11 +293,11 @@ export function computeScheduledDate(startDate: moment.Moment, nowTime: string, 
 		if ((terminalDay < scheduledDay) || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
 			const returnDate = moment().isoWeekday(scheduledDay).format('YYYY-MM-DD');
 			// return default date in the past if scheduledDate from SMIL is already in the past
-			return returnDate < scheduledDate ? returnDate : SMILScheduleEnum.endTimePast;
+			return returnDate < scheduledDate ? returnDate : SMILScheduleEnum.endDatePast;
 		} else {
 			const returnDate =  moment().add(1, 'weeks').isoWeekday(scheduledDay).format('YYYY-MM-DD');
 			// return default date in the past if scheduledDate from SMIL is already in the past
-			return returnDate < scheduledDate ? returnDate : SMILScheduleEnum.endTimePast;
+			return returnDate < scheduledDate ? returnDate : SMILScheduleEnum.endDatePast;
 		}
 	}
 	// dont schedule for another day, if it still can be played on given day
@@ -278,4 +337,52 @@ export function extractDayInfo(timeRecord: string): any {
 		timeRecord,
 		dayInfo,
 	};
+}
+
+export function setDuration(dur: any): number {
+	// leave only digits in duration string ( can contain s character )
+	if (dur === 'indefinite') {
+		return 999999;
+	}
+	dur = dur.replace(/[^0-9]/g, "");
+	// empty string or NaN
+	if (isNaN(dur) || dur.length === 0) {
+		return 5;
+	}
+
+	return parseInt(dur, 10);
+}
+
+export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget | SMILImage):
+	SMILVideo | SMILAudio | SMILWidget | SMILImage {
+	// extract additional css info which are not specified in region tag.
+	Object.keys(value).forEach((attr: any) => {
+		if (config.constants.additionalCssExtract.includes(attr)) {
+			value.regionInfo[attr] = get(value, attr);
+		}
+	});
+
+	return value;
+}
+
+export function createHtmlElement(htmlElement: string, filepath: string, regionInfo: RegionAttributes): HTMLElement {
+	const element: HTMLElement = document.createElement(htmlElement);
+
+	element.setAttribute('src', filepath);
+	element.id = `${getFileName(filepath)}-${regionInfo.regionName}`;
+	Object.keys(regionInfo).forEach((attr: any) => {
+		if (config.constants.cssElementsPosition.includes(attr)) {
+			element.style[attr] = `${regionInfo[attr]}px`;
+		}
+		if (config.constants.cssElements.includes(attr)) {
+			element.style[attr] = <string> regionInfo[attr];
+		}
+		if (config.constants.additionalCssExtract.includes(attr)) {
+			element.style[<any> ObjectFitEnum.objectFit] = get(ObjectFitEnum, `${regionInfo[attr]}`, 'fill');
+		}
+	});
+	element.style.position = 'absolute';
+	element.style.backgroundColor = 'transparent';
+
+	return element;
 }
