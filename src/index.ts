@@ -7,11 +7,9 @@ import { processSmil } from './components/xmlParser/xmlParse';
 import { Files } from './components/files/files';
 import { Playlist } from './components/playlist/playlist';
 import { FileStructure } from './enums';
-import { SMILFile, SosModule } from './models';
-// import { defaults as config } from './config';
+import { SMILFile, SMILFileObject, SosModule } from './models';
 import Debug from 'debug';
 import { getFileName } from "./components/files/tools";
-import { disableLoop } from "./components/playlist/tools";
 const files = new Files(sos);
 const playlist = new Playlist(sos, files);
 
@@ -102,8 +100,10 @@ async function startSmil(smilUrl: string) {
 
 	while (true) {
 		try {
-			// disable internal endless loops for playing media
-			disableLoop(false);
+			// enable internal endless loops for playing media
+			playlist.disableLoop(false);
+			// enable endless loop for checking files updated
+			playlist.setCheckFilesLoop(true);
 			await main(internalStorageUnit, smilUrl, sos);
 			debug('one smil iteration finished');
 		} catch (err) {
