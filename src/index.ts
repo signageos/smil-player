@@ -60,12 +60,12 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			// set intro url in playlist to exclude it from further playing
 			playlist.setIntroUrl(introVideo);
 			await playlist.playIntroVideo(introVideo.video);
-			await Promise.all(downloadPromises).then(async () =>  {
+			Promise.all(downloadPromises).then(async () =>  {
 				debug('SMIL media files download finished, stopping intro');
-				await playlist.endIntroVideo(introVideo.video);
 				playingIntro = false;
 			});
 		}
+		await playlist.endIntroVideo(introVideo.video);
 	} else {
 		// no intro
 		debug('No intro video found');
@@ -120,7 +120,7 @@ async function startSmil(smilUrl: string) {
 		document.body.style.backgroundColor = 'transparent';
 		debug('sOS is ready');
 		debug('Smil file url is: %s', sos.config.smilUrl);
-		// await startSmil('https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/zones.smil');
+		// await startSmil('https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/01-full-screen-playback.smil');
 		await startSmil(sos.config.smilUrl);
 	}
 })();
