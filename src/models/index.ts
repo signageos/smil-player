@@ -27,13 +27,14 @@ export type RegionAttributes = {
 	width: number,
 	height: number,
 	"z-index"?: number,
+	fit?: string,
 	[key: string]: string | number | undefined,
 };
 
 export type SMILVideo = {
 	src: string,
 	id: string,
-	fit: string,
+	fit?: string,
 	region: string,
 	etag?: string,
 	localFilePath: string,
@@ -45,6 +46,7 @@ export type SMILVideo = {
 export type SMILAudio = {
 	src: string,
 	dur: string,
+	fit?: string,
 	etag?: string,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
@@ -55,6 +57,7 @@ export type SMILImage = {
 	src: string,
 	region: string,
 	dur: string,
+	fit?: string,
 	etag?: string,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
@@ -65,6 +68,7 @@ export type SMILWidget = {
 	src: string,
 	region: string,
 	dur: string,
+	fit?: string,
 	etag?: string,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
@@ -74,6 +78,8 @@ export type SMILWidget = {
 export type SMILIntro = {
 	video: SMILVideo[],
 };
+
+export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo[];
 
 export type DownloadsList = {
 	video: SMILVideo[],
