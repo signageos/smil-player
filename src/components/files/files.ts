@@ -1,4 +1,5 @@
 import isNil = require('lodash/isNil');
+import get = require('lodash/get');
 import { FileStructure } from '../../enums';
 import {
 	CheckETagFunctions,
@@ -11,9 +12,8 @@ import {
 	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isValidLocalPath } from './tools';
+import { getFileName, getPath, isValidLocalPath, createDownloadPath } from './tools';
 import { debug } from './tools';
-import { corsAnywhere } from '../../../config/parameters';
 
 const isUrl = require('is-url-superb');
 
@@ -31,7 +31,7 @@ export class Files {
 
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < widgets.length; i++) {
-			if (isUrl(widgets[i].src)) {
+			if (isUrl(widgets[i].src) && widgets[i].src.indexOf('.wgt') > -1) {
 				debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
 				await this.sos.fileSystem.extractFile(
 					{
@@ -76,13 +76,13 @@ export class Files {
 				},
 			))) {
 				promises.push((async () => {
-					debug(`Downloading file: %O`, filesList[i].src);
+					debug(`Downloading file: %s`, filesList[i].src);
 					await this.sos.fileSystem.downloadFile(
 						{
 							storageUnit: internalStorageUnit,
 							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
 						},
-						corsAnywhere + filesList[i].src,
+						createDownloadPath(filesList[i].src),
 					);
 				})());
 			}
@@ -94,7 +94,7 @@ export class Files {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
-				const response = await fetch(corsAnywhere + filesList[i].src, {
+				const response = await fetch(createDownloadPath(filesList[i].src), {
 					method: 'HEAD',
 					headers: {
 						Accept: 'application/json',
@@ -107,7 +107,7 @@ export class Files {
 
 				if (filesList[i].etag !== newEtag) {
 					debug(`New version of file detected: %O`, filesList[i].src);
-					promises = promises.concat(this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath));
+					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
 				}
 			}
 		}
@@ -120,17 +120,44 @@ export class Files {
 				storageUnit: internalStorageUnit,
 				filePath: path,
 			})) {
-				debug(`Filepath already exists, deleting: %O`, path);
-				await this.sos.fileSystem.deleteFile({
-					storageUnit: internalStorageUnit,
-					filePath: path,
-				},                                   true);
+				debug(`Filepath already exists: %O`, path);
+				continue;
 			}
 			debug(`Create directory structure: %O`, path);
 			await this.sos.fileSystem.createDirectory({
 				storageUnit: internalStorageUnit,
 				filePath: path,
 			});
+		}
+	}
+
+	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<void> => {
+		const smilMediaArray: any = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
+
+		for (let path in FileStructure) {
+			const downloadedFiles = await this.sos.fileSystem.listFiles( { filePath: get(FileStructure, path), storageUnit: internalStorageUnit });
+
+			for (let storedFile of downloadedFiles) {
+				let found = false;
+				for (let smilFile of smilMediaArray) {
+					if (getFileName(storedFile.filePath) === getFileName(smilFile.src)) {
+						debug(`File found in new SMIL file: %s`, storedFile.filePath);
+						found = true;
+						break;
+					}
+				}
+
+				if (!found) {
+					// delete only path with files, not just folders
+					if (storedFile.filePath.indexOf('.') > -1) {
+						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
+						await this.sos.fileSystem.deleteFile({
+							storageUnit: internalStorageUnit,
+							filePath: storedFile.filePath,
+						},                                   true);
+					}
+				}
+			}
 		}
 	}
 

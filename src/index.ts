@@ -74,6 +74,11 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		debug('SMIL media files download finished');
 	}
 
+	// check of outdated files and delete them
+	await files.deleteUnusedFiles(internalStorageUnit, smilObject);
+
+	debug('Unused files deleted');
+
 	await files.extractWidgets(smilObject.ref, internalStorageUnit);
 
 	debug('Widgets extracted');

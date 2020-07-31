@@ -278,6 +278,11 @@ export class Playlist {
 			debug('Playing media sequentially: %O', value);
 			for (let i = 0; i < value.length; i += 1) {
 				if (isUrl(value[i].src)) {
+					// widget with website url as datasource
+					if (htmlElement === 'iframe' && getFileName(value[i].src).indexOf('.wgt') === -1) {
+						await this.playTimedMedia(htmlElement, value[i].src, value[i].regionInfo, value[i].dur);
+						continue;
+					}
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
@@ -289,6 +294,13 @@ export class Playlist {
 			const promises = [];
 			debug('Playing media in parallel: %O', value);
 			for (let i = 0; i < value.length; i += 1) {
+				// widget with website url as datasource
+				if (htmlElement === 'iframe' && getFileName(value[i].src).indexOf('.wgt') === -1) {
+					promises.push((async () => {
+						await this.playTimedMedia(htmlElement, value[i].src, value[i].regionInfo, value[i].dur);
+					})());
+					continue;
+				}
 				promises.push((async () => {
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
