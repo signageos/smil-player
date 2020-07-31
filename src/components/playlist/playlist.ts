@@ -347,28 +347,36 @@ export class Playlist {
 	public processingLoop = async (
 		internalStorageUnit: IStorageUnit,
 		smilObject: SMILFileObject,
-		fileEtagPromisesMedia: any[],
-		fileEtagPromisesSMIL: any[],
+		smilFile: SMILFile,
 	) => {
 		return new Promise((resolve, reject) => {
 			parallel([
-				async () => {
+				async (callback) => {
 					while (this.checkFilesLoop) {
-						await sleep(120000);
+						debug('Prepare ETag check for smil media files prepared');
+						const {
+							fileEtagPromisesMedia: fileEtagPromisesMedia,
+							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
+						} = await this.files.prepareETagSetup(internalStorageUnit, smilObject, smilFile);
+
+						debug('ETag check for smil media files prepared');
+						await sleep(90000);
+						debug('Checking files for changes');
 						const response = await Promise.all(fileEtagPromisesSMIL);
 						if (response[0].length > 0) {
 							debug('SMIL file changed, restarting loop');
-							disableLoop(true);
-							return;
+							this.disableLoop(true);
+							this.setCheckFilesLoop(false);
 						}
 						await Promise.all(fileEtagPromisesMedia);
 					}
+					callback();
 				},
-				async () => {
-					await runEndlessLoop(async () => {
+				async (callback) => {
+					await this.runEndlessLoop(async () => {
 						await this.processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
-						debug('One iteration of playlist finished');
 					});
+					callback();
 				},
 			],       async (err) => {
 				if (err) {
