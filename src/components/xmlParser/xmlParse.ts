@@ -9,11 +9,11 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
-	XmlSmilObject,
+	XmlSmilObject, SMILFile,
 } from '../../models';
 import { SMILEnums } from '../../enums';
 import { defaults as config } from '../../config';
-import { debug } from './tools';
+import { debug, containsElement } from './tools';
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {
@@ -49,13 +49,17 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		}
 		if (config.constants.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
-			if (Array.isArray(node.value)) {
-				// @ts-ignore
-				downloads[node.key] = downloads[node.key].concat(node.value);
-			} else {
-				// @ts-ignore
-				downloads[node.key].push(node.value);
+			if (!Array.isArray(node.value)) {
+				node.value = [node.value];
+
 			}
+			node.value.forEach((element: SMILFile) => {
+				// @ts-ignore
+				if (!containsElement(downloads[node.key], element.src)) {
+					// @ts-ignore
+					downloads[node.key].push(element);
+				}
+			});
 		}
 	});
 
