@@ -79,7 +79,7 @@ export type SMILIntro = {
 	video: SMILVideo[],
 };
 
-export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo[];
+export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo | SMILFile;
 
 export type DownloadsList = {
 	video: SMILVideo[],
