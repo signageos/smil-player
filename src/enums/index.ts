@@ -18,6 +18,8 @@ export enum SMILScheduleEnum {
 	endDatePast = '1970-01-01',
 	neverPlay = -3600000,
 	defaultAwait = 20000,
+	defaultDuration = 5,
+	infiniteDuration = 999999,
 }
 
 export enum ObjectFitEnum {

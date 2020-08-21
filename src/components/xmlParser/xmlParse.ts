@@ -9,7 +9,7 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
-	XmlSmilObject, SMILFile,
+	XmlSmilObject, SMILMedia,
 } from '../../models';
 import { SMILEnums } from '../../enums';
 import { defaults as config } from '../../config';
@@ -23,6 +23,9 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		audio: [],
 		intro: [],
 	};
+	const playableMedia = {
+		playlist: {},
+	};
 	const xmlFileSerialized: Document = new DOMParser().parseFromString(xmlFile, "text/xml");
 	debug('Xml string serialized : %O', xmlFileSerialized);
 	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFileSerialized, {
@@ -33,16 +36,13 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	debug('Xml file parsed to json object: %O', xmlObject);
 
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
-	const playableMedia = <SMILPlaylist> extractBodyContent(xmlObject.smil.body);
-	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; }) {
+	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
+	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; parent: { key: string; value: any; } }) {
 		// detect intro element, may not exist
 		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
-			// @ts-ignore
-			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; }) {
+			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; parent: { key: string; value: any; } }) {
 				if (config.constants.extractedElements.includes(introNode.key)) {
-					// @ts-ignore
 					debug('Intro element found: %O', introNode.parent.value);
-					// @ts-ignore
 					downloads.intro.push(introNode.parent.value);
 				}
 			});
@@ -53,8 +53,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 				node.value = [node.value];
 
 			}
-			node.value.forEach((element: SMILFile) => {
-				// @ts-ignore
+			node.value.forEach((element: SMILMedia) => {
 				if (!containsElement(downloads[node.key], element.src)) {
 					// @ts-ignore
 					downloads[node.key].push(element);
@@ -70,17 +69,15 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	return Object.assign({}, regions, playableMedia, downloads);
 }
 
-function extractRegionInfo(xmlObject: object): RegionsObject {
+function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
 	};
-	Object.keys(xmlObject).forEach((rootKey) => {
+	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
-		// @ts-ignore
 		if (Array.isArray(xmlObject[rootKey])) {
 			// iterate over array of objects
-			// @ts-ignore
-			Object.keys(xmlObject[rootKey]).forEach((index) => {
+			Object.keys(xmlObject[rootKey]).forEach((index: any) => {
 				//creates structure like this
 				// {
 				//     "region": {
@@ -106,12 +103,9 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 				//         }
 				//     }
 				// }
-				// @ts-ignore
 				if (xmlObject[rootKey][index].hasOwnProperty('regionName')) {
-					// @ts-ignore
 					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes> xmlObject[rootKey][index];
 				} else {
-					// @ts-ignore
 					regionsObject.region[xmlObject[rootKey][index][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey][index];
 
 				}
@@ -119,7 +113,6 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 		} else {
 			// only one region/rootLayout in layout element
 			if (rootKey === SMILEnums.rootLayout) {
-				// @ts-ignore
 				regionsObject.rootLayout = <RootLayout> xmlObject[rootKey];
 				// add left and top values for intro play
 				regionsObject.rootLayout.top = '0';
@@ -127,12 +120,9 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 			}
 
 			if (rootKey === SMILEnums.region) {
-				// @ts-ignore
 				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
-					// @ts-ignore
 					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes> xmlObject[rootKey];
 				} else {
-					// @ts-ignore
 					regionsObject.region[xmlObject[rootKey][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey];
 
 				}
@@ -141,14 +131,6 @@ function extractRegionInfo(xmlObject: object): RegionsObject {
 	});
 
 	return regionsObject;
-}
-
-function extractBodyContent(xmlObject: object): SMILPlaylist {
-	const playlist = {
-		playlist: {},
-	};
-	playlist.playlist = <SMILPlaylist> xmlObject;
-	return playlist;
 }
 
 export async function processSmil(xmlFile: string): Promise<SMILFileObject> {
