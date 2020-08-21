@@ -1,8 +1,9 @@
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
+import moment from 'moment';
 import { FileStructure } from '../../enums';
 import {
-	CheckETagFunctions,
+	CheckETagFunctions, MergedDownloadList,
 	SMILAudio,
 	SMILFile,
 	SMILFileObject,
@@ -90,7 +91,8 @@ export class Files {
 		return promises;
 	}
 
-	public checkFileEtag = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string): Promise<any[]> => {
+	// tslint:disable-next-line:max-line-length
+	public checkLastModified = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
@@ -99,13 +101,14 @@ export class Files {
 					headers: {
 						Accept: 'application/json',
 					},
+					mode: 'cors',
 				});
-				const newEtag = await response.headers.get('ETag');
-				if (isNil(filesList[i].etag)) {
-					filesList[i].etag = newEtag;
+				const newLastModified = await response.headers.get('last-modified');
+				if (isNil(filesList[i].lastModified)) {
+					filesList[i].lastModified = moment(newLastModified).valueOf();
 				}
 
-				if (filesList[i].etag !== newEtag) {
+				if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
 					debug(`New version of file detected: %O`, filesList[i].src);
 					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
 				}
@@ -175,7 +178,7 @@ export class Files {
 		return downloadPromises;
 	}
 
-	public prepareETagSetup = async (
+	public prepareLastModifiedSetup = async (
 		internalStorageUnit: IStorageUnit,
 		smilObject: SMILFileObject,
 		smilFile: SMILFile,
@@ -184,12 +187,12 @@ export class Files {
 		let fileEtagPromisesSMIL: Promise<any>[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
 
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.video, FileStructure.videos));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.audio, FileStructure.audios));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.img, FileStructure.images));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkFileEtag(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos));
+		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios));
+		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images));
+		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 
-		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkFileEtag(internalStorageUnit, [smilFile], FileStructure.rootFolder));
+		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkLastModified(internalStorageUnit, [smilFile], FileStructure.rootFolder));
 
 		return {
 			fileEtagPromisesMedia,
