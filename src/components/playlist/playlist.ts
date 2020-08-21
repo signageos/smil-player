@@ -17,7 +17,7 @@ import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/Fil
 import { defaults as config } from '../../config';
 import { getFileName } from '../files/tools';
 import {
-	debug, getRegionInfo, sleep, detectPrefetchLoop, parseSmilSchedule,
+	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setDuration, extractAdditionalInfo, createHtmlElement, setDefaultAwait,
 } from './tools';
 import { Files } from '../files/files';
@@ -77,22 +77,17 @@ export class Playlist {
 	}
 
 	public playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number | string) => {
-		let exist = false;
-		let oldElement: HTMLElement | undefined;
-		if (document.getElementById(getFileName(filepath)) != null) {
-			exist = true;
-			oldElement = <HTMLElement> document.getElementById(`${getFileName(filepath)}-${regionInfo.regionName}`);
-		}
+		const oldElement = document.getElementById(`${getFileName(filepath)}-${regionInfo.regionName}`);
 		const element: HTMLElement = createHtmlElement(htmlElement, filepath, regionInfo);
 
-		// set corerct duration
+		// set correct duration
 		duration = setDuration(duration);
 
 		debug('Creating htmlElement: %O with duration %s', element, duration);
 
 		document.body.appendChild(element);
 
-		if (exist && oldElement !== undefined) {
+		if (oldElement) {
 			oldElement.remove();
 		}
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
@@ -147,6 +142,7 @@ export class Playlist {
 			}
 
 			this.currentlyPlaying[currentVideo.regionInfo.regionName] = currentVideo;
+			currentVideo.playing = true;
 
 			await this.sos.video.play(
 				currentVideo.localFilePath,
@@ -155,7 +151,7 @@ export class Playlist {
 				currentVideo.regionInfo.width,
 				currentVideo.regionInfo.height,
 			);
-			currentVideo.playing = true;
+
 			if (previousVideo.playing) {
 				debug('Stopping video: %O', previousVideo);
 				await this.sos.video.stop(
@@ -192,9 +188,9 @@ export class Playlist {
 
 	public playVideosPar = async (videos: SMILVideo[], internalStorageUnit: IStorageUnit) => {
 		const promises = [];
-		for (let i = 0; i < videos.length; i += 1) {
+		for (let elem of videos) {
 			promises.push((async () => {
-				await this.playVideo(videos[i], internalStorageUnit);
+				await this.playVideo(elem, internalStorageUnit);
 			})());
 		}
 		await Promise.all(promises);
@@ -206,8 +202,7 @@ export class Playlist {
 		debug('Playing video: %O', video);
 
 		// prepare if video is not same as previous one played
-		if (isNil(this.currentlyPlaying[video.regionInfo.regionName]) ||
-			(!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].src !== video.src)) {
+		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
 			await this.sos.video.prepare(
 				video.localFilePath,
 				video.regionInfo.left,
@@ -217,9 +212,10 @@ export class Playlist {
 				config.videoOptions,
 			);
 		}
+
 		// cancel if video is not same as previous one played
-		if (!isNil(this.currentlyPlaying[video.regionInfo.regionName]) && this.currentlyPlaying[video.regionInfo.regionName].playing
-			&& this.currentlyPlaying[video.regionInfo.regionName].src !== video.src) {
+		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'playing')
+			&& get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
 			await this.cancelPreviousVideo(video.regionInfo);
 		}
 
@@ -313,38 +309,38 @@ export class Playlist {
 		}
 		if (parent === 'seq') {
 			debug('Playing media sequentially: %O', value);
-			for (let i = 0; i < value.length; i += 1) {
-				if (isUrl(value[i].src)) {
+			for (const elem of value) {
+				if (isUrl(elem.src)) {
 					// widget with website url as datasource
-					if (htmlElement === 'iframe' && getFileName(value[i].src).indexOf('.wgt') === -1) {
-						await this.playTimedMedia(htmlElement, value[i].src, value[i].regionInfo, value[i].dur);
+					if (htmlElement === 'iframe' && getFileName(elem.src).indexOf('.wgt') === -1) {
+						await this.playTimedMedia(htmlElement, elem.src, elem.regionInfo, elem.dur);
 						continue;
 					}
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
-						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
+						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
 					});
-					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, value[i].dur);
+					await this.playTimedMedia(htmlElement, mediaFile.localUri, elem.regionInfo, elem.dur);
 				}
 			}
 		}
 		if (parent === 'par') {
 			const promises = [];
 			debug('Playing media in parallel: %O', value);
-			for (let i = 0; i < value.length; i += 1) {
+			for (const elem of value) {
 				// widget with website url as datasource
-				if (htmlElement === 'iframe' && getFileName(value[i].src).indexOf('.wgt') === -1) {
+				if (htmlElement === 'iframe' && getFileName(elem.src).indexOf('.wgt') === -1) {
 					promises.push((async () => {
-						await this.playTimedMedia(htmlElement, value[i].src, value[i].regionInfo, value[i].dur);
+						await this.playTimedMedia(htmlElement, elem.src, elem.regionInfo, elem.dur);
 					})());
 					continue;
 				}
 				promises.push((async () => {
 					const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
-						filePath: `${fileStructure}/${getFileName(value[i].src)}${widgetRootFile}`,
+						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
 					});
-					await this.playTimedMedia(htmlElement, mediaFile.localUri, value[i].regionInfo, value[i].dur);
+					await this.playTimedMedia(htmlElement, mediaFile.localUri, elem.regionInfo, elem.dur);
 				})());
 			}
 			await Promise.all(promises);
@@ -381,13 +377,14 @@ export class Playlist {
 	}
 
 	public getRegionPlayElement = async (value: any, key: string, internalStorageUnit: IStorageUnit, region: RegionsObject, parent: string = '0') => {
+		// in case of array elements
 		if (!isNaN(parseInt(parent))) {
 			parent = 'seq';
 		}
 		if (Array.isArray(value)) {
-			for (let i in value) {
-				value[i].regionInfo = getRegionInfo(region, value[i].region);
-				extractAdditionalInfo(value[i]);
+			for (const elem of value) {
+				elem.regionInfo = getRegionInfo(region, elem.region);
+				extractAdditionalInfo(elem);
 			}
 		} else {
 			value.regionInfo = getRegionInfo(region, value.region);
@@ -409,10 +406,10 @@ export class Playlist {
 						const {
 							fileEtagPromisesMedia: fileEtagPromisesMedia,
 							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-						} = await this.files.prepareETagSetup(internalStorageUnit, smilObject, smilFile);
+						} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
 
-						debug('ETag check for smil media files prepared');
-						await sleep(90000);
+						debug('Last modified check for smil media files prepared');
+						await sleep(20000);
 						debug('Checking files for changes');
 						const response = await Promise.all(fileEtagPromisesSMIL);
 						if (response[0].length > 0) {
@@ -438,6 +435,24 @@ export class Playlist {
 			});
 		});
 	}
+
+	// tslint:disable-next-line:max-line-length
+	public processUnsupportedTag = (value: object | any[], region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0): Promise<void>[] => {
+		const promises: Promise<void>[] = [];
+		if (Array.isArray(value)) {
+			for (let elem of value) {
+				promises.push((async () => {
+					await this.processPlaylist(elem, region, internalStorageUnit, parent, endTime);
+				})());
+			}
+		} else {
+			promises.push((async () => {
+				await this.processPlaylist(value, region, internalStorageUnit, parent, endTime);
+			})());
+		}
+		return promises;
+	}
+
 	// processing parsed playlist, will change in future
 	// tslint:disable-next-line:max-line-length
 	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0) => {
@@ -448,33 +463,15 @@ export class Playlist {
 			}
 			let value: any = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
-			const promises = [];
+
+			let promises: Promise<void>[] = [];
+
 			if (key === 'excl') {
-				if (Array.isArray(value)) {
-					for (let elem of value) {
-						promises.push((async () => {
-							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
-						})());
-					}
-				} else {
-					promises.push((async () => {
-						await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
-					})());
-				}
+				promises = this.processUnsupportedTag(value, region, internalStorageUnit, 'seq', endTime);
 			}
 
 			if (key === 'priorityClass') {
-				if (Array.isArray(value)) {
-					for (let elem of value) {
-						promises.push((async () => {
-							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
-						})());
-					}
-				} else {
-					promises.push((async () => {
-						await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
-					})());
-				}
+				promises = this.processUnsupportedTag(value, region, internalStorageUnit, 'seq', endTime);
 			}
 
 			if (key === 'seq') {
@@ -483,7 +480,7 @@ export class Playlist {
 					for (const elem of value) {
 						if (elem.hasOwnProperty('begin') && elem.begin.indexOf('wallclock') > -1
 							&& !isEqual(elem, this.introObject)
-							&& detectPrefetchLoop(elem)) {
+							&& isNotPrefetchLoop(elem)) {
 							const {timeToStart, timeToEnd} = parseSmilSchedule(elem.begin, elem.end);
 							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
@@ -491,7 +488,7 @@ export class Playlist {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
 
-							if (timeToEnd === SMILScheduleEnum.neverPlay) {
+							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
 								arrayIndex += 1;
 								continue;
 							}
@@ -552,7 +549,7 @@ export class Playlist {
 						})());
 					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
-						&& detectPrefetchLoop(value)) {
+						&& isNotPrefetchLoop(value)) {
 						promises.push((async () => {
 							// when endTime is not set, play indefinitely
 							if (endTime === 0) {
@@ -562,6 +559,7 @@ export class Playlist {
 							} else {
 								while (Date.now() < endTime) {
 									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+									// force stop because new version of smil file was detected
 									if (this.getCancelFunction()) {
 										return;
 									}
@@ -601,6 +599,17 @@ export class Playlist {
 							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par', endTime);
 						})());
 					} else {
+						if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock') > -1) {
+							const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin, value.end);
+							if (timeToEnd === SMILScheduleEnum.neverPlay) {
+								return;
+							}
+							promises.push((async () => {
+								await sleep(timeToStart);
+								await this.processPlaylist(value, region, internalStorageUnit, parKey, timeToEnd);
+							})());
+							break;
+						}
 						if (parValue.hasOwnProperty('begin') && parValue.begin.indexOf('wallclock') > -1) {
 							const {timeToStart, timeToEnd} = parseSmilSchedule(parValue.begin, parValue.end);
 							if (timeToEnd === SMILScheduleEnum.neverPlay) {
@@ -608,11 +617,11 @@ export class Playlist {
 							}
 							promises.push((async () => {
 								await sleep(timeToStart);
-								await this.processPlaylist(parValue, region, internalStorageUnit, parKey, timeToEnd);
+								await this.processPlaylist(parValue, region, internalStorageUnit, 'par', timeToEnd);
 							})());
 							continue;
 						}
-						if (parValue.repeatCount === 'indefinite' && detectPrefetchLoop(parValue)) {
+						if (parValue.repeatCount === 'indefinite' && isNotPrefetchLoop(parValue)) {
 							promises.push((async () => {
 								// when endTime is not set, play indefinitely
 								if (endTime === 0) {
@@ -622,6 +631,7 @@ export class Playlist {
 								} else {
 									while (Date.now() < endTime) {
 										await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+										// force stop because new version of smil file was detected
 										if (this.getCancelFunction()) {
 											return;
 										}
@@ -650,6 +660,7 @@ export class Playlist {
 					}
 				}
 			}
+
 			await Promise.all(promises);
 
 			if (config.constants.extractedElements.includes(key)

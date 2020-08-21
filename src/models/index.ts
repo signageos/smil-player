@@ -1,6 +1,9 @@
 export type RegionsObject = {
-	region: object,
+	region: {
+		[key: string]: RegionAttributes,
+	},
 	rootLayout?: RootLayout;
+	[key: string]: any,
 };
 
 export type RootLayout = {
@@ -36,7 +39,7 @@ export type SMILVideo = {
 	id: string,
 	fit?: string,
 	region: string,
-	etag?: string,
+	lastModified?: number,
 	localFilePath: string,
 	arguments?: any[],
 	playing?: boolean,
@@ -45,9 +48,9 @@ export type SMILVideo = {
 
 export type SMILAudio = {
 	src: string,
-	dur: string,
+	dur?: string,
 	fit?: string,
-	etag?: string,
+	lastModified?: number,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
@@ -56,9 +59,9 @@ export type SMILAudio = {
 export type SMILImage = {
 	src: string,
 	region: string,
-	dur: string,
+	dur?: string,
 	fit?: string,
-	etag?: string,
+	lastModified?: number,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
@@ -67,16 +70,16 @@ export type SMILImage = {
 export type SMILWidget = {
 	src: string,
 	region: string,
-	dur: string,
+	dur?: string,
 	fit?: string,
-	etag?: string,
+	lastModified?: number,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 };
 
 export type SMILIntro = {
-	video: SMILVideo[],
+	video?: SMILVideo[],
 };
 
 export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo | SMILFile;
@@ -87,6 +90,7 @@ export type DownloadsList = {
 	ref: SMILWidget[],
 	audio: SMILAudio[],
 	intro: SMILIntro[],
+	[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[],
 };
 
 export type CheckETagFunctions = {
@@ -95,11 +99,12 @@ export type CheckETagFunctions = {
 };
 
 export type SMILPlaylist = {
-	playlist: { [key: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo },
+	playlist: { [key: string]: SMILMedia },
 };
 
 export type SMILFile = {
 	src: string,
+	lastModified?: number,
 };
 
 export type SosModule = {
@@ -128,3 +133,5 @@ export type CurrentlyPlaying = {
 };
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
+
+export type SMILMedia = SMILWidget | SMILImage | SMILAudio | SMILVideo;

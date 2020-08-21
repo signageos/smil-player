@@ -120,7 +120,6 @@ async function startSmil(smilUrl: string) {
 		document.body.style.backgroundColor = 'transparent';
 		debug('sOS is ready');
 		debug('Smil file url is: %s', sos.config.smilUrl);
-		// await startSmil('https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/01-full-screen-playback.smil');
 		await startSmil(sos.config.smilUrl);
 	}
 })();
