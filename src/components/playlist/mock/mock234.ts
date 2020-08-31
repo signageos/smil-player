@@ -11,6 +11,7 @@ export const mockSMILFileParsed234 = {
 			mediaAlign: "center",
 		},
 	},
+	refresh: 90,
 	rootLayout: {
 		width: "1080",
 		height: "1920",

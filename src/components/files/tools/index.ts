@@ -5,7 +5,7 @@ export const debug = Debug('@signageos/smil-player:filesModule');
 // regExp for valid path testing
 const reg = new RegExp('^([A-Za-z]:|[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)((/[A-Za-z0-9_.-]+)*)$');
 
-function getRandomInt(max: number) {
+export function getRandomInt(max: number) {
 	return Math.floor(Math.random() * Math.floor(max));
 }
 
