@@ -9,7 +9,7 @@ export function formatWeekDate(dateString: string, weekDay: string): string {
 	const strArray = dateString.split('T');
 	return `${strArray[0]}${weekDay}T${strArray[1]}`;
 }
-
+// compute how long it should wait between two days of week
 export function computeWaitInterval(weekToday: number, weekScheduled: number): number {
 	if (weekToday <= weekScheduled) {
 		// 24 hours in ms

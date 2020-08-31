@@ -18,6 +18,7 @@ export const mockSMILFileParsedRegionAlias = {
 		top: "0",
 		backgroundColor: "#FFFFFF",
 	},
+	refresh: 60,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",
