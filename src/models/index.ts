@@ -2,7 +2,8 @@ export type RegionsObject = {
 	region: {
 		[key: string]: RegionAttributes,
 	},
-	rootLayout?: RootLayout;
+	rootLayout?: RootLayout,
+	refresh: number,
 	[key: string]: any,
 };
 
@@ -17,6 +18,9 @@ export type RootLayout = {
 export type XmlSmilObject = {
 	smil: {
 		head: {
+			meta: {
+				content: string,
+			}
 			layout: RegionsObject,
 		},
 		body: object,
@@ -80,6 +84,8 @@ export type SMILWidget = {
 
 export type SMILIntro = {
 	video?: SMILVideo[],
+	img?: SMILImage[],
+	[key: string]: string | SMILImage[] | undefined,
 };
 
 export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo | SMILFile;

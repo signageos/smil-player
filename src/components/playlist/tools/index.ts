@@ -13,8 +13,7 @@ import {
 	SMILAudio,
 	SMILWidget,
 } from '../../../models';
-import { defaults as config } from '../../../config';
-import { ObjectFitEnum, SMILScheduleEnum } from '../../../enums';
+import { ObjectFitEnum, SMILScheduleEnum, XmlTags } from '../../../enums';
 import moment from 'moment';
 import { getFileName } from '../../files/tools';
 
@@ -24,6 +23,7 @@ export const debug = Debug('@signageos/smil-player:playlistModule');
 function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
 	return get(obj, path, 'notFound') === 'notFound';
 }
+
 /*	used for detection infinite loops in SMIL file
 	these are seq or par section which does not contain any media files:
 	example:
@@ -95,12 +95,13 @@ export function setDefaultAwait(elementsArray: any[]): number {
 	return SMILScheduleEnum.defaultAwait;
 }
 
+// set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
 export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
 	const resultObject: any = cloneDeep(regionInfo);
 
 	Object.keys(resultObject).forEach((attr: string) => {
 		// sos video does not support values in %
-		if (config.constants.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
+		if (XmlTags.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
 			switch (attr) {
 				case 'width':
 					resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
@@ -125,10 +126,10 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
 	let regionInfo = <RegionAttributes> get(regionObject.region, regionName, regionObject.rootLayout);
-	// unify regionName for further uses in code
-	if (regionInfo.hasOwnProperty(config.constants.regionNameAlias)) {
-		regionInfo.regionName = <string> regionInfo[config.constants.regionNameAlias];
-		delete regionInfo[config.constants.regionNameAlias];
+	// unify regionName for further uses in code ( xml:id -> regionName )
+	if (regionInfo.hasOwnProperty(XmlTags.regionNameAlias)) {
+		regionInfo.regionName = <string> regionInfo[XmlTags.regionNameAlias];
+		delete regionInfo[XmlTags.regionNameAlias];
 	}
 
 	regionInfo = fixVideoDimension(regionInfo);
@@ -142,6 +143,8 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	};
 	return regionInfo;
 }
+
+// responsible for computing if and how long should player wait before playing certain content
 // default endTime for infinite duration when there is no endTime specified, example string wallclock(R/2100-01-01T00:00:00/P1D)
 export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endDateAndTimeFuture): SmilScheduleObject {
 	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
@@ -343,6 +346,7 @@ export function extractDayInfo(timeRecord: string): any {
 	};
 }
 
+// how long should image, audio, widget stay on the screen
 export function setDuration(dur: any): number {
 	if (dur === 'indefinite') {
 		return SMILScheduleEnum.infiniteDuration;
@@ -363,11 +367,12 @@ export function setDuration(dur: any): number {
 	return parseInt(dur, 10);
 }
 
+// extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
 export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget | SMILImage):
 	SMILVideo | SMILAudio | SMILWidget | SMILImage {
 	// extract additional css info which are not specified in region tag.
 	Object.keys(value).forEach((attr: any) => {
-		if (config.constants.additionalCssExtract.includes(attr)) {
+		if (XmlTags.additionalCssExtract.includes(attr)) {
 			value.regionInfo[attr] = get(value, attr);
 		}
 	});
@@ -381,13 +386,13 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	element.setAttribute('src', filepath);
 	element.id = `${getFileName(filepath)}-${regionInfo.regionName}`;
 	Object.keys(regionInfo).forEach((attr: any) => {
-		if (config.constants.cssElementsPosition.includes(attr)) {
+		if (XmlTags.cssElementsPosition.includes(attr)) {
 			element.style[attr] = `${regionInfo[attr]}px`;
 		}
-		if (config.constants.cssElements.includes(attr)) {
+		if (XmlTags.cssElements.includes(attr)) {
 			element.style[attr] = <string> regionInfo[attr];
 		}
-		if (config.constants.additionalCssExtract.includes(attr)) {
+		if (XmlTags.additionalCssExtract.includes(attr)) {
 			element.style[<any> ObjectFitEnum.objectFit] = get(ObjectFitEnum, `${regionInfo[attr]}`, 'fill');
 		}
 	});
@@ -395,4 +400,17 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	element.style.backgroundColor = 'transparent';
 
 	return element;
+}
+
+export function resetBodyContent() {
+	// reset body
+	document.body.innerHTML = '';
+	document.body.style.backgroundColor = 'transparent';
+}
+
+export function errorVisibility(visible: boolean) {
+	const display = visible ? 'block' : 'none';
+
+	(<HTMLElement> document.getElementById('error')).style.display = display;
+	(<HTMLElement> document.getElementById('errorText')).style.display = display;
 }
