@@ -1,7 +1,6 @@
-# SMIL player PoC
+# SMIL player
 
 - This solution is alpha version of signageOs SMIL player applet.
-
 
 ## SMIL mandatory structure
 ```xml
@@ -21,6 +20,7 @@
 ```
 ## Supported SMIL  playlist tags
 - par and seq are fully supported
+- smil timings ( wallclock, repeatCount ) are fully supported
 - priorityClass and excl are treated as seq tags in this PoC version
 
 ## Necessary attributes in SMIL file
@@ -30,6 +30,7 @@
 <region xml:id="widget12" .... />
 ```
 - accepts only url to SMIL file ( form input at main page ), local storage is not supported
+- url to SMIL file can be also passed as smilUrl variable via SoS timings
 - all files ( audio, video.. ) must be stored on remote server,  local storage is not supported
 
 ## Supported features
@@ -42,10 +43,12 @@
 - downloads and extracts of widgets into local storage
 - checks for changes in provided SMIL file as well as checks for all files linked in SMIL
 - ability to restart on SMIL file change
+- supports media scheduling using wallclock definition
+- supports playing media loops using repeatCount attribute, possible to combine with wallclock
 
 ## NOT supported features
-- priority playlist, timings
+- priority playlist
 - not able to process files stored in local storage
 
 ### Used technology
-- webpack, typescript, mocha
+- webpack, typescript, mocha, xml2js, json-easy-filter
