@@ -1,6 +1,8 @@
 export enum SMILEnums {
 	region = 'region',
 	rootLayout = 'root-layout',
+	defaultRefresh = 20,
+	defaultDownloadRetry = 60,
 }
 
 export enum FileStructure {
@@ -29,3 +31,11 @@ export enum ObjectFitEnum {
 	cover = 'cover',
 	objectFit = 'object-fit',
 }
+
+export const XmlTags = {
+	extractedElements: ['video', 'audio', 'img', 'ref'],
+	cssElementsPosition: ['left', 'top', 'bottom', 'width', 'height'],
+	cssElements: ['z-index'],
+	additionalCssExtract: ['fit'],
+	regionNameAlias: 'xml:id',
+};

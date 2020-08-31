@@ -11,8 +11,7 @@ import {
 	SMILPlaylist,
 	XmlSmilObject, SMILMedia,
 } from '../../models';
-import { SMILEnums } from '../../enums';
-import { defaults as config } from '../../config';
+import { SMILEnums, XmlTags } from '../../enums';
 import { debug, containsElement } from './tools';
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
@@ -36,18 +35,21 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	debug('Xml file parsed to json object: %O', xmlObject);
 
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
+	regions.refresh = parseInt(xmlObject.smil.head.meta.content) || SMILEnums.defaultRefresh;
 	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
+
+	// traverse json as tree of nodes
 	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; parent: { key: string; value: any; } }) {
 		// detect intro element, may not exist
 		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
 			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; parent: { key: string; value: any; } }) {
-				if (config.constants.extractedElements.includes(introNode.key)) {
+				if (XmlTags.extractedElements.includes(introNode.key)) {
 					debug('Intro element found: %O', introNode.parent.value);
 					downloads.intro.push(introNode.parent.value);
 				}
 			});
 		}
-		if (config.constants.extractedElements.includes(node.key)) {
+		if (XmlTags.extractedElements.includes(node.key)) {
 			// create media arrays for easy download/update check
 			if (!Array.isArray(node.value)) {
 				node.value = [node.value];
@@ -72,6 +74,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
+		refresh: 0,
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
@@ -106,7 +109,7 @@ function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 				if (xmlObject[rootKey][index].hasOwnProperty('regionName')) {
 					regionsObject.region[xmlObject[rootKey][index].regionName] = <RegionAttributes> xmlObject[rootKey][index];
 				} else {
-					regionsObject.region[xmlObject[rootKey][index][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey][index];
+					regionsObject.region[xmlObject[rootKey][index][XmlTags.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey][index];
 
 				}
 			});
@@ -123,7 +126,7 @@ function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 				if (xmlObject[rootKey].hasOwnProperty('regionName')) {
 					regionsObject.region[xmlObject[rootKey].regionName] = <RegionAttributes> xmlObject[rootKey];
 				} else {
-					regionsObject.region[xmlObject[rootKey][config.constants.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey];
+					regionsObject.region[xmlObject[rootKey][XmlTags.regionNameAlias]] = <RegionAttributes> xmlObject[rootKey];
 
 				}
 			}

@@ -91,32 +91,7 @@ export class Files {
 		return promises;
 	}
 
-	// tslint:disable-next-line:max-line-length
-	public checkLastModified = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string): Promise<any[]> => {
-		let promises: Promise<any>[] = [];
-		for (let i = 0; i < filesList.length; i += 1) {
-			if (isUrl(filesList[i].src)) {
-				const response = await fetch(createDownloadPath(filesList[i].src), {
-					method: 'HEAD',
-					headers: {
-						Accept: 'application/json',
-					},
-					mode: 'cors',
-				});
-				const newLastModified = await response.headers.get('last-modified');
-				if (isNil(filesList[i].lastModified)) {
-					filesList[i].lastModified = moment(newLastModified).valueOf();
-				}
-
-				if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
-					debug(`New version of file detected: %O`, filesList[i].src);
-					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
-				}
-			}
-		}
-		return promises;
-	}
-
+	// prepare folder structure for media files, does not support recursive create
 	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
 		for (const path of Object.values(FileStructure)) {
 			if (await this.sos.fileSystem.exists({
@@ -134,6 +109,7 @@ export class Files {
 		}
 	}
 
+	// when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
 	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<void> => {
 		const smilMediaArray: any = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
@@ -198,5 +174,32 @@ export class Files {
 			fileEtagPromisesMedia,
 			fileEtagPromisesSMIL,
 		};
+	}
+
+	// periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
+	// tslint:disable-next-line:max-line-length
+	private checkLastModified = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string): Promise<any[]> => {
+		let promises: Promise<any>[] = [];
+		for (let i = 0; i < filesList.length; i += 1) {
+			if (isUrl(filesList[i].src)) {
+				const response = await fetch(createDownloadPath(filesList[i].src), {
+					method: 'HEAD',
+					headers: {
+						Accept: 'application/json',
+					},
+					mode: 'cors',
+				});
+				const newLastModified = await response.headers.get('last-modified');
+				if (isNil(filesList[i].lastModified)) {
+					filesList[i].lastModified = moment(newLastModified).valueOf();
+				}
+
+				if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
+					debug(`New version of file detected: %O`, filesList[i].src);
+					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+				}
+			}
+		}
+		return promises;
 	}
 }
