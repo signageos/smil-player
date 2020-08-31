@@ -52,3 +52,6 @@
 
 ### Used technology
 - webpack, typescript, mocha, xml2js, json-easy-filter
+
+### code documentation
+see documentation [here](docs/documentation.md)
