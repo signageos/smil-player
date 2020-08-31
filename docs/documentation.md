@@ -64,6 +64,15 @@ Folder contains simple unit tests to test supporting functions. Tests are writte
 asserts. Unit tests are using mocks in JSON or SMIL format which are stored is same folders as tested functionality.
 Complex tests for front-end part of application and media playing are missing for now.
 
+## How to develop
+1. First you need to create signageOs account at https://www.signageos.io/
+2. With account, you can access detailed documentation here https://docs.signageos.io/knowledge-base/setup-developer-environment
+3. How to run this project:
+    1. install node modules => __npm install__
+    2. build application => __npm run prepare__, this will create dist folder with compiled source code
+    3. run application => __npm start__
+    4. steps above should complete without any error, your application is running on __http://your.pc.ip.address:8090__
+
 ## Debugging
 It is possible to turn on debug messages using browser dev console. Type in __localStorage.debug = '@signageos/smil-player:*'__ 
 for debugging all modules, if you wish to debug specific component, replace wildcard with the name of the component
@@ -85,6 +94,7 @@ To turn debugging of just delete debug from localStorage: __delete localStorage.
 
 ## Useful links
 https://docs.signageos.io/category/smil-guides
+https://docs.signageos.io/knowledge-base/setup-developer-environment
 https://www.w3.org/TR/SMIL3/ \
 http://www.a-smil.org/index.php/Main_Page \
 https://docs.signageos.io/api
