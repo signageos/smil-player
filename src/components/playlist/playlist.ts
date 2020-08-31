@@ -14,8 +14,7 @@ import {
 } from '../../models';
 import { FileStructure, SMILScheduleEnum } from '../../enums';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { defaults as config } from '../../config';
-import { getFileName } from '../files/tools';
+import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setDuration, extractAdditionalInfo, createHtmlElement, setDefaultAwait,
@@ -116,9 +115,13 @@ export class Playlist {
 				filePath: `${FileStructure.videos}/${getFileName(previousVideo.src)}`,
 			});
 
-			currentVideo.localFilePath = currentVideoDetails.localUri;
-			nextVideo.localFilePath = nextVideoDetails.localUri;
-			previousVideo.localFilePath = previousVideoDetails.localUri;
+			// apend random query to each file, so each file object is unique even if files are exactly the same
+			currentVideo.localFilePath = currentVideo.localFilePath ?
+				currentVideo.localFilePath : `${currentVideoDetails.localUri}?query=${getRandomInt(10000)}`;
+			nextVideo.localFilePath = nextVideo.localFilePath ?
+				nextVideo.localFilePath : `${nextVideoDetails.localUri}?query=${getRandomInt(10000)}`;
+			previousVideo.localFilePath = previousVideo.localFilePath ?
+				previousVideo.localFilePath : `${previousVideoDetails.localUri}?query=${getRandomInt(10000)}`;
 
 			debug(
 				'Playing videos in loop, currentVideo: %O,' +
