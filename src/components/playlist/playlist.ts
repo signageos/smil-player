@@ -15,7 +15,7 @@ import {
 import { FileStructure, SMILScheduleEnum, XmlTags } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getRandomInt } from '../files/tools';
+import { getFileName } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setDuration, extractAdditionalInfo, createHtmlElement, setDefaultAwait, resetBodyContent,
@@ -474,13 +474,9 @@ export class Playlist {
 				filePath: `${FileStructure.videos}/${getFileName(previousVideo.src)}`,
 			});
 
-			// apend random query to each file, so each file object is unique even if files are exactly the same
-			currentVideo.localFilePath = currentVideo.localFilePath ?
-				currentVideo.localFilePath : `${currentVideoDetails.localUri}?query=${getRandomInt(10000)}`;
-			nextVideo.localFilePath = nextVideo.localFilePath ?
-				nextVideo.localFilePath : `${nextVideoDetails.localUri}?query=${getRandomInt(10000)}`;
-			previousVideo.localFilePath = previousVideo.localFilePath ?
-				previousVideo.localFilePath : `${previousVideoDetails.localUri}?query=${getRandomInt(10000)}`;
+			currentVideo.localFilePath = currentVideoDetails.localUri;
+			nextVideo.localFilePath = nextVideoDetails.localUri;
+			previousVideo.localFilePath = previousVideoDetails.localUri;
 
 			debug(
 				'Playing videos in loop, currentVideo: %O,' +
@@ -517,7 +513,8 @@ export class Playlist {
 				currentVideo.regionInfo.height,
 			);
 
-			if (previousVideo.playing) {
+			if (previousVideo.playing &&
+				previousVideo.src !== currentVideo.src) {
 				debug('Stopping video previous: %O', previousVideo);
 				await this.sos.video.stop(
 					previousVideo.localFilePath,
@@ -529,14 +526,17 @@ export class Playlist {
 				previousVideo.playing = false;
 			}
 			debug('Preparing video next: %O', nextVideo);
-			await this.sos.video.prepare(
-				nextVideo.localFilePath,
-				nextVideo.regionInfo.left,
-				nextVideo.regionInfo.top,
-				nextVideo.regionInfo.width,
-				nextVideo.regionInfo.height,
-				config.videoOptions,
-			);
+			if (nextVideo.src !== currentVideo.src) {
+				await this.sos.video.prepare(
+					nextVideo.localFilePath,
+					nextVideo.regionInfo.left,
+					nextVideo.regionInfo.top,
+					nextVideo.regionInfo.width,
+					nextVideo.regionInfo.height,
+					config.videoOptions,
+				);
+			}
+
 			await this.sos.video.onceEnded(
 				currentVideo.localFilePath,
 				currentVideo.regionInfo.left,
