@@ -47,9 +47,12 @@ export const mockSMILFileParsed99 = {
 			backgroundColor: "transparent",
 		},
 	},
+	refresh: 90,
 	rootLayout: {
 		width: "1920",
 		height: "1080",
+		left: "0",
+		top: "0",
 		backgroundColor: "#FFFFFF",
 	},
 	playlist: {
@@ -148,7 +151,6 @@ export const mockSMILFileParsed99 = {
 														],
 													},
 													{
-														_: "\n                                                >\n                                                \n                                            ",
 														seq: {
 															repeatCount: "indefinite",
 															ref: {

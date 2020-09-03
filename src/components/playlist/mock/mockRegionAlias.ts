@@ -1,7 +1,7 @@
-export const mockSMILFileParsed234 = {
+export const mockSMILFileParsedRegionAlias = {
 	region: {
 		video: {
-			regionName: "video",
+			'xml:id': "video",
 			left: "0",
 			top: "0",
 			width: "1080",
@@ -11,7 +11,6 @@ export const mockSMILFileParsed234 = {
 			mediaAlign: "center",
 		},
 	},
-	refresh: 90,
 	rootLayout: {
 		width: "1080",
 		height: "1920",
@@ -19,6 +18,7 @@ export const mockSMILFileParsed234 = {
 		top: "0",
 		backgroundColor: "#FFFFFF",
 	},
+	refresh: 60,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",

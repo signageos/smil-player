@@ -1,9 +1,20 @@
 import * as chai from 'chai';
 import moment from 'moment';
 import isNil = require('lodash/isNil');
-import { getRegionInfo, sleep, runEndlessLoop, disableLoop, parseSmilSchedule, extractDayInfo } from '../../../src/components/playlist/tools';
-import { formatDate, formatWeekDate, computeWaitInteral } from '../../testTools/testTools';
+import {
+	getRegionInfo,
+	sleep,
+	parseSmilSchedule,
+	extractDayInfo,
+	setDuration,
+	setDefaultAwait, extractAdditionalInfo, isNotPrefetchLoop,
+} from '../../../src/components/playlist/tools';
+import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
+import { Playlist } from '../../../src/components/playlist/playlist';
+import { Files } from '../../../src/components/files/files';
+import { SosModule } from '../../../src/models';
+import { SMILScheduleEnum } from '../../../src/enums';
 
 const expect = chai.expect;
 
@@ -15,12 +26,13 @@ describe('Playlist tools component', () => {
 			let expectedRegion: any = mockSMILFileParsed234.rootLayout;
 			expectedRegion = {
 				...expectedRegion,
-				...(!isNil(expectedRegion.top) && { top: parseInt(expectedRegion.top)}),
-				...(!isNil(expectedRegion.left) && { left: parseInt(expectedRegion.left)}),
+				...(!isNil(expectedRegion.top) && {top: parseInt(expectedRegion.top)}),
+				...(!isNil(expectedRegion.left) && {left: parseInt(expectedRegion.left)}),
 				width: parseInt(expectedRegion.width),
 				height: parseInt(expectedRegion.height),
 			};
 
+			// @ts-ignore
 			const response = getRegionInfo(mockSMILFileParsed234, 'InvalidRegionName');
 			expect(response).to.eql(expectedRegion);
 		});
@@ -30,12 +42,13 @@ describe('Playlist tools component', () => {
 			let expectedRegion: any = mockSMILFileParsed234.region.video;
 			expectedRegion = {
 				...expectedRegion,
-				...(!isNil(expectedRegion.top) && { top: parseInt(expectedRegion.top)}),
-				...(!isNil(expectedRegion.left) && { left: parseInt(expectedRegion.left)}),
+				...(!isNil(expectedRegion.top) && {top: parseInt(expectedRegion.top)}),
+				...(!isNil(expectedRegion.left) && {left: parseInt(expectedRegion.left)}),
 				width: parseInt(expectedRegion.width),
 				height: parseInt(expectedRegion.height),
 			};
 
+			// @ts-ignore
 			const response = getRegionInfo(mockSMILFileParsed234, 'video');
 			expect(response).to.eql(expectedRegion);
 		});
@@ -52,17 +65,208 @@ describe('Playlist tools component', () => {
 		});
 	});
 
+	describe('Playlist tools component setDefaultAwait tests', () => {
+		it('Should return correct value to await', async () => {
+			const testSchedules = [[{
+				'begin': 'wallclock(2022-01-01T09:00)',
+				'end': 'wallclock(2022-12-01T12:00)',
+				'repeatCount': '1',
+				'video': [],
+			}, {
+				'begin': 'wallclock(2020-07-16T12:00)',
+				'end': 'wallclock(2020-07-17T19:00)',
+				'repeatCount': '1',
+				'img': [],
+			}], [{
+				'begin': 'wallclock(2020-01-01T09:00)',
+				'end': 'wallclock(2020-12-01T12:00)',
+				'repeatCount': '1',
+				'video': [],
+			}, {
+				'begin': 'wallclock(2020-07-16T12:00)',
+				'end': 'wallclock(2020-07-17T19:00)',
+				'repeatCount': '1',
+				'img': [],
+			}], [{
+				'begin': 'wallclock(2022-01-01T09:00)',
+				'end': 'wallclock(2022-12-01T12:00)',
+				'repeatCount': '1',
+				'video': [],
+			}, {
+				'begin': 'wallclock(2022-07-16T12:00)',
+				'end': 'wallclock(2022-07-17T19:00)',
+				'repeatCount': '1',
+				'img': [],
+			}], [{
+				'begin': 'wallclock(2022-01-01T09:00)',
+				'end': 'wallclock(2022-12-01T12:00)',
+				'repeatCount': '1',
+				'video': [],
+			}, {
+				'begin': 'wallclock(2020-07-16T12:00)',
+				'end': 'wallclock(2020-12-17T19:00)',
+				'repeatCount': '1',
+				'img': [],
+			}]];
+
+			const awaitTimes = [
+				SMILScheduleEnum.defaultAwait,
+				0,
+				SMILScheduleEnum.defaultAwait,
+				0,
+			];
+
+			for (let i = 0; i < testSchedules.length; i += 1) {
+				const response = setDefaultAwait(testSchedules[i]);
+				expect(response).to.be.equal(awaitTimes[i]);
+			}
+		});
+	});
+
 	describe('Playlist tools component runEndlessLoop, disableLoop tests', () => {
 		it('Should stop endless loop after given amount of time', async () => {
+			const sos: SosModule = {
+				fileSystem: 'notSet',
+				video: 'notSet',
+			};
+			const files = new Files(sos);
+			const playlist = new Playlist(sos, files);
 			const interval = 1000;
 			const start = Date.now();
-			await runEndlessLoop( async () => {
+			await playlist.runEndlessLoop(async () => {
 				await sleep(interval);
-				disableLoop(true);
+				playlist.disableLoop(true);
 			});
 			const end = Date.now();
 			const timeWaited = end - start;
 			expect(Math.abs(interval - timeWaited)).to.be.lessThan(50);
+		});
+	});
+
+	describe('Playlist tools component setDuration', () => {
+		it('Should return correct duration for various inputs', async () => {
+			const durationStrings = [
+				`999`,
+				`indefinite`,
+				'asdmaskd',
+				'Nan',
+				'200',
+				undefined,
+			];
+			const duration = [
+				999,
+				999999,
+				5,
+				5,
+				200,
+				5,
+			];
+
+			for (let i = 0; i < durationStrings.length; i += 1) {
+				const response = setDuration(durationStrings[i]);
+				expect(response).to.be.equal(duration[i]);
+			}
+		});
+	});
+
+	describe('Playlist tools component extractAdditionalInfo', () => {
+		it('Should return correct values for additional parameters', async () => {
+			let testImage: any = {
+				src: 'http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4',
+				region: 'video',
+				dur: '20',
+				localFilePath: 'localFilePath',
+				playing: false,
+				fit: 'fill',
+				regionInfo : {
+					regionName: 'video',
+					left: 0,
+					top: 0,
+					width: 0,
+					height: 0,
+					'z-index': 1,
+					fit: 'fill',
+				},
+			};
+
+			testImage = extractAdditionalInfo(testImage);
+
+			expect(testImage.regionInfo.hasOwnProperty('fit')).to.be.equal(true);
+		});
+	});
+
+	describe('Playlist tools component isNotPrefetchLoop', () => {
+		it('Should detect infinite loops correctly', async () => {
+			let testObject: any = {
+				seq: [{
+					dur: '60s',
+				}, {
+					prefetch: [{
+						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
+					}],
+				}],
+			};
+
+			let response = isNotPrefetchLoop(testObject);
+			expect(response).to.be.equal(false);
+
+			testObject = {
+				par: [{
+					dur: '60s',
+				}, {
+					prefetch: [{
+						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png',
+					}, {
+						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
+					}],
+				}],
+			};
+
+			response = isNotPrefetchLoop(testObject);
+			expect(response).to.be.equal(false);
+
+			testObject = {
+				seq: {
+					begin: '0',
+					dur: 'indefinite',
+					ref: {
+						dur: 'indefinite',
+						src: 'adapi:blankScreen',
+					},
+				},
+			};
+
+			response = isNotPrefetchLoop(testObject);
+			expect(response).to.be.equal(false);
+
+			testObject = {
+				seq: {
+					repeatCount: 'indefinite',
+					img: {
+						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
+						region: 'widget14',
+						dur: '60s',
+						param: {
+							name: 'cacheControl',
+							value: 'onlyIfCached',
+						},
+					},
+				},
+			};
+
+			response = isNotPrefetchLoop(testObject);
+			expect(response).to.be.equal(true);
+
 		});
 	});
 
@@ -95,7 +299,7 @@ describe('Playlist tools component', () => {
 			];
 
 			for (let i = 0; i < testingStrings.length; i += 1) {
-				const { timeRecord, dayInfo } = extractDayInfo(testingStrings[i]);
+				const {timeRecord, dayInfo} = extractDayInfo(testingStrings[i]);
 				expect(timeRecord).to.be.equal(responses[i].timeRecord);
 				expect(dayInfo).to.be.equal(responses[i].dayInfo);
 			}
@@ -155,20 +359,35 @@ describe('Playlist tools component', () => {
 			// no endTime specified tomorrow start
 			testStartString = `wallclock(R/${formatDate(moment().subtract(7, 'hours'))}/P1D)`;
 			responseTimeObject = parseSmilSchedule(testStartString);
-			// schedule start for tommorow 17hours
-			expect(Math.abs(61200000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			// play immediately
+			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T00:00:00').valueOf());
 
-			// no endTime specified in the future start start
+			// no endTime specified in the future start startN
 			testStartString = `wallclock(R/${formatDate(moment().add(7, 'days'))}/P1D)`;
 			responseTimeObject = parseSmilSchedule(testStartString);
 			// schedule start in 7 days from now
 			expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T00:00:00').valueOf());
 
+			testStartString = `wallclock(2020-07-16T12:00)`;
+			testEndString = `wallclock(2020-07-17T19:00)`;
+			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+			// should be never played
+			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			// timeToEnd = -3600000, value of 1970-01-01T00:00:00 in millis
+			expect(responseTimeObject.timeToEnd.valueOf()).to.be.lessThan(0);
+
+			testStartString = `wallclock(2020-01-01T09:00)`;
+			testEndString = `wallclock(2020-12-01T12:00)`;
+			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			// timeToEnd = value of 2020-12-01T12:00:00
+			expect(responseTimeObject.timeToEnd).to.eql(moment('2020-12-01T12:00:00').valueOf());
+
 		});
 		it('Should return correct times for how long to wait and how long to play - weekdays specified after', async () => {
-			let mediaDuration = 4;
+			let mediaDuration = 3;
 			let dayOfWeek = moment().isoWeekday() + 3;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			let testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
@@ -178,7 +397,7 @@ describe('Playlist tools component', () => {
 			expect(Math.abs(259199003 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(3, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
-			mediaDuration = 8;
+			mediaDuration = 2;
 			dayOfWeek = moment().isoWeekday() - 1;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
@@ -188,19 +407,19 @@ describe('Playlist tools component', () => {
 			expect(Math.abs(518400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(6, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
-			mediaDuration = 8;
+			mediaDuration = 4;
 			dayOfWeek = moment().isoWeekday();
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			// scheduled immediately
-			expect(Math.abs(responseTimeObject.timeToStart)).to.be.eql(0);
+			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
-			mediaDuration = 8;
+			mediaDuration = 3;
 			dayOfWeek = Math.abs(moment().isoWeekday() - 5);
-			let waitMilis = computeWaitInteral(moment().isoWeekday(), dayOfWeek);
+			let waitMilis = computeWaitInterval(moment().isoWeekday(), dayOfWeek);
 			let waitDays = waitMilis / 86400000;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
@@ -211,7 +430,7 @@ describe('Playlist tools component', () => {
 				.to.be.lessThan(1000);
 
 			mediaDuration = 3;
-			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
+			dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
@@ -223,7 +442,7 @@ describe('Playlist tools component', () => {
 		});
 
 		it('Should return correct times for how long to wait and how long to play - weekdays specified before', async () => {
-			let mediaDuration = 4;
+			let mediaDuration = 2;
 			let dayOfWeek = moment().isoWeekday();
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			let testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
@@ -233,7 +452,7 @@ describe('Playlist tools component', () => {
 			expect(responseTimeObject.timeToStart <= 0).to.be.eql(true);
 			expect(Math.abs(moment().add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
-			mediaDuration = 6;
+			mediaDuration = 4;
 			dayOfWeek = moment().isoWeekday() + 2;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
@@ -243,9 +462,9 @@ describe('Playlist tools component', () => {
 			expect(Math.abs(172800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(2, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
-			mediaDuration = 7;
+			mediaDuration = 2;
 			dayOfWeek = Math.abs(moment().isoWeekday() - 5);
-			let waitMilis = computeWaitInteral(moment().isoWeekday(), dayOfWeek);
+			let waitMilis = computeWaitInterval(moment().isoWeekday(), dayOfWeek);
 			let waitDays = waitMilis / 86400000;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
@@ -255,8 +474,8 @@ describe('Playlist tools component', () => {
 			expect(Math.abs(moment().add(waitDays, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd))
 				.to.be.lessThan(1000);
 
-			mediaDuration = 7;
-			dayOfWeek = Math.abs(moment().isoWeekday() + 5);
+			mediaDuration = 3;
+			dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
@@ -267,5 +486,4 @@ describe('Playlist tools component', () => {
 
 		});
 	});
-
 });
