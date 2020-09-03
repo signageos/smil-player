@@ -2,7 +2,7 @@ const webpack = require('webpack');
 const path = require('path');
 const { CheckerPlugin } = require('awesome-typescript-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const SignageOSPlugin = require('@signageos/cli/dist/Webpack/Plugin');
+const SignageOSPlugin = require('@signageos/webpack-plugin');
 
 module.exports = (_env, argv) => {
 

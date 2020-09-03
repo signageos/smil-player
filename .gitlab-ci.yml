@@ -82,6 +82,9 @@ publish:npm:
     - prepare
     - build
   script:
+    - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
+    - echo 'always-auth=true' >> .npmrc
+    - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
     - npm publish --ignore-scripts
 
 publish:npm-public:
@@ -93,6 +96,9 @@ publish:npm-public:
     - prepare
     - build
   script:
+    - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
+    - echo 'always-auth=true' >> .npmrc
+    - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
     - export NPM_REGISTRY_URL=https://registry.npmjs.org/
     - export NPM_REGISTRY_HOST=registry.npmjs.org
     - export NPM_AUTH_TOKEN=$PUBLIC_NPM_AUTH_TOKEN

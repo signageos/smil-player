@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { getFileName, getPath, isValidLocalPath } from "../../../src/components/files/tools";
+import { createDownloadPath, getFileName, getPath, isValidLocalPath } from '../../../src/components/files/tools';
 
 const expect = chai.expect;
 
@@ -89,6 +89,21 @@ describe('Files tools component', () => {
 			for (let i = 0; i < invalidFilesPaths.length; i += 1) {
 				const response = isValidLocalPath(invalidFilesPaths[i]);
 				expect(response).to.be.equal(false);
+			}
+		});
+
+		it('Should return valid path', () => {
+			const validUrls = [
+				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg',
+				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.mp4',
+				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.wgt',
+			];
+
+			for (let i = 0; i < validUrls.length; i += 1) {
+				const response = createDownloadPath(validUrls[i]);
+				const responseNumber: number = parseInt(response.split('?v=')[1]);
+				expect(responseNumber).to.be.lessThan(1000000);
+				expect(responseNumber > 0).to.be.equal(true);
 			}
 		});
 
