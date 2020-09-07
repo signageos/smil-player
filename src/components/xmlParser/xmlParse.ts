@@ -39,7 +39,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
 
 	// traverse json as tree of nodes
-	new JefNode(playableMedia.playlist).filter(function (node: { key: string; value: any; parent: { key: string; value: any; } }) {
+	new JefNode(playableMedia.playlist).filter(
+		function (node: { key: string; value: any; parent: { key: string; value: any; } }) {
 		// detect intro element, may not exist
 		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
 			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; parent: { key: string; value: any; } }) {
