@@ -398,6 +398,8 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	});
 	element.style.position = 'absolute';
 	element.style.backgroundColor = 'transparent';
+	// @ts-ignore
+	element.style['border-width'] = '0px';
 
 	return element;
 }
@@ -406,6 +408,7 @@ export function resetBodyContent() {
 	// reset body
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
+	document.body.style.margin = '0px';
 }
 
 export function errorVisibility(visible: boolean) {
