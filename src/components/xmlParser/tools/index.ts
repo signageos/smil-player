@@ -1,9 +1,9 @@
 import Debug from 'debug';
-import { SMILFile } from '../../../models';
+import { SMILMediaSingle } from '../../../models';
 export const debug = Debug('@signageos/smil-player:xmlParseModule');
 
-export function containsElement(arr: any[], fileSrc: string): boolean  {
-	return arr.filter(function (elem: SMILFile) {
+export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean  {
+	return arr.filter(function (elem: SMILMediaSingle) {
 		return elem.src === fileSrc;
 	}).length > 0;
 }

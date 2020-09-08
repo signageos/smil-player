@@ -1,6 +1,6 @@
 # SMIL player
 
-- This solution is alpha version of signageOs SMIL player applet.
+- This solution is beta version of signageOs SMIL player applet.
 
 ## SMIL mandatory structure
 ```xml

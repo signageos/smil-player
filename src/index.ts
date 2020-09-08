@@ -80,6 +80,9 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	debug('Widgets extracted');
 
+	await playlist.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit);
+	debug('All elements info extracted');
+
 	debug('Starting to process parsed smil file');
 	await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
 }
