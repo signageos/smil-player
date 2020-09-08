@@ -6,8 +6,9 @@ import {
 	sleep,
 	parseSmilSchedule,
 	extractDayInfo,
-	setDuration,
+	setElementDuration,
 	setDefaultAwait, extractAdditionalInfo, isNotPrefetchLoop,
+	getStringToIntDefault,
 } from '../../../src/components/playlist/tools';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
@@ -62,6 +63,34 @@ describe('Playlist tools component', () => {
 			const end = Date.now();
 			const timeWaited = end - start;
 			expect(Math.abs(interval - timeWaited)).to.be.lessThan(50);
+		});
+	});
+
+	describe('Playlist tools component getStringToInt tests', () => {
+		it('Should return correct values for tested strings', async () => {
+			const testString = [
+				'aaaa',
+				'',
+				'14',
+				'99999',
+				'50s',
+				'NaN',
+			];
+
+			const intValues = [
+				0,
+				0,
+				14,
+				99999,
+				50,
+				0,
+				0,
+			];
+
+			for (let i = 0; i < testString.length; i += 1) {
+				const response = getStringToIntDefault(testString[i]);
+				expect(response).to.be.equal(intValues[i]);
+			}
 		});
 	});
 
@@ -163,7 +192,7 @@ describe('Playlist tools component', () => {
 			];
 
 			for (let i = 0; i < durationStrings.length; i += 1) {
-				const response = setDuration(durationStrings[i]);
+				const response = setElementDuration(<string> durationStrings[i]);
 				expect(response).to.be.equal(duration[i]);
 			}
 		});

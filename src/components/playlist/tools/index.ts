@@ -11,7 +11,7 @@ import {
 	SMILVideo,
 	SMILImage,
 	SMILAudio,
-	SMILWidget,
+	SMILWidget, PlaylistElement,
 } from '../../../models';
 import { ObjectFitEnum, SMILScheduleEnum, XmlTags } from '../../../enums';
 import moment from 'moment';
@@ -19,29 +19,30 @@ import { getFileName } from '../../files/tools';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
-// checks if given object contains prefetch element
 function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
 	return get(obj, path, 'notFound') === 'notFound';
 }
 
-/*	used for detection infinite loops in SMIL file
-	these are seq or par section which does not contain any media files:
-	example:
-	seq: [{
-		dur: "60s"
-	}, {
-		prefetch: [{
-			src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"
-		}, {
-			src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"
-		}, {
-			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"
-		}, {
-			src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"
-		}]
-	}]
-*/
-export function isNotPrefetchLoop(obj: InfiniteLoopObject): boolean {
+/**
+ * used for detection infinite loops in SMIL file
+ * these are seq or par section which does not contain any media files:
+ * 	example:
+ * 		seq: [{
+ * 			dur: "60s"
+ * 			}, {
+ * 			prefetch: [{
+ * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"
+ * 					}, {
+ * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"
+ * 					}, {
+ * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"
+ * 					}, {
+ * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"
+ * 					}]
+ * 				}]
+ * @param obj
+ */
+export function isNotPrefetchLoop(obj: InfiniteLoopObject | PlaylistElement): boolean {
 	let result = true;
 	if (Array.isArray(get(obj, 'seq', 'notFound'))) {
 		(<PrefetchObject[]> get(obj, 'seq', 'notFound')).forEach((elem: PrefetchObject) => {
@@ -81,12 +82,15 @@ export async function sleep(ms: number): Promise<object> {
 	});
 }
 
-// function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
-export function setDefaultAwait(elementsArray: any[]): number {
+/**
+ * function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
+ * @param elementsArray - array of SMIL media playlists ( seq, or par tags )
+ */
+export function setDefaultAwait(elementsArray: PlaylistElement[]): number {
 	const nowMillis: number = moment().valueOf();
 	// found element which can be player right now
 	for (const loopElem of elementsArray) {
-		const { timeToStart, timeToEnd } = parseSmilSchedule(loopElem.begin, loopElem.end);
+		const { timeToStart, timeToEnd } = parseSmilSchedule(loopElem.begin!, loopElem.end);
 		if (timeToStart <= 0 && timeToEnd > nowMillis) {
 			return 0;
 		}
@@ -95,7 +99,10 @@ export function setDefaultAwait(elementsArray: any[]): number {
 	return SMILScheduleEnum.defaultAwait;
 }
 
-// set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
+/**
+ * set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
+ * @param regionInfo - represents object with information about dimensions of region specified in smil file
+ */
 export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
 	const resultObject: any = cloneDeep(regionInfo);
 
@@ -144,8 +151,12 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	return regionInfo;
 }
 
-// responsible for computing if and how long should player wait before playing certain content
-// default endTime for infinite duration when there is no endTime specified, example string wallclock(R/2100-01-01T00:00:00/P1D)
+/**
+ * responsible for computing if and how long should player wait before playing certain content
+ * default endTime for infinite duration when there is no endTime specified, example string wallclock(R/2100-01-01T00:00:00/P1D)
+ * @param startTime - when to start play media, defined in smil file
+ * @param endTime - when to end playback, defined in smil file
+ */
 export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endDateAndTimeFuture): SmilScheduleObject {
 	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
 
@@ -283,8 +294,8 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	};
 }
 
-// tslint:disable-next-line:max-line-length
-export function computeScheduledDate(startDate: moment.Moment, nowTime: string, scheduledTime: string, scheduledDate: string, dayInfo: string) {
+export function computeScheduledDate(
+	startDate: moment.Moment, nowTime: string, scheduledTime: string, scheduledDate: string, dayInfo: string) {
 	// day of the week when will playing stop
 	const terminalDay = startDate.isoWeekday();
 	const scheduledDay = parseInt(dayInfo[2]);
@@ -346,8 +357,11 @@ export function extractDayInfo(timeRecord: string): any {
 	};
 }
 
-// how long should image, audio, widget stay on the screen
-export function setDuration(dur: any): number {
+/**
+ * how long should image, audio, widget stay on the screen
+ * @param dur - duration of element specified in smil file
+ */
+export function setElementDuration(dur: string): number {
 	if (dur === 'indefinite') {
 		return SMILScheduleEnum.infiniteDuration;
 	}
@@ -360,18 +374,21 @@ export function setDuration(dur: any): number {
 	// leave only digits in duration string ( can contain s character )
 	dur = dur.replace(/[^0-9]/g, "");
 	// empty string or NaN
-	if (isNaN(dur) || dur.length === 0) {
+	if (isNaN(Number(dur)) || dur.length === 0) {
 		return SMILScheduleEnum.defaultDuration;
 	}
 
 	return parseInt(dur, 10);
 }
 
-// extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
+/**
+ * extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
+ * @param value - represents SMIL media file object
+ */
 export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget | SMILImage):
 	SMILVideo | SMILAudio | SMILWidget | SMILImage {
 	// extract additional css info which are not specified in region tag.
-	Object.keys(value).forEach((attr: any) => {
+	Object.keys(value).forEach((attr: string) => {
 		if (XmlTags.additionalCssExtract.includes(attr)) {
 			value.regionInfo[attr] = get(value, attr);
 		}
@@ -380,11 +397,15 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 	return value;
 }
 
+export function generateElementId(filepath: string, regionName: string): string {
+	return `${getFileName(filepath)}-${regionName}`;
+}
+
 export function createHtmlElement(htmlElement: string, filepath: string, regionInfo: RegionAttributes): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
 	element.setAttribute('src', filepath);
-	element.id = `${getFileName(filepath)}-${regionInfo.regionName}`;
+	element.id = generateElementId(filepath, regionInfo.regionName);
 	Object.keys(regionInfo).forEach((attr: any) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
 			element.style[attr] = `${regionInfo[attr]}px`;
@@ -398,8 +419,7 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	});
 	element.style.position = 'absolute';
 	element.style.backgroundColor = 'transparent';
-	// @ts-ignore
-	element.style['border-width'] = '0px';
+	element.style.borderWidth = '0px';
 
 	return element;
 }
@@ -409,6 +429,10 @@ export function resetBodyContent() {
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
 	document.body.style.margin = '0px';
+}
+
+export function getStringToIntDefault(value: string): number {
+	return parseInt(value) || 0;
 }
 
 export function errorVisibility(visible: boolean) {
