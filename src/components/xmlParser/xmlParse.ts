@@ -9,7 +9,7 @@ import {
 	DownloadsList,
 	SMILFileObject,
 	SMILPlaylist,
-	XmlSmilObject, SMILMedia,
+	XmlSmilObject, SMILMediaSingle,
 } from '../../models';
 import { SMILEnums, XmlTags } from '../../enums';
 import { debug, containsElement } from './tools';
@@ -40,10 +40,10 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	// traverse json as tree of nodes
 	new JefNode(playableMedia.playlist).filter(
-		function (node: { key: string; value: any; parent: { key: string; value: any; } }) {
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
 		// detect intro element, may not exist
 		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
-			new JefNode(node.parent.value).filter(function (introNode: { key: string; value: any; parent: { key: string; value: any; } }) {
+			new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
 				if (XmlTags.extractedElements.includes(introNode.key)) {
 					debug('Intro element found: %O', introNode.parent.value);
 					downloads.intro.push(introNode.parent.value);
@@ -56,8 +56,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 				node.value = [node.value];
 
 			}
-			node.value.forEach((element: SMILMedia) => {
-				if (!containsElement(downloads[node.key], element.src)) {
+			node.value.forEach((element: SMILMediaSingle) => {
+				if (!containsElement(downloads[node.key], <string> element.src)) {
 					// @ts-ignore
 					downloads[node.key].push(element);
 				}

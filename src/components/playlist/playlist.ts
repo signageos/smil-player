@@ -10,7 +10,14 @@ import {
 	SMILFileObject,
 	SMILVideo,
 	SosModule,
-	CurrentlyPlaying, SMILFile, SMILImage,
+	CurrentlyPlaying,
+	SMILFile,
+	SMILImage,
+	PlaylistElement,
+	SMILWidget,
+	SMILMedia,
+	SMILMediaNoVideo,
+	SMILIntro,
 } from '../../models';
 import { FileStructure, SMILScheduleEnum, XmlTags } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
@@ -18,7 +25,8 @@ import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/Fil
 import { getFileName } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
-	setDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait, resetBodyContent,
+	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait, resetBodyContent,
+	generateElementId, getStringToIntDefault,
 } from './tools';
 import { Files } from '../files/files';
 const isUrl = require('is-url-superb');
@@ -46,7 +54,10 @@ export class Playlist {
 		this.cancelFunction = value;
 	}
 
-	// runs function given as parameter in endless loop
+	/**
+	 * runs function given as parameter in endless loop
+	 * @param fn - Function
+	 */
 	public runEndlessLoop = async (fn: Function) => {
 		while (!this.cancelFunction) {
 			try {
@@ -58,8 +69,12 @@ export class Playlist {
 		}
 	}
 
-	// plays intro media before actual playlist starts, default behaviour is to play video as intro
-	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit) => {
+	/**
+	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
+	 * @param smilObject - JSON representation of parsed smil file
+	 * @param internalStorageUnit - persistent storage unit
+	 */
+	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit): Promise<void> => {
 		let media: string = 'video';
 		let fileStructure: string = FileStructure.videos;
 		let playingIntro = true;
@@ -77,14 +92,14 @@ export class Playlist {
 
 		await Promise.all(downloadPromises);
 
-		const intro: any = smilObject.intro[0];
+		const intro: SMILIntro = smilObject.intro[0];
 
 		switch (media) {
 			case 'img':
-				await this.setupIntroImage(intro.img, internalStorageUnit, smilObject);
+				await this.setupIntroImage(intro.img!, internalStorageUnit, smilObject);
 				break;
 			default:
-				await this.setupIntroVideo(intro.video, internalStorageUnit, smilObject);
+				await this.setupIntroVideo(intro.video!, internalStorageUnit, smilObject);
 		}
 
 		debug('Intro video downloaded: %O', intro);
@@ -101,7 +116,7 @@ export class Playlist {
 					await sleep(1000);
 					break;
 				default:
-					await this.playIntroVideo(intro.video);
+					await this.playIntroVideo(intro.video!);
 			}
 
 			Promise.all(downloadPromises).then(async () =>  {
@@ -116,17 +131,22 @@ export class Playlist {
 				resetBodyContent();
 				break;
 			default:
-				await this.endIntroVideo(intro.video);
+				await this.endIntroVideo(intro.video!);
 		}
 	}
 
-	// main processing function of smil player, runs playlist in endless loop and periodically
-	// checks for smil and media update in parallel
+	/**
+	 * main processing function of smil player, runs playlist in endless loop and periodically
+	 * checks for smil and media update in parallel
+	 * @param internalStorageUnit - persistent storage unit
+	 * @param smilObject - JSON representation of parsed smil file
+	 * @param smilFile - representation of actual SMIL file
+	 */
 	public processingLoop = async (
 		internalStorageUnit: IStorageUnit,
 		smilObject: SMILFileObject,
 		smilFile: SMILFile,
-	) => {
+	): Promise<void> => {
 		return new Promise((resolve, reject) => {
 			parallel([
 				async (callback) => {
@@ -153,7 +173,7 @@ export class Playlist {
 				async (callback) => {
 					// endless processing of smil playlist
 					await this.runEndlessLoop(async () => {
-						await this.processPlaylist(smilObject.playlist, smilObject, internalStorageUnit);
+						await this.processPlaylist(smilObject.playlist);
 					});
 					callback();
 				},
@@ -166,13 +186,24 @@ export class Playlist {
 		});
 	}
 
-	public getAllInfo = async (playlist: any, region: any, internalStorageUnit: IStorageUnit) => {
+	/**
+	 * recursively traverses through playlist and gets additional info for all media  specified in smil file
+	 * @param playlist - smil file playlist, set of rules which media should be played and when
+	 * @param region - regions object with information about all regions
+	 * @param internalStorageUnit - persistent storage unit
+	 */
+	public getAllInfo = async (
+		playlist: PlaylistElement | PlaylistElement[], region: SMILFileObject, internalStorageUnit: IStorageUnit,
+	): Promise<void> => {
 		let widgetRootFile = '';
 		let fileStructure = '';
-		for (let [key, value] of Object.entries(playlist)) {
-			if (!isObject(value)) {
+		for (let [key, loopValue] of Object.entries(playlist)) {
+			// skip processing string values like "repeatCount": "indefinite"
+			if (!isObject(loopValue)) {
 				continue;
 			}
+
+			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			if (XmlTags.extractedElements.includes(key)) {
 				debug('found %s element, getting all info', key);
 				if (!Array.isArray(value)) {
@@ -197,14 +228,14 @@ export class Playlist {
 						debug(`Sorry, we are out of ${key}.`);
 				}
 
-				// @ts-ignore
 				for (const elem of value) {
 					if (isUrl(elem.src)) {
 						const mediaFile = <IFile> await this.sos.fileSystem.getFile({
 							storageUnit: internalStorageUnit,
 							filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
 						});
-						elem.localFilePath = mediaFile.localUri;
+						// in case of web page as widget, leave localFilePath blank
+						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 						elem.regionInfo = getRegionInfo(region, elem.region);
 						extractAdditionalInfo(elem);
 					}
@@ -215,55 +246,67 @@ export class Playlist {
 		}
 	}
 
-	// excl and priorityClass are not supported in this version, they are processed as seq tags
-	// tslint:disable-next-line:max-line-length
-	public processUnsupportedTag = (value: object | any[], region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0): Promise<void>[] => {
+	/**
+	 * excl and priorityClass are not supported in this version, they are processed as seq tags
+	 * @param value - JSON object or array of objects
+	 * @param parent - superordinate element of value
+	 * @param endTime - date in millis when value stops playing
+	 */
+	public processUnsupportedTag = (
+		value: PlaylistElement | PlaylistElement[], parent: string = '', endTime: number = 0,
+	): Promise<void>[] => {
 		const promises: Promise<void>[] = [];
 		if (Array.isArray(value)) {
 			for (let elem of value) {
 				promises.push((async () => {
-					await this.processPlaylist(elem, region, internalStorageUnit, parent, endTime);
+					await this.processPlaylist(elem, parent, endTime);
 				})());
 			}
 		} else {
 			promises.push((async () => {
-				await this.processPlaylist(value, region, internalStorageUnit, parent, endTime);
+				await this.processPlaylist(value, parent, endTime);
 			})());
 		}
 		return promises;
 	}
 
-	// recursive function which goes through the playlist and process supported tags
-	// is responsible for calling functions which handles actual playing of elements
-	// tslint:disable-next-line:max-line-length
-	public processPlaylist = async (playlist: object, region: RegionsObject, internalStorageUnit: IStorageUnit, parent: string = '', endTime: number = 0) => {
+	/**
+	 * recursive function which goes through the playlist and process supported tags
+	 * is responsible for calling functions which handles actual playing of elements
+	 * @param playlist - JSON representation of SMIL parsed playlist
+	 * @param parent - superordinate element of value
+	 * @param endTime - date in millis when value stops playing
+	 */
+	public processPlaylist = async (
+		playlist: PlaylistElement | PlaylistElement[], parent: string = '', endTime: number = 0,
+	) => {
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
 				debug('Playlist element with key: %O is not object. value: %O, skipping', key, loopValue);
 				continue;
 			}
-			let value: any = loopValue;
+			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 
 			let promises: Promise<void>[] = [];
 
 			if (key === 'excl') {
-				promises = this.processUnsupportedTag(value, region, internalStorageUnit, 'seq', endTime);
+				promises = this.processUnsupportedTag(value, 'seq', endTime);
 			}
 
 			if (key === 'priorityClass') {
-				promises = this.processUnsupportedTag(value, region, internalStorageUnit, 'seq', endTime);
+				promises = this.processUnsupportedTag(value, 'seq', endTime);
 			}
 
 			if (key === 'seq') {
 				if (Array.isArray(value)) {
 					let arrayIndex = 0;
-					for (const elem of value) {
-						if (elem.hasOwnProperty('begin') && elem.begin.indexOf('wallclock') > -1
-							&& !isEqual(elem, this.introObject)
-							&& isNotPrefetchLoop(elem)) {
-							const {timeToStart, timeToEnd} = parseSmilSchedule(elem.begin, elem.end);
+					for (const valueElement of value) {
+						if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1
+							&& !isEqual(valueElement, this.introObject)
+							&& isNotPrefetchLoop(valueElement)) {
+							const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
 							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
 								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
@@ -275,14 +318,14 @@ export class Playlist {
 								continue;
 							}
 
-							if (elem.hasOwnProperty('repeatCount') && elem.repeatCount !== 'indefinite') {
-								const repeatCount = elem.repeatCount;
+							if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
+								const repeatCount = valueElement.repeatCount;
 								let counter = 0;
 								if (timeToStart <= 0) {
 									promises.push((async () => {
 										await sleep(timeToStart);
 										while (counter < repeatCount) {
-											await this.processPlaylist(elem, region, internalStorageUnit, 'seq', timeToEnd);
+											await this.processPlaylist(valueElement, 'seq', timeToEnd);
 											counter += 1;
 										}
 									})());
@@ -295,7 +338,7 @@ export class Playlist {
 							if (value.length === 1 || timeToStart <= 0) {
 								promises.push((async () => {
 									await sleep(timeToStart);
-									await this.processPlaylist(elem, region, internalStorageUnit, 'seq', timeToEnd);
+									await this.processPlaylist(valueElement, 'seq', timeToEnd);
 								})());
 							}
 							await Promise.all(promises);
@@ -303,12 +346,12 @@ export class Playlist {
 							continue;
 						}
 
-						if (elem.hasOwnProperty('repeatCount') && elem.repeatCount !== 'indefinite') {
-							const repeatCount = elem.repeatCount;
+						if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
+							const repeatCount = valueElement.repeatCount;
 							let counter = 0;
 							promises.push((async () => {
 								while (counter < repeatCount) {
-									await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
+									await this.processPlaylist(valueElement, 'seq', endTime);
 									counter += 1;
 								}
 							})());
@@ -316,18 +359,18 @@ export class Playlist {
 							continue;
 						}
 						promises.push((async () => {
-							await this.processPlaylist(elem, region, internalStorageUnit, 'seq', endTime);
+							await this.processPlaylist(valueElement, 'seq', endTime);
 						})());
 					}
 				} else {
-					if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock') > -1) {
-						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin, value.end);
+					if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
+						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin!, value.end);
 						if (timeToEnd === SMILScheduleEnum.neverPlay) {
 							return;
 						}
 						promises.push((async () => {
 							await sleep(timeToStart);
-							await this.processPlaylist(value, region, internalStorageUnit, 'seq', timeToEnd);
+							await this.processPlaylist(value, 'seq', timeToEnd);
 						})());
 					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
@@ -336,11 +379,11 @@ export class Playlist {
 							// when endTime is not set, play indefinitely
 							if (endTime === 0) {
 								await this.runEndlessLoop(async () => {
-									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+									await this.processPlaylist(value, 'seq', endTime);
 								});
 							} else {
 								while (Date.now() < endTime) {
-									await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+									await this.processPlaylist(value, 'seq', endTime);
 									// force stop because new version of smil file was detected
 									if (this.getCancelFunction()) {
 										return;
@@ -349,18 +392,18 @@ export class Playlist {
 							}
 						})());
 					} else if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-						const repeatCount = value.repeatCount;
+						const repeatCount: number = <number> value.repeatCount;
 						let counter = 0;
 						promises.push((async () => {
 							while (counter < repeatCount) {
-								await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+								await this.processPlaylist(value, 'seq', endTime);
 								counter += 1;
 							}
 						})());
 						await Promise.all(promises);
 					} else {
 						promises.push((async () => {
-							await this.processPlaylist(value, region, internalStorageUnit, 'seq', endTime);
+							await this.processPlaylist(value, 'seq', endTime);
 						})());
 					}
 				}
@@ -369,7 +412,7 @@ export class Playlist {
 			if (key === 'par') {
 				for (let [parKey, parValue] of Object.entries(<object> value)) {
 					if (XmlTags.extractedElements.includes(parKey)) {
-						await this.getRegionPlayElement(parValue, parKey, parent);
+						await this.playElement(parValue, parKey, parent);
 						continue;
 					}
 					if (Array.isArray(parValue)) {
@@ -378,17 +421,17 @@ export class Playlist {
 							[controlTag]: parValue,
 						};
 						promises.push((async () => {
-							await this.processPlaylist(wrapper, region, internalStorageUnit, 'par', endTime);
+							await this.processPlaylist(wrapper, 'par', endTime);
 						})());
 					} else {
-						if (value.hasOwnProperty('begin') && value.begin.indexOf('wallclock') > -1) {
-							const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin, value.end);
+						if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
+							const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin!, value.end);
 							if (timeToEnd === SMILScheduleEnum.neverPlay) {
 								return;
 							}
 							promises.push((async () => {
 								await sleep(timeToStart);
-								await this.processPlaylist(value, region, internalStorageUnit, parKey, timeToEnd);
+								await this.processPlaylist(value, parKey, timeToEnd);
 							})());
 							break;
 						}
@@ -399,7 +442,7 @@ export class Playlist {
 							}
 							promises.push((async () => {
 								await sleep(timeToStart);
-								await this.processPlaylist(parValue, region, internalStorageUnit, 'par', timeToEnd);
+								await this.processPlaylist(parValue, 'par', timeToEnd);
 							})());
 							continue;
 						}
@@ -408,11 +451,11 @@ export class Playlist {
 								// when endTime is not set, play indefinitely
 								if (endTime === 0) {
 									await this.runEndlessLoop(async () => {
-										await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+										await this.processPlaylist(parValue, parKey, endTime);
 									});
 								} else {
 									while (Date.now() < endTime) {
-										await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+										await this.processPlaylist(parValue, parKey, endTime);
 										// force stop because new version of smil file was detected
 										if (this.getCancelFunction()) {
 											return;
@@ -424,11 +467,11 @@ export class Playlist {
 						}
 
 						if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
-							const repeatCount = parValue.repeatCount;
+							const repeatCount: number = parValue.repeatCount;
 							let counter = 0;
 							promises.push((async () => {
 								while (counter < repeatCount) {
-									await this.processPlaylist(parValue, region, internalStorageUnit, 'par', endTime);
+									await this.processPlaylist(parValue, 'par', endTime);
 									counter += 1;
 								}
 							})());
@@ -437,7 +480,7 @@ export class Playlist {
 						}
 
 						promises.push((async () => {
-							await this.processPlaylist(parValue, region, internalStorageUnit, parKey, endTime);
+							await this.processPlaylist(parValue, parKey, endTime);
 						})());
 					}
 				}
@@ -450,7 +493,7 @@ export class Playlist {
 				&& value !== get(this.introObject, 'video', 'default')
 				&& value !== get(this.introObject, 'img', 'default')
 			) {
-				await this.getRegionPlayElement(value, key, parent);
+				await this.playElement(<SMILMedia> value, key, parent);
 			}
 		}
 	}
@@ -463,7 +506,10 @@ export class Playlist {
 		return this.cancelFunction;
 	}
 
-	// removes video from DOM which played in current region before currently playing element ( image, widget or video )
+	/**
+	 * removes video from DOM which played in current region before currently playing element ( image, widget or video )
+	 * @param regionInfo - information about region when current video belongs to
+	 */
 	private cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
 		debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
 		await this.sos.video.stop(
@@ -477,50 +523,66 @@ export class Playlist {
 		debug('previous video stopped');
 	}
 
-	// plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
-	private playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: number | string) => {
-		return new Promise(async (resolve) => {
-			let oldElement = document.getElementById(`${getFileName(filepath)}-${regionInfo.regionName}`);
+	/**
+	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
+	 * @param htmlElement - which html element will be created in DOM
+	 * @param filepath - local folder structure where file is stored
+	 * @param regionInfo - information about region when current media belongs to
+	 * @param duration - how long should media stay on screen
+	 */
+	private playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: string) => {
+		return new Promise(async (resolve, reject) => {
+			let oldElement = document.getElementById(generateElementId(filepath, regionInfo.regionName));
 			// set correct duration
-			duration = setDuration(duration);
+			const parsedDuration: number = setElementDuration(duration);
 
 			if (oldElement) {
-				// @ts-ignore
-				let zIndex: number = parseInt(oldElement.style['z-index']) || 0;
+				let zIndex: number = getStringToIntDefault(oldElement.style.zIndex);
 				zIndex += 1;
-				// @ts-ignore
-				oldElement.style['z-index'] = zIndex;
+				oldElement.style.zIndex = String(zIndex);
 
-				// if previous media in region was video, cancel it
-				if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
-					await this.cancelPreviousVideo(regionInfo);
-				}
-
-				// @ts-ignore
-				await sleep(duration * 1000);
-				debug('element playing finished: %O', oldElement);
+				await this.waitMediaOnScreen(regionInfo, parsedDuration, oldElement);
 				resolve();
 			} else {
 				const element: HTMLElement = createHtmlElement(htmlElement, filepath, regionInfo);
 				document.body.appendChild(element);
 				debug('Creating htmlElement: %O with duration %s', element, duration);
 
-				element.onload = async () => {
-					// if previous media in region was video, cancel it
-					if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
-						await this.cancelPreviousVideo(regionInfo);
-					}
+				element.onerror = (message: string) => {
+					debug('Error occurred during playing element: %O with error message: %s', element, message);
+					reject();
+				};
 
-					// @ts-ignore
-					await sleep(duration * 1000);
-					debug('element playing finished: %O', element);
+				element.onload = async () => {
+
+					await this.waitMediaOnScreen(regionInfo, parsedDuration, element);
 					resolve();
 				};
 			}
 		});
 	}
 
-	// plays array of videos in sequential order
+	/**
+	 * pauses function execution for given duration time =  how long should media stay visible on the screen
+	 * @param regionInfo - information about region when current media belongs to
+	 * @param duration - how long should media stay on screen
+	 * @param element - displayed HTML element
+	 */
+	private waitMediaOnScreen = async (regionInfo: RegionAttributes, duration: number, element: HTMLElement) => {
+		// if previous media in region was video, cancel it
+		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
+			await this.cancelPreviousVideo(regionInfo);
+		}
+
+		// pause fucntion for how long should media stay on display screen
+		await sleep(duration * 1000);
+		debug('element playing finished: %O', element);
+	}
+
+	/**
+	 * plays array of videos in sequential order
+	 * @param videos - array of SMILVideo objects
+	 */
 	private playVideosSeq = async (videos: SMILVideo[]) => {
 		for (let i = 0; i < videos.length; i += 1) {
 			const previousVideo = videos[(i + videos.length - 1) % videos.length];
@@ -601,7 +663,10 @@ export class Playlist {
 		}
 	}
 
-	// plays videos in parallel
+	/**
+	 * plays videos in parallel
+	 * @param videos - array of SMILVideo objects
+	 */
 	private playVideosPar = async (videos: SMILVideo[]) => {
 		const promises = [];
 		for (let elem of videos) {
@@ -614,8 +679,7 @@ export class Playlist {
 
 	private playAudio = async (filePath: string) => {
 		debug('Playing audio: %s', filePath);
-		// tslint:disable-next-line:typedef
-		return new Promise(function(resolve, reject) {
+		return new Promise((resolve, reject) => {
 			const audioElement = <HTMLAudioElement> new Audio(filePath);
 			audioElement.onerror = reject;
 			audioElement.onended = resolve;
@@ -623,10 +687,12 @@ export class Playlist {
 		});
 	}
 
-	// plays one video
+	/**
+	 * plays one video
+	 * @param video - SMILVideo object
+	 */
 	private playVideo = async (video: SMILVideo) => {
 		debug('Playing video: %O', video);
-
 		// prepare if video is not same as previous one played
 		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
 			debug('Preparing video: %O', video);
@@ -729,9 +795,14 @@ export class Playlist {
 		);
 	}
 
-	// iterate through array of images, widgets or audios
+	/**
+	 * iterate through array of images, widgets or audios
+	 * @param value - object or array of object of type SMILAudio | SMILImage | SMILWidget
+	 * @param parent - superordinate element of value
+	 * @param htmlElement - which html element will be created in DOM
+	 */
 	private playOtherMedia = async (
-		value: any,
+		value: SMILMediaNoVideo,
 		parent: string,
 		htmlElement: string,
 	) => {
@@ -782,27 +853,38 @@ export class Playlist {
 		}
 	}
 
-	// call actual playing functions for given elements
-	private playElement = async (value: object | any[], key: string, parent: string) => {
+	/**
+	 * call actual playing functions for given elements
+	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo
+	 * @param key - defines which media will be played ( video, audio, image or widget )
+	 * @param parent - superordinate element of value
+	 */
+	private playElement = async (
+		value: SMILMedia, key: string, parent: string,
+	) => {
+		// in case of array elements play it in sequential order
+		if (!isNaN(parseInt(parent))) {
+			parent = 'seq';
+		}
 		debug('Playing element with key: %O, value: %O', key, value);
 		switch (key) {
 			case 'video':
 				if (Array.isArray(value)) {
 					if (parent === 'seq') {
-						await this.playVideosSeq(value);
+						await this.playVideosSeq(<SMILVideo[]> value);
 						break;
 					}
-					await this.playVideosPar(value);
+					await this.playVideosPar(<SMILVideo[]> value);
 					break;
 				} else {
 					await this.playVideo(<SMILVideo> value);
 					break;
 				}
 			case 'ref':
-				await this.playOtherMedia(value, parent, 'iframe');
+				await this.playOtherMedia(<SMILWidget | SMILWidget[]> value, parent, 'iframe');
 				break;
 			case 'img':
-				await this.playOtherMedia(value, parent, 'img');
+				await this.playOtherMedia(<SMILImage | SMILImage[]> value, parent, 'img');
 				break;
 			// case 'audio':
 			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
@@ -810,14 +892,5 @@ export class Playlist {
 			default:
 				debug(`Sorry, we are out of ${key}.`);
 		}
-	}
-
-	// get region info for elements which are going to be played
-	private getRegionPlayElement = async (value: any, key: string, parent: string = '0') => {
-		// in case of array elements
-		if (!isNaN(parseInt(parent))) {
-			parent = 'seq';
-		}
-		await this.playElement(value, key, parent);
 	}
 }
