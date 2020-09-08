@@ -40,7 +40,6 @@ export type RegionAttributes = {
 
 export type SMILVideo = {
 	src: string,
-	id: string,
 	fit?: string,
 	region: string,
 	lastModified?: number,
@@ -52,7 +51,7 @@ export type SMILVideo = {
 
 export type SMILAudio = {
 	src: string,
-	dur?: string,
+	dur: string,
 	fit?: string,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
@@ -63,7 +62,7 @@ export type SMILAudio = {
 export type SMILImage = {
 	src: string,
 	region: string,
-	dur?: string,
+	dur: string,
 	fit?: string,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
@@ -74,7 +73,7 @@ export type SMILImage = {
 export type SMILWidget = {
 	src: string,
 	region: string,
-	dur?: string,
+	dur: string,
 	fit?: string,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
@@ -83,9 +82,9 @@ export type SMILWidget = {
 };
 
 export type SMILIntro = {
-	video?: SMILVideo[],
-	img?: SMILImage[],
-	[key: string]: string | SMILImage[] | undefined,
+	video?: SMILVideo,
+	img?: SMILImage,
+	[key: string]: string | SMILImage | SMILVideo | undefined,
 };
 
 export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo | SMILFile;
@@ -100,12 +99,12 @@ export type DownloadsList = {
 };
 
 export type CheckETagFunctions = {
-	fileEtagPromisesMedia: any[],
-	fileEtagPromisesSMIL: any[],
+	fileEtagPromisesMedia: Promise<any>[],
+	fileEtagPromisesSMIL: Promise<any>[],
 };
 
 export type SMILPlaylist = {
-	playlist: { [key: string]: SMILMedia },
+	playlist: { [key: string]: PlaylistElement | PlaylistElement[] },
 };
 
 export type SMILFile = {
@@ -134,10 +133,23 @@ export type SmilScheduleObject = {
 	timeToEnd: number,
 };
 
+export type PlaylistElement = {
+	begin?: string,
+	end?: string,
+	repeatCount?: number | string,
+	seq?: PlaylistElement,
+	par?: PlaylistElement,
+	excl?: PlaylistElement,
+	priorityClass?: PlaylistElement,
+};
+
 export type CurrentlyPlaying = {
 	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
 };
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
 
-export type SMILMedia = SMILWidget | SMILImage | SMILAudio | SMILVideo;
+export type SMILMedia = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[] | SMILVideo | SMILVideo[];
+export type SMILMediaSingle = SMILImage  | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
+export type SMILMediaArray = SMILImage[]  | SMILWidget[] | SMILAudio[] | SMILVideo[];
+export type SMILMediaNoVideo = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[];

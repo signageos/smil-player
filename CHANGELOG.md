@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.0.1] - 2020-09-08
+### Added
+- performance optimization for older devices
+- add JSDoc, code structure improvements
+- improve test coverage
+
 ## [1.0.0] - 2020-08-31
 ### Added
 - First released version, supported features in readme or https://docs.signageos.io/category/smil-guides

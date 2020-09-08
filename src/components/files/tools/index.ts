@@ -24,3 +24,7 @@ export function isValidLocalPath(filePath: string) {
 export function createDownloadPath(sourceUrl: string): string {
 	return `${corsAnywhere}${sourceUrl}?v=${getRandomInt(1000000)}`;
 }
+
+export function createLocalFilePath(localFilePath: string, src: string): string {
+	return `${localFilePath}/${getFileName(src)}`;
+}

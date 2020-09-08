@@ -13,7 +13,7 @@ import {
 	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isValidLocalPath, createDownloadPath } from './tools';
+import { getFileName, getPath, isValidLocalPath, createDownloadPath, createLocalFilePath } from './tools';
 import { debug } from './tools';
 
 const isUrl = require('is-url-superb');
@@ -61,8 +61,9 @@ export class Files {
 		});
 	}
 
-	// tslint:disable-next-line:max-line-length
-	public parallelDownloadAllFiles = async (internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string, forceDownload: boolean = false): Promise<any[]> => {
+	public parallelDownloadAllFiles = async (
+		internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string, forceDownload: boolean = false,
+	): Promise<any[]> => {
 		const promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			// check for local urls to files (media/file.mp4)
@@ -73,7 +74,7 @@ export class Files {
 			if (isUrl(filesList[i].src) && (forceDownload || !await this.sos.fileSystem.exists(
 				{
 					storageUnit: internalStorageUnit,
-					filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
+					filePath: createLocalFilePath(localFilePath, filesList[i].src),
 				},
 			))) {
 				promises.push((async () => {
@@ -81,7 +82,7 @@ export class Files {
 					await this.sos.fileSystem.downloadFile(
 						{
 							storageUnit: internalStorageUnit,
-							filePath: `${localFilePath}/${getFileName(filesList[i].src)}`,
+							filePath: createLocalFilePath(localFilePath, filesList[i].src),
 						},
 						createDownloadPath(filesList[i].src),
 					);
@@ -91,7 +92,10 @@ export class Files {
 		return promises;
 	}
 
-	// prepare folder structure for media files, does not support recursive create
+	/**
+	 * prepare folder structure for media files, does not support recursive create
+	 * @param internalStorageUnit - persistent storage unit
+	 */
 	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
 		for (const path of Object.values(FileStructure)) {
 			if (await this.sos.fileSystem.exists({
@@ -109,9 +113,12 @@ export class Files {
 		}
 	}
 
-	// when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
+	/**
+	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
+	 * @param smilObject - JSON representation of parsed smil file
+	 */
 	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<void> => {
-		const smilMediaArray: any = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
+		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
 		for (let path in FileStructure) {
 			const downloadedFiles = await this.sos.fileSystem.listFiles( { filePath: get(FileStructure, path), storageUnit: internalStorageUnit });
@@ -176,9 +183,15 @@ export class Files {
 		};
 	}
 
-	// periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
-	// tslint:disable-next-line:max-line-length
-	private checkLastModified = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string): Promise<any[]> => {
+	/**
+	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
+	 * @param internalStorageUnit - persistent storage unit
+	 * @param filesList - list of files for update checks
+	 * @param localFilePath - folder structure specifying path to file
+	 */
+	private checkLastModified = async (
+		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string,
+		): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			if (isUrl(filesList[i].src)) {
