@@ -71,7 +71,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	}
 
 	// check of outdated files and delete them
-	await files.deleteUnusedFiles(internalStorageUnit, smilObject);
+	await files.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
 
 	debug('Unused files deleted');
 
