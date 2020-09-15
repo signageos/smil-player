@@ -117,7 +117,7 @@ export class Files {
 	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
 	 * @param smilObject - JSON representation of parsed smil file
 	 */
-	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<void> => {
+	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
 		for (let path in FileStructure) {
@@ -133,7 +133,7 @@ export class Files {
 					}
 				}
 
-				if (!found) {
+				if (!found && (getFileName(storedFile.filePath) !== getFileName(smilUrl))) {
 					// delete only path with files, not just folders
 					if (storedFile.filePath.indexOf('.') > -1) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
