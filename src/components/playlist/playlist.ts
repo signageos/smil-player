@@ -70,6 +70,28 @@ export class Playlist {
 	}
 
 	/**
+	 * Performs all necessary actions needed to process playlist ( delete unused files, extact widgets, extract regionInfo for each media )
+	 * @param smilObject - JSON representation of parsed smil file
+	 * @param internalStorageUnit - persistent storage unit
+	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
+	 */
+	public manageFilesAndInfo = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string) => {
+		// check of outdated files and delete them
+		await this.files.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
+
+		debug('Unused files deleted');
+
+		// unpack .wgt archives with widgets ( ref tag )
+		await this.files.extractWidgets(smilObject.ref, internalStorageUnit);
+
+		debug('Widgets extracted');
+
+		// extracts region info for all medias in playlist
+		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit);
+		debug('All elements info extracted');
+	}
+
+	/**
 	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param internalStorageUnit - persistent storage unit
@@ -120,6 +142,10 @@ export class Playlist {
 			}
 
 			Promise.all(downloadPromises).then(async () =>  {
+				// prepares everything needed for processing playlist
+				if (playingIntro) {
+					await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+				}
 				// all files are downloaded, stop intro
 				debug('SMIL media files download finished, stopping intro');
 				playingIntro = false;
