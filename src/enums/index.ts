@@ -14,6 +14,12 @@ export enum FileStructure {
 	extracted = 'smil/widgets/extracted',
 }
 
+export enum HtmlEnum {
+	img = 'img',
+	ref = 'iframe',
+	widgetRoot = '/index.html',
+}
+
 export enum SMILScheduleEnum {
 	endDateAndTimeFuture = 'wallclock(R/2100-01-01T00:00:00/P1D)',
 	endDateAndTimePast = '1970-01-01T00:00:00',

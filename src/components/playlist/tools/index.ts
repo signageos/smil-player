@@ -404,7 +404,6 @@ export function generateElementId(filepath: string, regionName: string): string 
 export function createHtmlElement(htmlElement: string, filepath: string, regionInfo: RegionAttributes): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
-	element.setAttribute('src', filepath);
 	element.id = generateElementId(filepath, regionInfo.regionName);
 	Object.keys(regionInfo).forEach((attr: any) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
@@ -420,8 +419,21 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	element.style.position = 'absolute';
 	element.style.backgroundColor = 'transparent';
 	element.style.borderWidth = '0px';
+	element.style.display = 'none';
 
 	return element;
+}
+
+/**
+ * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
+ * @param value - Smil image or Smil widget
+ * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
+ */
+export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string) {
+	debug('creating element: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
+	const localFilePath = value.localFilePath !== ''  ? value.localFilePath : value.src;
+	const image = createHtmlElement(htmlElement, localFilePath, value.regionInfo);
+	document.body.appendChild(image);
 }
 
 export function resetBodyContent() {
