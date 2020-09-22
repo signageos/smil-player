@@ -1,7 +1,6 @@
 import * as xml2js from 'xml2js';
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
-import { DOMParser } from 'xmldom';
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -25,9 +24,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const playableMedia = {
 		playlist: {},
 	};
-	const xmlFileSerialized: Document = new DOMParser().parseFromString(xmlFile, "text/xml");
-	debug('Xml string serialized : %O', xmlFileSerialized);
-	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFileSerialized, {
+	debug('Parsing xml string to json : %O', xmlFile);
+	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 		mergeAttrs: true,
 		explicitArray: false,
 	});
