@@ -61,27 +61,15 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// download and play intro file if exists ( image or video )
 	if (smilObject.intro.length > 0) {
-		await playlist.playIntro(smilObject, internalStorageUnit);
+		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
 	} else {
 		// no intro
 		debug('No intro video found');
 		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 		await Promise.all(downloadPromises);
 		debug('SMIL media files download finished');
+		await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
 	}
-
-	// check of outdated files and delete them
-	await files.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
-
-	debug('Unused files deleted');
-
-	// unpack .wgt archives with widgets ( ref tag )
-	await files.extractWidgets(smilObject.ref, internalStorageUnit);
-
-	debug('Widgets extracted');
-
-	await playlist.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit);
-	debug('All elements info extracted');
 
 	debug('Starting to process parsed smil file');
 	await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);

@@ -47,6 +47,7 @@ export type SMILVideo = {
 	arguments?: any[],
 	playing?: boolean,
 	regionInfo: RegionAttributes,
+	media?: string,
 };
 
 export type SMILAudio = {
@@ -78,6 +79,13 @@ export type SMILWidget = {
 	lastModified?: number,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
+	playing?: boolean,
+};
+
+export type SosHtmlElement = {
+	src: string,
+	id: string,
+	media?: string,
 	playing?: boolean,
 };
 
@@ -144,7 +152,7 @@ export type PlaylistElement = {
 };
 
 export type CurrentlyPlaying = {
-	[regionName: string]: SMILWidget | SMILImage | SMILAudio | SMILVideo,
+	[regionName: string]: SosHtmlElement | SMILVideo,
 };
 
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;

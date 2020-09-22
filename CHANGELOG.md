@@ -8,11 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - fix offline playback
 
-## [1.0.1] - 2020-09-08
+## [1.0.1] - 2020-09-17
 ### Added
 - performance optimization for older devices
 - add JSDoc, code structure improvements
 - improve test coverage
+
+### Fixed
+- fix offline playback
+- performance improvements for older/slower devices
 
 ## [1.0.0] - 2020-08-31
 ### Added

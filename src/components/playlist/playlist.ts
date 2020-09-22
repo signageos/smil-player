@@ -17,16 +17,16 @@ import {
 	SMILWidget,
 	SMILMedia,
 	SMILMediaNoVideo,
-	SMILIntro,
+	SMILIntro, SosHtmlElement,
 } from '../../models';
-import { FileStructure, SMILScheduleEnum, XmlTags } from '../../enums';
+import { FileStructure, SMILScheduleEnum, XmlTags, HtmlEnum } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait, resetBodyContent,
-	generateElementId, getStringToIntDefault,
+	generateElementId, createDomElement,
 } from './tools';
 import { Files } from '../files/files';
 const isUrl = require('is-url-superb');
@@ -70,11 +70,33 @@ export class Playlist {
 	}
 
 	/**
+	 * Performs all necessary actions needed to process playlist ( delete unused files, extact widgets, extract regionInfo for each media )
+	 * @param smilObject - JSON representation of parsed smil file
+	 * @param internalStorageUnit - persistent storage unit
+	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
+	 */
+	public manageFilesAndInfo = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string) => {
+		// check of outdated files and delete them
+		await this.files.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
+
+		debug('Unused files deleted');
+
+		// unpack .wgt archives with widgets ( ref tag )
+		await this.files.extractWidgets(smilObject.ref, internalStorageUnit);
+
+		debug('Widgets extracted');
+
+		// extracts region info for all medias in playlist
+		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit);
+		debug('All elements info extracted');
+	}
+
+	/**
 	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param internalStorageUnit - persistent storage unit
 	 */
-	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit): Promise<void> => {
+	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string): Promise<void> => {
 		let media: string = 'video';
 		let fileStructure: string = FileStructure.videos;
 		let playingIntro = true;
@@ -120,9 +142,13 @@ export class Playlist {
 			}
 
 			Promise.all(downloadPromises).then(async () =>  {
+				// prepares everything needed for processing playlist
+				if (playingIntro) {
+					await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+				}
 				// all files are downloaded, stop intro
 				debug('SMIL media files download finished, stopping intro');
-				playingIntro = false;
+				return playingIntro = false;
 			});
 		}
 
@@ -195,8 +221,9 @@ export class Playlist {
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[], region: SMILFileObject, internalStorageUnit: IStorageUnit,
 	): Promise<void> => {
-		let widgetRootFile = '';
-		let fileStructure = '';
+		let widgetRootFile: string = '';
+		let fileStructure: string = '';
+		let htmlElement: string = '';
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			// skip processing string values like "repeatCount": "indefinite"
 			if (!isObject(loopValue)) {
@@ -215,11 +242,13 @@ export class Playlist {
 						fileStructure = FileStructure.videos;
 						break;
 					case 'ref':
-						widgetRootFile = '/index.html';
+						widgetRootFile = HtmlEnum.widgetRoot;
 						fileStructure = FileStructure.extracted;
+						htmlElement = HtmlEnum.ref;
 						break;
 					case 'img':
 						fileStructure = FileStructure.images;
+						htmlElement = HtmlEnum.img;
 						break;
 					case 'audio':
 						fileStructure = FileStructure.audios;
@@ -238,6 +267,11 @@ export class Playlist {
 						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 						elem.regionInfo = getRegionInfo(region, elem.region);
 						extractAdditionalInfo(elem);
+
+						// create placeholders in DOM for images and widgets to speedup playlist processing
+						if (key === 'img' || key === 'ref') {
+							createDomElement(elem, htmlElement);
+						}
 					}
 				}
 			} else {
@@ -507,58 +541,90 @@ export class Playlist {
 	}
 
 	/**
+	 * determines which function to use to cancel previous content
+	 * @param regionInfo - information about region when current video belongs to
+	 */
+	private cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
+		switch (this.currentlyPlaying[regionInfo.regionName].media) {
+			case 'video':
+				await sleep(500);
+				await this.cancelPreviousVideo(regionInfo);
+				break;
+			default:
+				await sleep(200);
+				this.cancelPreviousImage(regionInfo);
+				break;
+		}
+	}
+
+	/**
+	 * sets element which played in current region before currently playing element invisible ( image, widget, video )
+	 * @param regionInfo - information about region when current video belongs to
+	 */
+	private cancelPreviousImage = (regionInfo: RegionAttributes) => {
+		debug('previous html element playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+		const element = <HTMLElement> document.getElementById((<SosHtmlElement> this.currentlyPlaying[regionInfo.regionName]).id);
+		element.style.display = 'none';
+		this.currentlyPlaying[regionInfo.regionName].playing = false;
+	}
+
+	/**
+	 * updated currentlyPlaying object with new element
+	 * @param element -  element which is currently playing in given region ( video or HtmlElement )
+	 * @param tag - variable which specifies type of element ( video or HtmlElement )
+	 * @param regionName -  name of the region of current media
+	 */
+	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string) => {
+		this.currentlyPlaying[regionName] = element;
+		this.currentlyPlaying[regionName].media = tag;
+		this.currentlyPlaying[regionName].playing = true;
+	}
+
+	/**
 	 * removes video from DOM which played in current region before currently playing element ( image, widget or video )
 	 * @param regionInfo - information about region when current video belongs to
 	 */
 	private cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
 		debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+		const video = <SMILVideo> this.currentlyPlaying[regionInfo.regionName];
 		await this.sos.video.stop(
-			this.currentlyPlaying[regionInfo.regionName].localFilePath,
-			this.currentlyPlaying[regionInfo.regionName].regionInfo.left,
-			this.currentlyPlaying[regionInfo.regionName].regionInfo.top,
-			this.currentlyPlaying[regionInfo.regionName].regionInfo.width,
-			this.currentlyPlaying[regionInfo.regionName].regionInfo.height,
+			video.localFilePath,
+			video.regionInfo.left,
+			video.regionInfo.top,
+			video.regionInfo.width,
+			video.regionInfo.height,
 		);
-		this.currentlyPlaying[regionInfo.regionName].playing = false;
+		video.playing = false;
 		debug('previous video stopped');
 	}
 
 	/**
 	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
-	 * @param htmlElement - which html element will be created in DOM
 	 * @param filepath - local folder structure where file is stored
 	 * @param regionInfo - information about region when current media belongs to
 	 * @param duration - how long should media stay on screen
 	 */
-	private playTimedMedia = async (htmlElement: string, filepath: string, regionInfo: RegionAttributes, duration: string) => {
-		return new Promise(async (resolve, reject) => {
-			let oldElement = document.getElementById(generateElementId(filepath, regionInfo.regionName));
+	private playTimedMedia = async (
+		filepath: string, regionInfo: RegionAttributes, duration: string,
+	) => {
+		return new Promise(async (resolve) => {
+			let element = <HTMLElement> document.getElementById(generateElementId(filepath, regionInfo.regionName));
 			// set correct duration
 			const parsedDuration: number = setElementDuration(duration);
 
-			if (oldElement) {
-				let zIndex: number = getStringToIntDefault(oldElement.style.zIndex);
-				zIndex += 1;
-				oldElement.style.zIndex = String(zIndex);
-
-				await this.waitMediaOnScreen(regionInfo, parsedDuration, oldElement);
-				resolve();
-			} else {
-				const element: HTMLElement = createHtmlElement(htmlElement, filepath, regionInfo);
-				document.body.appendChild(element);
-				debug('Creating htmlElement: %O with duration %s', element, duration);
-
-				element.onerror = (message: string) => {
-					debug('Error occurred during playing element: %O with error message: %s', element, message);
-					reject();
-				};
-
-				element.onload = async () => {
-
-					await this.waitMediaOnScreen(regionInfo, parsedDuration, element);
-					resolve();
-				};
+			if (element.getAttribute('src') === null) {
+				element.setAttribute('src', filepath);
 			}
+
+			element.style.display = 'block';
+
+			const sosHtmlElement: SosHtmlElement = {
+				src: <string> element.getAttribute('src'),
+				id: element.id,
+			};
+
+			await this.waitMediaOnScreen(regionInfo, parsedDuration, sosHtmlElement);
+			resolve();
 		});
 	}
 
@@ -568,12 +634,17 @@ export class Playlist {
 	 * @param duration - how long should media stay on screen
 	 * @param element - displayed HTML element
 	 */
-	private waitMediaOnScreen = async (regionInfo: RegionAttributes, duration: number, element: HTMLElement) => {
-		// if previous media in region was video, cancel it
-		if (!isNil(this.currentlyPlaying[regionInfo.regionName]) && this.currentlyPlaying[regionInfo.regionName].playing) {
-			await this.cancelPreviousVideo(regionInfo);
+	private waitMediaOnScreen = async (regionInfo: RegionAttributes, duration: number, element: SosHtmlElement) => {
+		// set invisible previous element in region for gapless playback if it differs from current element
+		if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
+			&& this.currentlyPlaying[regionInfo.regionName].src !== element.src) {
+			debug('cancelling media: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
+			await this.cancelPreviousMedia(regionInfo);
 		}
 
+		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
+
+		debug('waiting image duration: %s from element: %s', duration, element.id);
 		// pause fucntion for how long should media stay on display screen
 		await sleep(duration * 1000);
 		debug('element playing finished: %O', element);
@@ -610,9 +681,13 @@ export class Playlist {
 					config.videoOptions,
 				);
 			}
+			// cancel if there was image player before
+			if (get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'playing') && i === 0
+			&& get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'media') === 'html') {
+				await this.cancelPreviousMedia(currentVideo.regionInfo);
+			}
 
-			this.currentlyPlaying[currentVideo.regionInfo.regionName] = currentVideo;
-			currentVideo.playing = true;
+			this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
 
 			debug('Playing video current: %O', currentVideo);
 			await this.sos.video.play(
@@ -658,7 +733,7 @@ export class Playlist {
 
 			// force stop video only when reloading smil file due to new version of smil
 			if (this.getCancelFunction()) {
-				await this.cancelPreviousVideo(currentVideo.regionInfo);
+				await this.cancelPreviousMedia(currentVideo.regionInfo);
 			}
 		}
 	}
@@ -709,11 +784,10 @@ export class Playlist {
 		// cancel if video is not same as previous one played
 		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'playing')
 			&& get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
-			await this.cancelPreviousVideo(video.regionInfo);
+			await this.cancelPreviousMedia(video.regionInfo);
 		}
 
-		this.currentlyPlaying[video.regionInfo.regionName] = video;
-		video.playing = true;
+		this.setCurrentlyPlaying(video, 'video', video.regionInfo.regionName);
 
 		await this.sos.video.play(
 			video.localFilePath,
@@ -733,10 +807,10 @@ export class Playlist {
 		debug('Playing video finished: %O', video);
 
 		// no video.stop function so one video can be played gapless in infinite loop
-		// stopping is handled by cancelPreviousVideo function
+		// stopping is handled by cancelPreviousMedia function
 		// force stop video only when reloading smil file due to new version of smil
 		if (this.getCancelFunction()) {
-			await this.cancelPreviousVideo(video.regionInfo);
+			await this.cancelPreviousMedia(video.regionInfo);
 		}
 	}
 
@@ -819,14 +893,14 @@ export class Playlist {
 				if (isUrl(elem.src)) {
 					// widget with website url as datasource
 					if (htmlElement === 'iframe' && getFileName(elem.src).indexOf('.wgt') === -1) {
-						await this.playTimedMedia(htmlElement, elem.src, elem.regionInfo, elem.dur);
+						await this.playTimedMedia(elem.src, elem.regionInfo, elem.dur);
 						continue;
 					}
 					if (htmlElement === 'audio') {
 						await this.playAudio(elem.localFilePath);
 						continue;
 					}
-					await this.playTimedMedia(htmlElement, elem.localFilePath, elem.regionInfo, elem.dur);
+					await this.playTimedMedia(elem.localFilePath, elem.regionInfo, elem.dur);
 				}
 			}
 		}
@@ -837,7 +911,7 @@ export class Playlist {
 				// widget with website url as datasource
 				if (htmlElement === 'iframe' && getFileName(elem.src).indexOf('.wgt') === -1) {
 					promises.push((async () => {
-						await this.playTimedMedia(htmlElement, elem.src, elem.regionInfo, elem.dur);
+						await this.playTimedMedia(elem.src, elem.regionInfo, elem.dur);
 					})());
 					continue;
 				}
@@ -846,7 +920,7 @@ export class Playlist {
 						await this.playAudio(elem.localFilePath);
 						return;
 					}
-					await this.playTimedMedia(htmlElement, elem.localFilePath, elem.regionInfo, elem.dur);
+					await this.playTimedMedia(elem.localFilePath, elem.regionInfo, elem.dur);
 				})());
 			}
 			await Promise.all(promises);
@@ -887,7 +961,7 @@ export class Playlist {
 				await this.playOtherMedia(<SMILImage | SMILImage[]> value, parent, 'img');
 				break;
 			// case 'audio':
-			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio', '');
+			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio');
 			// 	break;
 			default:
 				debug(`Sorry, we are out of ${key}.`);
