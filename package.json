@@ -71,8 +71,7 @@
     "nyc": "^15.0.0",
     "ts-node": "^8.8.1",
     "whatwg-fetch": "^3.4.0",
-    "xml2js": "^0.4.23",
-    "xmldom": "^0.3.0"
+    "xml2js": "^0.4.23"
   },
   "sos": {
     "appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2"
