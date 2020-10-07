@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - fixed smil parsing issue on Rpi
+- fixed new smil file download/offline processing
 
 ## [1.0.1] - 2020-09-17
 ### Added
