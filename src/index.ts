@@ -31,10 +31,11 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	// wait for one minute and then try to download it again
 	while (smilFileContent === '') {
 		try {
-			// download SMIL file
-			downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder);
-
-			await Promise.all(downloadPromises);
+			// download SMIL file if device has internet connection
+			if (navigator.onLine) {
+				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, true);
+				await Promise.all(downloadPromises);
+			}
 
 			smilFileContent = await thisSos.fileSystem.readFile({
 				storageUnit: internalStorageUnit,

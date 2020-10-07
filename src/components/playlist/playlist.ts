@@ -710,8 +710,9 @@ export class Playlist {
 				);
 				previousVideo.playing = false;
 			}
-			debug('Preparing video next: %O', nextVideo);
+
 			if (nextVideo.src !== currentVideo.src) {
+				debug('Preparing video next: %O', nextVideo);
 				await this.sos.video.prepare(
 					nextVideo.localFilePath,
 					nextVideo.regionInfo.left,
@@ -722,6 +723,7 @@ export class Playlist {
 				);
 			}
 
+			debug('Before onceEnded video function: %O', currentVideo);
 			await this.sos.video.onceEnded(
 				currentVideo.localFilePath,
 				currentVideo.regionInfo.left,
@@ -849,6 +851,7 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
+		debug('Playing intro video before onceEnded: %O', video);
 		await this.sos.video.onceEnded(
 			video.localFilePath,
 			video.regionInfo.left,
@@ -856,6 +859,7 @@ export class Playlist {
 			video.regionInfo.width,
 			video.regionInfo.height,
 		);
+		debug('Playing intro video after onceEnded: %O', video);
 	}
 
 	private endIntroVideo = async (video: SMILVideo) => {
