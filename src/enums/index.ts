@@ -18,6 +18,7 @@ export enum HtmlEnum {
 	img = 'img',
 	ref = 'iframe',
 	widgetRoot = '/index.html',
+	video = 'video',
 }
 
 export enum SMILScheduleEnum {
