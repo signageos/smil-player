@@ -25,7 +25,7 @@ import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/Fil
 import { getFileName } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait, resetBodyContent,
+	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
 	generateElementId, createDomElement,
 } from './tools';
 import { Files } from '../files/files';
@@ -95,16 +95,18 @@ export class Playlist {
 	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param internalStorageUnit - persistent storage unit
+	 * @param smilUrl - url of actual smil file
 	 */
 	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string): Promise<void> => {
-		let media: string = 'video';
+		let media: string = HtmlEnum.video;
 		let fileStructure: string = FileStructure.videos;
 		let playingIntro = true;
 		let downloadPromises: Promise<Function[]>[] = [];
+		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
 		// play image
-		if (smilObject.intro[0].hasOwnProperty('img')) {
-			media = 'img';
+		if (smilObject.intro[0].hasOwnProperty(HtmlEnum.img)) {
+			media = HtmlEnum.img;
 			fileStructure = FileStructure.images;
 		}
 
@@ -117,14 +119,16 @@ export class Playlist {
 		const intro: SMILIntro = smilObject.intro[0];
 
 		switch (media) {
-			case 'img':
-				await this.setupIntroImage(intro.img!, internalStorageUnit, smilObject);
+			case HtmlEnum.img:
+				if (imageElement.getAttribute('src') === null) {
+					imageElement = await this.setupIntroImage(intro.img!, internalStorageUnit, smilObject);
+				}
 				break;
 			default:
 				await this.setupIntroVideo(intro.video!, internalStorageUnit, smilObject);
 		}
 
-		debug('Intro video downloaded: %O', intro);
+		debug('Intro media downloaded: %O', intro);
 
 		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
@@ -134,7 +138,7 @@ export class Playlist {
 			this.setIntroUrl(intro);
 
 			switch (media) {
-				case 'img':
+				case HtmlEnum.img:
 					await sleep(1000);
 					break;
 				default:
@@ -153,8 +157,8 @@ export class Playlist {
 		}
 
 		switch (media) {
-			case 'img':
-				resetBodyContent();
+			case HtmlEnum.img:
+				imageElement.style.display = 'none';
 				break;
 			default:
 				await this.endIntroVideo(intro.video!);
@@ -186,13 +190,15 @@ export class Playlist {
 						debug('Last modified check for smil media files prepared');
 						await sleep(smilObject.refresh * 1000);
 						debug('Checking files for changes');
-						const response = await Promise.all(fileEtagPromisesSMIL);
-						if (response[0].length > 0) {
-							debug('SMIL file changed, restarting loop');
-							this.disableLoop(true);
-							this.setCheckFilesLoop(false);
+						let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+						responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+						for (const response of responseFiles) {
+							if (response.length > 0) {
+								debug('One of the files changed, restarting loop');
+								this.disableLoop(true);
+								this.setCheckFilesLoop(false);
+							}
 						}
-						await Promise.all(fileEtagPromisesMedia);
 					}
 					callback();
 				},
@@ -832,14 +838,17 @@ export class Playlist {
 		debug('Intro video prepared: %O', video);
 	}
 
-	private setupIntroImage = async (image: SMILImage, internalStorageUnit: IStorageUnit, region: RegionsObject) => {
+	private setupIntroImage = async (image: SMILImage, internalStorageUnit: IStorageUnit, region: RegionsObject): Promise<HTMLElement> => {
 		const currentImageDetails = <IFile> await this.files.getFileDetails(image, internalStorageUnit, FileStructure.images);
 		image.regionInfo = getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails.localUri;
 		debug('Setting-up intro image: %O', image);
-		const element: HTMLElement = createHtmlElement('img', image.localFilePath, image.regionInfo);
+		const element: HTMLElement = createHtmlElement(HtmlEnum.img, image.localFilePath, image.regionInfo);
+		element.style.display = 'block';
+		element.setAttribute('src', image.localFilePath);
 		document.body.appendChild(element);
 		debug('Intro image prepared: %O', element);
+		return element;
 	}
 
 	private playIntroVideo = async (video: SMILVideo) => {
