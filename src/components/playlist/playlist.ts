@@ -186,13 +186,15 @@ export class Playlist {
 						debug('Last modified check for smil media files prepared');
 						await sleep(smilObject.refresh * 1000);
 						debug('Checking files for changes');
-						const response = await Promise.all(fileEtagPromisesSMIL);
-						if (response[0].length > 0) {
-							debug('SMIL file changed, restarting loop');
-							this.disableLoop(true);
-							this.setCheckFilesLoop(false);
+						let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+						responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+						for (const response of responseFiles) {
+							if (response.length > 0) {
+								debug('One of the files changed, restarting loop');
+								this.disableLoop(true);
+								this.setCheckFilesLoop(false);
+							}
 						}
-						await Promise.all(fileEtagPromisesMedia);
 					}
 					callback();
 				},
