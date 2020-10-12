@@ -95,17 +95,18 @@ export class Playlist {
 	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param internalStorageUnit - persistent storage unit
+	 * @param smilUrl - url of actual smil file
 	 */
 	public playIntro = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string): Promise<void> => {
-		let media: string = 'video';
+		let media: string = HtmlEnum.video;
 		let fileStructure: string = FileStructure.videos;
 		let playingIntro = true;
 		let downloadPromises: Promise<Function[]>[] = [];
 		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
 		// play image
-		if (smilObject.intro[0].hasOwnProperty('img')) {
-			media = 'img';
+		if (smilObject.intro[0].hasOwnProperty(HtmlEnum.img)) {
+			media = HtmlEnum.img;
 			fileStructure = FileStructure.images;
 		}
 
@@ -127,7 +128,7 @@ export class Playlist {
 				await this.setupIntroVideo(intro.video!, internalStorageUnit, smilObject);
 		}
 
-		debug('Intro video downloaded: %O', intro);
+		debug('Intro media downloaded: %O', intro);
 
 		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
@@ -137,7 +138,7 @@ export class Playlist {
 			this.setIntroUrl(intro);
 
 			switch (media) {
-				case 'img':
+				case HtmlEnum.img:
 					await sleep(1000);
 					break;
 				default:
