@@ -4,12 +4,12 @@ import isObject = require('lodash/isObject');
 import get = require('lodash/get');
 import { isEqual } from "lodash";
 import { parallel } from 'async';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import {
 	RegionAttributes,
 	RegionsObject,
 	SMILFileObject,
 	SMILVideo,
-	SosModule,
 	CurrentlyPlaying,
 	SMILFile,
 	SMILImage,
@@ -35,12 +35,12 @@ export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
 	private files: Files;
-	private sos: SosModule;
+	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
 	private currentlyPlaying: CurrentlyPlaying = {};
 	private introObject: object;
 
-	constructor(sos: SosModule, files: Files) {
+	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
 	}
