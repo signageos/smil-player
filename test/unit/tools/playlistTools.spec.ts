@@ -14,7 +14,6 @@ import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
 import { Playlist } from '../../../src/components/playlist/playlist';
 import { Files } from '../../../src/components/files/files';
-import { SosModule } from '../../../src/models';
 import { SMILScheduleEnum } from '../../../src/enums';
 
 const expect = chai.expect;
@@ -154,9 +153,10 @@ describe('Playlist tools component', () => {
 
 	describe('Playlist tools component runEndlessLoop, disableLoop tests', () => {
 		it('Should stop endless loop after given amount of time', async () => {
-			const sos: SosModule = {
+			const sos: any = {
 				fileSystem: 'notSet',
 				video: 'notSet',
+				management: 'notSet',
 			};
 			const files = new Files(sos);
 			const playlist = new Playlist(sos, files);
