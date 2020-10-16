@@ -2,12 +2,13 @@
 import { applyFetchPolyfill } from './polyfills/fetch';
 applyFetchPolyfill();
 import sos from '@signageos/front-applet';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { processSmil } from './components/xmlParser/xmlParse';
 import { Files } from './components/files/files';
 import { Playlist } from './components/playlist/playlist';
 import { FileStructure, SMILEnums } from './enums';
-import { SMILFile, SMILFileObject, SosModule } from './models';
+import { SMILFile, SMILFileObject } from './models';
 import Debug from 'debug';
 import { getFileName } from './components/files/tools';
 import { sleep, resetBodyContent, errorVisibility } from './components/playlist/tools';
@@ -16,7 +17,7 @@ const playlist = new Playlist(sos, files);
 
 const debug = Debug('@signageos/smil-player:main');
 
-async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: SosModule) {
+async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet) {
 	const smilFile: SMILFile = {
 		src: smilUrl,
 	};

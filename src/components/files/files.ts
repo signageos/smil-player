@@ -2,6 +2,7 @@ import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 import moment from 'moment';
 import { FileStructure } from '../../enums';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import {
 	CheckETagFunctions, MergedDownloadList,
 	SMILAudio,
@@ -10,7 +11,6 @@ import {
 	SMILImage,
 	SMILVideo,
 	SMILWidget,
-	SosModule,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getPath, isValidLocalPath, createDownloadPath, createLocalFilePath } from './tools';
@@ -19,10 +19,10 @@ import { debug } from './tools';
 const isUrl = require('is-url-superb');
 
 export class Files {
-	private sos: SosModule;
+	private sos: FrontApplet;
 	private smilFileUrl: string;
 
-	constructor(sos: SosModule) {
+	constructor(sos: FrontApplet) {
 		this.sos = sos;
 	}
 
@@ -115,7 +115,9 @@ export class Files {
 
 	/**
 	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
+	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilObject - JSON representation of parsed smil file
+	 * @param smilUrl -  url to smil file from input
 	 */
 	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];

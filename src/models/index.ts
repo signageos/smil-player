@@ -120,12 +120,6 @@ export type SMILFile = {
 	lastModified?: number,
 };
 
-export type SosModule = {
-	fileSystem: any,
-	video: any,
-
-};
-
 export type PrefetchObject = {
 	prefetch: {
 		src: string,

@@ -4,12 +4,12 @@ import isObject = require('lodash/isObject');
 import get = require('lodash/get');
 import { isEqual } from "lodash";
 import { parallel } from 'async';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import {
 	RegionAttributes,
 	RegionsObject,
 	SMILFileObject,
 	SMILVideo,
-	SosModule,
 	CurrentlyPlaying,
 	SMILFile,
 	SMILImage,
@@ -19,10 +19,10 @@ import {
 	SMILMediaNoVideo,
 	SMILIntro, SosHtmlElement,
 } from '../../models';
-import { FileStructure, SMILScheduleEnum, XmlTags, HtmlEnum } from '../../enums';
+import { FileStructure, SMILScheduleEnum, XmlTags, HtmlEnum, DeviceInfo } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName } from '../files/tools';
+import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
@@ -35,12 +35,12 @@ export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
 	private files: Files;
-	private sos: SosModule;
+	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
 	private currentlyPlaying: CurrentlyPlaying = {};
 	private introObject: object;
 
-	constructor(sos: SosModule, files: Files) {
+	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
 	}
@@ -618,8 +618,14 @@ export class Playlist {
 			// set correct duration
 			const parsedDuration: number = setElementDuration(duration);
 
+			// add query parameter to invalidate cache on devices
 			if (element.getAttribute('src') === null) {
-				element.setAttribute('src', filepath);
+				// BrightSign does not support query parameters in filesystem
+				if (await this.doesSupportQueryParametersCompatibilityMode()) {
+					element.setAttribute('src', `${filepath}?v=${getRandomInt(1000000)}`);
+				} else {
+					element.setAttribute('src', filepath);
+				}
 			}
 
 			element.style.display = 'block';
@@ -654,6 +660,16 @@ export class Playlist {
 		// pause fucntion for how long should media stay on display screen
 		await sleep(duration * 1000);
 		debug('element playing finished: %O', element);
+	}
+
+	/**
+	 * Function to determine if device supports query parameters in filesystem. Its mechanism to invalidate cache used
+	 * in updating smil media on the fly without restarting device. Only device which does not support this feature is brightsign
+	 * but its needed there. Brightsign works fine without query parameters.
+	 */
+	// TODO: add this feature to SoS module itself
+	private doesSupportQueryParametersCompatibilityMode = async (): Promise<boolean> => {
+		return (await this.sos.management.app.getType() !== DeviceInfo.brightsign);
 	}
 
 	/**

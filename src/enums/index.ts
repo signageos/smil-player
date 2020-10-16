@@ -46,3 +46,7 @@ export const XmlTags = {
 	additionalCssExtract: ['fit'],
 	regionNameAlias: 'xml:id',
 };
+
+export enum DeviceInfo {
+	brightsign = 'brightsign',
+}
