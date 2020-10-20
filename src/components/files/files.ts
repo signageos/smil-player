@@ -71,6 +71,7 @@ export class Files {
 				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
 			}
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
+			// TODO: add md5 check instead of forceDownload
 			if (isUrl(filesList[i].src) && (forceDownload || !await this.sos.fileSystem.exists(
 				{
 					storageUnit: internalStorageUnit,
@@ -149,17 +150,19 @@ export class Files {
 		}
 	}
 
-	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
+	public prepareDownloadMediaSetup = async (
+		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, forceDownload: boolean,
+	): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets, forceDownload));
 		return downloadPromises;
 	}
 

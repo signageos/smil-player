@@ -22,6 +22,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		src: smilUrl,
 	};
 	let downloadPromises: Promise<Function[]>[] = [];
+	let forceDownload = false;
 
 	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 	files.setSmilUrl(smilUrl);
@@ -34,7 +35,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		try {
 			// download SMIL file if device has internet connection
 			if (navigator.onLine) {
-				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, true);
+				forceDownload = true;
+				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, forceDownload);
 				await Promise.all(downloadPromises);
 			}
 
@@ -67,7 +69,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	} else {
 		// no intro
 		debug('No intro video found');
-		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject, forceDownload);
 		await Promise.all(downloadPromises);
 		debug('SMIL media files download finished');
 		await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
