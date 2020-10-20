@@ -208,7 +208,12 @@ export class Playlist {
 				async (callback) => {
 					// endless processing of smil playlist
 					await this.runEndlessLoop(async () => {
-						await this.processPlaylist(smilObject.playlist);
+						try {
+							await this.processPlaylist(smilObject.playlist);
+						} catch (err) {
+							debug('Unexpected error during playlist processing: %O', err);
+							await sleep(5000);
+						}
 					});
 					callback();
 				},
@@ -617,29 +622,34 @@ export class Playlist {
 		filepath: string, regionInfo: RegionAttributes, duration: string,
 	) => {
 		return new Promise(async (resolve) => {
-			let element = <HTMLElement> document.getElementById(generateElementId(filepath, regionInfo.regionName));
-			// set correct duration
-			const parsedDuration: number = setElementDuration(duration);
+			try {
+				let element = <HTMLElement> document.getElementById(generateElementId(filepath, regionInfo.regionName));
+				// set correct duration
+				const parsedDuration: number = setElementDuration(duration);
 
-			// add query parameter to invalidate cache on devices
-			if (element.getAttribute('src') === null) {
-				// BrightSign does not support query parameters in filesystem
-				if (await this.doesSupportQueryParametersCompatibilityMode()) {
-					element.setAttribute('src', `${filepath}?v=${getRandomInt(1000000)}`);
-				} else {
-					element.setAttribute('src', filepath);
+				// add query parameter to invalidate cache on devices
+				if (element.getAttribute('src') === null) {
+					// BrightSign does not support query parameters in filesystem
+					if (await this.doesSupportQueryParametersCompatibilityMode()) {
+						element.setAttribute('src', `${filepath}?v=${getRandomInt(1000000)}`);
+					} else {
+						element.setAttribute('src', filepath);
+					}
 				}
+
+				element.style.display = 'block';
+
+				const sosHtmlElement: SosHtmlElement = {
+					src: <string> element.getAttribute('src'),
+					id: element.id,
+				};
+
+				await this.waitMediaOnScreen(regionInfo, parsedDuration, sosHtmlElement);
+				resolve();
+			} catch (err) {
+				debug('Unexpected error: %O during html element playback: %s', err, filepath);
+				resolve();
 			}
-
-			element.style.display = 'block';
-
-			const sosHtmlElement: SosHtmlElement = {
-				src: <string> element.getAttribute('src'),
-				id: element.id,
-			};
-
-			await this.waitMediaOnScreen(regionInfo, parsedDuration, sosHtmlElement);
-			resolve();
 		});
 	}
 
@@ -681,86 +691,90 @@ export class Playlist {
 	 */
 	private playVideosSeq = async (videos: SMILVideo[]) => {
 		for (let i = 0; i < videos.length; i += 1) {
-			const previousVideo = videos[(i + videos.length - 1) % videos.length];
-			const currentVideo = videos[i];
-			const nextVideo = videos[(i + 1) % videos.length];
+			try {
+				const previousVideo = videos[(i + videos.length - 1) % videos.length];
+				const currentVideo = videos[i];
+				const nextVideo = videos[(i + 1) % videos.length];
 
-			debug(
-				'Playing videos in loop, currentVideo: %O,' +
-				' previousVideo: %O' +
-				' nextVideo: %O',
-				currentVideo,
-				previousVideo,
-				nextVideo,
-			);
+				debug(
+					'Playing videos in loop, currentVideo: %O,' +
+					' previousVideo: %O' +
+					' nextVideo: %O',
+					currentVideo,
+					previousVideo,
+					nextVideo,
+				);
 
-			// prepare video only once ( was double prepare current and next video )
-			if (i === 0) {
-				debug('Preparing video current: %O', currentVideo);
-				await this.sos.video.prepare(
+				// prepare video only once ( was double prepare current and next video )
+				if (i === 0) {
+					debug('Preparing video current: %O', currentVideo);
+					await this.sos.video.prepare(
+						currentVideo.localFilePath,
+						currentVideo.regionInfo.left,
+						currentVideo.regionInfo.top,
+						currentVideo.regionInfo.width,
+						currentVideo.regionInfo.height,
+						config.videoOptions,
+					);
+				}
+				// cancel if there was image player before
+				if (get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'playing') && i === 0
+					&& get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'media') === 'html') {
+					await this.cancelPreviousMedia(currentVideo.regionInfo);
+				}
+
+				this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
+
+				debug('Playing video current: %O', currentVideo);
+				await this.sos.video.play(
 					currentVideo.localFilePath,
 					currentVideo.regionInfo.left,
 					currentVideo.regionInfo.top,
 					currentVideo.regionInfo.width,
 					currentVideo.regionInfo.height,
-					config.videoOptions,
 				);
-			}
-			// cancel if there was image player before
-			if (get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'playing') && i === 0
-			&& get(this.currentlyPlaying[currentVideo.regionInfo.regionName], 'media') === 'html') {
-				await this.cancelPreviousMedia(currentVideo.regionInfo);
-			}
 
-			this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
+				if (previousVideo.playing &&
+					previousVideo.src !== currentVideo.src) {
+					debug('Stopping video previous: %O', previousVideo);
+					await this.sos.video.stop(
+						previousVideo.localFilePath,
+						previousVideo.regionInfo.left,
+						previousVideo.regionInfo.top,
+						previousVideo.regionInfo.width,
+						previousVideo.regionInfo.height,
+					);
+					previousVideo.playing = false;
+				}
 
-			debug('Playing video current: %O', currentVideo);
-			await this.sos.video.play(
-				currentVideo.localFilePath,
-				currentVideo.regionInfo.left,
-				currentVideo.regionInfo.top,
-				currentVideo.regionInfo.width,
-				currentVideo.regionInfo.height,
-			);
+				if (nextVideo.src !== currentVideo.src) {
+					debug('Preparing video next: %O', nextVideo);
+					await this.sos.video.prepare(
+						nextVideo.localFilePath,
+						nextVideo.regionInfo.left,
+						nextVideo.regionInfo.top,
+						nextVideo.regionInfo.width,
+						nextVideo.regionInfo.height,
+						config.videoOptions,
+					);
+				}
 
-			if (previousVideo.playing &&
-				previousVideo.src !== currentVideo.src) {
-				debug('Stopping video previous: %O', previousVideo);
-				await this.sos.video.stop(
-					previousVideo.localFilePath,
-					previousVideo.regionInfo.left,
-					previousVideo.regionInfo.top,
-					previousVideo.regionInfo.width,
-					previousVideo.regionInfo.height,
+				debug('Before onceEnded video function: %O', currentVideo);
+				await this.sos.video.onceEnded(
+					currentVideo.localFilePath,
+					currentVideo.regionInfo.left,
+					currentVideo.regionInfo.top,
+					currentVideo.regionInfo.width,
+					currentVideo.regionInfo.height,
 				);
-				previousVideo.playing = false;
-			}
+				debug('Finished playing video: %O', currentVideo);
 
-			if (nextVideo.src !== currentVideo.src) {
-				debug('Preparing video next: %O', nextVideo);
-				await this.sos.video.prepare(
-					nextVideo.localFilePath,
-					nextVideo.regionInfo.left,
-					nextVideo.regionInfo.top,
-					nextVideo.regionInfo.width,
-					nextVideo.regionInfo.height,
-					config.videoOptions,
-				);
-			}
-
-			debug('Before onceEnded video function: %O', currentVideo);
-			await this.sos.video.onceEnded(
-				currentVideo.localFilePath,
-				currentVideo.regionInfo.left,
-				currentVideo.regionInfo.top,
-				currentVideo.regionInfo.width,
-				currentVideo.regionInfo.height,
-			);
-			debug('Finished playing video: %O', currentVideo);
-
-			// force stop video only when reloading smil file due to new version of smil
-			if (this.getCancelFunction()) {
-				await this.cancelPreviousMedia(currentVideo.regionInfo);
+				// force stop video only when reloading smil file due to new version of smil
+				if (this.getCancelFunction()) {
+					await this.cancelPreviousMedia(currentVideo.regionInfo);
+				}
+			} catch (err) {
+				debug('Unexpected error: %O during multiple video playback at video: %O', err, videos[i]);
 			}
 		}
 	}
@@ -794,50 +808,54 @@ export class Playlist {
 	 * @param video - SMILVideo object
 	 */
 	private playVideo = async (video: SMILVideo) => {
-		debug('Playing video: %O', video);
-		// prepare if video is not same as previous one played
-		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
-			debug('Preparing video: %O', video);
-			await this.sos.video.prepare(
+		try {
+			debug('Playing video: %O', video);
+			// prepare if video is not same as previous one played
+			if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
+				debug('Preparing video: %O', video);
+				await this.sos.video.prepare(
+					video.localFilePath,
+					video.regionInfo.left,
+					video.regionInfo.top,
+					video.regionInfo.width,
+					video.regionInfo.height,
+					config.videoOptions,
+				);
+			}
+
+			// cancel if video is not same as previous one played
+			if (get(this.currentlyPlaying[video.regionInfo.regionName], 'playing')
+				&& get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
+				await this.cancelPreviousMedia(video.regionInfo);
+			}
+
+			this.setCurrentlyPlaying(video, 'video', video.regionInfo.regionName);
+
+			await this.sos.video.play(
 				video.localFilePath,
 				video.regionInfo.left,
 				video.regionInfo.top,
 				video.regionInfo.width,
 				video.regionInfo.height,
-				config.videoOptions,
 			);
-		}
 
-		// cancel if video is not same as previous one played
-		if (get(this.currentlyPlaying[video.regionInfo.regionName], 'playing')
-			&& get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
-			await this.cancelPreviousMedia(video.regionInfo);
-		}
+			await this.sos.video.onceEnded(
+				video.localFilePath,
+				video.regionInfo.left,
+				video.regionInfo.top,
+				video.regionInfo.width,
+				video.regionInfo.height,
+			);
+			debug('Playing video finished: %O', video);
 
-		this.setCurrentlyPlaying(video, 'video', video.regionInfo.regionName);
-
-		await this.sos.video.play(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-		);
-
-		await this.sos.video.onceEnded(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-		);
-		debug('Playing video finished: %O', video);
-
-		// no video.stop function so one video can be played gapless in infinite loop
-		// stopping is handled by cancelPreviousMedia function
-		// force stop video only when reloading smil file due to new version of smil
-		if (this.getCancelFunction()) {
-			await this.cancelPreviousMedia(video.regionInfo);
+			// no video.stop function so one video can be played gapless in infinite loop
+			// stopping is handled by cancelPreviousMedia function
+			// force stop video only when reloading smil file due to new version of smil
+			if (this.getCancelFunction()) {
+				await this.cancelPreviousMedia(video.regionInfo);
+			}
+		} catch (err) {
+			debug('Unexpected error: %O occurred during single video playback: O%', err, video);
 		}
 	}
 
