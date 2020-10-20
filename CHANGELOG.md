@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - fixed media files update check
 - fixed image intro
 - fixed image/widgets update check, add random query string to avoid caching except for brightsign device
+- add improved error handling
 
 ## [1.0.1] - 2020-09-17
 ### Added
