@@ -22,6 +22,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		src: smilUrl,
 	};
 	let downloadPromises: Promise<Function[]>[] = [];
+	let forceDownload = false;
 
 	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 	files.setSmilUrl(smilUrl);
@@ -34,7 +35,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		try {
 			// download SMIL file if device has internet connection
 			if (navigator.onLine) {
-				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, true);
+				forceDownload = true;
+				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, forceDownload);
 				await Promise.all(downloadPromises);
 			}
 
@@ -63,11 +65,11 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// download and play intro file if exists ( image or video )
 	if (smilObject.intro.length > 0) {
-		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
+		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl, forceDownload);
 	} else {
 		// no intro
 		debug('No intro video found');
-		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject, forceDownload);
 		await Promise.all(downloadPromises);
 		debug('SMIL media files download finished');
 		await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
@@ -85,7 +87,7 @@ async function startSmil(smilUrl: string) {
 
 	await files.createFileStructure(internalStorageUnit);
 
-	debug('file structure created');
+	debug('File structure created');
 
 	while (true) {
 		try {
@@ -94,12 +96,10 @@ async function startSmil(smilUrl: string) {
 			// enable endless loop for checking files updated
 			playlist.setCheckFilesLoop(true);
 			await main(internalStorageUnit, smilUrl, sos);
-			debug('one smil iteration finished');
+			debug('One smil iteration finished');
 		} catch (err) {
 			debug('Unexpected error : %O', err);
-			throw err;
 		}
-
 	}
 }
 // self invoking function to start smil processing if smilUrl is defined in sos.config via timings
