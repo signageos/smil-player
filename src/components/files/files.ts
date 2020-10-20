@@ -71,6 +71,7 @@ export class Files {
 				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
 			}
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
+			// TODO: add md5 check instead of forceDownload
 			if (isUrl(filesList[i].src) && (forceDownload || !await this.sos.fileSystem.exists(
 				{
 					storageUnit: internalStorageUnit,
@@ -149,17 +150,19 @@ export class Files {
 		}
 	}
 
-	public prepareDownloadMediaSetup = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject): Promise<any[]> => {
+	public prepareDownloadMediaSetup = async (
+		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, forceDownload: boolean,
+	): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images, forceDownload));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets, forceDownload));
 		return downloadPromises;
 	}
 
@@ -196,23 +199,27 @@ export class Files {
 		): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
-			if (isUrl(filesList[i].src)) {
-				const response = await fetch(createDownloadPath(filesList[i].src), {
-					method: 'HEAD',
-					headers: {
-						Accept: 'application/json',
-					},
-					mode: 'cors',
-				});
-				const newLastModified = await response.headers.get('last-modified');
-				if (isNil(filesList[i].lastModified)) {
-					filesList[i].lastModified = moment(newLastModified).valueOf();
-				}
+			try {
+				if (isUrl(filesList[i].src)) {
+					const response = await fetch(createDownloadPath(filesList[i].src), {
+						method: 'HEAD',
+						headers: {
+							Accept: 'application/json',
+						},
+						mode: 'cors',
+					});
+					const newLastModified = await response.headers.get('last-modified');
+					if (isNil(filesList[i].lastModified)) {
+						filesList[i].lastModified = moment(newLastModified).valueOf();
+					}
 
-				if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
-					debug(`New version of file detected: %O`, filesList[i].src);
-					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+					if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
+						debug(`New version of file detected: %O`, filesList[i].src);
+						promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+					}
 				}
+			} catch (err) {
+					debug('Error occurred: %O during checking file version: %O', err, filesList[i]);
 			}
 		}
 		return promises;
