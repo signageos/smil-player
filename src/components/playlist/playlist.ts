@@ -200,6 +200,7 @@ export class Playlist {
 								debug('One of the files changed, restarting loop');
 								this.disableLoop(true);
 								this.setCheckFilesLoop(false);
+								break;
 							}
 						}
 					}
