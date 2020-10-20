@@ -437,6 +437,17 @@ export function createDomElement(value: SMILImage | SMILWidget, htmlElement: str
 }
 
 export function resetBodyContent() {
+	try {
+		for (let i = document.images.length; i-- > 0;) {
+			debug('Removing images');
+			if (!isNil(document.images[i])) {
+				document.images[i].parentNode!.removeChild(document.images[i]);
+			}
+		}
+	} catch (err) {
+		debug('Error: %O during removing image: %O', err , document.images[document.images.length]);
+	}
+
 	// reset body
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
