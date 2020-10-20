@@ -65,7 +65,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// download and play intro file if exists ( image or video )
 	if (smilObject.intro.length > 0) {
-		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
+		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl, forceDownload);
 	} else {
 		// no intro
 		debug('No intro video found');
@@ -87,7 +87,7 @@ async function startSmil(smilUrl: string) {
 
 	await files.createFileStructure(internalStorageUnit);
 
-	debug('file structure created');
+	debug('File structure created');
 
 	while (true) {
 		try {
@@ -96,12 +96,10 @@ async function startSmil(smilUrl: string) {
 			// enable endless loop for checking files updated
 			playlist.setCheckFilesLoop(true);
 			await main(internalStorageUnit, smilUrl, sos);
-			debug('one smil iteration finished');
+			debug('One smil iteration finished');
 		} catch (err) {
 			debug('Unexpected error : %O', err);
-			throw err;
 		}
-
 	}
 }
 // self invoking function to start smil processing if smilUrl is defined in sos.config via timings
