@@ -199,23 +199,27 @@ export class Files {
 		): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
-			if (isUrl(filesList[i].src)) {
-				const response = await fetch(createDownloadPath(filesList[i].src), {
-					method: 'HEAD',
-					headers: {
-						Accept: 'application/json',
-					},
-					mode: 'cors',
-				});
-				const newLastModified = await response.headers.get('last-modified');
-				if (isNil(filesList[i].lastModified)) {
-					filesList[i].lastModified = moment(newLastModified).valueOf();
-				}
+			try {
+				if (isUrl(filesList[i].src)) {
+					const response = await fetch(createDownloadPath(filesList[i].src), {
+						method: 'HEAD',
+						headers: {
+							Accept: 'application/json',
+						},
+						mode: 'cors',
+					});
+					const newLastModified = await response.headers.get('last-modified');
+					if (isNil(filesList[i].lastModified)) {
+						filesList[i].lastModified = moment(newLastModified).valueOf();
+					}
 
-				if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
-					debug(`New version of file detected: %O`, filesList[i].src);
-					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+					if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
+						debug(`New version of file detected: %O`, filesList[i].src);
+						promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+					}
 				}
+			} catch (err) {
+					debug('Error occurred: %O during checking file version: %O', err, filesList[i]);
 			}
 		}
 		return promises;
