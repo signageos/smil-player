@@ -13,11 +13,16 @@ import Debug from 'debug';
 import { getFileName } from './components/files/tools';
 import { sleep, resetBodyContent, errorVisibility } from './components/playlist/tools';
 const files = new Files(sos);
-const playlist = new Playlist(sos, files);
 
 const debug = Debug('@signageos/smil-player:main');
 
 async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet) {
+	const playlist = new Playlist(sos, files);
+	// enable internal endless loops for playing media
+	playlist.disableLoop(false);
+	// enable endless loop for checking files updated
+	playlist.setCheckFilesLoop(true);
+
 	const smilFile: SMILFile = {
 		src: smilUrl,
 	};
@@ -91,10 +96,6 @@ async function startSmil(smilUrl: string) {
 
 	while (true) {
 		try {
-			// enable internal endless loops for playing media
-			playlist.disableLoop(false);
-			// enable endless loop for checking files updated
-			playlist.setCheckFilesLoop(true);
 			await main(internalStorageUnit, smilUrl, sos);
 			debug('One smil iteration finished');
 		} catch (err) {
