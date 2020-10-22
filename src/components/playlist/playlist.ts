@@ -578,6 +578,10 @@ export class Playlist {
 	 */
 	private cancelPreviousImage = (regionInfo: RegionAttributes) => {
 		debug('previous html element playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
+			debug('html element was already cancelled');
+			return;
+		}
 		const element = <HTMLElement> document.getElementById((<SosHtmlElement> this.currentlyPlaying[regionInfo.regionName]).id);
 		element.style.display = 'none';
 		this.currentlyPlaying[regionInfo.regionName].playing = false;
@@ -601,6 +605,10 @@ export class Playlist {
 	 */
 	private cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
 		debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
+			debug('video was already cancelled');
+			return;
+		}
 		const video = <SMILVideo> this.currentlyPlaying[regionInfo.regionName];
 		await this.sos.video.stop(
 			video.localFilePath,
