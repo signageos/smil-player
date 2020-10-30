@@ -1,6 +1,7 @@
 import Debug from 'debug';
 import * as path from 'path';
 import { corsAnywhere } from '../../../../config/parameters';
+import { MediaInfoObject, MergedDownloadList } from "../../../models";
 export const debug = Debug('@signageos/smil-player:filesModule');
 // regExp for valid path testing
 const reg = new RegExp('^([A-Za-z]:|[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)((/[A-Za-z0-9_.-]+)*)$');
@@ -27,4 +28,16 @@ export function createDownloadPath(sourceUrl: string): string {
 
 export function createLocalFilePath(localFilePath: string, src: string): string {
 	return `${localFilePath}/${getFileName(src)}`;
+}
+
+export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): MediaInfoObject {
+	let fileLastModifiedObject: MediaInfoObject = {};
+	for (let file of fileList) {
+		fileLastModifiedObject[getFileName(file.src)] = file.lastModified ? file.lastModified : 0;
+	}
+	return fileLastModifiedObject;
+}
+
+export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: any) {
+	jsonObject[attr] = value;
 }
