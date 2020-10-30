@@ -11,9 +11,11 @@ import {
 	SMILImage,
 	SMILVideo,
 	SMILWidget,
+	MediaInfoObject,
 } from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isValidLocalPath, createDownloadPath, createLocalFilePath } from './tools';
+import { getFileName, getPath, isValidLocalPath, createDownloadPath,
+	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject } from './tools';
 import { debug } from './tools';
 
 const isUrl = require('is-url-superb');
@@ -61,35 +63,111 @@ export class Files {
 		});
 	}
 
+	public shouldUpdateLocalFile = async (
+		internalStorageUnit: IStorageUnit, localFilePath: string, media: MergedDownloadList,
+		mediaInfoObject: MediaInfoObject,
+	): Promise<boolean> => {
+		const currentLastModified = await this.fetchLastModified(media.src);
+		// file was not found
+		if (isNil(currentLastModified)) {
+			debug(`File was not found on remote server: %O `, media.src);
+			return false;
+		}
+
+		if (!await this.sos.fileSystem.exists({
+			storageUnit: internalStorageUnit,
+			filePath: createLocalFilePath(localFilePath, media.src),
+		})) {
+			debug(`File does not exist: %s  downloading`, media.src);
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			return true;
+		}
+
+		const storedLastModified = mediaInfoObject[getFileName(media.src)];
+		if (isNil(storedLastModified)) {
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			return true;
+		}
+
+		if (moment(storedLastModified).valueOf() < moment(currentLastModified).valueOf()) {
+			debug(`New file version detected: %O `, media.src);
+			// update mediaInfo object
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			return true;
+		}
+		return false;
+	}
+
+	public writeMediaInfoFile = async (internalStorageUnit: IStorageUnit, mediaInfoObject: object) => {
+		debug('Writing to mediaInfo file in persistent storage: %O', mediaInfoObject);
+		await this.sos.fileSystem.writeFile(
+			{
+				storageUnit: internalStorageUnit,
+				filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+			},
+			JSON.stringify(mediaInfoObject));
+	}
+
+	public deleteFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+		try {
+			debug('Deleting file from persistent storage: %s', filePath);
+			await this.sos.fileSystem.deleteFile({
+				storageUnit: internalStorageUnit,
+				filePath: filePath,
+			},                                   true);
+		} catch (err) {
+			debug('Unexpected error occured during deleting file from persistent storage: %s', filePath);
+		}
+	}
+
+	public getOrCreateMediaInfoFile = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
+		if (!await this.sos.fileSystem.exists({
+			storageUnit: internalStorageUnit,
+			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+		})) {
+			debug('MediaInfo file not found, creating json object');
+			return createJsonStructureMediaInfo(filesList);
+		}
+
+		const response = await this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
+			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)});
+		return JSON.parse(response);
+	}
+
 	public parallelDownloadAllFiles = async (
-		internalStorageUnit: IStorageUnit, filesList: any[], localFilePath: string, forceDownload: boolean = false,
+		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[], localFilePath: string, forceDownload: boolean = false,
 	): Promise<any[]> => {
 		const promises: Promise<any>[] = [];
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile(internalStorageUnit, filesList);
+		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
+
 		for (let i = 0; i < filesList.length; i += 1) {
 			// check for local urls to files (media/file.mp4)
 			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
 				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
 			}
+			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, filesList[i], mediaInfoObject);
+
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
-			// TODO: add md5 check instead of forceDownload
-			if (isUrl(filesList[i].src) && (forceDownload || !await this.sos.fileSystem.exists(
-				{
-					storageUnit: internalStorageUnit,
-					filePath: createLocalFilePath(localFilePath, filesList[i].src),
-				},
-			))) {
+			if (isUrl(filesList[i].src) && (forceDownload || shouldUpdate)) {
 				promises.push((async () => {
-					debug(`Downloading file: %s`, filesList[i].src);
-					await this.sos.fileSystem.downloadFile(
-						{
-							storageUnit: internalStorageUnit,
-							filePath: createLocalFilePath(localFilePath, filesList[i].src),
-						},
-						createDownloadPath(filesList[i].src),
-					);
+					try {
+						debug(`Downloading file: %s`, filesList[i].src);
+						await this.sos.fileSystem.downloadFile(
+							{
+								storageUnit: internalStorageUnit,
+								filePath: createLocalFilePath(localFilePath, filesList[i].src),
+							},
+							createDownloadPath(filesList[i].src),
+						);
+					} catch (err) {
+						debug(`Unexpected error: %O during downloading file: %s`, err, filesList[i].src);
+					}
 				})());
 			}
 		}
+		// save/update mediaInfoObject to persistent storage
+		await this.writeMediaInfoFile(internalStorageUnit, mediaInfoObject);
 		return promises;
 	}
 
@@ -135,8 +213,8 @@ export class Files {
 						break;
 					}
 				}
-
-				if (!found && (getFileName(storedFile.filePath) !== getFileName(smilUrl))) {
+				if (!found && (getFileName(storedFile.filePath) !== getFileName(smilUrl))
+				&& (getFileName(storedFile.filePath).indexOf(FileStructure.smilMediaInfoFileName) === -1)) {
 					// delete only path with files, not just folders
 					if (storedFile.filePath.indexOf('.') > -1) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
@@ -151,18 +229,18 @@ export class Files {
 	}
 
 	public prepareDownloadMediaSetup = async (
-		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, forceDownload: boolean,
+		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject,
 	): Promise<any[]> => {
 		let downloadPromises: Promise<any>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos, forceDownload));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios, forceDownload));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images, forceDownload));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets, forceDownload));
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
 		return downloadPromises;
 	}
 
@@ -188,6 +266,23 @@ export class Files {
 		};
 	}
 
+	private fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
+		try {
+			const response = await fetch(createDownloadPath(fileSrc), {
+				method: 'HEAD',
+				headers: {
+					Accept: 'application/json',
+				},
+				mode: 'cors',
+			});
+			const newLastModified = await response.headers.get('last-modified');
+			return newLastModified ? newLastModified :	 0;
+		} catch (err) {
+			debug('Unexpected error occured during lastModified fetch: %O', err);
+			return null;
+		}
+	}
+
 	/**
 	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
 	 * @param internalStorageUnit - persistent storage unit
@@ -201,14 +296,11 @@ export class Files {
 		for (let i = 0; i < filesList.length; i += 1) {
 			try {
 				if (isUrl(filesList[i].src)) {
-					const response = await fetch(createDownloadPath(filesList[i].src), {
-						method: 'HEAD',
-						headers: {
-							Accept: 'application/json',
-						},
-						mode: 'cors',
-					});
-					const newLastModified = await response.headers.get('last-modified');
+					const newLastModified = await this.fetchLastModified(filesList[i].src);
+					if (isNil(newLastModified)) {
+						debug(`File was not found on remote server: %O `, filesList[i].src);
+						continue;
+					}
 					if (isNil(filesList[i].lastModified)) {
 						filesList[i].lastModified = moment(newLastModified).valueOf();
 					}

@@ -149,6 +149,10 @@ export type CurrentlyPlaying = {
 	[regionName: string]: SosHtmlElement | SMILVideo,
 };
 
+export type MediaInfoObject = {
+	[fileName: string]: string | null | number,
+};
+
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
 
 export type SMILMedia = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[] | SMILVideo | SMILVideo[];

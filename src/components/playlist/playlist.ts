@@ -99,7 +99,7 @@ export class Playlist {
 	 * @param forceDownload - should download file even if already exists in localstorage
 	 */
 	public playIntro = async (
-		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string, forceDownload: boolean,
+		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
 	): Promise<void> => {
 		let media: string = HtmlEnum.video;
 		let fileStructure: string = FileStructure.videos;
@@ -114,7 +114,7 @@ export class Playlist {
 		}
 
 		downloadPromises = downloadPromises.concat(
-			await this.files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0][media]], fileStructure, forceDownload),
+			await this.files.parallelDownloadAllFiles(internalStorageUnit, [<SMILVideo | SMILImage> smilObject.intro[0][media]], fileStructure),
 		);
 
 		await Promise.all(downloadPromises);
@@ -133,7 +133,7 @@ export class Playlist {
 
 		debug('Intro media downloaded: %O', intro);
 
-		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject, forceDownload);
+		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
 		while (playingIntro) {
 			debug('Playing intro');
@@ -734,7 +734,6 @@ export class Playlist {
 
 				this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
 
-				debug('Playing video current: %O', currentVideo);
 				await this.sos.video.play(
 					currentVideo.localFilePath,
 					currentVideo.regionInfo.left,
