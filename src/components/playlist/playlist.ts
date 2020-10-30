@@ -99,7 +99,7 @@ export class Playlist {
 	 * @param forceDownload - should download file even if already exists in localstorage
 	 */
 	public playIntro = async (
-		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string, forceDownload: boolean,
+		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
 	): Promise<void> => {
 		let media: string = HtmlEnum.video;
 		let fileStructure: string = FileStructure.videos;
@@ -114,7 +114,7 @@ export class Playlist {
 		}
 
 		downloadPromises = downloadPromises.concat(
-			await this.files.parallelDownloadAllFiles(internalStorageUnit, [smilObject.intro[0][media]], fileStructure, forceDownload),
+			await this.files.parallelDownloadAllFiles(internalStorageUnit, [<SMILVideo | SMILImage> smilObject.intro[0][media]], fileStructure),
 		);
 
 		await Promise.all(downloadPromises);
@@ -133,7 +133,7 @@ export class Playlist {
 
 		debug('Intro media downloaded: %O', intro);
 
-		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject, forceDownload);
+		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
 		while (playingIntro) {
 			debug('Playing intro');
@@ -713,6 +713,10 @@ export class Playlist {
 					previousVideo,
 					nextVideo,
 				);
+				// TODO: implement check to sos library
+				if (currentVideo.localFilePath === '') {
+					throw new Error('No localFilePath');
+				}
 
 				// prepare video only once ( was double prepare current and next video )
 				if (i === 0) {
@@ -732,9 +736,9 @@ export class Playlist {
 					await this.cancelPreviousMedia(currentVideo.regionInfo);
 				}
 
+				debug('Playing video current: %O', currentVideo);
 				this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
 
-				debug('Playing video current: %O', currentVideo);
 				await this.sos.video.play(
 					currentVideo.localFilePath,
 					currentVideo.regionInfo.left,
@@ -756,7 +760,7 @@ export class Playlist {
 					previousVideo.playing = false;
 				}
 
-				if (nextVideo.src !== currentVideo.src) {
+				if (nextVideo.src !== currentVideo.src && nextVideo.localFilePath !== '') {
 					debug('Preparing video next: %O', nextVideo);
 					await this.sos.video.prepare(
 						nextVideo.localFilePath,
@@ -819,6 +823,9 @@ export class Playlist {
 	private playVideo = async (video: SMILVideo) => {
 		try {
 			debug('Playing video: %O', video);
+			if (video.localFilePath === '') {
+				throw new Error('No localFilePath');
+			}
 			// prepare if video is not same as previous one played
 			if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
 				debug('Preparing video: %O', video);

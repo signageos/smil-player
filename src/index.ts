@@ -10,7 +10,7 @@ import { Playlist } from './components/playlist/playlist';
 import { FileStructure, SMILEnums } from './enums';
 import { SMILFile, SMILFileObject } from './models';
 import Debug from 'debug';
-import { getFileName } from './components/files/tools';
+import { createLocalFilePath, getFileName } from './components/files/tools';
 import { sleep, resetBodyContent, errorVisibility } from './components/playlist/tools';
 const files = new Files(sos);
 
@@ -70,11 +70,11 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// download and play intro file if exists ( image or video )
 	if (smilObject.intro.length > 0) {
-		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl, forceDownload);
+		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
 	} else {
 		// no intro
 		debug('No intro video found');
-		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject, forceDownload);
+		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 		await Promise.all(downloadPromises);
 		debug('SMIL media files download finished');
 		await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
@@ -93,6 +93,9 @@ async function startSmil(smilUrl: string) {
 	await files.createFileStructure(internalStorageUnit);
 
 	debug('File structure created');
+
+	// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+	await files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
 
 	while (true) {
 		try {
