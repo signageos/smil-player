@@ -713,6 +713,10 @@ export class Playlist {
 					previousVideo,
 					nextVideo,
 				);
+				// TODO: implement check to sos library
+				if (currentVideo.localFilePath === '') {
+					throw new Error('No localFilePath');
+				}
 
 				// prepare video only once ( was double prepare current and next video )
 				if (i === 0) {
@@ -732,6 +736,7 @@ export class Playlist {
 					await this.cancelPreviousMedia(currentVideo.regionInfo);
 				}
 
+				debug('Playing video current: %O', currentVideo);
 				this.setCurrentlyPlaying(currentVideo, 'video', currentVideo.regionInfo.regionName);
 
 				await this.sos.video.play(
@@ -755,7 +760,7 @@ export class Playlist {
 					previousVideo.playing = false;
 				}
 
-				if (nextVideo.src !== currentVideo.src) {
+				if (nextVideo.src !== currentVideo.src && nextVideo.localFilePath !== '') {
 					debug('Preparing video next: %O', nextVideo);
 					await this.sos.video.prepare(
 						nextVideo.localFilePath,
@@ -818,6 +823,9 @@ export class Playlist {
 	private playVideo = async (video: SMILVideo) => {
 		try {
 			debug('Playing video: %O', video);
+			if (video.localFilePath === '') {
+				throw new Error('No localFilePath');
+			}
 			// prepare if video is not same as previous one played
 			if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
 				debug('Preparing video: %O', video);
