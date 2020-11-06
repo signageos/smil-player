@@ -135,29 +135,9 @@ export class Playlist {
 
 		downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
-		while (playingIntro) {
-			debug('Playing intro');
-			// set intro url in playlist to exclude it from further playing
-			this.setIntroUrl(intro);
+		await this.playIntroLoop(media, intro, downloadPromises, smilObject, internalStorageUnit, smilUrl);
 
-			switch (media) {
-				case HtmlEnum.img:
-					await sleep(1000);
-					break;
-				default:
-					await this.playIntroVideo(intro.video!);
-			}
-
-			Promise.all(downloadPromises).then(async () =>  {
-				// prepares everything needed for processing playlist
-				if (playingIntro) {
-					await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
-				}
-				// all files are downloaded, stop intro
-				debug('SMIL media files download finished, stopping intro');
-				return playingIntro = false;
-			});
-		}
+		debug('Playing intro finished: %O', intro);
 
 		switch (media) {
 			case HtmlEnum.img:
@@ -906,6 +886,49 @@ export class Playlist {
 		document.body.appendChild(element);
 		debug('Intro image prepared: %O', element);
 		return element;
+	}
+
+	private playIntroLoop = async (
+		media: string, intro: SMILIntro, downloadPromises: Promise<Function[]>[],
+		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
+	): Promise<void> => {
+		return new Promise((resolve, reject) => {
+			let playingIntro = true;
+			parallel([
+				async (callback) => {
+					while (playingIntro) {
+						debug('Playing intro');
+						// set intro url in playlist to exclude it from further playing
+						this.setIntroUrl(intro);
+
+						switch (media) {
+							case SMILEnums.img:
+								await sleep(1000);
+								break;
+							default:
+								await this.playIntroVideo(intro.video!);
+						}
+					}
+					callback();
+				},
+				async (callback) => {
+					Promise.all(downloadPromises).then(async () =>  {
+						// prepares everything needed for processing playlist
+						await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+
+						// all files are downloaded, stop intro
+						debug('SMIL media files download finished, stopping intro ' + playingIntro);
+						playingIntro = false;
+						callback();
+					});
+				},
+			],       async (err) => {
+				if (err) {
+					reject(err);
+				}
+				resolve();
+			});
+		});
 	}
 
 	private playIntroVideo = async (video: SMILVideo) => {
