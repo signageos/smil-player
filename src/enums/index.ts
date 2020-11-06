@@ -3,6 +3,18 @@ export enum SMILEnums {
 	rootLayout = 'root-layout',
 	defaultRefresh = 20,
 	defaultDownloadRetry = 60,
+	videoDurationOffset = 1000,
+	defaultVideoDuration = 0,
+}
+
+export enum SMILTriggersEnum {
+	triggerFormat = 'trigger',
+	triggerValue = 'triggerValue',
+	metaContent = 'content',
+	sensorRfid = 'rfid',
+	sensorNexmo = 'nexmosphere',
+	nexmoDevice = '/dev/ttyUSB0',
+	nexmoBaudRate = 115200,
 }
 
 export enum FileStructure {
@@ -19,6 +31,10 @@ export enum FileStructure {
 export enum HtmlEnum {
 	img = 'img',
 	ref = 'iframe',
+	top = 'top',
+	width = 'width',
+	height = 'height',
+	left = 'left',
 	widgetRoot = '/index.html',
 	video = 'video',
 }

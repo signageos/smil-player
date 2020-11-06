@@ -1,17 +1,26 @@
 import * as xml2js from 'xml2js';
 // @ts-ignore
 import { JefNode } from 'json-easy-filter';
+import get from 'lodash/get';
+import merge from 'lodash/merge';
 import {
 	RegionAttributes,
 	RegionsObject,
 	RootLayout,
 	DownloadsList,
 	SMILFileObject,
+	XmlSmilObject,
+	SMILMediaSingle,
+	TriggerList,
+	XmlHeadObject,
 	SMILPlaylist,
-	XmlSmilObject, SMILMediaSingle,
+	SMILSensors,
+	SMILTriggers,
+	SMILTriggerCondition, SMILMetaObject, ParsedSensor, ParsedTriggerInfo,
 } from '../../models';
-import { SMILEnums, XmlTags } from '../../enums';
+import { SMILEnums, SMILTriggersEnum, XmlTags } from '../../enums';
 import { debug, containsElement } from './tools';
+import isNil = require('lodash/isNil');
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const downloads: DownloadsList = {
@@ -24,6 +33,11 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const playableMedia = {
 		playlist: {},
 	};
+	const triggerList: TriggerList = {
+		sensors: [],
+		triggerSensorInfo: {},
+		triggers: {},
+	};
 	debug('Parsing xml string to json : %O', xmlFile);
 	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 		mergeAttrs: true,
@@ -33,7 +47,8 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	debug('Xml file parsed to json object: %O', xmlObject);
 
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
-	regions.refresh = parseInt(xmlObject.smil.head.meta.content) || SMILEnums.defaultRefresh;
+
+	parseHeadInfo(xmlObject.smil.head, regions, triggerList);
 	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
 
 	// traverse json as tree of nodes
@@ -61,13 +76,94 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 				}
 			});
 		}
+
+		if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
+			triggerList.triggers![node.value.begin!] = merge(triggerList.triggers![node.value.begin!], node.value);
+		}
 	});
 
 	debug('Extracted regions object: %O', regions);
 	debug('Extracted playableMedia object: %O', playableMedia);
 	debug('Extracted downloads object: %O', downloads);
 
-	return Object.assign({}, regions, playableMedia, downloads);
+	return Object.assign({}, regions, playableMedia, downloads, triggerList);
+}
+
+function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
+	// use default value at start
+	regions.refresh = SMILEnums.defaultRefresh;
+
+	if (!isNil(metaObjects.meta)) {
+		parseMetaInfo(metaObjects.meta, regions);
+	}
+
+	if (!isNil(metaObjects.sensors)) {
+		triggerList.sensors = parseSensorsInfo(metaObjects.sensors);
+	}
+
+	if (!isNil(metaObjects.triggers)) {
+		triggerList.triggerSensorInfo = parseTriggersInfo(metaObjects.triggers);
+	}
+}
+
+function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
+	if (!Array.isArray(meta)) {
+		meta = [meta];
+	}
+	for (const metaRecord of meta) {
+		if (metaRecord.hasOwnProperty(SMILTriggersEnum.metaContent)) {
+			regions.refresh = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+		}
+	}
+}
+
+function parseSensorsInfo(sensors: SMILSensors): ParsedSensor[] {
+	const finalSensors = [];
+	if (!Array.isArray(sensors.sensor)) {
+		sensors.sensor = [sensors.sensor];
+	}
+	for (const sensor of sensors.sensor) {
+		const picked: ParsedSensor = (({ type, id, driver }) => ({ type, id, driver }))(sensor);
+		// value saved in _ prefix
+		if (!Array.isArray(sensor.option)) {
+			sensor.option = [sensor.option];
+		}
+		for (const option of sensor.option) {
+			picked[<string> option.name] = option._;
+		}
+		finalSensors.push(picked);
+	}
+	return finalSensors;
+}
+
+function parseTriggersInfo(triggers: SMILTriggers): ParsedTriggerInfo {
+	const finalTriggers: any = {};
+	if (!Array.isArray(triggers.trigger)) {
+		triggers.trigger = [triggers.trigger];
+	}
+	for (const trigger of triggers.trigger) {
+		let stringCondition = '';
+		for (const condition of trigger.condition as Array<SMILTriggerCondition>) {
+			if (typeof condition === 'string') {
+				stringCondition = condition;
+				continue;
+			}
+			finalTriggers[`${condition.origin}-${condition.data}`]
+				= isNil(finalTriggers[`${condition.origin}-${condition.data}`]) ? {} : finalTriggers[`${condition.origin}-${condition.data}`];
+
+			finalTriggers[`${condition.origin}-${condition.data}`].trigger = trigger.id;
+			finalTriggers[`${condition.origin}-${condition.data}`].stringCondition = stringCondition;
+
+			finalTriggers[`${condition.origin}-${condition.data}`].condition
+				= isNil(finalTriggers[`${condition.origin}-${condition.data}`].condition) ?
+				[] : finalTriggers[`${condition.origin}-${condition.data}`].condition;
+
+			finalTriggers[`${condition.origin}-${condition.data}`].condition.push({
+				action: condition.action,
+			});
+		}
+	}
+	return finalTriggers;
 }
 
 function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
@@ -136,6 +232,5 @@ function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 }
 
 export async function processSmil(xmlFile: string): Promise<SMILFileObject> {
-	const smilObject = await parseXml(xmlFile);
-	return smilObject;
+	return await parseXml(xmlFile);
 }
