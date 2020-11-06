@@ -53,6 +53,7 @@ export type RegionAttributes = {
 export type SMILVideo = {
 	src: string,
 	fit?: string,
+	dur?: number,
 	region: string,
 	lastModified?: number,
 	localFilePath: string,
@@ -228,8 +229,12 @@ export type PlaylistElement = {
 };
 
 export type CurrentlyPlaying = {
-	[regionName: string]: SosHtmlElement | SMILVideo,
+	[regionName: string]: PlayingInfo,
 };
+
+export type PlayingInfo = {
+	player?: string,
+} & SosHtmlElement & SMILVideo;
 
 export type MediaInfoObject = {
 	[fileName: string]: string | null | number,

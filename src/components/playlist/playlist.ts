@@ -254,12 +254,17 @@ export class Playlist {
 
 				for (const elem of value) {
 					if (isUrl(elem.src)) {
-						const mediaFile = <IFile> await this.sos.fileSystem.getFile({
+						const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
 							storageUnit: internalStorageUnit,
 							filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
 						});
 						// in case of web page as widget, leave localFilePath blank
 						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
+
+						// check if video has duration defined due to webos bug
+						if (key === 'video') {
+							elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
+						}
 						elem.regionInfo = getRegionInfo(region, elem.region);
 						extractAdditionalInfo(elem);
 
@@ -756,14 +761,34 @@ export class Playlist {
 					);
 				}
 
-				debug('Before onceEnded video function: %O', currentVideo);
-				await this.sos.video.onceEnded(
+				debug('Starting playing video onceEnded function: %O', currentVideo);
+
+				const promiseRaceArray = [];
+				promiseRaceArray.push(this.sos.video.onceEnded(
 					currentVideo.localFilePath,
-					currentVideo.regionInfo.left,
-					currentVideo.regionInfo.top,
-					currentVideo.regionInfo.width,
-					currentVideo.regionInfo.height,
-				);
+					regionInfo.left,
+					regionInfo.top,
+					regionInfo.width,
+					regionInfo.height,
+				));
+				if (get(currentVideo, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+					promiseRaceArray.push(sleep(currentVideo.dur! + SMILEnums.videoDurationOffset));
+				}
+				/*
+					has to be inner try catch, because stoping video in middle of playback throws error
+					in onceEnded function, if it would be caught by higher try..catch rest of function would
+					not be processed
+				    due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
+				    so playback can continue
+
+				*/
+				// TODO: fix in webos app
+				try {
+					await Promise.race(promiseRaceArray);
+				} catch (err) {
+					debug('Unexpected error: %O during multiple video playback onceEnded at video: %O', err, videos[i]);
+				}
+
 				debug('Finished playing video: %O', currentVideo);
 
 				// force stop video only when reloading smil file due to new version of smil
@@ -839,13 +864,30 @@ export class Playlist {
 				video.regionInfo.height,
 			);
 
-			await this.sos.video.onceEnded(
+			debug('Starting playing video onceEnded function: %O', video);
+
+			const promiseRaceArray = [];
+			promiseRaceArray.push(this.sos.video.onceEnded(
 				video.localFilePath,
-				video.regionInfo.left,
-				video.regionInfo.top,
-				video.regionInfo.width,
-				video.regionInfo.height,
-			);
+				regionInfo.left,
+				regionInfo.top,
+				regionInfo.width,
+				regionInfo.height,
+			));
+
+			// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
+			// so playback can continue
+			// TODO: fix in webos app
+			if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+				promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
+			}
+
+			try {
+				await Promise.race(promiseRaceArray);
+			} catch (err) {
+				debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
+			}
+
 			debug('Playing video finished: %O', video);
 
 			// no video.stop function so one video can be played gapless in infinite loop
