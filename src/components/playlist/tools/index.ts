@@ -464,3 +464,12 @@ export function errorVisibility(visible: boolean) {
 	(<HTMLElement> document.getElementById('error')).style.display = display;
 	(<HTMLElement> document.getElementById('errorText')).style.display = display;
 }
+
+export function checkSlowDevice(deviceType: string): boolean {
+	for (const type of DeviceModels.slowerDevices) {
+		if (deviceType.startsWith(type)) {
+			return true;
+		}
+	}
+	return false;
+}
