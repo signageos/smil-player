@@ -1,6 +1,5 @@
 import * as chai from 'chai';
 import moment from 'moment';
-import isNil = require('lodash/isNil');
 import {
 	getRegionInfo,
 	sleep,
@@ -12,6 +11,9 @@ import {
 } from '../../../src/components/playlist/tools';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
+import { mockSMILFileTriggers } from '../../../src/components/playlist/mock/mockTriggers';
+import { mockSMILFileTriggersNoTopLeft } from '../../../src/components/playlist/mock/mockTriggersNoTopLeft';
+import { mockParsedNestedRegion, mockParsed234Layout, mockParsed234Region, mockParsedNestedRegionNoTopLeft } from '../../../src/components/playlist/mock/mockRegions';
 import { Playlist } from '../../../src/components/playlist/playlist';
 import { Files } from '../../../src/components/files/files';
 import { SMILScheduleEnum } from '../../../src/enums';
@@ -22,35 +24,27 @@ describe('Playlist tools component', () => {
 
 	describe('Playlist tools component getRegionInfo tests', () => {
 		it('Should return default region for non-existing region name', () => {
-
-			let expectedRegion: any = mockSMILFileParsed234.rootLayout;
-			expectedRegion = {
-				...expectedRegion,
-				...(!isNil(expectedRegion.top) && {top: parseInt(expectedRegion.top)}),
-				...(!isNil(expectedRegion.left) && {left: parseInt(expectedRegion.left)}),
-				width: parseInt(expectedRegion.width),
-				height: parseInt(expectedRegion.height),
-			};
-
 			// @ts-ignore
 			const response = getRegionInfo(mockSMILFileParsed234, 'InvalidRegionName');
-			expect(response).to.eql(expectedRegion);
+			expect(response).to.eql(mockParsed234Layout);
 		});
 
 		it('Should return correct region for existing region name', () => {
-
-			let expectedRegion: any = mockSMILFileParsed234.region.video;
-			expectedRegion = {
-				...expectedRegion,
-				...(!isNil(expectedRegion.top) && {top: parseInt(expectedRegion.top)}),
-				...(!isNil(expectedRegion.left) && {left: parseInt(expectedRegion.left)}),
-				width: parseInt(expectedRegion.width),
-				height: parseInt(expectedRegion.height),
-			};
-
 			// @ts-ignore
 			const response = getRegionInfo(mockSMILFileParsed234, 'video');
-			expect(response).to.eql(expectedRegion);
+			expect(response).to.eql(mockParsed234Region);
+		});
+
+		it('Should return correct region values for nested regions', () => {
+			// @ts-ignore
+			const response = getRegionInfo(mockSMILFileTriggers, 'video');
+			expect(response).to.eql(mockParsedNestedRegion);
+		});
+
+		it('Should return correct region values for nested regions without top and left specified', () => {
+			// @ts-ignore
+			const response = getRegionInfo(mockSMILFileTriggersNoTopLeft, 'video');
+			expect(response).to.eql(mockParsedNestedRegionNoTopLeft);
 		});
 	});
 
@@ -157,6 +151,7 @@ describe('Playlist tools component', () => {
 				fileSystem: 'notSet',
 				video: 'notSet',
 				management: 'notSet',
+				hardware: 'notSet',
 			};
 			const files = new Files(sos);
 			const playlist = new Playlist(sos, files);
@@ -417,7 +412,7 @@ describe('Playlist tools component', () => {
 		});
 		it('Should return correct times for how long to wait and how long to play - weekdays specified after', async () => {
 			let mediaDuration = 3;
-			let dayOfWeek = moment().isoWeekday() + 3;
+			let dayOfWeek = (moment().isoWeekday() + 3) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 			let testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			let testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
@@ -482,7 +477,7 @@ describe('Playlist tools component', () => {
 			expect(Math.abs(moment().add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
 			mediaDuration = 4;
-			dayOfWeek = moment().isoWeekday() + 2;
+			dayOfWeek = Math.abs(moment().isoWeekday() + 2) % 7;
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
