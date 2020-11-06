@@ -26,7 +26,7 @@ import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
-	generateElementId, createDomElement,
+	generateElementId, createDomElement, checkSlowDevice,
 } from './tools';
 import { Files } from '../files/files';
 const isUrl = require('is-url-superb');
@@ -644,9 +644,13 @@ export class Playlist {
 					} else {
 						element.setAttribute('src', filepath);
 					}
+					element.style.display = 'block';
+					if (checkSlowDevice(await this.sos.management.getModel())) {
+						await sleep(500);
+					}
+				} else {
+					element.style.display = 'block';
 				}
-
-				element.style.display = 'block';
 
 				const sosHtmlElement: SosHtmlElement = {
 					src: <string> element.getAttribute('src'),

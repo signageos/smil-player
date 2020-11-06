@@ -65,6 +65,10 @@ export const XmlTags = {
 	regionNameAlias: 'xml:id',
 };
 
+export const DeviceModels = {
+	slowerDevices: ['Raspberry'],
+};
+
 export enum DeviceInfo {
 	brightsign = 'brightsign',
 }
