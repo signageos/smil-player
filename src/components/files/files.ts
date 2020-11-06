@@ -1,5 +1,6 @@
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
+const isUrl = require('is-url-superb');
 import moment from 'moment';
 import { FileStructure } from '../../enums';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';

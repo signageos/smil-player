@@ -1,6 +1,7 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
 import isObject = require('lodash/isObject');
+const isUrl = require('is-url-superb');
 import get = require('lodash/get');
 import { isEqual } from "lodash";
 import { parallel } from 'async';
@@ -241,7 +242,7 @@ export class Playlist {
 						fileStructure = FileStructure.extracted;
 						htmlElement = HtmlEnum.ref;
 						break;
-					case 'img':
+					case SMILEnums.img:
 						fileStructure = FileStructure.images;
 						htmlElement = HtmlEnum.img;
 						break;
@@ -269,8 +270,8 @@ export class Playlist {
 						extractAdditionalInfo(elem);
 
 						// create placeholders in DOM for images and widgets to speedup playlist processing
-						if (key === 'img' || key === 'ref') {
-							createDomElement(elem, htmlElement);
+						if (key === SMILEnums.img || key === 'ref') {
+							createDomElement(elem, htmlElement, isTrigger);
 						}
 					}
 				}
@@ -322,6 +323,15 @@ export class Playlist {
 			}
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
+
+			// dont play intro in the actual playlist
+			if (XmlTags.extractedElements.includes(key)
+				&& value !== get(this.introObject, 'video', 'default')
+				&& value !== get(this.introObject, SMILEnums.img, 'default')
+			) {
+				await this.playElement(<SMILMedia> value, key, parent);
+				continue;
+			}
 
 			let promises: Promise<void>[] = [];
 
@@ -704,7 +714,8 @@ export class Playlist {
 				);
 				// TODO: implement check to sos library
 				if (currentVideo.localFilePath === '') {
-					throw new Error('No localFilePath');
+					debug('Video: %O has empty localFilepath: %O', currentVideo);
+					continue;
 				}
 
 				// prepare video only once ( was double prepare current and next video )
@@ -832,8 +843,11 @@ export class Playlist {
 	private playVideo = async (video: SMILVideo) => {
 		try {
 			debug('Playing video: %O', video);
+
+			// TODO: implement check to sos library
 			if (video.localFilePath === '') {
-				throw new Error('No localFilePath');
+				debug('Video: %O has empty localFilepath: %O', video);
+				return;
 			}
 			// prepare if video is not same as previous one played
 			if (get(this.currentlyPlaying[video.regionInfo.regionName], 'src') !== video.src) {
@@ -1090,10 +1104,10 @@ export class Playlist {
 					break;
 				}
 			case 'ref':
-				await this.playOtherMedia(<SMILWidget | SMILWidget[]> value, parent, 'iframe');
+				await this.playOtherMedia(<SMILWidget | SMILWidget[]> value, parent, HtmlEnum.ref);
 				break;
-			case 'img':
-				await this.playOtherMedia(<SMILImage | SMILImage[]> value, parent, 'img');
+			case SMILEnums.img:
+				await this.playOtherMedia(<SMILImage | SMILImage[]> value, parent, HtmlEnum.img);
 				break;
 			// case 'audio':
 			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio');
