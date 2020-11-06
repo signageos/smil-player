@@ -18,8 +18,6 @@ import { getFileName, getPath, isValidLocalPath, createDownloadPath,
 	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject } from './tools';
 import { debug } from './tools';
 
-const isUrl = require('is-url-superb');
-
 export class Files {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
@@ -118,6 +116,18 @@ export class Files {
 		} catch (err) {
 			debug('Unexpected error occured during deleting file from persistent storage: %s', filePath);
 		}
+	}
+
+	public readFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+		return this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
+			filePath: filePath});
+	}
+
+	public fileExists = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+		return this.sos.fileSystem.exists({
+			storageUnit: internalStorageUnit,
+			filePath: filePath,
+		});
 	}
 
 	public getOrCreateMediaInfoFile = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
