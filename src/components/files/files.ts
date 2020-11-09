@@ -1,5 +1,6 @@
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
+const isUrl = require('is-url-superb');
 import moment from 'moment';
 import { FileStructure } from '../../enums';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
@@ -17,8 +18,6 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import { getFileName, getPath, isValidLocalPath, createDownloadPath,
 	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject } from './tools';
 import { debug } from './tools';
-
-const isUrl = require('is-url-superb');
 
 export class Files {
 	private sos: FrontApplet;
@@ -118,6 +117,18 @@ export class Files {
 		} catch (err) {
 			debug('Unexpected error occured during deleting file from persistent storage: %s', filePath);
 		}
+	}
+
+	public readFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+		return this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
+			filePath: filePath});
+	}
+
+	public fileExists = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+		return this.sos.fileSystem.exists({
+			storageUnit: internalStorageUnit,
+			filePath: filePath,
+		});
 	}
 
 	public getOrCreateMediaInfoFile = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
