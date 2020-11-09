@@ -13,9 +13,10 @@ import {
 	SMILAudio,
 	SMILWidget, PlaylistElement,
 } from '../../../models';
-import { ObjectFitEnum, SMILScheduleEnum, XmlTags } from '../../../enums';
+import { ObjectFitEnum, SMILScheduleEnum, XmlTags, SMILEnums, DeviceModels } from '../../../enums';
 import moment from 'moment';
 import { getFileName } from '../../files/tools';
+import { parseNestedRegions }  from '../../xmlParser/tools';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
 
@@ -140,6 +141,10 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	}
 
 	regionInfo = fixVideoDimension(regionInfo);
+	// fix nested regions and its values for dynamic use
+	if (regionInfo.hasOwnProperty(SMILEnums.region)) {
+		regionInfo = parseNestedRegions(regionInfo);
+	}
 	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
 	regionInfo = {
 		...regionInfo,
@@ -401,7 +406,9 @@ export function generateElementId(filepath: string, regionName: string): string 
 	return `${getFileName(filepath)}-${regionName}`;
 }
 
-export function createHtmlElement(htmlElement: string, filepath: string, regionInfo: RegionAttributes): HTMLElement {
+export function createHtmlElement(
+	htmlElement: string, filepath: string, regionInfo: RegionAttributes, isTrigger: boolean = false,
+): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
 	element.id = generateElementId(filepath, regionInfo.regionName);
@@ -421,6 +428,11 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
 	element.style.borderWidth = '0px';
 	element.style.display = 'none';
 
+	// set filePAth for trigger images immediately
+	if (isTrigger) {
+		element.setAttribute('src', filepath);
+	}
+
 	return element;
 }
 
@@ -428,12 +440,18 @@ export function createHtmlElement(htmlElement: string, filepath: string, regionI
  * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
  * @param value - Smil image or Smil widget
  * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
+ * @param isTrigger
  */
-export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string) {
+export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string, isTrigger: boolean = false) {
 	debug('creating element: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
+	if ( document.getElementById(generateElementId(value.localFilePath, value.regionInfo.regionName))) {
+		debug('element already exists: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
+		return;
+	}
+
 	const localFilePath = value.localFilePath !== ''  ? value.localFilePath : value.src;
-	const image = createHtmlElement(htmlElement, localFilePath, value.regionInfo);
-	document.body.appendChild(image);
+	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, isTrigger);
+	document.body.appendChild(element);
 }
 
 export function resetBodyContent() {
@@ -463,4 +481,13 @@ export function errorVisibility(visible: boolean) {
 
 	(<HTMLElement> document.getElementById('error')).style.display = display;
 	(<HTMLElement> document.getElementById('errorText')).style.display = display;
+}
+
+export function checkSlowDevice(deviceType: string): boolean {
+	for (const type of DeviceModels.slowerDevices) {
+		if (deviceType.startsWith(type)) {
+			return true;
+		}
+	}
+	return false;
 }

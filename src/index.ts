@@ -94,8 +94,16 @@ async function startSmil(smilUrl: string) {
 
 	debug('File structure created');
 
-	// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
-	await files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
+	if (await files.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))) {
+		const fileContent = JSON.parse(await files.readFile(
+			internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)));
+
+		// delete mediaInfo file only in case that currently played smil is different from previous
+		if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
+			// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+			await files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
+		}
+	}
 
 	while (true) {
 		try {
