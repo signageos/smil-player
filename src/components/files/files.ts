@@ -277,7 +277,7 @@ export class Files {
 		};
 	}
 
-	private fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
+	public fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
 		try {
 			const response = await fetch(createDownloadPath(fileSrc), {
 				method: 'HEAD',
@@ -287,7 +287,7 @@ export class Files {
 				mode: 'cors',
 			});
 			const newLastModified = await response.headers.get('last-modified');
-			return newLastModified ? newLastModified :	 0;
+			return newLastModified ? newLastModified : 0;
 		} catch (err) {
 			debug('Unexpected error occured during lastModified fetch: %O', err);
 			return null;

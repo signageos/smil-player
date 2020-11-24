@@ -4,7 +4,7 @@ import isObject = require('lodash/isObject');
 const isUrl = require('is-url-superb');
 import get = require('lodash/get');
 import set = require('lodash/set');
-import { isEqual } from "lodash";
+import { isEqual } from 'lodash';
 import { parallel } from 'async';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';

@@ -9,6 +9,7 @@ import { Files } from './components/files/files';
 import { Playlist } from './components/playlist/playlist';
 import { FileStructure, SMILEnums } from './enums';
 import { SMILFile, SMILFileObject } from './models';
+import { isNil } from 'lodash';
 import Debug from 'debug';
 import { createLocalFilePath, getFileName } from './components/files/tools';
 import { sleep, resetBodyContent, errorVisibility } from './components/playlist/tools';
@@ -38,8 +39,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	// wait for one minute and then try to download it again
 	while (smilFileContent === '') {
 		try {
-			// download SMIL file if device has internet connection
-			if (navigator.onLine) {
+			// download SMIL file if device has internet connection and smil file exists on remote server
+			if (!isNil(await files.fetchLastModified(smilFile.src))) {
 				forceDownload = true;
 				downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, forceDownload);
 				await Promise.all(downloadPromises);
