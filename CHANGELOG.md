@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - add new instance of playlist during each smil restart
 - add lastModified check during media files download at the start of the smil processing
 - add check for empty localFilePath during video playback
+- remove navigator.online and replace it with fetch functionality
 
 ## [1.0.1] - 2020-09-17
 ### Added
