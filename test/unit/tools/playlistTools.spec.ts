@@ -106,7 +106,7 @@ describe('Playlist tools component', () => {
 				'video': [],
 			}, {
 				'begin': 'wallclock(2020-07-16T12:00)',
-				'end': 'wallclock(2020-07-17T19:00)',
+				'end': 'wallclock(2025-07-17T19:00)',
 				'repeatCount': '1',
 				'img': [],
 			}], [{
@@ -126,7 +126,7 @@ describe('Playlist tools component', () => {
 				'video': [],
 			}, {
 				'begin': 'wallclock(2020-07-16T12:00)',
-				'end': 'wallclock(2020-12-17T19:00)',
+				'end': 'wallclock(2025-12-17T19:00)',
 				'repeatCount': '1',
 				'img': [],
 			}]];
@@ -406,8 +406,8 @@ describe('Playlist tools component', () => {
 			testEndString = `wallclock(2020-12-01T12:00)`;
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
-			// timeToEnd = value of 2020-12-01T12:00:00
-			expect(responseTimeObject.timeToEnd).to.eql(moment('2020-12-01T12:00:00').valueOf());
+			// timeToEnd = value of 2020-12-01T12:00:00 should return -3600000 ( default value for playlists in the past )
+			expect(responseTimeObject.timeToEnd).to.eql(-3600000);
 
 		});
 		it('Should return correct times for how long to wait and how long to play - weekdays specified after', async () => {

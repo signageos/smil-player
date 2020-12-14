@@ -437,7 +437,10 @@ export class Playlist {
 					}
 					if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
 						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin!, value.end);
+						// playlist endTime is in past, wait default amnout of time and then try again ( to avoid indefinite loop )
 						if (timeToEnd === SMILScheduleEnum.neverPlay) {
+							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+							await sleep(SMILScheduleEnum.defaultAwait);
 							return;
 						}
 						promises.push((async () => {
