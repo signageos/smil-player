@@ -1,6 +1,6 @@
 {
   "name": "@signageos/smil-player",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
@@ -18,7 +18,7 @@
     "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
     "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
     "upload-applet": "sos applet upload",
-    "clean": "rm -rf cache dist",
+    "clean": "rm -rf cache dist/*",
     "prepare": "npm run clean && npm run build",
     "build": "npm run clean && webpack --display-modules",
     "build-test": "tsc",
