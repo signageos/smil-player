@@ -10,7 +10,7 @@ import { triggerRfid } from '../../../src/components/playlist/mock/mockTriggerRf
 import * as chai from 'chai';
 
 const expect = chai.expect;
-describe('XmlParse component', () => {
+describe('XmlParse tools component', () => {
 
 	describe('XmlParse tools component tests', () => {
 		it('Should parse whole xml file correctly file triggers', async () => {
