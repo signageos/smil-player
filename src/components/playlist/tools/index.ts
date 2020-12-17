@@ -496,6 +496,13 @@ export function errorVisibility(visible: boolean) {
 	(<HTMLElement> document.getElementById('errorText')).style.display = display;
 }
 
+export function shouldContinuePlayback(endTime: number, timesPlayed: number): boolean {
+	if (endTime >= 1000 && Date.now() <= endTime) {
+		return true;
+	}
+	return endTime < 1000 && timesPlayed < endTime;
+}
+
 export function checkSlowDevice(deviceType: string): boolean {
 	for (const type of DeviceModels.slowerDevices) {
 		if (deviceType.startsWith(type)) {

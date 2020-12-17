@@ -8,7 +8,6 @@ import { isEqual } from 'lodash';
 import { parallel } from 'async';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
-
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -340,6 +339,7 @@ export class Playlist {
 	 * @param endTime - date in millis when value stops playing
 	 * @param priorityObject
 	 */
+	// TODO: refactor pri updatu s testama na FE
 	public processPlaylist = async (
 		playlist: PlaylistElement | PlaylistElement[], parent: string = '',
 		endTime: number = 0, priorityObject: PriorityObject =  <PriorityObject> {},
@@ -352,7 +352,6 @@ export class Playlist {
 			}
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
-
 			// dont play intro in the actual playlist
 			if (XmlTags.extractedElements.includes(key)
 				&& value !== get(this.introObject, 'video', 'default')
@@ -527,6 +526,7 @@ export class Playlist {
 						await this.priorityBehaviour(parValue, parKey, newParent, endTime, priorityObject, isLast);
 						continue;
 					}
+
 					if (Array.isArray(parValue)) {
 						const controlTag = parKey === 'seq' ? parKey : 'par';
 						const wrapper = {
@@ -594,6 +594,7 @@ export class Playlist {
 							})());
 							continue;
 						}
+
 						if (parValue.repeatCount === 'indefinite' && isNotPrefetchLoop(parValue)) {
 							promises.push((async () => {
 								// when endTime is not set, play indefinitely
@@ -863,7 +864,8 @@ export class Playlist {
 	 * @param filepath - local folder structure where file is stored
 	 * @param regionInfo - information about regio	n when current media belongs to
 	 * @param duration - how long should media stay on screen
-	 * @param triggerValue
+	 * @param triggerValue - name of trigger playlist
+	 * @param arrayIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 */
 	private playTimedMedia = async (
 		filepath: string, regionInfo: RegionAttributes, duration: string, triggerValue: string | undefined, arrayIndex: number,
@@ -920,6 +922,7 @@ export class Playlist {
 	 * @param parentRegion
 	 * @param duration - how long should media stay on screen
 	 * @param element - displayed HTML element
+	 * @param arrayIndex
 	 */
 	private waitMediaOnScreen = async (
 		regionInfo: RegionAttributes, parentRegion: RegionAttributes, duration: number, element: SosHtmlElement, arrayIndex: number,
@@ -1158,6 +1161,11 @@ export class Playlist {
 		});
 	}
 
+	/**
+	 * Function responsible for dynamic assigment of nested regions for trigger playlists
+	 * @param media - playlist to be played
+	 * @param element - html element in DOM ( image, widget )
+	 */
 	private handleTriggers = async (media: SMILVideo | SosHtmlElement, element: HTMLElement | undefined = undefined) => {
 		let regionInfo = media.regionInfo;
 		while (await this.isRegionOrNestedActive(regionInfo) && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
