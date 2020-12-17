@@ -12,6 +12,7 @@ import {
 	SMILImage,
 	SMILAudio,
 	SMILWidget, PlaylistElement,
+	PriorityObject,
 } from '../../../models';
 import { ObjectFitEnum, SMILScheduleEnum, XmlTags, SMILEnums, DeviceModels } from '../../../enums';
 import moment from 'moment';
@@ -436,6 +437,16 @@ export function createHtmlElement(
 	}
 
 	return element;
+}
+
+export function createPriorityObject(priorityClass: object, priorityLevel: number): PriorityObject {
+	return {
+		priorityLevel,
+		lower: get(priorityClass, 'lower', 'defer'),
+		peer: get(priorityClass, 'peer', 'stop'),
+		higher: get(priorityClass, 'higher', 'pause'),
+		pauseDisplay: get(priorityClass, 'pauseDisplay', 'show'),
+	};
 }
 
 /**

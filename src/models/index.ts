@@ -240,7 +240,34 @@ export type MediaInfoObject = {
 	[fileName: string]: string | null | number,
 };
 
-export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList;
+export type PriorityObject = {
+	priorityLevel: number,
+	lower: string,
+	peer: string,
+	higher: string,
+	pauseDisplay: string,
+};
+
+export type CurrentlyPlayingPriority = {
+	[regionName: string]: CurrentlyPlayingRegion[],
+};
+
+export type CurrentlyPlayingRegion = {
+	media: SMILMedia,
+	priority: PriorityObject,
+	player: {
+		contentPause: number,
+		stop: boolean,
+		endTime: number,
+		playing: boolean,
+		timesPlayed: number,
+	},
+	parent: string,
+	behaviour: string,
+	controlledPlaylist: number | null,
+	isFirstInPlaylist: SMILMedia;
+};
+export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList & TriggerList;
 
 export type SMILMedia = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[] | SMILVideo | SMILVideo[];
 export type SMILMediaSingle = SMILImage  | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
