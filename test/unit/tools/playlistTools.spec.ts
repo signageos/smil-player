@@ -409,6 +409,13 @@ describe('Playlist tools component', () => {
 			// timeToEnd = value of 2020-12-01T12:00:00 should return -3600000 ( default value for playlists in the past )
 			expect(responseTimeObject.timeToEnd).to.eql(-3600000);
 
+			testStartString = `wallclock(2020-01-01T09:00)`;
+			testEndString = `wallclock(${formatDate(moment().add(7, 'minutes'))})`;
+			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+			expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			// timeToEnd value should be 7 minutes from now
+			expect(Math.abs(responseTimeObject.timeToEnd - moment().add(7, 'minutes').valueOf())).to.be.lessThan(1000);
+
 		});
 		it('Should return correct times for how long to wait and how long to play - weekdays specified after', async () => {
 			let mediaDuration = 3;
