@@ -55,3 +55,12 @@
 
 ### code documentation
 see documentation [here](docs/documentation.md)
+
+## Development
+For development internally in signageOS team, there are a few specifics. We are using internal private NPM registry, so please copy the template .npmrc.template to .npmrc and adjust your local PC ~/.bashrc file as below (for unix systems, for Win add environment variables in windows This PC options).
+```sh
+echo 'export NPM_REGISTRY_URL="https://npm.signageos.io"' >> ~/.bashrc
+echo 'export NPM_REGISTRY_HOST="npm.signageos.io"' >> ~/.bashrc
+echo 'export NPM_AUTH_TOKEN="__PASTE_YOUR_SECRET_TOKEN__"' >> ~/.bashrc
+cp .npmrc.template .npmrc
+```
