@@ -73,3 +73,8 @@ export const DeviceModels = {
 export enum DeviceInfo {
 	brightsign = 'brightsign',
 }
+
+export enum TimedMediaResponseEnum {
+	cancelLoop = 'cancelLoop',
+	finished = 'finished',
+}
