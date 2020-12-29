@@ -12,11 +12,11 @@ import {
 	SMILImage,
 	SMILAudio,
 	SMILWidget, PlaylistElement,
-	PriorityObject,
+	PriorityObject, CurrentlyPlayingRegion,
 } from '../../../models';
 import { ObjectFitEnum, SMILScheduleEnum, XmlTags, SMILEnums, DeviceModels } from '../../../enums';
 import moment from 'moment';
-import { getFileName } from '../../files/tools';
+import { getFileName, getRandomInt } from '../../files/tools';
 import { parseNestedRegions }  from '../../xmlParser/tools';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
@@ -510,4 +510,19 @@ export function checkSlowDevice(deviceType: string): boolean {
 		}
 	}
 	return false;
+}
+
+export function getLastArrayItem(array: any[]): any {
+	return array[array.length - 1];
+}
+
+// seq-98665
+export function generateParentId(tagName: string): string {
+	return `${tagName}-${getRandomInt(100000)}`;
+}
+
+export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
+	return currentlyPlaying.findIndex((element) => {
+		return (get(element, 'player.playing', false) === true);
+	});
 }

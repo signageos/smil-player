@@ -267,6 +267,8 @@ export type CurrentlyPlayingRegion = {
 	controlledPlaylist: number | null,
 	isFirstInPlaylist: SMILMedia;
 };
+
+export type TimedMediaResponse = 'cancelLoop' | 'finished';
 export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList & TriggerList;
 
 export type SMILMedia = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[] | SMILVideo | SMILVideo[];
