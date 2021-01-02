@@ -7,7 +7,8 @@ import {
 	extractDayInfo,
 	setElementDuration,
 	setDefaultAwait, extractAdditionalInfo, isNotPrefetchLoop,
-	getStringToIntDefault,
+	getStringToIntDefault, generateParentId, getIndexOfPlayingMedia,
+	getLastArrayItem,
 } from '../../../src/components/playlist/tools';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
@@ -21,6 +22,164 @@ import { SMILScheduleEnum } from '../../../src/enums';
 const expect = chai.expect;
 
 describe('Playlist tools component', () => {
+
+	describe('Playlist tools component getIndexOfPlayingMedia tests', () => {
+		it('Should return correct index', () => {
+
+			let currentlyPlaying = [
+				{
+					player: {
+						playing: true,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+			];
+			// @ts-ignore
+			let response = getIndexOfPlayingMedia(currentlyPlaying);
+			expect(response).to.be.equal(0);
+
+			currentlyPlaying = [
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: true,
+					},
+				},
+			];
+			// @ts-ignore
+			response = getIndexOfPlayingMedia(currentlyPlaying);
+			expect(response).to.be.equal(2);
+
+			currentlyPlaying = [
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: true,
+					},
+				},
+			];
+			// @ts-ignore
+			response = getIndexOfPlayingMedia(currentlyPlaying);
+			expect(response).to.be.equal(2);
+
+			currentlyPlaying = [
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+			];
+			// @ts-ignore
+			response = getIndexOfPlayingMedia(currentlyPlaying);
+			expect(response).to.be.equal(-1);
+
+			let currentlyPlayingEmpty = [
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{
+					player: {
+						playing: false,
+					},
+				},
+				{},
+			];
+			// @ts-ignore
+			response = getIndexOfPlayingMedia(currentlyPlayingEmpty);
+			expect(response).to.be.equal(-1);
+		});
+	});
+
+	describe('Playlist tools component generateParentId tests', () => {
+		it('Should return correct parentId', () => {
+			const onlyDigitsRegex = /^\d+$/;
+			const testTagNames = [
+				'seq',
+				'par',
+				'priorityClass',
+				'excl',
+				'Something',
+			];
+
+			const parentIds = [
+				'seq-',
+				'par-',
+				'priorityClass-',
+				'excl-',
+				'Something-',
+			];
+			for (let i = 0; i < testTagNames.length; i += 1) {
+				let response = generateParentId(testTagNames[i]);
+				expect(response.startsWith(parentIds[i])).to.be.equal(true);
+				// delete first part of parentId
+				response = response.replace(parentIds[i], '');
+				// check if remaining id string is digits only
+				expect(onlyDigitsRegex.test(response)).to.be.equal(true);
+			}
+		});
+	});
+
+	describe('Playlist tools component getLastArrayItem tests', () => {
+		it('Should return correct array element', () => {
+			const testArrays = [
+				[1, 2, 3, 4],
+				[5],
+				[1, 'testing'],
+				[1, true],
+			];
+
+			const lastElements = [
+				4,
+				5,
+				'testing',
+				true,
+			];
+
+			for (let i = 0; i < testArrays.length; i += 1) {
+				let response = getLastArrayItem(testArrays[i]);
+				expect(response).to.be.equal(lastElements[i]);
+			}
+		});
+	});
 
 	describe('Playlist tools component getRegionInfo tests', () => {
 		it('Should return default region for non-existing region name', () => {
