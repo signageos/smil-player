@@ -233,7 +233,9 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 				};
 			}
 
-			if (dateEnd < nowDay && splitStringEnd[2] !== 'P1D') {
+			// either end date is in past ( date format YYYY-MM-DD ) or the date is same as today, but time format is already in past ( HH:mm:ss )
+			// and time is specified without repeating attributes, so it should be played only once when begin tag <= now <= end tag
+			if ((dateEnd < nowDay || (dateEnd === nowDay && moment(splitStringEnd[1]).valueOf() < Date.now())) && splitStringEnd[2] !== 'P1D') {
 				timeToStart = 0;
 				timeToEnd = SMILScheduleEnum.neverPlay;
 				debug('wallclock completely in the past, will not be played');
