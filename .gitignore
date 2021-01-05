@@ -5,3 +5,5 @@
 /.idea/
 /cache/
 /src/testing/
+/package-lock.json
+/.npmrc
