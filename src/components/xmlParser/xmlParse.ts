@@ -11,12 +11,11 @@ import {
 	SMILFileObject,
 	XmlSmilObject,
 	SMILMediaSingle,
-	TriggerList,
 	XmlHeadObject,
 	SMILPlaylist,
 	SMILSensors,
 	SMILTriggers,
-	SMILTriggerCondition, SMILMetaObject, ParsedSensor, ParsedTriggerInfo,
+	SMILTriggerCondition, SMILMetaObject, ParsedSensor, ParsedTriggerInfo, TriggerList,
 } from '../../models';
 import { SMILEnums, SMILTriggersEnum, XmlTags } from '../../enums';
 import { debug, containsElement } from './tools';

@@ -12,10 +12,11 @@ import {
 	SMILImage,
 	SMILAudio,
 	SMILWidget, PlaylistElement,
+	PriorityObject, CurrentlyPlayingRegion,
 } from '../../../models';
 import { ObjectFitEnum, SMILScheduleEnum, XmlTags, SMILEnums, DeviceModels } from '../../../enums';
 import moment from 'moment';
-import { getFileName } from '../../files/tools';
+import { getFileName, getRandomInt } from '../../files/tools';
 import { parseNestedRegions }  from '../../xmlParser/tools';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
@@ -438,6 +439,16 @@ export function createHtmlElement(
 	return element;
 }
 
+export function createPriorityObject(priorityClass: object, priorityLevel: number): PriorityObject {
+	return {
+		priorityLevel,
+		lower: get(priorityClass, 'lower', 'defer'),
+		peer: get(priorityClass, 'peer', 'stop'),
+		higher: get(priorityClass, 'higher', 'pause'),
+		pauseDisplay: get(priorityClass, 'pauseDisplay', 'show'),
+	};
+}
+
 /**
  * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
  * @param value - Smil image or Smil widget
@@ -485,6 +496,13 @@ export function errorVisibility(visible: boolean) {
 	(<HTMLElement> document.getElementById('errorText')).style.display = display;
 }
 
+export function shouldContinuePlayback(endTime: number, timesPlayed: number): boolean {
+	if (endTime >= 1000 && Date.now() <= endTime) {
+		return true;
+	}
+	return endTime < 1000 && timesPlayed < endTime;
+}
+
 export function checkSlowDevice(deviceType: string): boolean {
 	for (const type of DeviceModels.slowerDevices) {
 		if (deviceType.startsWith(type)) {
@@ -492,4 +510,19 @@ export function checkSlowDevice(deviceType: string): boolean {
 		}
 	}
 	return false;
+}
+
+export function getLastArrayItem(array: any[]): any {
+	return array[array.length - 1];
+}
+
+// seq-98665
+export function generateParentId(tagName: string): string {
+	return `${tagName}-${getRandomInt(100000)}`;
+}
+
+export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
+	return currentlyPlaying.findIndex((element) => {
+		return (get(element, 'player.playing', false) === true);
+	});
 }

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - trigger support
 - webos video playback hotfix with sleep(videoDuration) and Promise.race
+- add priority behaviour support (excl and priorityClass tags)
 
 ### Fixed
 - fixed smil parsing issue on Rpi
