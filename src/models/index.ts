@@ -51,6 +51,7 @@ export type RegionAttributes = {
 };
 
 export type SMILVideo = {
+	expr?: string,
 	src: string,
 	fit?: string,
 	dur?: number,
@@ -65,6 +66,7 @@ export type SMILVideo = {
 };
 
 export type SMILAudio = {
+	expr?: string,
 	src: string,
 	dur: string,
 	fit?: string,
@@ -76,6 +78,7 @@ export type SMILAudio = {
 };
 
 export type SMILImage = {
+	expr?: string,
 	src: string,
 	region: string,
 	dur: string,
@@ -88,6 +91,7 @@ export type SMILImage = {
 };
 
 export type SMILWidget = {
+	expr?: string,
 	src: string,
 	region: string,
 	dur: string,
@@ -100,6 +104,7 @@ export type SMILWidget = {
 };
 
 export type SosHtmlElement = {
+	expr?: string,
 	src: string,
 	id: string,
 	media?: string,
@@ -111,6 +116,7 @@ export type SosHtmlElement = {
 };
 
 export type SMILIntro = {
+	expr?: string,
 	video?: SMILVideo,
 	img?: SMILImage,
 	[key: string]: string | SMILImage | SMILVideo | undefined,
@@ -219,6 +225,7 @@ export type SmilScheduleObject = {
 };
 
 export type PlaylistElement = {
+	expr?: string,
 	begin?: string,
 	end?: string,
 	repeatCount?: number | string,
@@ -266,6 +273,13 @@ export type CurrentlyPlayingRegion = {
 	behaviour: string,
 	controlledPlaylist: number | null,
 	isFirstInPlaylist: SMILMedia;
+};
+
+export type ParsedConditionalExpr = {
+	firstArgument: string,
+	removedFirstArgument: string,
+	secondArgument: string,
+	comparator: string,
 };
 
 export type TimedMediaResponse = 'cancelLoop' | 'finished';

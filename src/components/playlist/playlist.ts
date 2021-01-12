@@ -34,15 +34,16 @@ import {
 	DeviceInfo,
 	SMILEnums,
 	TimedMediaResponseEnum,
+	ConditionalExprEnum,
 } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
+	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwaitWallclock,
 	generateElementId, createDomElement, checkSlowDevice, createPriorityObject,
-	generateParentId, getIndexOfPlayingMedia, getLastArrayItem,
+	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired, setDefaultAwaitConditional,
 } from './tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAntenna";
@@ -50,6 +51,8 @@ import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAnten
 export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
+	private playerName: string;
+	private playerId: string;
 	private files: Files;
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
@@ -61,6 +64,9 @@ export class Playlist {
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
+		// TODO: will be handled diffrently in the future when we have units tests for sos sdk
+		this.playerName = get(sos, 'config.playerName', '');
+		this.playerId = get(sos, 'config.playerName', '');
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
@@ -320,13 +326,25 @@ export class Playlist {
 	 * @param parent - superordinate element of value
 	 * @param endTime - date in millis when value stops playing
 	 */
-	public processPriorityTag = (
+	public processPriorityTag = async (
 		value: PlaylistElement | PlaylistElement[], parent: string = '', endTime: number = 0,
-	): Promise<void>[] => {
+	): Promise<Promise<void>[]> => {
 		const promises: Promise<void>[] = [];
 		if (Array.isArray(value)) {
 			let arrayIndex = value.length - 1;
 			for (let elem of value) {
+				// wallclock has higher priority than conditional expression
+				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
+					if (arrayIndex === 0 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+						=== SMILScheduleEnum.defaultAwait) {
+						debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+						await sleep(SMILScheduleEnum.defaultAwait);
+					}
+					arrayIndex -= 1;
+					continue;
+				}
+
 				const priorityObject = createPriorityObject(elem, arrayIndex);
 				promises.push((async () => {
 					await this.processPlaylist(elem, parent, endTime, priorityObject);
@@ -335,6 +353,11 @@ export class Playlist {
 			}
 		} else {
 			const priorityObject = createPriorityObject(value, 0);
+			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				await sleep(SMILScheduleEnum.defaultAwait);
+				return [];
+			}
 			promises.push((async () => {
 				await this.processPlaylist(value, parent, endTime, priorityObject);
 			})());
@@ -378,11 +401,11 @@ export class Playlist {
 			let promises: Promise<void>[] = [];
 
 			if (key === 'excl') {
-				promises = this.processPriorityTag(value, 'seq', endTime);
+				promises = await this.processPriorityTag(value, 'seq', endTime);
 			}
 
 			if (key === 'priorityClass') {
-				promises = this.processPriorityTag(value, 'seq', endTime);
+				promises = await this.processPriorityTag(value, 'seq', endTime);
 			}
 
 			if (key === 'seq') {
@@ -392,19 +415,33 @@ export class Playlist {
 					for (const valueElement of value) {
 						// skip trigger processing in automated playlist
 						if (valueElement.hasOwnProperty('begin') && valueElement.begin!.startsWith(SMILTriggersEnum.triggerFormat)) {
+							arrayIndex += 1;
 							continue;
 						}
+
 						if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1
 							&& !isEqual(valueElement, this.introObject)
 							&& isNotPrefetchLoop(valueElement)) {
 							const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
 							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
-							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
+							if (arrayIndex === value.length - 1 && setDefaultAwaitWallclock(value) === SMILScheduleEnum.defaultAwait) {
 								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
 
 							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+								arrayIndex += 1;
+								continue;
+							}
+
+							// wallclock has higher priority than conditional expression
+							if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
+								if (arrayIndex === value.length - 1 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+									=== SMILScheduleEnum.defaultAwait) {
+									debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+									await sleep(SMILScheduleEnum.defaultAwait);
+								}
 								arrayIndex += 1;
 								continue;
 							}
@@ -434,6 +471,18 @@ export class Playlist {
 								})());
 							}
 							await Promise.all(promises);
+							arrayIndex += 1;
+							continue;
+						}
+
+						// wallclock has higher priority than conditional expression
+						if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
+							if (arrayIndex === value.length - 1 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+								=== SMILScheduleEnum.defaultAwait) {
+								debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+								await sleep(SMILScheduleEnum.defaultAwait);
+							}
 							arrayIndex += 1;
 							continue;
 						}
@@ -468,6 +517,13 @@ export class Playlist {
 							await sleep(SMILScheduleEnum.defaultAwait);
 							return;
 						}
+
+						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
+						}
+
 						if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
 							const repeatCount: number = <number> value.repeatCount;
 							let counter = 0;
@@ -485,6 +541,10 @@ export class Playlist {
 							await sleep(timeToStart);
 							await this.processPlaylist(value, newParent, endTime, priorityObject);
 						})());
+					} else if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+						debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+						await sleep(SMILScheduleEnum.defaultAwait);
+						return;
 					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& isNotPrefetchLoop(value)) {
@@ -559,6 +619,13 @@ export class Playlist {
 								await sleep(SMILScheduleEnum.defaultAwait);
 								return;
 							}
+
+							if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
 							if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
 								const repeatCount: number = <number> value.repeatCount;
 								let counter = 0;
@@ -579,8 +646,27 @@ export class Playlist {
 							break;
 						}
 
+						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+							debug('Conditional expression 1111: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
+						}
+
 						if (parValue.hasOwnProperty('begin') && parValue.begin!.indexOf('wallclock') > -1) {
 							const { timeToStart, timeToEnd } = parseSmilSchedule(parValue.begin!, parValue.end);
+
+							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
+							if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
 							if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
 								const repeatCount: number = <number> parValue.repeatCount;
 								let counter = 0;
@@ -595,16 +681,17 @@ export class Playlist {
 								continue;
 							}
 
-							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-								await sleep(SMILScheduleEnum.defaultAwait);
-								return;
-							}
 							promises.push((async () => {
 								await sleep(timeToStart);
 								await this.processPlaylist(parValue, newParent, timeToEnd, priorityObject);
 							})());
 							continue;
+						}
+
+						if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
 						}
 
 						if (parValue.repeatCount === 'indefinite' && isNotPrefetchLoop(parValue)) {
@@ -1022,6 +1109,11 @@ export class Playlist {
 					continue;
 				}
 
+				if (isConditionalExpExpired(currentVideo, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for video: %O is false', currentVideo.expr!, currentVideo);
+					continue;
+				}
+
 				// prepare video only once ( was double prepare current and next video )
 				if (i === 0) {
 					debug('Preparing video current: %O', currentVideo);
@@ -1221,6 +1313,11 @@ export class Playlist {
 			// TODO: implement check to sos library
 			if (video.localFilePath === '') {
 				debug('Video: %O has empty localFilepath: %O', video);
+				return;
+			}
+
+			if (isConditionalExpExpired(video, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for video: %O is false', video.expr!, video);
 				return;
 			}
 
@@ -1451,6 +1548,10 @@ export class Playlist {
 			debug('Playing media sequentially: %O', value);
 			for (const elem of value) {
 				if (isUrl(elem.src)) {
+					if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+						debug('Conditional expression: %s, for video: %O is false', elem.expr!, elem);
+						continue;
+					}
 					// widget with website url as datasource
 					if (htmlElement === HtmlEnum.ref && getFileName(elem.src).indexOf('.wgt') === -1) {
 						response = <string> await this.playTimedMedia(elem.src, elem.regionInfo, elem.dur, elem.triggerValue, index);
@@ -1474,6 +1575,10 @@ export class Playlist {
 			const promises = [];
 			debug('Playing media in parallel: %O', value);
 			for (const elem of value) {
+				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for video: %O is false', elem.expr!, elem);
+					continue;
+				}
 				// widget with website url as datasource
 				if (htmlElement === HtmlEnum.ref && getFileName(elem.src).indexOf('.wgt') === -1) {
 					promises.push((async () => {

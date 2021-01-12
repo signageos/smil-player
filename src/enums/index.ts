@@ -78,3 +78,18 @@ export enum TimedMediaResponseEnum {
 	cancelLoop = 'cancelLoop',
 	finished = 'finished',
 }
+
+export enum ConditionalExprEnum {
+	exprTag = 'expr',
+	compareConst = 'adapi-compare',
+	currentDate = 'adapi-date',
+	currentDateUTC = 'adapi-gmdate',
+	substringAfter = 'substring-after',
+	substring = 'substring',
+	weekDay = 'adapi-weekday',
+	weekDayUtc = 'adapi-gmweekday',
+	playerId = 'smil-playerId',
+	playerName = 'smil-playerName',
+	dateFormat = 'YYYY-MM-DD',
+	dateAndTimeFormat = 'YYYY-MM-DDTHH:mm:ss',
+}
