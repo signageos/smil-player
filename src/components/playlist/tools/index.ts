@@ -470,7 +470,7 @@ export function createPriorityObject(priorityClass: object, priorityLevel: numbe
  * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
  * @param value - Smil image or Smil widget
  * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
- * @param isTrigger
+ * @param isTrigger - determines if element is trigger element or ordinary one ( trigger is played on demand )
  */
 export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string, isTrigger: boolean = false) {
 	debug('creating element: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
@@ -555,9 +555,9 @@ export function isConditionalExpExpired(
 
 /**
  * Checks if conditional expression evaluates true or false
- * @param expresion
- * @param playerName
- * @param playerId
+ * @param expresion - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
+ * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
+ * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
  */
 export function checkConditionalExp(expresion: string, playerName: string = '', playerId: string = ''): boolean {
 	let conditionOperator = '';
@@ -593,9 +593,9 @@ export function checkConditionalExp(expresion: string, playerName: string = '', 
 /**
  * Evaluates expression comparing days in week expr="adapi-weekday()=1" or expr="adapi-gmweekday()=1"
  * week days 0 (Sunday) to 6 (Saturday)
- * @param element
- * @param weekDay
- * @param isUtc
+ * @param element - conditional expression such as expr="adapi-weekday()=1"
+ * @param weekDay - parameter specifying which time format to use adapi-weekday() or adapi-gmweekday()
+ * @param isUtc -  if date is in UTC or not
  */
 function parseWeekDayExpr(element: string, weekDay: string, isUtc: boolean): boolean {
 	let firstArgument;
@@ -616,10 +616,10 @@ function parseWeekDayExpr(element: string, weekDay: string, isUtc: boolean): boo
 
 /**
  * Evaluates expression comparing two dates expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
- * @param firstArgument
- * @param secondArgument
- * @param comparator
- * @param isUtc
+ * @param firstArgument - simple date expression adapi-date() or date specified 2010-01-01T00:00:00
+ * @param secondArgument - simple date expression adapi-date() or date specified 2010-01-01T00:00:00
+ * @param comparator - specified how to compare two dates ( &lt; , &lt;=, =, &gt;=, &gt; )
+ * @param isUtc -  if date is in UTC or not
  */
 function parseSimpleDateExpr(firstArgument: string, secondArgument: string, comparator: string, isUtc: boolean): boolean {
 	if (firstArgument === ConditionalExprEnum.currentDate) {
@@ -642,9 +642,9 @@ function parseSimpleDateExpr(firstArgument: string, secondArgument: string, comp
 /**
  * Evaluates expression comparing playerID or playerName expr="adapi-compare(smil-playerId(),'playerId')" or
  * expr="adapi-compare(smil-playerName(),'Entrance')"
- * @param firstArgument
- * @param removedFirstArgument
- * @param playerIdentification
+ * @param firstArgument - smil-playerName or smil-playerId or string identifier
+ * @param removedFirstArgument - expression string without first argument such as 'playerId')"
+ * @param playerIdentification - playerName or playedId from sos.config object
  */
 function parsePlayerIdsExpr(firstArgument: string, removedFirstArgument: string, playerIdentification: string) {
 	let secondArgument;
@@ -658,7 +658,7 @@ function parsePlayerIdsExpr(firstArgument: string, removedFirstArgument: string,
 
 /**
  * Parses expression string into separate arguments adapi-compare('17:00:00', substring-after(adapi-date(), 'T')) &gt; 0"
- * @param element
+ * @param element - conditional expression such as expr="adapi-weekday()=1"
  */
 function parseCompareExpr(element: string): ParsedConditionalExpr {
 	let firstArgument;
@@ -692,7 +692,7 @@ function parseCompareExpr(element: string): ParsedConditionalExpr {
 
 /**
  * Parses nested substring expression substring-after(adapi-date(), 'T')
- * @param argument
+ * @param argument part of conditional expression such as substring-after(adapi-date(), 'T')
  */
 function parseSubstringExpr(argument: string): string {
 	let [ innerFirst, innerSecond ] = argument.slice(ConditionalExprEnum.substringAfter.length).split(',');
@@ -707,9 +707,9 @@ function parseSubstringExpr(argument: string): string {
 
 /**
  * Evaluates unparsed expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
- * @param elementExpr
- * @param playerName
- * @param playerId
+ * @param elementExpr - conditional expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
+ * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
+ * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
  */
 function parseConditionalExp(elementExpr: string, playerName: string = '', playerId: string = '') {
 	let element = removeUnnecessaryCharacters(elementExpr);
@@ -751,19 +751,23 @@ function parseConditionalExp(elementExpr: string, playerName: string = '', playe
 
 		if (typeof firstArgument === 'string' && firstArgument.startsWith(ConditionalExprEnum.substringAfter)) {
 			firstArgument = parseSubstringExpr(firstArgument);
+			return compareValues(firstArgument, secondArgument, comparator);
 		}
 
 		if (typeof secondArgument === 'string' && secondArgument.startsWith(ConditionalExprEnum.substringAfter)) {
 			secondArgument = parseSubstringExpr(secondArgument);
+			return compareValues(firstArgument, secondArgument, comparator);
 		}
 
-		return compareValues(firstArgument, secondArgument, comparator);
 	}
+
+	debug('Conditional expression format is not supported: %s', element);
+	return false;
 }
 
 /**
  * adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0 => adapi-compareadapi-date,2010-01-01T00:00:00&lt;0
- * @param expr
+ * @param expr - conditional expression adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0
  */
 function removeUnnecessaryCharacters(expr: string): string {
 	let parsedExpr = expr;
@@ -779,9 +783,9 @@ function removeUnnecessaryCharacters(expr: string): string {
 
 /**
  * check if values and specified comparator match
- * @param firstArgument
- * @param secondArgument
- * @param comparator
+ * @param firstArgument - string or number to compare
+ * @param secondArgument - string or number to compare
+ * @param comparator - specified how to compare two dates ( &lt; , &lt;=, =, &gt;=, &gt; )
  */
 function compareValues(firstArgument: string | number, secondArgument: string | number, comparator: string) {
 	if ( firstArgument < secondArgument && comparator.indexOf('lt;') > -1 ) {
@@ -796,7 +800,6 @@ function compareValues(firstArgument: string | number, secondArgument: string | 
 }
 
 function isIsoDate(dateString: string) {
-	// TODO: vyladit lip ten regex
 	if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateString)) { return false; }
 	let d = moment(dateString).utc(true);
 	const stringDate = d.toISOString().indexOf('Z') > -1 ? d.toISOString().substring(0, d.toISOString().length - 5) : d.toISOString();
@@ -811,10 +814,10 @@ function generateCurrentDate(utc: boolean) {
 }
 
 /**
- * finds index of nth occurence of substring specified by count
- * @param string
- * @param subString
- * @param count
+ * finds index of nth occurrence of substring specified by count
+ * @param string - t,est,
+ * @param subString ,
+ * @param count 2 = returns second index of ',' in string 't,est,'
  */
 function getPosition(string: string, subString: string, count: number) {
 	return string.split(subString, count).join(subString).length;

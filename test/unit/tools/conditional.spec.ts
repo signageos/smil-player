@@ -318,4 +318,36 @@ describe('Playlist tools checkConditionalExp', () => {
 			expect(checkConditionalExp(testExpression)).to.be.equal(true);
 		});
 	});
+
+	describe('Playlist tools component checkConditionalExp not supported expression', () => {
+		it('Should return correct response', () => {
+			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
+			let testExpression = 'adapi-compare(\'f1835d9f-be8f-4054-9e6c-123456789012\', smil-playerIdd())';
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			testExpression = 'adapi-compare(\'testing\', smil-playerrrNameeee())';
+			expect(checkConditionalExp(testExpression, 'testing', '')).to.be.equal(false);
+
+			testExpression = 'adapi-compare(smil-playerIdd(), \'f1835d9f-be8f-4054-9e6c-123456789012\')';
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			testExpression = 'adapi-compare(smil-playerNameeee(), \'testing\')';
+			expect(checkConditionalExp(testExpression, 'testing', '')).to.be.equal(false);
+
+			testExpression = `adapi-commmmpare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2050-01-01T00:00:00\', adapi-date())>0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			testExpression = `adapi-commmmpare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2050-01-01T00:00:00\', adapi-daaaaate())>0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			let dayOfWeek = moment().isoWeekday();
+			testExpression = `adapi-compare(\'${dayTime}\', substrrrrrring-after(adapi-date(), \'T\'))<=0 and ${dayOfWeek}=adapi-weekday() and ${dayOfWeek}>=adapi-weekday()
+			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			testExpression = `adapi-compare(\'${dayTime}\', substrrrrrring-after(adapi-date(), \'T\'))<=0 or ${dayOfWeek}=adapi-weekday() or ${dayOfWeek}>=adapi-weekday()
+			or adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+		});
+	});
 });
