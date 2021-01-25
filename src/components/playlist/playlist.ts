@@ -41,9 +41,9 @@ import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/Fro
 import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwaitWallclock,
+	setElementDuration, createHtmlElement, extractAdditionalInfo, getDefaultAwaitWallclock,
 	generateElementId, createDomElement, checkSlowDevice, createPriorityObject,
-	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired, setDefaultAwaitConditional,
+	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired, getDefaultAwaitConditional,
 } from './tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAntenna";
@@ -336,7 +336,7 @@ export class Playlist {
 				// wallclock has higher priority than conditional expression
 				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
 					debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
-					if (arrayIndex === 0 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+					if (arrayIndex === 0 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
 						=== SMILScheduleEnum.defaultAwait) {
 						debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 						await sleep(SMILScheduleEnum.defaultAwait);
@@ -424,7 +424,7 @@ export class Playlist {
 							&& isNotPrefetchLoop(valueElement)) {
 							const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
 							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
-							if (arrayIndex === value.length - 1 && setDefaultAwaitWallclock(value) === SMILScheduleEnum.defaultAwait) {
+							if (arrayIndex === value.length - 1 && getDefaultAwaitWallclock(value) === SMILScheduleEnum.defaultAwait) {
 								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
@@ -437,7 +437,7 @@ export class Playlist {
 							// wallclock has higher priority than conditional expression
 							if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
 								debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
-								if (arrayIndex === value.length - 1 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+								if (arrayIndex === value.length - 1 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
 									=== SMILScheduleEnum.defaultAwait) {
 									debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 									await sleep(SMILScheduleEnum.defaultAwait);
@@ -478,7 +478,7 @@ export class Playlist {
 						// wallclock has higher priority than conditional expression
 						if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
 							debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
-							if (arrayIndex === value.length - 1 && setDefaultAwaitConditional(value, this.playerName, this.playerId)
+							if (arrayIndex === value.length - 1 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
 								=== SMILScheduleEnum.defaultAwait) {
 								debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 								await sleep(SMILScheduleEnum.defaultAwait);

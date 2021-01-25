@@ -88,13 +88,13 @@ export async function sleep(ms: number): Promise<object> {
  * function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
  * @param elementsArray - array of SMIL media playlists ( seq, or par tags )
  */
-export function setDefaultAwaitWallclock(elementsArray: PlaylistElement[]): number {
+export function getDefaultAwaitWallclock(elementsArray: PlaylistElement[]): number {
 	const nowMillis: number = moment().valueOf();
 	// found element which can be player right now
 	for (const loopElem of elementsArray) {
 		const { timeToStart, timeToEnd } = parseSmilSchedule(loopElem.begin!, loopElem.end);
 		if (timeToStart <= 0 && timeToEnd > nowMillis) {
-			return 0;
+			return SMILScheduleEnum.playImmediately;
 		}
 	}
 
@@ -107,11 +107,11 @@ export function setDefaultAwaitWallclock(elementsArray: PlaylistElement[]): numb
  * @param playerName
  * @param playerId
  */
-export function setDefaultAwaitConditional(elementsArray: PlaylistElement[], playerName: string, playerId: string): number {
+export function getDefaultAwaitConditional(elementsArray: PlaylistElement[], playerName: string, playerId: string): number {
 	// found element which can be player right now
 	for (const loopElem of elementsArray) {
 		if (!isConditionalExpExpired(loopElem, playerName, playerId)) {
-			return 0;
+			return SMILScheduleEnum.playImmediately;
 		}
 	}
 
@@ -548,7 +548,7 @@ export function isConditionalExpExpired(
 		element: SMILMediaSingle | PlaylistElement | PlaylistElement[], playerName: string = '', playerId: string = '',
 	): boolean {
 	if (Array.isArray(element)) {
-		return setDefaultAwaitConditional(element, playerName, playerId) !== 0;
+		return getDefaultAwaitConditional(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
 	}
 	return (element.hasOwnProperty(ConditionalExprEnum.exprTag) && !checkConditionalExp(element.expr!, playerName, playerId));
 }
