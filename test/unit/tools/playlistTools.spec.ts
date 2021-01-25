@@ -6,7 +6,7 @@ import {
 	parseSmilSchedule,
 	extractDayInfo,
 	setElementDuration,
-	setDefaultAwait, extractAdditionalInfo, isNotPrefetchLoop,
+	getDefaultAwaitWallclock, extractAdditionalInfo, isNotPrefetchLoop,
 	getStringToIntDefault, generateParentId, getIndexOfPlayingMedia,
 	getLastArrayItem,
 } from '../../../src/components/playlist/tools';
@@ -298,7 +298,7 @@ describe('Playlist tools component', () => {
 			];
 
 			for (let i = 0; i < testSchedules.length; i += 1) {
-				const response = setDefaultAwait(testSchedules[i]);
+				const response = getDefaultAwaitWallclock(testSchedules[i]);
 				expect(response).to.be.equal(awaitTimes[i]);
 			}
 		});
