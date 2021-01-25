@@ -1,6 +1,6 @@
 # SMIL player
 
-- This solution is beta version of signageOs SMIL player applet.
+- This solution is beta version of [signageOS SMIL Player](https://docs.signageos.io/category/smil-guides) applet.
 
 ## SMIL mandatory structure
 ```xml
@@ -35,6 +35,7 @@
 
 ## Supported features
 - sequential and parallel play of audio, video, image and widget
+- priority playlist
 - supports simple layering ( z-index ) with videos always played on background ( lowest level ) 
 - pairs all media with proper regions from layout part of SMIL, if no region specified, uses values from root-layout tag
 - plays media in endless loops if necessary ( one element as well as multiple )
@@ -45,19 +46,23 @@
 - ability to restart on SMIL file change
 - supports media scheduling using wallclock definition
 - supports playing media loops using repeatCount attribute, possible to combine with wallclock
+- supports sensors-based triggers
 
 ## NOT supported features
-- priority playlist
 - not able to process files stored in local storage
 
 ### Used technology
 - webpack, typescript, mocha, xml2js, json-easy-filter
 
-### code documentation
-see documentation [here](docs/documentation.md)
+### Code documentation
+- See documentation [here](docs/documentation.md)
+
+### SMIL documentation
+- See documentation for [SMIL file creation](https://docs.signageos.io/category/smil-docs-guides)
 
 ## Development
 For development internally in signageOS team, there are a few specifics. We are using internal private NPM registry, so please copy the template .npmrc.template to .npmrc and adjust your local PC ~/.bashrc file as below (for unix systems, for Win add environment variables in windows This PC options).
+
 ```sh
 echo 'export NPM_REGISTRY_URL="https://npm.signageos.io"' >> ~/.bashrc
 echo 'export NPM_REGISTRY_HOST="npm.signageos.io"' >> ~/.bashrc
