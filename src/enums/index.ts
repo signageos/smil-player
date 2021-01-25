@@ -45,6 +45,7 @@ export enum SMILScheduleEnum {
 	endDateAndTimePast = '1970-01-01T00:00:00',
 	endDatePast = '1970-01-01',
 	neverPlay = -3600000,
+	playImmediately = 0,
 	defaultAwait = 20000,
 	defaultDuration = 5,
 	infiniteDuration = 999999,
@@ -77,4 +78,19 @@ export enum DeviceInfo {
 export enum TimedMediaResponseEnum {
 	cancelLoop = 'cancelLoop',
 	finished = 'finished',
+}
+
+export enum ConditionalExprEnum {
+	exprTag = 'expr',
+	compareConst = 'adapi-compare',
+	currentDate = 'adapi-date',
+	currentDateUTC = 'adapi-gmdate',
+	substringAfter = 'substring-after',
+	substring = 'substring',
+	weekDay = 'adapi-weekday',
+	weekDayUtc = 'adapi-gmweekday',
+	playerId = 'smil-playerId',
+	playerName = 'smil-playerName',
+	dateFormat = 'YYYY-MM-DD',
+	dateAndTimeFormat = 'YYYY-MM-DDTHH:mm:ss',
 }

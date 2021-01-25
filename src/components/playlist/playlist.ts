@@ -34,15 +34,16 @@ import {
 	DeviceInfo,
 	SMILEnums,
 	TimedMediaResponseEnum,
+	ConditionalExprEnum,
 } from '../../enums';
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
+	setElementDuration, createHtmlElement, extractAdditionalInfo, getDefaultAwaitWallclock,
 	generateElementId, createDomElement, checkSlowDevice, createPriorityObject,
-	generateParentId, getIndexOfPlayingMedia, getLastArrayItem,
+	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired, getDefaultAwaitConditional,
 } from './tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAntenna";
@@ -50,6 +51,8 @@ import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAnten
 export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
+	private playerName: string;
+	private playerId: string;
 	private files: Files;
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
@@ -61,6 +64,9 @@ export class Playlist {
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
+		// TODO: will be handled diffrently in the future when we have units tests for sos sdk
+		this.playerName = get(sos, 'config.playerName', '');
+		this.playerId = get(sos, 'config.playerName', '');
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
@@ -81,14 +87,14 @@ export class Playlist {
 			try {
 				await fn();
 			} catch (err) {
-				debug('Error: %O occured during processing function %s', err, fn.name);
+				debug('Error: %O occurred during processing function %s', err, fn.name);
 				throw err;
 			}
 		}
 	}
 
 	/**
-	 * Performs all necessary actions needed to process playlist ( delete unused files, extact widgets, extract regionInfo for each media )
+	 * Performs all necessary actions needed to process playlist ( delete unused files, extract widgets, extract regionInfo for each media )
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
@@ -320,13 +326,25 @@ export class Playlist {
 	 * @param parent - superordinate element of value
 	 * @param endTime - date in millis when value stops playing
 	 */
-	public processPriorityTag = (
+	public processPriorityTag = async (
 		value: PlaylistElement | PlaylistElement[], parent: string = '', endTime: number = 0,
-	): Promise<void>[] => {
+	): Promise<Promise<void>[]> => {
 		const promises: Promise<void>[] = [];
 		if (Array.isArray(value)) {
 			let arrayIndex = value.length - 1;
 			for (let elem of value) {
+				// wallclock has higher priority than conditional expression
+				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
+					if (arrayIndex === 0 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
+						=== SMILScheduleEnum.defaultAwait) {
+						debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+						await sleep(SMILScheduleEnum.defaultAwait);
+					}
+					arrayIndex -= 1;
+					continue;
+				}
+
 				const priorityObject = createPriorityObject(elem, arrayIndex);
 				promises.push((async () => {
 					await this.processPlaylist(elem, parent, endTime, priorityObject);
@@ -335,6 +353,11 @@ export class Playlist {
 			}
 		} else {
 			const priorityObject = createPriorityObject(value, 0);
+			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				await sleep(SMILScheduleEnum.defaultAwait);
+				return [];
+			}
 			promises.push((async () => {
 				await this.processPlaylist(value, parent, endTime, priorityObject);
 			})());
@@ -350,7 +373,7 @@ export class Playlist {
 	 * @param endTime - date in millis when value stops playing
 	 * @param priorityObject
 	 */
-	// TODO: refactor pri updatu s testama na FE
+		// TODO: refactor pri update s testama na FE
 	public processPlaylist = async (
 		playlist: PlaylistElement | PlaylistElement[], parent: string = '',
 		endTime: number = 0, priorityObject: PriorityObject =  <PriorityObject> {},
@@ -378,11 +401,11 @@ export class Playlist {
 			let promises: Promise<void>[] = [];
 
 			if (key === 'excl') {
-				promises = this.processPriorityTag(value, 'seq', endTime);
+				promises = await this.processPriorityTag(value, 'seq', endTime);
 			}
 
 			if (key === 'priorityClass') {
-				promises = this.processPriorityTag(value, 'seq', endTime);
+				promises = await this.processPriorityTag(value, 'seq', endTime);
 			}
 
 			if (key === 'seq') {
@@ -392,19 +415,33 @@ export class Playlist {
 					for (const valueElement of value) {
 						// skip trigger processing in automated playlist
 						if (valueElement.hasOwnProperty('begin') && valueElement.begin!.startsWith(SMILTriggersEnum.triggerFormat)) {
+							arrayIndex += 1;
 							continue;
 						}
+
 						if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1
 							&& !isEqual(valueElement, this.introObject)
 							&& isNotPrefetchLoop(valueElement)) {
 							const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
 							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
-							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
+							if (arrayIndex === value.length - 1 && getDefaultAwaitWallclock(value) === SMILScheduleEnum.defaultAwait) {
 								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
 
 							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+								arrayIndex += 1;
+								continue;
+							}
+
+							// wallclock has higher priority than conditional expression
+							if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
+								if (arrayIndex === value.length - 1 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
+									=== SMILScheduleEnum.defaultAwait) {
+									debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+									await sleep(SMILScheduleEnum.defaultAwait);
+								}
 								arrayIndex += 1;
 								continue;
 							}
@@ -438,6 +475,18 @@ export class Playlist {
 							continue;
 						}
 
+						// wallclock has higher priority than conditional expression
+						if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
+							if (arrayIndex === value.length - 1 && getDefaultAwaitConditional(value, this.playerName, this.playerId)
+								=== SMILScheduleEnum.defaultAwait) {
+								debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+								await sleep(SMILScheduleEnum.defaultAwait);
+							}
+							arrayIndex += 1;
+							continue;
+						}
+
 						if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
 							const repeatCount = valueElement.repeatCount;
 							let counter = 0;
@@ -462,12 +511,19 @@ export class Playlist {
 					}
 					if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
 						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin!, value.end);
-						// playlist endTime is in past, wait default amnout of time and then try again ( to avoid indefinite loop )
+						// playlist endTime is in past, wait default amount of time and then try again ( to avoid indefinite loop )
 						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
 							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 							await sleep(SMILScheduleEnum.defaultAwait);
 							return;
 						}
+
+						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
+						}
+
 						if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
 							const repeatCount: number = <number> value.repeatCount;
 							let counter = 0;
@@ -485,6 +541,10 @@ export class Playlist {
 							await sleep(timeToStart);
 							await this.processPlaylist(value, newParent, endTime, priorityObject);
 						})());
+					} else if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+						debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+						await sleep(SMILScheduleEnum.defaultAwait);
+						return;
 					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& isNotPrefetchLoop(value)) {
@@ -559,6 +619,13 @@ export class Playlist {
 								await sleep(SMILScheduleEnum.defaultAwait);
 								return;
 							}
+
+							if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
 							if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
 								const repeatCount: number = <number> value.repeatCount;
 								let counter = 0;
@@ -579,8 +646,27 @@ export class Playlist {
 							break;
 						}
 
+						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+							debug('Conditional expression 1111: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
+						}
+
 						if (parValue.hasOwnProperty('begin') && parValue.begin!.indexOf('wallclock') > -1) {
 							const { timeToStart, timeToEnd } = parseSmilSchedule(parValue.begin!, parValue.end);
+
+							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
+							if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
+								debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
+								await sleep(SMILScheduleEnum.defaultAwait);
+								return;
+							}
+
 							if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
 								const repeatCount: number = <number> parValue.repeatCount;
 								let counter = 0;
@@ -595,16 +681,17 @@ export class Playlist {
 								continue;
 							}
 
-							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-								await sleep(SMILScheduleEnum.defaultAwait);
-								return;
-							}
 							promises.push((async () => {
 								await sleep(timeToStart);
 								await this.processPlaylist(parValue, newParent, timeToEnd, priorityObject);
 							})());
 							continue;
+						}
+
+						if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
+							debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
+							await sleep(SMILScheduleEnum.defaultAwait);
+							return;
 						}
 
 						if (parValue.repeatCount === 'indefinite' && isNotPrefetchLoop(parValue)) {
@@ -664,7 +751,7 @@ export class Playlist {
 				baudRate: <number> SMILTriggersEnum.nexmoBaudRate,
 			});
 		} catch (err) {
-			debug('Error occured during Nexmosphere trigger initialization: %O', err);
+			debug('Error occurred during Nexmosphere trigger initialization: %O', err);
 			return;
 		}
 
@@ -695,13 +782,13 @@ export class Playlist {
 					} catch (err) {
 						debug('Unexpected error occurred at sensor: %O with tag: %s', sensor, tag);
 					}
-			});
+				});
 			}
 		}
 	}
 
 	private processRfidAntenna = async (smilObject: SMILFileObject, sensor: ParsedSensor, tag: number, action: string) => {
-		debug('RfId tag: %s picked on antena: %s', tag, sensor.id);
+		debug('RfId tag: %s picked on antenna: %s', tag, sensor.id);
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		let counter = 0;
 		// check if some conditions equals emitted parameters
@@ -874,7 +961,7 @@ export class Playlist {
 	/**
 	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
 	 * @param filepath - local folder structure where file is stored
-	 * @param regionInfo - information about regio	n when current media belongs to
+	 * @param regionInfo - information about region when current media belongs to
 	 * @param duration - how long should media stay on screen
 	 * @param triggerValue - name of trigger playlist
 	 * @param arrayIndex - at which index is playlist stored in currentlyPlayingPriority object
@@ -1022,6 +1109,11 @@ export class Playlist {
 					continue;
 				}
 
+				if (isConditionalExpExpired(currentVideo, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for video: %O is false', currentVideo.expr!, currentVideo);
+					continue;
+				}
+
 				// prepare video only once ( was double prepare current and next video )
 				if (i === 0) {
 					debug('Preparing video current: %O', currentVideo);
@@ -1097,7 +1189,7 @@ export class Playlist {
 					promiseRaceArray.push(sleep(currentVideo.dur! + SMILEnums.videoDurationOffset));
 				}
 				/*
-					has to be inner try catch, because stoping video in middle of playback throws error
+					has to be inner try catch, because stopping video in middle of playback throws error
 					in onceEnded function, if it would be caught by higher try..catch rest of function would
 					not be processed
 				    due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
@@ -1221,6 +1313,11 @@ export class Playlist {
 			// TODO: implement check to sos library
 			if (video.localFilePath === '') {
 				debug('Video: %O has empty localFilepath: %O', video);
+				return;
+			}
+
+			if (isConditionalExpExpired(video, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for video: %O is false', video.expr!, video);
 				return;
 			}
 
@@ -1451,6 +1548,10 @@ export class Playlist {
 			debug('Playing media sequentially: %O', value);
 			for (const elem of value) {
 				if (isUrl(elem.src)) {
+					if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+						debug('Conditional expression: %s, for video: %O is false', elem.expr!, elem);
+						continue;
+					}
 					// widget with website url as datasource
 					if (htmlElement === HtmlEnum.ref && getFileName(elem.src).indexOf('.wgt') === -1) {
 						response = <string> await this.playTimedMedia(elem.src, elem.regionInfo, elem.dur, elem.triggerValue, index);
@@ -1474,6 +1575,10 @@ export class Playlist {
 			const promises = [];
 			debug('Playing media in parallel: %O', value);
 			for (const elem of value) {
+				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+					debug('Conditional expression: %s, for video: %O is false', elem.expr!, elem);
+					continue;
+				}
 				// widget with website url as datasource
 				if (htmlElement === HtmlEnum.ref && getFileName(elem.src).indexOf('.wgt') === -1) {
 					promises.push((async () => {
@@ -1538,7 +1643,7 @@ export class Playlist {
 	 * Handles lifecycle of playlist in priority behaviour
 	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo
 	 * @param key - defines which media will be played ( video, audio, image or widget )
-	 * @param parent - parent specifying parent object in xml with randomly generated sufix (par-98324)
+	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 * @param priorityObject - information about priority rules for given playlist
 	 * @param isLast - if current playlist is last in playlist chain ( could me multiple image, video, widgets playlists )
@@ -1587,7 +1692,7 @@ export class Playlist {
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param currentIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param previousPlayingIndex - at which index is previously playing playlist stored in currentlyPlayingPriority object
-	 * @param parent - parent specifying parent object in xml with randomly generated sufix (par-98324)
+	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 * @param priorityRule - which priority rule will be used ( never, stop, pause or defer )
 	 */
@@ -1619,14 +1724,14 @@ export class Playlist {
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param currentIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param previousPlayingIndex - at which index is previously playing playlist stored in currentlyPlayingPriority object
-	 * @param parent - parent specifying parent object in xml with randomly generated sufix (par-98324)
+	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 */
 	private handlePriorityBeforePlay = async (
 			priorityObject: PriorityObject, priorityRegionName: string, currentIndex: number,
 			previousPlayingIndex: number, parent: string, endTime: number,
 		): Promise<void> => {
-		// if attempted to play playlsit which was stopped by higher priority, wait till end of higher priority playlist and try again
+		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (this.currentlyPlayingPriority[priorityRegionName][currentIndex].parent === parent
 			&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].behaviour === 'stop') {
 			await this.handlePrecedingContentStop(priorityObject, priorityRegionName, currentIndex, previousPlayingIndex);
@@ -1699,7 +1804,7 @@ export class Playlist {
 				return;
 			}
 
-			// wait for new potentional playlist to appear
+			// wait for new potential playlist to appear
 			await sleep((this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100);
 			this.currentlyPlayingPriority[priorityRegionName][currentIndex].behaviour = '';
 
@@ -1767,7 +1872,7 @@ export class Playlist {
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param currentIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param previousPlayingIndex - at which index is previously playing playlist stored in currentlyPlayingPriority object
-	 * @param parent - parent specifying parent object in xml with randomly generated sufix (par-98324)
+	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 */
 	private handleDeferBehaviour = async (
@@ -1776,7 +1881,7 @@ export class Playlist {
 		): Promise<void> => {
 		debug('Handling defer behaviour for playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 		this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour = 'defer';
-		// set current defered content to not playing
+		// set current deferred content to not playing
 		this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.playing = false;
 
 		while (true) {
@@ -1789,7 +1894,7 @@ export class Playlist {
 				return;
 			}
 
-			// wait for new potentional playlist to appear
+			// wait for new potential playlist to appear
 			await sleep((this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100);
 
 			debug('Defer behaviour lock released for playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
@@ -1829,7 +1934,7 @@ export class Playlist {
 		/*
 			condition which determines if this was last iteration of playlist
 			rule 1: if endTime in millis is lower as current time and at the same time is higher than 1000
-				- endTime is specified in date in milis
+				- endTime is specified in date in millis
 			rule 2: if timesPlayed is bigger than endTime
 				- endTime is specified as repeatCount ( <= 1000 )
 			rule 3: is last part of current playlist chain
@@ -1844,7 +1949,7 @@ export class Playlist {
 			// some playlist was paused by this one, unpause it
 			const pausedIndex = this.currentlyPlayingPriority[priorityRegionName][currentIndex].controlledPlaylist;
 			if (!isNil(pausedIndex)) {
-				debug('Unpaused priority dependant playlist: %O for region: %s'
+				debug('Un paused priority dependant playlist: %O for region: %s'
 					,    this.currentlyPlayingPriority[priorityRegionName][pausedIndex], priorityRegionName);
 				this.currentlyPlayingPriority[priorityRegionName][pausedIndex].player.contentPause = 0;
 			}
@@ -1853,10 +1958,10 @@ export class Playlist {
 	}
 	/**
 	 * Functions handles elements in currentlyPlayingPriority object, pushes new ones or replaces older ones when parent is same
-	 * also copies neccesary info from older playlists
+	 * also copies necessary info from older playlists
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param value - actual playlist
-	 * @param parent - parent specifying parent object in xml with randomly generated sufix (par-98324)
+	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 * @param priorityObject - information about priority rules for given playlist
 	 */
