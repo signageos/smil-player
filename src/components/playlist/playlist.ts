@@ -66,7 +66,7 @@ export class Playlist {
 		this.files = files;
 		// TODO: will be handled diffrently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
-		this.playerId = get(sos, 'config.playerName', '');
+		this.playerId = get(sos, 'config.playerId', '');
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
