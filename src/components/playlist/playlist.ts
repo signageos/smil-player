@@ -451,7 +451,10 @@ export class Playlist {
 								let counter = 0;
 								if (timeToStart <= 0) {
 									promises.push((async () => {
-										await sleep(timeToStart);
+										// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+										if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+											return;
+										}
 										newParent = generateParentId('seq');
 										while (counter < repeatCount) {
 											await this.processPlaylist(valueElement, newParent, repeatCount, priorityObject);
@@ -466,7 +469,10 @@ export class Playlist {
 							// play at least one from array to avoid infinite loop
 							if (value.length === 1 || timeToStart <= 0) {
 								promises.push((async () => {
-									await sleep(timeToStart);
+									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+										return;
+									}
 									await this.processPlaylist(valueElement, newParent, timeToEnd, priorityObject);
 								})());
 							}
@@ -528,7 +534,10 @@ export class Playlist {
 							const repeatCount: number = <number> value.repeatCount;
 							let counter = 0;
 							promises.push((async () => {
-								await sleep(timeToStart);
+								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+									return;
+								}
 								newParent = generateParentId('seq');
 								while (counter < repeatCount) {
 									await this.processPlaylist(value, newParent, repeatCount, priorityObject);
@@ -538,7 +547,10 @@ export class Playlist {
 							continue;
 						}
 						promises.push((async () => {
-							await sleep(timeToStart);
+							// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+							if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+								return;
+							}
 							await this.processPlaylist(value, newParent, endTime, priorityObject);
 						})());
 					} else if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
@@ -630,7 +642,10 @@ export class Playlist {
 								const repeatCount: number = <number> value.repeatCount;
 								let counter = 0;
 								promises.push((async () => {
-									await sleep(timeToStart);
+									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+										return;
+									}
 									newParent = generateParentId('par');
 									while (counter < repeatCount) {
 										await this.processPlaylist(value, newParent, repeatCount, priorityObject);
@@ -640,7 +655,10 @@ export class Playlist {
 								break;
 							}
 							promises.push((async () => {
-								await sleep(timeToStart);
+								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+									return;
+								}
 								await this.processPlaylist(value, newParent, timeToEnd, priorityObject);
 							})());
 							break;
@@ -671,7 +689,10 @@ export class Playlist {
 								const repeatCount: number = <number> parValue.repeatCount;
 								let counter = 0;
 								promises.push((async () => {
-									await sleep(timeToStart);
+									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+										return;
+									}
 									newParent = generateParentId(parKey);
 									while (counter < repeatCount) {
 										await this.processPlaylist(parValue, newParent, repeatCount, priorityObject);
@@ -682,7 +703,10 @@ export class Playlist {
 							}
 
 							promises.push((async () => {
-								await sleep(timeToStart);
+								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
+									return;
+								}
 								await this.processPlaylist(parValue, newParent, timeToEnd, priorityObject);
 							})());
 							continue;
@@ -1066,7 +1090,6 @@ export class Playlist {
 			return TimedMediaResponseEnum.cancelLoop;
 		}
 
-		debug('element playing finished: %O', element);
 		return TimedMediaResponseEnum.finished;
 	}
 
@@ -1078,6 +1101,25 @@ export class Playlist {
 	// TODO: add this feature to SoS module itself
 	private doesSupportQueryParametersCompatibilityMode = async (): Promise<boolean> => {
 		return (await this.sos.management.app.getType() !== DeviceInfo.brightsign);
+	}
+
+	/**
+	 * function used to await for content to appear based on wallclock definitions, can be interupted earlier by updates in smil file
+	 * @param timeout - how long should function wait
+	 */
+	private waitTimeoutOrFileUpdate = async (timeout: number): Promise<boolean> => {
+		const promises = [];
+		let fileUpdated = false;
+		promises.push(sleep(timeout));
+		promises.push(new Promise(async (resolve) => {
+			while (!this.getCancelFunction()) {
+				await sleep(1000);
+			}
+			fileUpdated = true;
+			resolve();
+		}));
+		await Promise.race(promises);
+		return fileUpdated;
 	}
 
 	/**
@@ -1798,8 +1840,9 @@ export class Playlist {
 				return;
 			}
 
-			// during playlist pause was exceeded its endTime, dont play it and return from function
-			if (this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime <= Date.now()) {
+			// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+			if (this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime <= Date.now()
+				&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime !== 0) {
 				debug('Playtime for playlist: %O was exceeded, exiting', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 				return;
 			}
@@ -1807,6 +1850,7 @@ export class Playlist {
 			// wait for new potential playlist to appear
 			await sleep((this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100);
 			this.currentlyPlayingPriority[priorityRegionName][currentIndex].behaviour = '';
+			this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.stop = false;
 
 			debug('Stop behaviour lock released for playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 
@@ -1891,6 +1935,13 @@ export class Playlist {
 
 			// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 			if (this.getCancelFunction()) {
+				return;
+			}
+
+			// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+			if (this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime <= Date.now()
+				&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime !== 0) {
+				debug('Playtime for playlist: %O was exceeded, exiting', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 				return;
 			}
 
