@@ -1153,6 +1153,18 @@ export class Playlist {
 
 				if (isConditionalExpExpired(currentVideo, this.playerName, this.playerId)) {
 					debug('Conditional expression: %s, for video: %O is false', currentVideo.expr!, currentVideo);
+					if (previousVideo.playing &&
+						previousVideo.src !== currentVideo.src && i !== videos.length - 1) {
+						debug('Stopping video previous: %O', previousVideo);
+						await this.sos.video.stop(
+							previousVideo.localFilePath,
+							regionInfo.left,
+							regionInfo.top,
+							regionInfo.width,
+							regionInfo.height,
+						);
+						previousVideo.playing = false;
+					}
 					continue;
 				}
 
@@ -1250,15 +1262,15 @@ export class Playlist {
 				// stopped because of higher priority playlist will start to play
 				if (this.currentlyPlaying[regionInfo.regionName].player === 'stop'
 					|| this.currentlyPlayingPriority[regionInfo.regionName][index].player.stop) {
-					debug('Stopping video: %O', currentVideo);
-					await this.sos.video.stop(
-						currentVideo.localFilePath,
-						regionInfo.left,
-						regionInfo.top,
-						regionInfo.width,
-						regionInfo.height,
-					);
-					currentVideo.playing = false;
+					// debug('Stopping video: %O', currentVideo);
+					// await this.sos.video.stop(
+					// 	currentVideo.localFilePath,
+					// 	regionInfo.left,
+					// 	regionInfo.top,
+					// 	regionInfo.width,
+					// 	regionInfo.height,
+					// );
+					// currentVideo.playing = false;
 					break;
 				}
 
