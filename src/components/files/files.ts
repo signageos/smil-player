@@ -312,6 +312,9 @@ export class Files {
 						debug(`File was not found on remote server: %O `, filesList[i].src);
 						continue;
 					}
+
+					debug(`Fetched new last-modified header: %s for file: %O `, newLastModified, filesList[i].src);
+
 					if (isNil(filesList[i].lastModified)) {
 						filesList[i].lastModified = moment(newLastModified).valueOf();
 					}

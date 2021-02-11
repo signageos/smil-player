@@ -93,7 +93,7 @@ export function setDefaultAwaitWallclock(playlistElement: PlaylistElement): numb
 	const { timeToStart, timeToEnd } = parseSmilSchedule(playlistElement.begin!, playlistElement.end);
 	// found element which can be player right now
 	if (timeToStart <= 0 && timeToEnd > nowMillis) {
-		return 0;
+		return SMILScheduleEnum.playImmediately;
 	}
 	return SMILScheduleEnum.defaultAwait;
 }
@@ -107,7 +107,7 @@ export function setDefaultAwaitWallclock(playlistElement: PlaylistElement): numb
 export function setDefaultAwaitConditional(playlistElement: PlaylistElement, playerName: string, playerId: string): number {
 	// found element which can be player right now
 	if (!isConditionalExpExpired(playlistElement, playerName, playerId)) {
-		return 0;
+		return SMILScheduleEnum.playImmediately;
 	}
 	return SMILScheduleEnum.defaultAwait;
 }
@@ -122,25 +122,25 @@ export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: st
 	for (const loopElem of elementsArray) {
 		// no wallclock or expr specified
 		if (!loopElem.hasOwnProperty('begin') && !loopElem.hasOwnProperty('expr')) {
-			return 0;
+			return SMILScheduleEnum.playImmediately;
 		}
 
 		if (loopElem.hasOwnProperty('begin')) {
-			if (setDefaultAwaitWallclock(loopElem) === 0) {
+			if (setDefaultAwaitWallclock(loopElem) === SMILScheduleEnum.playImmediately) {
 				if (loopElem.hasOwnProperty('expr')) {
-					if (setDefaultAwaitConditional(loopElem, playerName, playerId) === 0) {
-						return 0;
+					if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
+						return SMILScheduleEnum.playImmediately;
 					} else {
 						return SMILScheduleEnum.defaultAwait;
 					}
 				}
-				return 0;
+				return SMILScheduleEnum.playImmediately;
 			}
 		}
 
 		if (loopElem.hasOwnProperty('expr') && !loopElem.hasOwnProperty('begin')) {
-			if (setDefaultAwaitConditional(loopElem, playerName, playerId) === 0) {
-				return 0;
+			if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
+				return SMILScheduleEnum.playImmediately;
 			}
 		}
 	}
@@ -578,7 +578,7 @@ export function isConditionalExpExpired(
 		element: SMILMediaSingle | PlaylistElement | PlaylistElement[], playerName: string = '', playerId: string = '',
 	): boolean {
 	if (Array.isArray(element)) {
-		return setDefaultAwait(element, playerName, playerId) !== 0;
+		return setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
 	}
 	return (element.hasOwnProperty(ConditionalExprEnum.exprTag) && !checkConditionalExp(element.expr!, playerName, playerId));
 }
