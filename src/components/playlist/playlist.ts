@@ -632,6 +632,7 @@ export class Playlist {
 
 			if (key === 'par') {
 				for (let [parKey, parValue] of Object.entries(<object> value)) {
+					debug('Processing playlist element with key: %O, parValue: %O', parKey, parValue);
 					let newParent = generateParentId(parKey);
 					if (XmlTags.extractedElements.includes(parKey)) {
 						const lastPlaylistElem: string = Object.entries(value)[Object.entries(value).length - 1][0];

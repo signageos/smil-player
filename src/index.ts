@@ -74,7 +74,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
 	} else {
 		// no intro
-		debug('No intro video found');
+		debug('No intro element found');
 		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 		await Promise.all(downloadPromises);
 		debug('SMIL media files download finished');
