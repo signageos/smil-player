@@ -550,13 +550,13 @@ export class Playlist {
 						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
 							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 							await sleep(SMILScheduleEnum.defaultAwait);
-							return;
+							continue;
 						}
 
 						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
 							debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
 							await sleep(SMILScheduleEnum.defaultAwait);
-							return;
+							continue;
 						}
 
 						if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
@@ -585,7 +585,7 @@ export class Playlist {
 					} else if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
 						debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
 						await sleep(SMILScheduleEnum.defaultAwait);
-						return;
+						continue;
 					} else if (value.repeatCount === 'indefinite'
 						&& value !== this.introObject
 						&& isNotPrefetchLoop(value)) {
@@ -1714,7 +1714,6 @@ export class Playlist {
 			parent = 'seq';
 		}
 		debug('Playing element with key: %O, value: %O', key, value);
-		console.timeEnd("code");
 		switch (key) {
 			case 'video':
 				if (Array.isArray(value)) {
