@@ -1,0 +1,7 @@
+{
+  "baseUrl": "http://192.168.0.94:8090",
+  "chromeWebSecurity": false,
+  "viewportHeight": 1080,
+  "viewportWidth": 1920,
+  "projectId": "smil-player"
+}
