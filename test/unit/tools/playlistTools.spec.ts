@@ -6,9 +6,9 @@ import {
 	parseSmilSchedule,
 	extractDayInfo,
 	setElementDuration,
-	getDefaultAwaitWallclock, extractAdditionalInfo, isNotPrefetchLoop,
+	extractAdditionalInfo, isNotPrefetchLoop,
 	getStringToIntDefault, generateParentId, getIndexOfPlayingMedia,
-	getLastArrayItem,
+	getLastArrayItem, setDefaultAwait,
 } from '../../../src/components/playlist/tools';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
@@ -298,7 +298,7 @@ describe('Playlist tools component', () => {
 			];
 
 			for (let i = 0; i < testSchedules.length; i += 1) {
-				const response = getDefaultAwaitWallclock(testSchedules[i]);
+				const response = setDefaultAwait(testSchedules[i]);
 				expect(response).to.be.equal(awaitTimes[i]);
 			}
 		});
