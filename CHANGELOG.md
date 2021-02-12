@@ -5,8 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- basic cypress tests support
+
 ### Fixed
 - fixed bug with file update blocked by wallclock functions
+- fixed bug with one playlist blocking another during wait
+- improved performance for LG devices
+
 
 ## [1.1.0] - 2021-01-26
 ### Added

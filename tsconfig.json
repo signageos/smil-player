@@ -5,6 +5,7 @@
 		"target": "es5",
 		"declaration": false,
 		"sourceMap": true,
+		"inlineSources": true,
 		"moduleResolution": "node",
 		"jsx": "react",
 		"pretty": true,
@@ -31,6 +32,7 @@
 		"libs/chrome/chrome-plugin.d.ts"
 	],
 	"exclude": [
-		"src/webWorker.ts"
+		"src/webWorker.ts",
+		"cypress/**/*.ts"
 	]
 }

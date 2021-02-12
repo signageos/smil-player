@@ -47,6 +47,7 @@
 - supports media scheduling using wallclock definition
 - supports playing media loops using repeatCount attribute, possible to combine with wallclock
 - supports sensors-based triggers
+- supports conditional expressions
 
 ## NOT supported features
 - not able to process files stored in local storage
