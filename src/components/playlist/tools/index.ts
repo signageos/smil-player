@@ -657,6 +657,11 @@ function parseWeekDayExpr(element: string, weekDay: string, isUtc: boolean): boo
 		firstArgument = parseInt(element.slice(0, 1));
 		secondArgument = generateCurrentDate(isUtc).day();
 		comparator = element.slice(0, element.indexOf(weekDay[0])).slice(1);
+		// in case string contains two g characters, one in comparator &gt; and one in weekDay identifier gmweekday
+		// we need to split by second character
+		if ((element.match(/g/g) || []).length >= 2) {
+			comparator = element.slice(0, getPosition(element, weekDay[0], 2)).slice(1);
+		}
 		return compareValues(firstArgument, secondArgument, comparator);
 	}
 }
@@ -761,12 +766,12 @@ function parseSubstringExpr(argument: string): string {
 function parseConditionalExp(elementExpr: string, playerName: string = '', playerId: string = '') {
 	let element = removeUnnecessaryCharacters(elementExpr);
 
-	if (element.indexOf(ConditionalExprEnum.weekDay) > -1) {
-		return parseWeekDayExpr(element, ConditionalExprEnum.weekDay, false);
-	}
-
 	if (element.indexOf(ConditionalExprEnum.weekDayUtc) > -1) {
 		return parseWeekDayExpr(element, ConditionalExprEnum.weekDayUtc, true);
+	}
+
+	if (element.indexOf(ConditionalExprEnum.weekDay) > -1) {
+		return parseWeekDayExpr(element, ConditionalExprEnum.weekDay, false);
 	}
 
 	if (element.indexOf(ConditionalExprEnum.compareConst) > -1) {
@@ -826,6 +831,7 @@ function removeUnnecessaryCharacters(expr: string): string {
 	parsedExpr = parsedExpr.replace(/\'/g, '');
 	parsedExpr = parsedExpr.replace(/>/g, '&gt;');
 	parsedExpr = parsedExpr.replace(/</g, '&lt;');
+	parsedExpr = parsedExpr.replace(/adapi-/g, '');
 
 	return parsedExpr;
 }
