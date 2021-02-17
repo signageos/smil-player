@@ -82,13 +82,13 @@ export enum TimedMediaResponseEnum {
 
 export enum ConditionalExprEnum {
 	exprTag = 'expr',
-	compareConst = 'adapi-compare',
-	currentDate = 'adapi-date',
-	currentDateUTC = 'adapi-gmdate',
+	compareConst = 'compare',
+	currentDate = 'date',
+	currentDateUTC = 'gmdate',
 	substringAfter = 'substring-after',
 	substring = 'substring',
-	weekDay = 'adapi-weekday',
-	weekDayUtc = 'adapi-gmweekday',
+	weekDay = 'weekday',
+	weekDayUtc = 'gmweekday',
 	playerId = 'smil-playerId',
 	playerName = 'smil-playerName',
 	dateFormat = 'YYYY-MM-DD',
