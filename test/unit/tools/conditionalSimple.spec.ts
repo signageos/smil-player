@@ -283,12 +283,10 @@ describe('Playlist tools checkConditionalExp', () => {
 			expect(checkConditionalExp(testExpression)).to.be.equal(true);
 
 			dayOfWeek = moment().isoWeekday();
-			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}&lt;adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()
-			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0`;
+			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}&lt;adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()`;
 			expect(checkConditionalExp(testExpression)).to.be.equal(false);
 
-			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}=adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()
-			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0`;
+			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}=adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()`;
 			expect(checkConditionalExp(testExpression)).to.be.equal(true);
 		});
 	});
