@@ -2,6 +2,8 @@ import Debug from 'debug';
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import cloneDeep = require('lodash/cloneDeep');
+import split from "split-string";
+
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -584,40 +586,55 @@ export function isConditionalExpExpired(
 }
 
 /**
+ * parses nested conditional expression - removes unnecessary characters and replaces AND and OR operators as well as [ ]
+ * @param expresion
+ */
+function removeCharactersNestedExpr(expresion: string): string {
+	let parsedExpr = expresion;
+	parsedExpr = parsedExpr.replace(/\s/g, '');
+	// split-string module can only split by one character, so its necessary to replace AND, OR strings with another characters
+	parsedExpr = parsedExpr.replace(/and|AND/g, '!');
+	parsedExpr = parsedExpr.replace(/or|OR/g, '?');
+	// remove brackets for strings like [ condition ]
+	if (parsedExpr[0] === '[') {
+		parsedExpr = parsedExpr.substring(1);
+	}
+
+	if (parsedExpr[parsedExpr.length - 1] === ']') {
+		parsedExpr = parsedExpr.slice(0, - 1);
+	}
+	return parsedExpr;
+}
+
+/**
  * Checks if conditional expression evaluates true or false
  * @param expresion - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
  * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
  * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
  */
 export function checkConditionalExp(expresion: string, playerName: string = '', playerId: string = ''): boolean {
-	let conditionOperator = '';
-	let conditionArray: string[];
-	conditionArray = [expresion];
-	if (expresion.indexOf(' and ') > -1) {
-		conditionArray = expresion.split(' and ');
-		conditionOperator = 'and';
-	}
+	let parsedExpr = removeCharactersNestedExpr(expresion);
 
-	if (expresion.indexOf(' or ') > -1) {
-		conditionArray = expresion.split(' or ');
-		conditionOperator = 'or';
-	}
-
-	for (const element of conditionArray) {
-		const response = parseConditionalExp(element, playerName, playerId);
-		if (!response && conditionOperator !== 'or') {
-			return false;
+	const splitByAnd = split(parsedExpr, { brackets: {'[': ']'}, separator: '!'});
+	if (splitByAnd.length > 1) {
+		for (const element of splitByAnd) {
+			if (!checkConditionalExp(element, playerName, playerId)) {
+				return false;
+			}
 		}
-
-		if (response && conditionOperator !== 'and') {
-			return true;
-		}
+		return true;
 	}
-	/**
-	 * if condition operator is "and" and no false condition was found, return true. Otherwise return false,
-	 * because composed OR condition or single condition would return true value earlier.
-	 */
-	return conditionOperator === 'and';
+	const splitByOr = split(parsedExpr, { brackets: {'[': ']'}, separator: '?'});
+	if (splitByOr.length > 1) {
+		for (const element of splitByOr) {
+			if (checkConditionalExp(element, playerName, playerId)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	return parseConditionalExp(parsedExpr, playerName, playerId);
 }
 
 /**
@@ -804,6 +821,8 @@ function removeUnnecessaryCharacters(expr: string): string {
 	parsedExpr = parsedExpr.replace(/\s/g, '');
 	parsedExpr = parsedExpr.replace(/\)/g, '');
 	parsedExpr = parsedExpr.replace(/\(/g, '');
+	parsedExpr = parsedExpr.replace(/\[/g, '');
+	parsedExpr = parsedExpr.replace(/\]/g, '');
 	parsedExpr = parsedExpr.replace(/\'/g, '');
 	parsedExpr = parsedExpr.replace(/>/g, '&gt;');
 	parsedExpr = parsedExpr.replace(/</g, '&lt;');
