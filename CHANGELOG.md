@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - basic cypress tests support
+- advanced conditional expression conditions
 
 ### Fixed
 - fixed bug with file update blocked by wallclock functions
