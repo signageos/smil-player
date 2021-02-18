@@ -207,6 +207,94 @@ describe('Playlist tools checkConditionalExp', () => {
 		});
 	});
 
+	describe('Playlist tools component checkConditionalExp time tests', () => {
+		it('Should return correct response', () => {
+			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
+			let testExpression = `adapi-compare(\'${dayTime}\', time())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(\''${dayTime}\', time())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(time(), \''${dayTime}\')&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(\''${dayTime}\', time()))&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(time(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(time(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(time(), \''${dayTime}\')&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(time(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(\''${dayTime}\', time())&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(\''${dayTime}\', time())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+		});
+	});
+
+	describe('Playlist tools component checkConditionalExp gmtime tests', () => {
+		it('Should return correct response', () => {
+			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
+			let testExpression = `adapi-compare(\'${dayTime}\', gmtime())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(\''${dayTime}\', gmtime())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(gmtime(), \''${dayTime}\')&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(\''${dayTime}\', gmtime()))&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(gmtime(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
+			testExpression = `adapi-compare(gmtime(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(gmtime(), \''${dayTime}\')&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(gmtime(), \''${dayTime}\')&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(\''${dayTime}\', gmtime())&gt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(false);
+
+			dayTime = moment().subtract(1, 'hour').format('HH:mm');
+			testExpression = `adapi-compare(\''${dayTime}\', gmtime())&lt;=0`;
+			expect(checkConditionalExp(testExpression)).to.be.equal(true);
+		});
+	});
+
 	describe('Playlist tools component checkConditionalExp adapi-compare - substringAfter tests', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
