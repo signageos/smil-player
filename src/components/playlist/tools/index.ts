@@ -133,7 +133,7 @@ export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: st
 					if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
 						return SMILScheduleEnum.playImmediately;
 					} else {
-						return SMILScheduleEnum.defaultAwait;
+						continue;
 					}
 				}
 				return SMILScheduleEnum.playImmediately;
@@ -633,7 +633,6 @@ export function checkConditionalExp(expresion: string, playerName: string = '', 
 		}
 		return false;
 	}
-
 	return parseConditionalExp(parsedExpr, playerName, playerId);
 }
 
@@ -657,6 +656,11 @@ function parseWeekDayExpr(element: string, weekDay: string, isUtc: boolean): boo
 		firstArgument = parseInt(element.slice(0, 1));
 		secondArgument = generateCurrentDate(isUtc).day();
 		comparator = element.slice(0, element.indexOf(weekDay[0])).slice(1);
+		// in case string contains two g characters, one in comparator &gt; and one in weekDay identifier gmweekday
+		// we need to split by second character
+		if ((element.match(/g/g) || []).length >= 2) {
+			comparator = element.slice(0, getPosition(element, weekDay[0], 2)).slice(1);
+		}
 		return compareValues(firstArgument, secondArgument, comparator);
 	}
 }
@@ -669,17 +673,42 @@ function parseWeekDayExpr(element: string, weekDay: string, isUtc: boolean): boo
  * @param isUtc -  if date is in UTC or not
  */
 function parseSimpleDateExpr(firstArgument: string, secondArgument: string, comparator: string, isUtc: boolean): boolean {
-	if (firstArgument === ConditionalExprEnum.currentDate) {
+	if (firstArgument === ConditionalExprEnum.currentDate || firstArgument === ConditionalExprEnum.currentDateUTC) {
 		firstArgument = generateCurrentDate(isUtc).format(ConditionalExprEnum.dateFormat);
 		if (isIsoDate(secondArgument)) {
 			secondArgument = moment(secondArgument).format(ConditionalExprEnum.dateFormat);
 		}
 	}
 
-	if (secondArgument === ConditionalExprEnum.currentDate) {
+	if (secondArgument === ConditionalExprEnum.currentDate || firstArgument === ConditionalExprEnum.currentDateUTC) {
 		secondArgument = generateCurrentDate(isUtc).format(ConditionalExprEnum.dateFormat);
 		if (isIsoDate(firstArgument)) {
 			firstArgument = moment(firstArgument).format(ConditionalExprEnum.dateFormat);
+		}
+	}
+
+	return compareValues(firstArgument, secondArgument, comparator);
+}
+
+/**
+ * Evaluates expression comparing two times expr="adapi-compare(time(),'19:00:00')&lt;0"
+ * @param firstArgument - simple time expression time() or date specified 19:00:00
+ * @param secondArgument - simple time expression time() or date specified 19:00:00
+ * @param comparator - specified how to compare two dates ( &lt; , &lt;=, =, &gt;=, &gt; )
+ * @param isUtc -  if time is in UTC or not
+ */
+function parseSimpleTimeExpr(firstArgument: string, secondArgument: string, comparator: string, isUtc: boolean): boolean {
+	if (firstArgument === ConditionalExprEnum.currentTime || firstArgument === ConditionalExprEnum.currentTimeUTC) {
+		firstArgument = generateCurrentDate(isUtc).format(ConditionalExprEnum.timeFormat);
+		if (isValidTime(secondArgument)) {
+			secondArgument = moment(secondArgument, ConditionalExprEnum.timeFormat).format(ConditionalExprEnum.timeFormat);
+		}
+	}
+
+	if (secondArgument === ConditionalExprEnum.currentTime || secondArgument === ConditionalExprEnum.currentTimeUTC) {
+		secondArgument = generateCurrentDate(isUtc).format(ConditionalExprEnum.timeFormat);
+		if (isValidTime(firstArgument)) {
+			firstArgument = moment(firstArgument, ConditionalExprEnum.timeFormat).format(ConditionalExprEnum.timeFormat);
 		}
 	}
 
@@ -761,12 +790,12 @@ function parseSubstringExpr(argument: string): string {
 function parseConditionalExp(elementExpr: string, playerName: string = '', playerId: string = '') {
 	let element = removeUnnecessaryCharacters(elementExpr);
 
-	if (element.indexOf(ConditionalExprEnum.weekDay) > -1) {
-		return parseWeekDayExpr(element, ConditionalExprEnum.weekDay, false);
+	if (element.indexOf(ConditionalExprEnum.weekDayUTC) > -1) {
+		return parseWeekDayExpr(element, ConditionalExprEnum.weekDayUTC, true);
 	}
 
-	if (element.indexOf(ConditionalExprEnum.weekDayUtc) > -1) {
-		return parseWeekDayExpr(element, ConditionalExprEnum.weekDayUtc, true);
+	if (element.indexOf(ConditionalExprEnum.weekDay) > -1) {
+		return parseWeekDayExpr(element, ConditionalExprEnum.weekDay, false);
 	}
 
 	if (element.indexOf(ConditionalExprEnum.compareConst) > -1) {
@@ -793,7 +822,17 @@ function parseConditionalExp(elementExpr: string, playerName: string = '', playe
 
 		if (firstArgument === ConditionalExprEnum.currentDateUTC ||
 			secondArgument === ConditionalExprEnum.currentDateUTC) {
-			return parseSimpleDateExpr(firstArgument, secondArgument, comparator, false);
+			return parseSimpleDateExpr(firstArgument, secondArgument, comparator, true);
+		}
+
+		if (firstArgument === ConditionalExprEnum.currentTime ||
+			secondArgument === ConditionalExprEnum.currentTime) {
+			return parseSimpleTimeExpr(firstArgument, secondArgument, comparator, false);
+		}
+
+		if (firstArgument === ConditionalExprEnum.currentTimeUTC ||
+			secondArgument === ConditionalExprEnum.currentTimeUTC) {
+			return parseSimpleTimeExpr(firstArgument, secondArgument, comparator, true);
 		}
 
 		if (typeof firstArgument === 'string' && firstArgument.startsWith(ConditionalExprEnum.substringAfter)) {
@@ -826,6 +865,7 @@ function removeUnnecessaryCharacters(expr: string): string {
 	parsedExpr = parsedExpr.replace(/\'/g, '');
 	parsedExpr = parsedExpr.replace(/>/g, '&gt;');
 	parsedExpr = parsedExpr.replace(/</g, '&lt;');
+	parsedExpr = parsedExpr.replace(/adapi-/g, '');
 
 	return parsedExpr;
 }
@@ -853,6 +893,10 @@ function isIsoDate(dateString: string) {
 	let d = moment(dateString).utc(true);
 	const stringDate = d.toISOString().indexOf('Z') > -1 ? d.toISOString().substring(0, d.toISOString().length - 5) : d.toISOString();
 	return stringDate === dateString;
+}
+
+function isValidTime(timeString: string) {
+	return /(?:[01]\d|2[0123]):(?:[012345]\d)(:[012345]\d)/.test(timeString);
 }
 
 function generateCurrentDate(utc: boolean) {
