@@ -133,7 +133,7 @@ export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: st
 					if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
 						return SMILScheduleEnum.playImmediately;
 					} else {
-						return SMILScheduleEnum.defaultAwait;
+						continue;
 					}
 				}
 				return SMILScheduleEnum.playImmediately;
@@ -633,7 +633,6 @@ export function checkConditionalExp(expresion: string, playerName: string = '', 
 		}
 		return false;
 	}
-
 	return parseConditionalExp(parsedExpr, playerName, playerId);
 }
 
