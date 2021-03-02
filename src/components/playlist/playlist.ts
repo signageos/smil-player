@@ -1931,7 +1931,8 @@ export class Playlist {
 			// break only if priority level is not same, because if it is, peer priority which comes later in
 			// playlist is playing, and previous playlist cannot cancel it
 			if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].priority.priorityLevel
-				!== priorityObject.priorityLevel) {
+				<  priorityObject.priorityLevel) {
+				debug('Stop behaviour: breaking from stop lock');
 				break;
 			}
 			debug('New found playlist has same priority, wait for it to finish, setting stop behaviour for playlist: %O'
