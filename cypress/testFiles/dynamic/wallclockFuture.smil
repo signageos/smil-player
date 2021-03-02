@@ -1,0 +1,68 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="444" />
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF" />
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF" mediaAlign="topLeft" />
+        </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/play/report/?player=99</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
+    </head>
+
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <!-- Paralel playback sequence, all below is happening at the same time -->
+        <par>
+            <!-- Preloader to show something before the full content is loaded and ready -->
+            <!-- This <seq> will happend first followed by the next seq -->
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/loader.mp4" />
+                </seq>
+            </seq>
+
+            <!-- Once all ready, the playback of the full content will start -->
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl repeatCount="indefinite">
+                    <priorityClass lower="never" peer="stop" higher="stop">
+                        <!-- Scheduled playback loop -->
+                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                            <seq repeatCount="indefinite">
+                                <excl begin="0" repeatCount="indefinite">
+                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
+                                        <par begin="PRIORITY_1_BEGIN" end="PRIORITY_1_END">
+                                            <seq repeatCount="indefinite">
+                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto" />
+                                                </video>
+                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto" />
+                                                </img>
+                                            </seq>
+                                        </par>
+                                    </priorityClass>
+                                </excl>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                </excl> <!-- 1 -->
+            </par>
+        </par> <!-- /1 -->
+    </body>
+</smil>

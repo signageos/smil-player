@@ -1,0 +1,42 @@
+<smil>
+	<head>
+		<meta http-equiv="refresh" content="20"/>
+		<layout>
+			<!-- define the screen resolution -->
+			<root-layout width="1920" height="1080" backgroundColor="#18182c" />
+
+			<!-- define the screen layout zones in relative % -->
+			<region regionName="main" left="25%" top="25%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+		</layout>
+	</head>
+	<body>
+		<par>
+
+			<!-- Play this intro video as long as the resources being prefetched -->
+			<seq end="__prefetchEnd.endEvent">
+				<seq repeatCount="indefinite">
+					<!-- Play waiting prompt -->
+					<video src="assets/loader.mp4" />
+				</seq>
+			</seq>
+
+			<!-- Downloading resources into the internal storage -->
+			<seq>
+				<prefetch src="./assets/landscape1.mp4" />
+				<prefetch src="./assets/landscape2.mp4" />
+				<prefetch src="./assets/landscape1.jpg" />
+				<prefetch src="./assets/landscape2.jpg" />
+				<seq id="__prefetchEnd" dur="1s" />
+			</seq>
+
+			<!-- Wait for the prefetch of media files, once done, start the playback -->
+			<par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+
+				<!-- indefinite loop of media files in the selected order -->
+				<seq repeatCount="indefinite">
+					<video src="assets/landscape1.mp4" region="main" soundLevel="0%" fit="fill"></video>
+				</seq>
+			</par>
+		</par>
+	</body>
+</smil>
