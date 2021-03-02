@@ -1,23 +1,36 @@
 export enum CypressTimeouts {
 	submitTimeout = 500,
+	transitionTimeout = 1000,
 	// duration of media in tests, in 5 seconds one media will finish and will be replaced by another
 	videoTransitionTimeout = 5300,
 	imageTransitionTimeout = 3300,
 	elementAwaitTimeout = 10000,
+	longerElementAwaitTimeout = 15000,
+}
+
+export enum TestServer {
+	port = 3000,
+	assetsPath = 'cypress/testFiles/assets',
+	dynamicTestFilesPath = 'cypress/testFiles/dynamic',
+	testFilesPath = 'cypress/testFiles',
 }
 
 export enum SMILUrls {
-	zones= 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/zonesCypress.smil',
-	noActiveSeq= 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockNoActiveSeq.smil',
-	noActivePar= 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockNoActivePar.smil',
-	wallclockFixedSeqWebsite = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockFixedSeqWebsite.smil',
-	wallclockFixedParWebsite = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockFixedParWebsite.smil',
-	wallclockConditionalSeq = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockConditionalSeq.smil',
-	wallclockConditionalPar = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/wallclockConditionalPar.smil',
-	repeatCountNoIntro = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/repeatCountNoIntro.smil',
-	repeatCountIntroVideo = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/repeatCountIntroVideo.smil',
-	repeatCountIntroImage = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/repeatCountIntroImage.smil',
-	conditionalMediaElement = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/conditionalMediaElement.smil',
-	introFirstVideoSame = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/introFirstVideoSame.smil',
-	relativeFilePaths = 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cypress-e2e/07-relative-file-paths.smil',
+	zones = 'http://localhost:3000/zonesCypress.smil',
+	noActiveSeq = 'http://localhost:3000/wallclockNoActiveSeq.smil',
+	noActivePar = 'http://localhost:3000/wallclockNoActivePar.smil',
+	wallclockFixedSeqWebsite = 'http://localhost:3000/wallclockFixedSeqWebsite.smil',
+	wallclockFixedParWebsite = 'http://localhost:3000/wallclockFixedParWebsite.smil',
+	wallclockConditionalSeq = 'http://localhost:3000/wallclockConditionalSeq.smil',
+	wallclockConditionalPar = 'http://localhost:3000/wallclockConditionalPar.smil',
+	repeatCountNoIntro = ' http://localhost:3000/repeatCountNoIntro.smil',
+	repeatCountIntroVideo = 'http://localhost:3000/repeatCountIntroVideo.smil',
+	repeatCountIntroImage = 'http://localhost:3000/repeatCountIntroImage.smil',
+	conditionalMediaElement = 'http://localhost:3000/conditionalMediaElement.smil',
+	introFirstVideoSame = 'http://localhost:3000/introFirstVideoSame.smil',
+	relativeFilePaths = 'http://localhost:3000/relativeFilePaths.smil',
+	priorityStop = 'http://localhost:3000/dynamic/priorityStop.smil',
+	priorityPause = 'http://localhost:3000/dynamic/priorityPause.smil',
+	priorityDefer = 'http://localhost:3000/dynamic/priorityDefer.smil',
+	wallclockFuture = 'http://localhost:3000/dynamic/wallclockFuture.smil',
 }

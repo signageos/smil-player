@@ -3,20 +3,20 @@ import Chainable = Cypress.Chainable;
 export function testVisible(element: Chainable) {
 	element.then($header => {
 		if ($header.is(':visible')) {
-			assert.isOk('visibility', 'element is VISIBLE at this moment');
+			assert.isOk('visibility', `element is VISIBLE at this moment ${$header.src}`);
 			return;
 		}
-		assert.isNotOk('invisibility', 'element is INVISIBLE at this moment');
+		assert.isNotOk('invisibility', `element is INVISIBLE at this moment ${$header.src}`);
 	});
 }
 
 export function testInvisible(element: Chainable) {
 	element.then($header => {
 		if ($header.is(':visible')) {
-			assert.isNotOk('visibility', 'element is VISIBLE at this moment');
+			assert.isNotOk('visibility', `element is VISIBLE at this moment ${$header.src}`);
 			return;
 		}
-		assert.isOk('invisibility', 'element is INVISIBLE at this moment');
+		assert.isOk('invisibility', `element is INVISIBLE at this moment ${$header.src}`);
 	});
 }
 
