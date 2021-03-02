@@ -562,7 +562,7 @@ export function checkSlowDevice(deviceType: string): boolean {
 }
 
 export function getLastArrayItem(array: any[]): any {
-	return array[array.length - 1];
+	return array.pop();
 }
 
 // seq-98665

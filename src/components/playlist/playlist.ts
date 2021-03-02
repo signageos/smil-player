@@ -1099,6 +1099,7 @@ export class Playlist {
 		): Promise<TimedMediaResponse> => {
 
 		// set invisible previous element in region for gapless playback if it differs from current element
+		// TODO: check also default region
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
 			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
 			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
@@ -1277,7 +1278,7 @@ export class Playlist {
 						);
 				}
 
-				debug('Starting playing video onceEnded function: %O', currentVideo);
+				debug('Starting playing video onceEnded function - multiple videos: %O', currentVideo);
 
 				const promiseRaceArray = [];
 				promiseRaceArray.push(this.sos.video.onceEnded(
@@ -1288,6 +1289,7 @@ export class Playlist {
 					regionInfo.height,
 				));
 				if (get(currentVideo, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+					debug('Got duration: %s for video: %O', currentVideo.dur!, currentVideo);
 					promiseRaceArray.push(sleep(currentVideo.dur! + SMILEnums.videoDurationOffset));
 				}
 				/*
@@ -1464,7 +1466,7 @@ export class Playlist {
 
 			this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
 
-			debug('Starting playing video onceEnded function: %O', video);
+			debug('Starting playing video onceEnded function - single video: %O', video);
 
 			const promiseRaceArray = [];
 			promiseRaceArray.push(this.sos.video.onceEnded(
@@ -1479,6 +1481,7 @@ export class Playlist {
 			// so playback can continue
 			// TODO: fix in webos app
 			if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+				debug('Got duration: %s for video: %O', video.dur!, video);
 				promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
 			}
 
