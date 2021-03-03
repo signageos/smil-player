@@ -1,4 +1,4 @@
-import { doesNotExist, testCoordinates, testVisible } from '../../tools/tools';
+import { doesNotExist, testCoordinates } from '../../tools/tools';
 import { CypressTimeouts, SMILUrls } from '../../enums/enums';
 
 describe("relativeFilePaths.smil test", () => {
@@ -17,7 +17,7 @@ describe("relativeFilePaths.smil test", () => {
 		cy.wait(CypressTimeouts.videoTransitionTimeout);
 		cy.wait(CypressTimeouts.videoTransitionTimeout);
 
-		testVisible(cy.get('video[src*="videos/landscape1.mp4"]'));
+		cy.get('video[src*="videos/landscape1.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		testCoordinates(cy.get('video[src*="videos/landscape1.mp4"]'), 270, 480, 960, 540);
 
 	});
