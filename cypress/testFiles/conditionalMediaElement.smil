@@ -1,0 +1,76 @@
+<smil>
+	<head>
+		<meta http-equiv="refresh" content="20"/>
+		<layout>
+			<!-- define the screen resolution -->
+			<root-layout width="1920" height="1080" backgroundColor="#18182c" />
+
+			<!-- define the screen layout zones in relative % -->
+			<region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+			<region regionName="bottom-left" left="0" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+			<region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+			<region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+		</layout>
+	</head>
+	<body>
+		<par>
+
+			<!-- Play this intro video as long as the resources being prefetched -->
+			<seq end="__prefetchEnd.endEvent">
+				<seq repeatCount="indefinite">
+					<!-- Play waiting prompt -->
+					<video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+				</seq>
+			</seq>
+
+			<!-- Downloading resources into the internal storage -->
+			<seq>
+				<prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
+				<prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" />
+				<prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
+				<prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
+				<seq id="__prefetchEnd" dur="1s" />
+			</seq>
+
+			<par repeatCount="indefinite">
+
+				<par repeatCount="indefinite">
+					<!-- video plays, image does not -->
+					<seq>
+						<video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="top-left" soundLevel="0%" expr="adapi-weekday()&lt;=9"></video>
+						<img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-left" fit="fill" expr="adapi-weekday()&gt;=9"></img>
+					</seq>
+				</par>
+
+				<par repeatCount="indefinite">
+					<!-- image plays, video does not -->
+					<seq>
+						<video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="top-right" soundLevel="0%" expr="adapi-weekday()&gt;=9"></video>
+						<img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-right" fit="fill" expr="adapi-weekday()&lt;=9"></img>
+					</seq>
+				</par>
+
+				<par repeatCount="indefinite">
+					<!-- images play, second video does not -->
+					<seq>
+						<video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="bottom-left" soundLevel="0%"></video>
+						<video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="bottom-left" soundLevel="0%" expr="adapi-weekday()&gt;=9"></video>
+						<img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="bottom-left" fit="fill"></img>
+						<img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="bottom-left" fit="fill" expr="adapi-weekday()&lt;=9"></img>
+					</seq>
+				</par>
+
+				<par>
+					<!-- videos play, first image does not -->
+					<seq repeatCount="indefinite">
+						<video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="bottom-right" soundLevel="0%" expr="adapi-weekday()&lt;=9"></video>
+						<video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="bottom-right" soundLevel="0%"></video>
+						<img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="bottom-right" fit="fill" expr="adapi-weekday()&gt;=9"></img>
+						<img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="bottom-right" fit="fill"></img>
+					</seq>
+				</par>
+
+			</par>
+		</par>
+	</body>
+</smil>
