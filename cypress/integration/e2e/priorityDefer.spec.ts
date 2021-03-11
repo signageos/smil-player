@@ -27,10 +27,6 @@ describe("priorityDefer.smil test", () => {
 		cy.iframe().find('img[src*="images/img_3.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		cy.get('video[src*="videos/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		testCoordinates(cy.get('video[src*="videos/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"]'), 0, 0, 1280, 720);
-		cy.wait(CypressTimeouts.videoTransitionTimeout);
-
-		cy.get('video[src*="videos/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.get('video[src*="videos/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"]'), 0, 0, 1280, 720);
 
 		cy.get('video[src*="videos/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		cy.iframe().find('img[src*="images/img_1.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
