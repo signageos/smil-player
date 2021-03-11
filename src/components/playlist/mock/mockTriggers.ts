@@ -72,7 +72,8 @@ export const mockSMILFileTriggers = {
 											begin: "0",
 											par: [{
 												repeatCount: "indefinite",
-												seq: [{dur: "60s"}, {prefetch: [{src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}]}],
+												seq: [{dur: "60s"}, {prefetch: [
+													{src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}]}],
 											}, {
 												seq: {
 													repeatCount: "1",
