@@ -915,3 +915,11 @@ function generateCurrentDate(utc: boolean) {
 function getPosition(string: string, subString: string, count: number) {
 	return string.split(subString, count).join(subString).length;
 }
+
+export function isPromise(promise: any) {
+	return !!promise && typeof promise.then === 'function';
+}
+
+export function removeDigits(expr: string): string {
+	return expr.replace(/[0-9]/g, '');
+}
