@@ -24,7 +24,10 @@ import { removeDigits } from '../playlist/tools';
 
 let tagNameCounter = 0;
 
-// adds unique number to each media attribute in json eg. video => video0
+/**
+ * adds unique number to each media attribute in json eg. video => video0
+ * @param tagName name of tag ( seq, par, video etc..)
+ */
 export function tagNameSuffix(tagName: string): string {
 	if (XmlTags.extractedElements.includes(tagName)) {
 		return `${tagName}${tagNameCounter++}`;
