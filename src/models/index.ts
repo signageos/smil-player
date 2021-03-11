@@ -241,6 +241,7 @@ export type CurrentlyPlaying = {
 
 export type PlayingInfo = {
 	player?: string,
+	promiseFunction?: any[],
 } & SosHtmlElement & SMILVideo;
 
 export type MediaInfoObject = {
