@@ -54,7 +54,7 @@ export const mockSMILFileTriggers = {
 				end: "__prefetchEnd.endEvent",
 				seq: {
 					repeatCount: "indefinite",
-					video: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
+					video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
 				},
 			}, {
 				prefetch: [{src: "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/9820.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}],
@@ -72,29 +72,27 @@ export const mockSMILFileTriggers = {
 											begin: "0",
 											par: [{
 												repeatCount: "indefinite",
-												seq: [{dur: "60s"}, {
-													prefetch: [
-														{src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}],
-												}],
+												seq: [{dur: "60s"}, {prefetch: [{src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}]}],
 											}, {
 												seq: {
 													repeatCount: "1",
-													video: [{
+													video1: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4",
 														type: "application/widget",
 														region: "video",
 														param: {name: "cacheControl", value: "onlyIfCached"},
-													}, {
+													},
+													video2: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4",
 														type: "application/widget",
 														region: "video",
 														param: {name: "cacheControl", value: "onlyIfCached"},
-													}],
+													},
 												},
 											}, {
 												seq: {
 													begin: "trigger",
-													img: {
+													img3: {
 														src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png",
 														region: "widget13",
 														dur: "60s",
@@ -104,36 +102,38 @@ export const mockSMILFileTriggers = {
 											}, {
 												seq: {
 													begin: "trigger2",
-													video: [{
+													video4: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 														id: "annons1",
 														fit: "hidden",
 														region: "video",
 														param: {name: "cacheControl", value: "auto"},
-													}, {
+													},
+													video5: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 														id: "annons1",
 														fit: "hidden",
 														region: "video",
 														param: {name: "cacheControl", value: "auto"},
-													}],
+													},
 												},
 											}, {
 												seq: {
 													begin: "trigger3",
-													video: [{
+													video6: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 														id: "annons1",
 														fit: "hidden",
 														region: "video",
 														param: {name: "cacheControl", value: "auto"},
-													}, {
+													},
+													video7: {
 														src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4",
 														id: "annons1",
 														fit: "hidden",
 														region: "video",
 														param: {name: "cacheControl", value: "auto"},
-													}],
+													},
 												},
 											}],
 										},
@@ -174,62 +174,27 @@ export const mockSMILFileTriggers = {
 	audio: [],
 	intro: [{
 		repeatCount: "indefinite",
-		video: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
+		video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
 	}],
-	sensors: [
-		{
-			address: "003",
-			driver: "nexmosphere",
-			id: "rfid1",
-			type: "rfid",
-		},
-		{
-			address: "005",
-			driver: "nexmosphere",
-			id: "rfid2",
-			type: "rfid",
-		},
-		{
-			address: "007",
-			test5: "111",
-			driver: "nexmosphere",
-			id: "rfid3",
-			type: "rfid",
-		},
-	],
+	sensors: [{type: "rfid", id: "rfid1", driver: "nexmosphere", address: "003"}, {
+		type: "rfid",
+		id: "rfid2",
+		driver: "nexmosphere",
+		address: "005",
+	}, {type: "rfid", id: "rfid3", driver: "nexmosphere", address: "007", test5: "111"}],
 	triggerSensorInfo: {
 		"rfid1-1": {
-			condition: [
-				{
-					action: "placed",
-				},
-			],
-			stringCondition: "or",
 			trigger: "trigger3",
-		},
-		"rfid2-2": {
-			condition: [
-				{
-					action: "placed",
-				},
-			],
 			stringCondition: "or",
-			trigger: "trigger3",
+			condition: [{action: "placed"}],
 		},
-		"rfid3-3": {
-			condition: [
-				{
-					action: "placed",
-				},
-			],
-			stringCondition: "or",
-			trigger: "trigger2",
-		},
+		"rfid2-2": {trigger: "trigger3", stringCondition: "or", condition: [{action: "placed"}]},
+		"rfid3-3": {trigger: "trigger2", stringCondition: "or", condition: [{action: "placed"}]},
 	},
 	triggers: {
 		trigger: {
 			begin: "trigger",
-			img: {
+			img3: {
 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png",
 				region: "widget13",
 				dur: "60s",
@@ -238,35 +203,37 @@ export const mockSMILFileTriggers = {
 		},
 		trigger2: {
 			begin: "trigger2",
-			video: [{
+			video4: {
 				src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 				id: "annons1",
 				fit: "hidden",
 				region: "video",
 				param: {name: "cacheControl", value: "auto"},
-			}, {
+			},
+			video5: {
 				src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 				id: "annons1",
 				fit: "hidden",
 				region: "video",
 				param: {name: "cacheControl", value: "auto"},
-			}],
+			},
 		},
 		trigger3: {
 			begin: "trigger3",
-			video: [{
+			video6: {
 				src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
 				id: "annons1",
 				fit: "hidden",
 				region: "video",
 				param: {name: "cacheControl", value: "auto"},
-			}, {
+			},
+			video7: {
 				src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4",
 				id: "annons1",
 				fit: "hidden",
 				region: "video",
 				param: {name: "cacheControl", value: "auto"},
-			}],
+			},
 		},
 	},
 };
