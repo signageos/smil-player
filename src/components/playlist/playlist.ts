@@ -42,7 +42,7 @@ import { getFileName, getRandomInt } from '../files/tools';
 import {
 	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
 	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
-	generateElementId, createDomElement, checkSlowDevice, createPriorityObject,
+	generateElementId, createDomElement, removeDigits, createPriorityObject,
 	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired,
 } from './tools';
 import { Files } from '../files/files';
@@ -128,15 +128,21 @@ export class Playlist {
 	public playIntro = async (
 		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
 	): Promise<void> => {
-		let media: string = HtmlEnum.video;
-		let fileStructure: string = FileStructure.videos;
+		let media: string = '';
+		let fileStructure: string = '';
 		let downloadPromises: Promise<Function[]>[] = [];
 		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
-		// play image
-		if (smilObject.intro[0].hasOwnProperty(HtmlEnum.img)) {
-			media = HtmlEnum.img;
-			fileStructure = FileStructure.images;
+		for (const property in smilObject.intro[0]) {
+			if (property.startsWith(HtmlEnum.video)) {
+				media = property;
+				fileStructure = FileStructure.videos;
+			}
+
+			if (property.startsWith(HtmlEnum.img)) {
+				media = property;
+				fileStructure = FileStructure.images;
+			}
 		}
 
 		downloadPromises = downloadPromises.concat(
@@ -147,14 +153,16 @@ export class Playlist {
 
 		const intro: SMILIntro = smilObject.intro[0];
 
-		switch (media) {
+		debug('Intro media object: %O', intro);
+
+		switch (removeDigits(media)) {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
-					imageElement = await this.setupIntroImage(intro.img!, internalStorageUnit, smilObject);
+					imageElement = await this.setupIntroImage(<SMILImage> get(intro, `${media}`), internalStorageUnit, smilObject);
 				}
 				break;
 			default:
-				await this.setupIntroVideo(intro.video!, internalStorageUnit, smilObject);
+				await this.setupIntroVideo(<SMILVideo> get(intro, `${media}`), internalStorageUnit, smilObject);
 		}
 
 		debug('Intro media downloaded: %O', intro);
@@ -165,12 +173,12 @@ export class Playlist {
 
 		debug('Playing intro finished: %O', intro);
 
-		switch (media) {
+		switch (removeDigits(media)) {
 			case HtmlEnum.img:
 				imageElement.style.display = 'none';
 				break;
 			default:
-				await this.endIntroVideo(intro.video!);
+				await this.endIntroVideo(<SMILVideo> get(intro, `${media}`));
 		}
 	}
 
@@ -261,13 +269,13 @@ export class Playlist {
 			}
 
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
-			if (XmlTags.extractedElements.includes(key)) {
+			if (XmlTags.extractedElements.includes(removeDigits(key))) {
 				debug('found %s element, getting all info', key);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
 
-				switch (key) {
+				switch (removeDigits(key)) {
 					case 'video':
 						fileStructure = FileStructure.videos;
 						break;
@@ -297,7 +305,7 @@ export class Playlist {
 						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
 						// check if video has duration defined due to webos bug
-						if (key === 'video') {
+						if (key.startsWith('video')) {
 							elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
 						}
 						elem.regionInfo = getRegionInfo(region, elem.region);
@@ -309,7 +317,7 @@ export class Playlist {
 						}
 
 						// create placeholders in DOM for images and widgets to speedup playlist processing
-						if (key === SMILEnums.img || key === 'ref') {
+						if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
 							createDomElement(elem, htmlElement, isTrigger);
 						}
 					}
@@ -387,9 +395,10 @@ export class Playlist {
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			// dont play intro in the actual playlist
-			if (XmlTags.extractedElements.includes(key)
-				&& value !== get(this.introObject, 'video', 'default')
-				&& value !== get(this.introObject, SMILEnums.img, 'default')
+			// TODO: remove intro check
+			if (XmlTags.extractedElements.includes(removeDigits(key))
+				&& value !== get(this.introObject, 'video0', 'default')
+				&& value !== get(this.introObject, SMILEnums.img + '0', 'default')
 			) {
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
 
@@ -634,7 +643,7 @@ export class Playlist {
 				for (let [parKey, parValue] of Object.entries(<object> value)) {
 					debug('Processing playlist element with key: %O, parValue: %O', parKey, parValue);
 					let newParent = generateParentId(parKey);
-					if (XmlTags.extractedElements.includes(parKey)) {
+					if (XmlTags.extractedElements.includes(removeDigits(key))) {
 						const lastPlaylistElem: string = Object.entries(value)[Object.entries(value).length - 1][0];
 						const isLast = lastPlaylistElem === key;
 						await this.priorityBehaviour(parValue, parKey, newParent, endTime, priorityObject, isLast);
@@ -1718,24 +1727,19 @@ export class Playlist {
 			parent = 'seq';
 		}
 		debug('Playing element with key: %O, value: %O', key, value);
-		switch (key) {
+		switch (removeDigits(key)) {
 			case 'video':
-				if (Array.isArray(value)) {
-					if (parent.startsWith('seq')) {
-						await this.playVideosSeq(<SMILVideo[]> value);
-						break;
-					}
-					await this.playVideosPar(<SMILVideo[]> value);
-					break;
-				} else {
-					await this.playVideo(<SMILVideo> value);
-					break;
-				}
+				await this.playVideo(<SMILVideo> value, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+				break;
 			case 'ref':
-				await this.playOtherMedia(<SMILWidget | SMILWidget[]> value, parent, HtmlEnum.ref);
+				await this.playOtherMedia(
+					<SMILWidget> value, parent, HtmlEnum.ref, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast,
+				);
 				break;
 			case SMILEnums.img:
-				await this.playOtherMedia(<SMILImage | SMILImage[]> value, parent, HtmlEnum.img);
+				await this.playOtherMedia(
+					<SMILImage> value, parent, HtmlEnum.img, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast,
+				);
 				break;
 			// case 'audio':
 			// 	await this.playOtherMedia(value, internalStorageUnit, parent, FileStructure.audios, 'audio');

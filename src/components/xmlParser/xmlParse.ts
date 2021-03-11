@@ -3,6 +3,7 @@ import * as xml2js from 'xml2js';
 import { JefNode } from 'json-easy-filter';
 import get from 'lodash/get';
 import merge from 'lodash/merge';
+import isNil from 'lodash/isNil';
 import {
 	RegionAttributes,
 	RegionsObject,
@@ -19,9 +20,21 @@ import {
 } from '../../models';
 import { SMILEnums, SMILTriggersEnum, XmlTags } from '../../enums';
 import { debug, containsElement } from './tools';
-import isNil = require('lodash/isNil');
+import { removeDigits } from '../playlist/tools';
+
+let tagNameCounter = 0;
+
+// adds unique number to each media attribute in json eg. video => video0
+export function tagNameSuffix(tagName: string): string {
+	if (XmlTags.extractedElements.includes(tagName)) {
+		return `${tagName}${tagNameCounter++}`;
+	}
+	return tagName;
+}
 
 async function parseXml(xmlFile: string): Promise<SMILFileObject> {
+	// reset counter during media update
+	tagNameCounter = 0;
 	const downloads: DownloadsList = {
 		video: [],
 		img: [],
@@ -41,6 +54,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 		mergeAttrs: true,
 		explicitArray: false,
+		tagNameProcessors: [tagNameSuffix],
 	});
 
 	debug('Xml file parsed to json object: %O', xmlObject);
@@ -56,22 +70,25 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		// detect intro element, may not exist
 		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
 			new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
-				if (XmlTags.extractedElements.includes(introNode.key)) {
+				if (!isNil(introNode.key)
+					&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
 					debug('Intro element found: %O', introNode.parent.value);
 					downloads.intro.push(introNode.parent.value);
 				}
 			});
 		}
-		if (XmlTags.extractedElements.includes(node.key)) {
+
+		if (!isNil(node.key)
+			&& XmlTags.extractedElements.includes(removeDigits(node.key))) {
 			// create media arrays for easy download/update check
 			if (!Array.isArray(node.value)) {
 				node.value = [node.value];
 
 			}
 			node.value.forEach((element: SMILMediaSingle) => {
-				if (!containsElement(downloads[node.key], <string> element.src)) {
+				if (!containsElement(downloads[removeDigits(node.key)], <string> element.src)) {
 					// @ts-ignore
-					downloads[node.key].push(element);
+					downloads[removeDigits(node.key)].push(element);
 				}
 			});
 		}
