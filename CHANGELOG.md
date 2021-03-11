@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- fixed wrong order when processing sequences of elements without seq or par tags
+- improved performance during conditional playback
+- fixed cypress tests timeouts
+
+### Added
+- added local express server for cypress tests
+- added dynamic cypress tests for priority and wallclock
+
 ## [1.2.0] - 2021-02-12
 ### Added
 - basic cypress tests support
