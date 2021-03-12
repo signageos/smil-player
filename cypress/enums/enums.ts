@@ -4,7 +4,7 @@ export enum CypressTimeouts {
 	// duration of media in tests, in 5 seconds one media will finish and will be replaced by another
 	videoTransitionTimeout = 5300,
 	imageTransitionTimeout = 3300,
-	elementAwaitTimeout = 10000,
+	elementAwaitTimeout = 13000,
 	longerElementAwaitTimeout = 15000,
 }
 
@@ -33,4 +33,5 @@ export enum SMILUrls {
 	priorityPause = 'http://localhost:3000/dynamic/priorityPause.smil',
 	priorityDefer = 'http://localhost:3000/dynamic/priorityDefer.smil',
 	wallclockFuture = 'http://localhost:3000/dynamic/wallclockFuture.smil',
+	correctOrder = 'http://localhost:3000/correctOrder.smil',
 }
