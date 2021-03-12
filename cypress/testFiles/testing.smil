@@ -1,0 +1,32 @@
+<!--<smil>-->
+<!--    <head>-->
+<!--        <meta http-equiv="refresh" content="10"/>-->
+<!--        <layout>-->
+<!--            <root-layout width="1920" height="1080" backgroundColor="#000000"/>-->
+<!--            <region regionName="ckluuizvd009499mhmahigmrr" left="0" top="0" width="960" height="1080" z-index="0" backgroundColor="#000000"/>-->
+<!--            <region regionName="ckluvxtet87841zl4caobnpsf" left="960" top="0" width="960" height="1080" z-index="0" backgroundColor="#000000"/>-->
+<!--        </layout>-->
+<!--    </head>-->
+<!--    <body>-->
+<!--        <par>-->
+<!--            <seq end="__prefetchEnd.endEvent">-->
+<!--                <seq repeatCount="indefinite">-->
+<!--                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/global/smil-placeholders/loading-horizontal.png" dur="5s" fit="fill"/>-->
+<!--                </seq>-->
+<!--            </seq>-->
+<!--            <par begin="__prefetchEnd.endEvent">-->
+<!--                <seq repeatCount="indefinite">-->
+<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiV2VhdGhlck1vZHVsZSIsImNhbXBhaWduSWQiOiJja2x1ejV2cXQyOTg4NzF6a3d2azFvOTMxMSIsImFwcFVybCI6Imh0dHBzOi8vc3RhZ2Uuc2lnbmFnZWxhYi5jb20vYXBpL2dyYXBocWwifQ.wgt" type="application/widget" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
+
+<!--                                <ref src="https://example.com" type="text/html" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
+
+<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiUnNzRmVlZE1vZHVsZSIsImNhbXBhaWduSWQiOiJja201MWlvcGY5MjY5MXptZTVrbDk0dGFhIiwiYXBwVXJsIjoiaHR0cHM6Ly9zdGFnZS5zaWduYWdlbGFiLmNvbS9hcGkvZ3JhcGhxbCJ9.wgt" type="application/widget" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
+
+<!--                </seq>-->
+<!--                <seq repeatCount="indefinite">-->
+<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiUnNzRmVlZE1vZHVsZSIsImNhbXBhaWduSWQiOiJja200ejhscHUyMzYwMXpxbHI3M2F4bzlsIiwiYXBwVXJsIjoiaHR0cHM6Ly9zdGFnZS5zaWduYWdlbGFiLmNvbS9hcGkvZ3JhcGhxbCJ9.wgt" type="application/widget" dur="5s" region="ckluvxtet87841zl4caobnpsf"/>-->
+<!--                </seq>-->
+<!--            </par>-->
+<!--        </par>-->
+<!--    </body>-->
+<!--</smil>-->

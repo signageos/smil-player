@@ -241,6 +241,7 @@ export type CurrentlyPlaying = {
 
 export type PlayingInfo = {
 	player?: string,
+	promiseFunction?: any[],
 } & SosHtmlElement & SMILVideo;
 
 export type MediaInfoObject = {
@@ -288,4 +289,4 @@ export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList & Trig
 export type SMILMedia = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[] | SMILVideo | SMILVideo[];
 export type SMILMediaSingle = SMILImage  | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
 export type SMILMediaArray = SMILImage[]  | SMILWidget[] | SMILAudio[] | SMILVideo[];
-export type SMILMediaNoVideo = SMILImage | SMILImage [] | SMILWidget | SMILWidget[] | SMILAudio | SMILAudio[];
+export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILAudio;
