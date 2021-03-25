@@ -38,9 +38,9 @@ import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getRandomInt } from '../files/tools';
 import {
-	debug, getRegionInfo, sleep, isNotPrefetchLoop, parseSmilSchedule,
+	debug, getRegionInfo, sleep, parseSmilSchedule,
 	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
-	generateElementId, createDomElement, removeDigits, createPriorityObject,
+	createDomElement, removeDigits, createPriorityObject,
 	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired,
 } from './tools';
 import { Files } from '../files/files';
@@ -55,9 +55,10 @@ export class Playlist {
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
 	private currentlyPlaying: CurrentlyPlaying = {};
+	private videoPreparing: any = {};
+	private promiseAwaiting: any = {};
 	private currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	private triggersEndless: any = {};
-	private introObject: object;
 
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
@@ -156,7 +157,7 @@ export class Playlist {
 		switch (removeDigits(media)) {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
-					imageElement = await this.setupIntroImage(<SMILImage> get(intro, `${media}`), internalStorageUnit, smilObject);
+					imageElement = await this.setupIntroImage(<SMILImage> get(intro, `${media}`), internalStorageUnit, smilObject, media);
 				}
 				break;
 			default:
@@ -222,6 +223,7 @@ export class Playlist {
 			await this.runEndlessLoop(async () => {
 				try {
 					await this.processPlaylist(smilObject.playlist);
+					debug('One smil playlist iteration finished');
 				} catch (err) {
 					debug('Unexpected error during playlist processing: %O', err);
 					await sleep(5000);
@@ -331,38 +333,30 @@ export class Playlist {
 		value: PlaylistElement | PlaylistElement[], parent: string = '', endTime: number = 0,
 	): Promise<Promise<void>[]> => {
 		const promises: Promise<void>[] = [];
-		if (Array.isArray(value)) {
-			let arrayIndex = value.length - 1;
-			for (let elem of value) {
-				// wallclock has higher priority than conditional expression
-				if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
-					debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
-					if (arrayIndex === 0 && setDefaultAwait(value, this.playerName, this.playerId)
-						=== SMILScheduleEnum.defaultAwait) {
-						debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-						await sleep(SMILScheduleEnum.defaultAwait);
-					}
-					arrayIndex -= 1;
-					continue;
-				}
-
-				const priorityObject = createPriorityObject(elem, arrayIndex);
-				promises.push((async () => {
-					await this.processPlaylist(elem, parent, endTime, priorityObject);
-				})());
-				arrayIndex -= 1;
-			}
-		} else {
-			const priorityObject = createPriorityObject(value, 0);
-			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-				debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
-				await sleep(SMILScheduleEnum.defaultAwait);
-				return [];
-			}
-			promises.push((async () => {
-				await this.processPlaylist(value, parent, endTime, priorityObject);
-			})());
+		if (!Array.isArray(value)) {
+			value = [value];
 		}
+		let arrayIndex = value.length - 1;
+		for (let elem of value) {
+			// wallclock has higher priority than conditional expression
+			if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
+				if (arrayIndex === 0 && setDefaultAwait(value, this.playerName, this.playerId)
+					=== SMILScheduleEnum.defaultAwait) {
+					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+					await sleep(SMILScheduleEnum.defaultAwait);
+				}
+				arrayIndex -= 1;
+				continue;
+			}
+
+			const priorityObject = createPriorityObject(elem, arrayIndex);
+			promises.push((async () => {
+				await this.processPlaylist(elem, parent, endTime, priorityObject);
+			})());
+			arrayIndex -= 1;
+		}
+
 		return promises;
 	}
 
@@ -374,7 +368,6 @@ export class Playlist {
 	 * @param endTime - date in millis when value stops playing
 	 * @param priorityObject - contains data about priority behaviour for given playlist
 	 */
-		// TODO: refactor pri update s testama na FE
 	public processPlaylist = async (
 		playlist: PlaylistElement | PlaylistElement[], parent: string = '',
 		endTime: number = 0, priorityObject: PriorityObject =  <PriorityObject> {},
@@ -382,19 +375,14 @@ export class Playlist {
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
-				debug('Playlist element with key: %O is not object. value: %O, skipping', key, loopValue);
+				debug('Skipping playlist element with key: %O is not object. value: %O', key, loopValue);
 				continue;
 			}
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 			debug('Processing playlist element with key: %O, value: %O', key, value);
 			// dont play intro in the actual playlist
-			// TODO: remove intro check
-			if (XmlTags.extractedElements.includes(removeDigits(key))
-				&& value !== get(this.introObject, 'video0', 'default')
-				&& value !== get(this.introObject, SMILEnums.img + '0', 'default')
-			) {
+			if (XmlTags.extractedElements.includes(removeDigits(key))) {
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
-
 				const isLast = lastPlaylistElem === key;
 				await this.priorityBehaviour(<SMILMedia> value, key, parent, endTime, priorityObject, isLast);
 				continue;
@@ -410,399 +398,137 @@ export class Playlist {
 				promises = await this.processPriorityTag(value, 'seq', endTime);
 			}
 
+			if (key === 'par') {
+				let newParent = generateParentId(key);
+
+				if (Array.isArray(value)) {
+					value.forEach((elem) => {
+						const controlTag = key === 'seq' ? key : 'par';
+						const wrapper = {
+							[controlTag]: elem,
+						};
+						promises.push(this.createDefaultPromise(wrapper, priorityObject, newParent, endTime));
+					});
+					await Promise.all(promises);
+					continue;
+				}
+
+				if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
+					const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
+					if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+						if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
+							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+							await sleep(SMILScheduleEnum.defaultAwait);
+						}
+						continue;
+					}
+
+					// wallclock has higher priority than conditional expression
+					if (await this.checkConditionalDefaultAwait(value)) {
+						continue;
+					}
+
+					if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
+						promises.push(this.createRepeatCountDefinitePromise(value, priorityObject, 'par', timeToStart));
+						await Promise.all(promises);
+						continue;
+					}
+					promises.push(this.createDefaultPromise(value, priorityObject, newParent, timeToEnd, timeToStart));
+					await Promise.all(promises);
+					continue;
+				}
+				// wallclock has higher priority than conditional expression
+				if (await this.checkConditionalDefaultAwait(value)) {
+					continue;
+				}
+
+				if (value.repeatCount === 'indefinite') {
+					promises.push(this.createRepeatCountIndefinitePromise(value, priorityObject, parent, endTime, key));
+					await Promise.all(promises);
+					continue;
+				}
+
+				if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
+					promises.push(this.createRepeatCountDefinitePromise(value, priorityObject, key));
+					await Promise.all(promises);
+					continue;
+				}
+				promises.push(this.createDefaultPromise(value, priorityObject, newParent, endTime));
+			}
+
 			if (key === 'seq') {
 				let newParent = generateParentId('seq');
-				if (Array.isArray(value)) {
-					let arrayIndex = 0;
-					for (const valueElement of value) {
-						// skip trigger processing in automated playlist
-						if (valueElement.hasOwnProperty('begin') && valueElement.begin!.startsWith(SMILTriggersEnum.triggerFormat)) {
-							arrayIndex += 1;
-							continue;
+				if (!Array.isArray(value)) {
+					value = [value];
+				}
+				let arrayIndex = 0;
+				for (const valueElement of value) {
+					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
+						const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
+						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
+						if (arrayIndex === value.length - 1 && setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
+							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+							await sleep(SMILScheduleEnum.defaultAwait);
 						}
 
-						if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1
-							&& !isEqual(valueElement, this.introObject)
-							&& isNotPrefetchLoop(valueElement)) {
-							const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
-							// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
-							if (arrayIndex === value.length - 1 && setDefaultAwait(value) === SMILScheduleEnum.defaultAwait) {
-								debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-								await sleep(SMILScheduleEnum.defaultAwait);
-							}
-
-							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-								arrayIndex += 1;
-								continue;
-							}
-
-							// wallclock has higher priority than conditional expression
-							if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
-								debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
-								if (arrayIndex === value.length - 1 && setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
-									debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-									await sleep(SMILScheduleEnum.defaultAwait);
-								}
-								arrayIndex += 1;
-								continue;
-							}
-
-							if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
-								const repeatCount = valueElement.repeatCount;
-								let counter = 0;
-								if (timeToStart <= 0) {
-									promises.push((async () => {
-										// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-										if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-											return;
-										}
-										newParent = generateParentId('seq');
-										while (counter < repeatCount) {
-											await this.processPlaylist(valueElement, newParent, repeatCount, priorityObject);
-											counter += 1;
-										}
-									})());
-								}
-								await Promise.all(promises);
-								arrayIndex += 1;
-								continue;
-							}
-							// play at least one from array to avoid infinite loop
-							if (value.length === 1 || timeToStart <= 0) {
-								promises.push((async () => {
-									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-										return;
-									}
-									await this.processPlaylist(valueElement, newParent, timeToEnd, priorityObject);
-								})());
-							}
-							await Promise.all(promises);
+						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
 							arrayIndex += 1;
 							continue;
 						}
 
 						// wallclock has higher priority than conditional expression
-						if (isConditionalExpExpired(valueElement, this.playerName, this.playerId)) {
-							debug('Conditional expression: %s, for value: %O is false', valueElement[ConditionalExprEnum.exprTag]!, valueElement);
-							if (arrayIndex === value.length - 1 && setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
-								debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-								await sleep(SMILScheduleEnum.defaultAwait);
-							}
+						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value.length)) {
 							arrayIndex += 1;
 							continue;
 						}
 
 						if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
-							const repeatCount = valueElement.repeatCount;
-							let counter = 0;
-							promises.push((async () => {
-								newParent = generateParentId('seq');
-								while (counter < repeatCount) {
-									await this.processPlaylist(valueElement, newParent, repeatCount, priorityObject);
-									counter += 1;
-								}
-							})());
-							await Promise.all(promises);
+							if (timeToStart <= 0) {
+								promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, 'seq', timeToStart));
+							}
+							if (!parent.startsWith('par')) {
+								await Promise.all(promises);
+							}
+							arrayIndex += 1;
 							continue;
 						}
-
-						if (valueElement.repeatCount === 'indefinite'
-							&& valueElement !== this.introObject
-							&& isNotPrefetchLoop(valueElement)) {
-							promises.push((async () => {
-								// when endTime is not set, play indefinitely
-								if (endTime === 0) {
-									newParent = generateParentId('seq');
-									await this.runEndlessLoop(async () => {
-										await this.processPlaylist(valueElement, newParent, endTime, priorityObject);
-									});
-									// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
-								} else if (endTime > 0 && endTime <= 1000) {
-									const seqParent = parent.replace('par', 'seq');
-									await this.processPlaylist(valueElement, seqParent, endTime, priorityObject);
-								} else {
-									newParent = generateParentId('seq');
-									while (Date.now() <= endTime) {
-										await this.processPlaylist(valueElement, newParent, endTime, priorityObject);
-										// force stop because new version of smil file was detected
-										if (this.getCancelFunction()) {
-											return;
-										}
-									}
-								}
-							})());
-
-							await Promise.all(promises);
-							continue;
+						// play at least one from array to avoid infinite loop
+						if (value.length === 1 || timeToStart <= 0) {
+							promises.push(this.createDefaultPromise(valueElement, priorityObject, newParent, timeToEnd, timeToStart));
 						}
-
-						promises.push((async () => {
-							await this.processPlaylist(valueElement, newParent, endTime, priorityObject);
-						})());
-					}
-				} else {
-					// skip trigger processing in automated playlist
-					if (value.hasOwnProperty('begin') && value.begin!.startsWith(SMILTriggersEnum.triggerFormat)) {
+						if (!parent.startsWith('par')) {
+							await Promise.all(promises);
+						}
+						arrayIndex += 1;
 						continue;
 					}
-					if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
-						const {timeToStart, timeToEnd} = parseSmilSchedule(value.begin!, value.end);
-						// playlist endTime is in past, wait default amount of time and then try again ( to avoid indefinite loop )
-						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-							await sleep(SMILScheduleEnum.defaultAwait);
-							continue;
-						}
 
-						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-							debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
-							await sleep(SMILScheduleEnum.defaultAwait);
-							continue;
-						}
-
-						if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-							const repeatCount: number = <number> value.repeatCount;
-							let counter = 0;
-							promises.push((async () => {
-								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-									return;
-								}
-								newParent = generateParentId('seq');
-								while (counter < repeatCount) {
-									await this.processPlaylist(value, newParent, repeatCount, priorityObject);
-									counter += 1;
-								}
-							})());
-							continue;
-						}
-						promises.push((async () => {
-							// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-							if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-								return;
-							}
-							await this.processPlaylist(value, newParent, endTime, priorityObject);
-						})());
-					} else if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-						debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
-						await sleep(SMILScheduleEnum.defaultAwait);
+					// wallclock has higher priority than conditional expression
+					if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value.length)) {
+						arrayIndex += 1;
 						continue;
-					} else if (value.repeatCount === 'indefinite'
-						&& value !== this.introObject
-						&& isNotPrefetchLoop(value)) {
-						promises.push((async () => {
-							// when endTime is not set, play indefinitely
-							if (endTime === 0) {
-								newParent = generateParentId('seq');
-								await this.runEndlessLoop(async () => {
-									await this.processPlaylist(value, newParent, endTime, priorityObject);
-								});
-								// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
-							} else if (endTime > 0 && endTime <= 1000) {
-								const seqParent = parent.replace('par', 'seq');
-								await this.processPlaylist(value, seqParent, endTime, priorityObject);
-							} else {
-								newParent = generateParentId('seq');
-								while (Date.now() <= endTime) {
-									await this.processPlaylist(value, newParent, endTime, priorityObject);
-									// force stop because new version of smil file was detected
-									if (this.getCancelFunction()) {
-										return;
-									}
-								}
-							}
-						})());
-					} else if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-						const repeatCount: number = <number> value.repeatCount;
-						let counter = 0;
-						promises.push((async () => {
-							newParent = generateParentId('seq');
-							while (counter < repeatCount) {
-								await this.processPlaylist(value, newParent, repeatCount, priorityObject);
-								counter += 1;
-							}
-						})());
+					}
+
+					if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
+						promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, 'seq'));
+						if (!parent.startsWith('par')) {
+							await Promise.all(promises);
+						}
+						continue;
+					}
+
+					if (valueElement.repeatCount === 'indefinite') {
+						promises.push(this.createRepeatCountIndefinitePromise(valueElement, priorityObject, parent, endTime, key));
+
+						if (!parent.startsWith('par')) {
+							await Promise.all(promises);
+						}
+						continue;
+					}
+
+					promises.push(this.createDefaultPromise(valueElement, priorityObject, newParent, endTime));
+					if (!parent.startsWith('par')) {
 						await Promise.all(promises);
-					} else {
-						promises.push((async () => {
-							await this.processPlaylist(value, newParent, endTime, priorityObject);
-						})());
-					}
-				}
-			}
-
-			if (key === 'par') {
-				for (let [parKey, parValue] of Object.entries(<object> value)) {
-					debug('Processing playlist element with key: %O, parValue: %O', parKey, parValue);
-					let newParent = generateParentId(parKey);
-					if (XmlTags.extractedElements.includes(removeDigits(key))) {
-						const lastPlaylistElem: string = Object.entries(value)[Object.entries(value).length - 1][0];
-						const isLast = lastPlaylistElem === key;
-						await this.priorityBehaviour(parValue, parKey, newParent, endTime, priorityObject, isLast);
-						continue;
-					}
-
-					if (Array.isArray(parValue)) {
-						const controlTag = parKey === 'seq' ? parKey : 'par';
-						const wrapper = {
-							[controlTag]: parValue,
-						};
-						promises.push((async () => {
-							await this.processPlaylist(wrapper, newParent, endTime, priorityObject);
-						})());
-					} else {
-						// skip trigger processing in automated playlist
-						if (value.hasOwnProperty('begin') && value.begin!.startsWith(SMILTriggersEnum.triggerFormat)) {
-							continue;
-						}
-						if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
-							const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
-							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-								if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-									debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-									await sleep(SMILScheduleEnum.defaultAwait);
-								}
-								continue;
-							}
-
-							if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-								if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-									debug('Conditional expression : %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
-									await sleep(SMILScheduleEnum.defaultAwait);
-								}
-								continue;
-							}
-
-							if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-								const repeatCount: number = <number> value.repeatCount;
-								let counter = 0;
-								promises.push((async () => {
-									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-										return;
-									}
-									newParent = generateParentId('par');
-									while (counter < repeatCount) {
-										await this.processPlaylist(value, newParent, repeatCount, priorityObject);
-										counter += 1;
-									}
-								})());
-								break;
-							}
-
-							promises.push((async () => {
-								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-									return;
-								}
-								await this.processPlaylist(value, newParent, timeToEnd, priorityObject);
-							})());
-							break;
-						}
-
-						if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-							if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-								debug('Conditional expression : %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
-								await sleep(SMILScheduleEnum.defaultAwait);
-							}
-							continue;
-						}
-
-						if (parValue.hasOwnProperty('begin') && parValue.begin!.indexOf('wallclock') > -1) {
-							const { timeToStart, timeToEnd } = parseSmilSchedule(parValue.begin!, parValue.end);
-							if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
-								if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-									debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
-									await sleep(SMILScheduleEnum.defaultAwait);
-								}
-								continue;
-							}
-
-							if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
-								if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-									debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
-									await sleep(SMILScheduleEnum.defaultAwait);
-								}
-								continue;
-							}
-
-							if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
-								const repeatCount: number = <number> parValue.repeatCount;
-								let counter = 0;
-								promises.push((async () => {
-									// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-									if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-										return;
-									}
-									newParent = generateParentId(parKey);
-									while (counter < repeatCount) {
-										await this.processPlaylist(parValue, newParent, repeatCount, priorityObject);
-										counter += 1;
-									}
-								})());
-								continue;
-							}
-
-							promises.push((async () => {
-								// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-								if (await this.waitTimeoutOrFileUpdate(timeToStart)) {
-									return;
-								}
-								await this.processPlaylist(parValue, newParent, timeToEnd, priorityObject);
-							})());
-							continue;
-						}
-
-						if (isConditionalExpExpired(parValue, this.playerName, this.playerId)) {
-							if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
-								debug('Conditional expression: %s, for value: %O is false', parValue[ConditionalExprEnum.exprTag]!, parValue);
-								await sleep(SMILScheduleEnum.defaultAwait);
-							}
-							continue;
-						}
-
-						if (parValue.repeatCount === 'indefinite' && isNotPrefetchLoop(parValue)) {
-							promises.push((async () => {
-								// when endTime is not set, play indefinitely
-								if (endTime === 0) {
-									newParent = generateParentId(parKey);
-									await this.runEndlessLoop(async () => {
-										await this.processPlaylist(parValue, newParent, endTime, priorityObject);
-									});
-								} else if (endTime > 0 && endTime <= 1000) {
-									await this.processPlaylist(parValue, newParent, endTime, priorityObject);
-								} else {
-									newParent = generateParentId(parKey);
-									while (Date.now() <= endTime) {
-										await this.processPlaylist(parValue, newParent, endTime, priorityObject);
-										// force stop because new version of smil file was detected
-										if (this.getCancelFunction()) {
-											return;
-										}
-									}
-								}
-							})());
-							continue;
-						}
-
-						if (parValue.hasOwnProperty('repeatCount') && parValue.repeatCount !== 'indefinite') {
-							const repeatCount: number = parValue.repeatCount;
-							let counter = 0;
-							promises.push((async () => {
-								newParent = generateParentId(parKey);
-								while (counter < repeatCount) {
-									await this.processPlaylist(parValue, newParent, repeatCount, priorityObject);
-									counter += 1;
-								}
-							})());
-							await Promise.all(promises);
-							continue;
-						}
-
-						promises.push((async () => {
-							await this.processPlaylist(parValue, newParent, endTime, priorityObject);
-						})());
 					}
 				}
 			}
@@ -1019,6 +745,7 @@ export class Playlist {
 			await this.processTrigger(smilObject, triggerInfo);
 			return;
 		}
+
 		// if no condition to activate trigger was found, stop it if its already running
 		if (!isNil(this.triggersEndless[triggerInfo.trigger])) {
 			debug('Cancelling trigger: %O', triggerInfo.trigger);
@@ -1074,10 +801,6 @@ export class Playlist {
 			}
 		}
 		return false;
-	}
-
-	private setIntroUrl(introObject: object) {
-		this.introObject = introObject;
 	}
 
 	private getCancelFunction(): boolean {
@@ -1171,10 +894,6 @@ export class Playlist {
 
 	/**
 	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
-	 * @param filepath - local folder structure where file is stored
-	 * @param regionInfo - information about region when current media belongs to
-	 * @param duration - how long should media stay on screen
-	 * @param triggerValue - name of trigger playlist
 	 * @param arrayIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param priorityRegionName - name of currently playing region stored in currentlyPlayingPriority object
 	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
@@ -1183,37 +902,37 @@ export class Playlist {
 	 * @param isLast - if this media is last element in current playlist
 	 */
 	private playTimedMedia = async (
-		filepath: string, regionInfo: RegionAttributes, duration: string, triggerValue: string | undefined, arrayIndex: number,
+		value: SMILMediaNoVideo, arrayIndex: number,
 		priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 	): Promise<void> => {
 			try {
-				let element = <HTMLElement> document.getElementById(generateElementId(filepath, regionInfo.regionName));
+				let element = <HTMLElement> document.getElementById(<string> value.id);
 
 				// set correct duration
-				const parsedDuration: number = setElementDuration(duration);
+				const parsedDuration: number = setElementDuration(value.dur);
 
 				// add query parameter to invalidate cache on devices
 				if (element.getAttribute('src') === null) {
 					// BrightSign does not support query parameters in filesystem
 					if (await this.doesSupportQueryParametersCompatibilityMode()) {
-						element.setAttribute('src', `${filepath}?v=${getRandomInt(1000000)}`);
+						element.setAttribute('src', `${value.localFilePath}?v=${getRandomInt(1000000)}`);
 					} else {
-						element.setAttribute('src', filepath);
+						element.setAttribute('src', value.localFilePath);
 					}
 				}
 
 				const sosHtmlElement: SosHtmlElement = {
 					src: <string> element.getAttribute('src'),
 					id: element.id,
-					regionInfo,
-					localFilePath:  filepath,
+					regionInfo: value.regionInfo,
+					localFilePath:  value.localFilePath,
 				};
 
-				if (!isNil(triggerValue)) {
-					sosHtmlElement.triggerValue = triggerValue;
+				if (!isNil(value.triggerValue)) {
+					sosHtmlElement.triggerValue = value.triggerValue;
 				}
 
-				const parentRegion = regionInfo;
+				const parentRegion = value.regionInfo;
 				let localRegionInfo = await this.handleTriggers(sosHtmlElement, element);
 
 				if (!(await this.shouldWaitAndContinue(
@@ -1222,15 +941,15 @@ export class Playlist {
 					return;
 				}
 
-				this.currentlyPlaying[localRegionInfo.regionName].promiseFunction! = [(async () => {
-					element.style.display = 'block';
+				this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
+					element.style.visibility = 'visible';
+					await sleep(100);
 					await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
 					debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
 				})()];
-
 			} catch (err) {
-				debug('Unexpected error: %O during html element playback: %s', err, filepath);
+				debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
 			}
 	}
 
@@ -1246,6 +965,7 @@ export class Playlist {
 		regionInfo: RegionAttributes, parentRegion: RegionAttributes, duration: number, element: SosHtmlElement, arrayIndex: number,
 		): Promise<void> => {
 
+		debug('Starting to play element: %O', element);
 		// set invisible previous element in region for gapless playback if it differs from current element
 		// TODO: check also default region
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
@@ -1256,8 +976,8 @@ export class Playlist {
 		}
 
 		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (get(this.currentlyPlaying[parentRegion.regionName], 'playing')
-			&& (get(this.currentlyPlaying[parentRegion.regionName], 'src') !== element.src)) {
+		if (parentRegion.regionName !== regionInfo.regionName
+			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
 			debug('cancelling media from parent region: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
 			await this.cancelPreviousMedia(parentRegion);
 		}
@@ -1378,13 +1098,13 @@ export class Playlist {
 		media: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, priorityRegionName: string,
 		currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 	): Promise<boolean> => {
-		if (get(this.currentlyPlaying, `${regionInfo.regionName}`, 'default') === 'default') {
-			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo> media;
-			this.currentlyPlaying[regionInfo.regionName].promiseFunction = [];
+		if (get(this.promiseAwaiting, `${regionInfo.regionName}`, 'default') === 'default') {
+			this.promiseAwaiting[regionInfo.regionName] = <PlayingInfo> media;
+			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
 		}
 
-		if (get(this.currentlyPlaying, `${regionInfo.regionName}.promiseFunction`, 'default') === 'default') {
-			this.currentlyPlaying[regionInfo.regionName].promiseFunction = [];
+		if (get(this.promiseAwaiting, `${regionInfo.regionName}.promiseFunction`, 'default') === 'default') {
+			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
 		}
 
 		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause') {
@@ -1439,8 +1159,6 @@ export class Playlist {
 	private playVideo = async (
 		video: SMILVideo, priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 		) => {
-		debug('Playing video: %O', video);
-
 		// TODO: implement check to sos library
 		if (video.localFilePath === '') {
 			debug('Video: %O has empty localFilepath: %O', video);
@@ -1452,8 +1170,27 @@ export class Playlist {
 			return;
 		}
 
+		debug('Playing video: %O', video);
+
 		const parentRegion = video.regionInfo;
 		let regionInfo = await this.handleTriggers(video);
+
+		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
+		// prepare if video is not same as previous one played
+		if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
+		&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
+			debug('Preparing video: %O', video);
+			await this.sos.video.prepare(
+				video.localFilePath,
+				regionInfo.left,
+				regionInfo.top,
+				regionInfo.width,
+				regionInfo.height,
+				config.videoOptions,
+			);
+		}
+
+		this.videoPreparing[regionInfo.regionName] = video;
 
 		if (!(await this.shouldWaitAndContinue(video, regionInfo, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast))) {
 			return;
@@ -1461,23 +1198,8 @@ export class Playlist {
 
 		debug('Playing video after promise all: %O', video);
 
-		this.currentlyPlaying[regionInfo.regionName].promiseFunction! = [(async () => {
+		this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
 			try {
-				const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
-				// prepare if video is not same as previous one played
-				if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
-					debug('Preparing video: %O', video);
-					await this.sos.video.prepare(
-						video.localFilePath,
-						regionInfo.left,
-						regionInfo.top,
-						regionInfo.width,
-						regionInfo.height,
-						config.videoOptions,
-					);
-					await sleep(200);
-				}
-
 				await this.sos.video.play(
 					video.localFilePath,
 					regionInfo.left,
@@ -1489,12 +1211,14 @@ export class Playlist {
 				// cancel if video is not same as previous one played in the same region
 				if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
 					&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
+					debug('cancelling media: %s from video: %s', this.currentlyPlaying[regionInfo.regionName].src, video.src);
 					await this.cancelPreviousMedia(regionInfo);
 				}
 
 				// cancel if video is not same as previous one played in the parent region ( triggers case )
-				if (get(this.currentlyPlaying[parentRegion.regionName], 'playing')
-					&& get(this.currentlyPlaying[parentRegion.regionName], 'src') !== video.src) {
+				if (parentRegion.regionName !== regionInfo.regionName
+					&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
+					debug('cancelling media from parent region: %s from video: %s', this.currentlyPlaying[parentRegion.regionName].src, video.src);
 					await this.cancelPreviousMedia(parentRegion);
 				}
 
@@ -1548,7 +1272,6 @@ export class Playlist {
 				&& this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0) {
 					video.playing = false;
 					await sleep(100);
-					console.log('video paused ' + video.src);
 					// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 					if (this.getCancelFunction()) {
 						await this.cancelPreviousMedia(regionInfo);
@@ -1615,8 +1338,6 @@ export class Playlist {
 		promises.push((async () => {
 			while (playingIntro) {
 				debug('Playing intro');
-				// set intro url in playlist to exclude it from further playing
-				this.setIntroUrl(intro);
 
 				switch (removeDigits(media)) {
 					case SMILEnums.img:
@@ -1701,20 +1422,15 @@ export class Playlist {
 			}
 			// widget with website url as datasource
 			if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
-				await this.playTimedMedia(
-					value.src, value.regionInfo, value.dur, value.triggerValue, index, priorityRegionName,
-					currentIndex, previousPlayingIndex, endTime, isLast,
-				);
+				value.localFilePath = value.src;
+				await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
 				return;
 			}
 			if (htmlElement === 'audio') {
 				await this.playAudio(value.localFilePath);
 				return;
 			}
-			await this.playTimedMedia(
-				value.localFilePath, value.regionInfo, value.dur, value.triggerValue, index, priorityRegionName,
-				currentIndex, previousPlayingIndex, endTime, isLast,
-			);
+			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
 		}
 	}
 
@@ -2172,6 +1888,7 @@ export class Playlist {
 					infoObject.isFirstInPlaylist = infoObject.media;
 					this.currentlyPlayingPriority[priorityRegionName].push(infoObject);
 					currentIndex = this.currentlyPlayingPriority[priorityRegionName].length - 1;
+					break;
 				}
 				arrayIndex += 1;
 			}
