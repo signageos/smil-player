@@ -454,16 +454,16 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 	return value;
 }
 
-export function generateElementId(filepath: string, regionName: string): string {
-	return `${getFileName(filepath)}-${regionName}`;
+export function generateElementId(filepath: string, regionName: string, key: string): string {
+	return `${getFileName(filepath)}-${regionName}-${key}`;
 }
 
 export function createHtmlElement(
-	htmlElement: string, filepath: string, regionInfo: RegionAttributes, isTrigger: boolean = false,
+	htmlElement: string, filepath: string, regionInfo: RegionAttributes, key: string, isTrigger: boolean = false,
 ): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
-	element.id = generateElementId(filepath, regionInfo.regionName);
+	element.id = generateElementId(filepath, regionInfo.regionName, key);
 	Object.keys(regionInfo).forEach((attr: any) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
 			element.style[attr] = `${regionInfo[attr]}px`;
@@ -478,8 +478,8 @@ export function createHtmlElement(
 	element.style.position = 'absolute';
 	element.style.backgroundColor = 'transparent';
 	element.style.borderWidth = '0px';
-	element.style.display = 'none';
 
+	element.style.visibility = 'hidden';
 	// set filePAth for trigger images immediately
 	if (isTrigger) {
 		element.setAttribute('src', filepath);
@@ -504,16 +504,17 @@ export function createPriorityObject(priorityClass: object, priorityLevel: numbe
  * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
  * @param isTrigger - determines if element is trigger element or ordinary one ( trigger is played on demand )
  */
-export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string, isTrigger: boolean = false) {
-	debug('creating element: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
-	if ( document.getElementById(generateElementId(value.localFilePath, value.regionInfo.regionName))) {
-		debug('element already exists: %s' + generateElementId(value.localFilePath, value.regionInfo.regionName));
-		return;
+export function createDomElement(value: SMILImage | SMILWidget, htmlElement: string, key: string, isTrigger: boolean = false): string {
+	const elementId = generateElementId(value.localFilePath, value.regionInfo.regionName, key);
+	debug('creating element: %s' + elementId);
+	if (document.getElementById(elementId)) {
+		debug('element already exists: %s' + elementId);
+		return elementId;
 	}
-
 	const localFilePath = value.localFilePath !== ''  ? value.localFilePath : value.src;
-	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, isTrigger);
+	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, isTrigger);
 	document.body.appendChild(element);
+	return element.id;
 }
 
 export function resetBodyContent() {
@@ -567,10 +568,16 @@ export function getLastArrayItem(array: any[]): any {
 
 // seq-98665
 export function generateParentId(tagName: string): string {
-	return `${tagName}-${getRandomInt(100000)}`;
+	let parsedTagName = removeDigits(tagName);
+	parsedTagName = parsedTagName.replace('-', '');
+	return `${parsedTagName}-${getRandomInt(100000)}`;
 }
 
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
+	// no element was played before ( trigger case )
+	if (isNil(currentlyPlaying)) {
+		return 0;
+	}
 	return currentlyPlaying.findIndex((element) => {
 		return (get(element, 'player.playing', false) === true);
 	});
