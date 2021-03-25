@@ -173,7 +173,7 @@ export class Playlist {
 
 		switch (removeDigits(media)) {
 			case HtmlEnum.img:
-				imageElement.style.display = 'none';
+				imageElement.style.visibility = 'hidden';
 				break;
 			default:
 				await this.endIntroVideo(<SMILVideo> get(intro, `${media}`));
@@ -309,10 +309,12 @@ export class Playlist {
 
 						// create placeholders in DOM for images and widgets to speedup playlist processing
 						if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-							createDomElement(elem, htmlElement, isTrigger);
+							elem.id = createDomElement(elem, htmlElement, key, isTrigger);
 						}
 					}
 				}
+				// reset widget exprension for next elements
+				widgetRootFile = '';
 			} else {
 				await this.getAllInfo(value, region, internalStorageUnit, isTrigger);
 			}
@@ -948,14 +950,18 @@ export class Playlist {
 	 * @param regionInfo - information about region when current video belongs to
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
+		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
 		switch (this.currentlyPlaying[regionInfo.regionName].media) {
 			case 'video':
 				await sleep(50);
 				await this.cancelPreviousVideo(regionInfo);
 				break;
-			default:
+			case 'html':
 				await sleep(50);
 				this.cancelPreviousImage(regionInfo);
+				break;
+			default:
+				debug('Element not supported for cancellation');
 				break;
 		}
 	}
@@ -971,7 +977,7 @@ export class Playlist {
 			return;
 		}
 		const element = <HTMLElement> document.getElementById((<SosHtmlElement> this.currentlyPlaying[regionInfo.regionName]).id);
-		element.style.display = 'none';
+		element.style.visibility = 'hidden';
 		this.currentlyPlaying[regionInfo.regionName].player = 'stop';
 		this.currentlyPlaying[regionInfo.regionName].playing = false;
 	}
@@ -983,11 +989,8 @@ export class Playlist {
 	 * @param regionName -  name of the region of current media
 	 */
 	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string) => {
-		if (this.currentlyPlaying[regionName].src === element.src) {
-			this.currentlyPlaying[regionName] = Object.assign(this.currentlyPlaying[regionName], element);
-		} else {
-			this.currentlyPlaying[regionName] = <PlayingInfo> element;
-		}
+		debug('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
+		this.currentlyPlaying[regionName] = <PlayingInfo> element;
 		this.currentlyPlaying[regionName].media = tag;
 		this.currentlyPlaying[regionName].playing = true;
 	}
@@ -1425,13 +1428,15 @@ export class Playlist {
 		debug('Intro video prepared: %O', video);
 	}
 
-	private setupIntroImage = async (image: SMILImage, internalStorageUnit: IStorageUnit, region: RegionsObject): Promise<HTMLElement> => {
+	private setupIntroImage = async (
+		image: SMILImage, internalStorageUnit: IStorageUnit, region: RegionsObject, key: string,
+	): Promise<HTMLElement> => {
 		const currentImageDetails = <IFile> await this.files.getFileDetails(image, internalStorageUnit, FileStructure.images);
 		image.regionInfo = getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails.localUri;
 		debug('Setting-up intro image: %O', image);
-		const element: HTMLElement = createHtmlElement(HtmlEnum.img, image.localFilePath, image.regionInfo);
-		element.style.display = 'block';
+		const element: HTMLElement = createHtmlElement(HtmlEnum.img, image.localFilePath, image.regionInfo, key);
+		element.style.visibility = 'visible';
 		element.setAttribute('src', image.localFilePath);
 		document.body.appendChild(element);
 		debug('Intro image prepared: %O', element);

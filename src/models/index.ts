@@ -66,6 +66,7 @@ export type SMILVideo = {
 };
 
 export type SMILAudio = {
+	id?: string,
 	expr?: string,
 	src: string,
 	dur: string,
@@ -78,6 +79,7 @@ export type SMILAudio = {
 };
 
 export type SMILImage = {
+	id?: string,
 	expr?: string,
 	src: string,
 	region: string,
@@ -91,6 +93,7 @@ export type SMILImage = {
 };
 
 export type SMILWidget = {
+	id?: string,
 	expr?: string,
 	src: string,
 	region: string,
