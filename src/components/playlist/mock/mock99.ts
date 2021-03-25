@@ -51,16 +51,7 @@ export const mockSMILFileParsed99 = {
 	rootLayout: {width: "1920", height: "1080", backgroundColor: "#FFFFFF", top: "0", left: "0"},
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml", style: "background-color:#FFFFFF", par: {
-			seq: [{
-				end: "__prefetchEnd.endEvent",
-				seq: {
-					repeatCount: "indefinite",
-					video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
-				},
-			}, {
-				prefetch: [{src: "http://butikstv.centrumkanalen.com/play/media/rendered/filmer/9820.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}],
-				seq: {id: "__prefetchEnd", dur: "1s"},
-			}], par: {
+			seq: [], par: {
 				begin: "__prefetchEnd.endEvent", repeatCount: "indefinite", excl: {
 					repeatCount: "indefinite", priorityClass: [{
 						lower: "never", peer: "stop", higher: "stop", par: {
@@ -73,8 +64,7 @@ export const mockSMILFileParsed99 = {
 											begin: "0",
 											par: [{
 												repeatCount: "indefinite",
-												seq: [{dur: "60s"}, {prefetch: [
-													{src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"}]}],
+												seq: [{dur: "60s"}],
 											}, {
 												seq: {
 													repeatCount: "indefinite",

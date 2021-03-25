@@ -16,15 +16,6 @@ export const mockSMILFileParsedRegionAlias = {
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml", style: "background-color:#FFFFFF", par: {
 			seq: [{
-				end: "__prefetchEnd.endEvent",
-				seq: {
-					repeatCount: "indefinite",
-					video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4"},
-				},
-			}, {
-				prefetch: [{src: "http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/widget.wgt"}, {src: "http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10813.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10814.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10815.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10816.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10817.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10818.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10819.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10820.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10821.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10822.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10823.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10824.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10825.png"}, {src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10826.png"}],
-				seq: {id: "__prefetchEnd", dur: "1s"},
-			}, {
 				begin: "__prefetchEnd.endEvent",
 				repeatCount: "indefinite",
 				par: {
