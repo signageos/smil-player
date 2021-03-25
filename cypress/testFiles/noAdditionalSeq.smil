@@ -1,0 +1,33 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="20"/>
+        <layout>
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+
+            <!-- define the screen layout zones in relative % -->
+            <region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="bottom-left" left="0" top="50%" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                   region="bottom-left" soundLevel="0%"></video>
+
+            <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                   region="bottom-right" soundLevel="0%"></video>
+            <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                   region="top-left" soundLevel="0%"></video>
+
+            <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                   region="top-right" soundLevel="0%"></video>
+        </par>
+    </body>
+</smil>
