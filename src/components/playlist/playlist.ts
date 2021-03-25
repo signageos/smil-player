@@ -812,6 +812,12 @@ export class Playlist {
 	}
 
 	public watchTriggers = async(smilObject: SMILFileObject) => {
+
+		this.watchKeyboardInput(smilObject);
+		await this.watchRfidAntena(smilObject);
+	}
+
+	private watchRfidAntena = async (smilObject: SMILFileObject) => {
 		let serialPort;
 		try {
 			serialPort = await this.sos.hardware.openSerialPort({
@@ -855,29 +861,162 @@ export class Playlist {
 		}
 	}
 
-	private processRfidAntenna = async (smilObject: SMILFileObject, sensor: ParsedSensor, tag: number, action: string) => {
-		debug('RfId tag: %s picked on antenna: %s', tag, sensor.id);
-		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
+	private watchKeyboardInput = (smilObject: SMILFileObject) => {
+
+		let state = {
+			buffer: [],
+			lastKeyTime: Date.now(),
+		};
+
+		window.parent.document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
+			state = await this.processKeyDownEvent(event, smilObject, state);
+		});
+
+		document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
+			state = await this.processKeyDownEvent(event, smilObject, state);
+		});
+	}
+
+	private processKeyDownEvent = async (event: KeyboardEvent, smilObject: SMILFileObject, state: any): Promise<any> => {
+		const key = event.key.toLowerCase();
+		const currentTime = Date.now();
+		let buffer: any = [];
+
+		if (currentTime - state.lastKeyTime > SMILTriggersEnum.keyStrokeDelay) {
+			buffer = [key];
+		} else {
+			buffer = [...state.buffer, key];
+		}
+		let bufferString = buffer.join('');
+		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`];
+
+		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`])
+			&& !get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)) {
+			await this.processTrigger(smilObject, triggerInfo);
+			buffer = [];
+		}
+
+		state = { buffer: buffer, lastKeyTime: currentTime};
+		return state;
+	}
+
+	private processTrigger = async (
+		smilObject: SMILFileObject, triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+		) => {
+		debug('Starting trigger: %O', triggerInfo.trigger);
+		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
+		await this.processPlaylist(triggerMedia);
+		await Promise.all(this.promiseAwaiting[this.triggersEndless[triggerInfo.trigger].regionInfo.regionName].promiseFunction!);
+
+		// trigger finished playing by itself, cancel it
+		debug('Cancelling trigger: %O', triggerInfo.trigger);
+		const regionInfo = this.triggersEndless[triggerInfo.trigger].regionInfo;
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
+		await this.cancelPreviousMedia(regionInfo);
+
+		// remove info about trigger
+		debug('Deleting trigger info: %O', triggerInfo.trigger);
+		delete this.triggersEndless[triggerInfo.trigger];
+	}
+
+	private createDefaultPromise = (
+		value: PlaylistElement, priorityObject: PriorityObject, parent: string, timeToEnd: number, timeToStart: number = -1,
+		): Promise<void> => {
+		return ((async () => {
+			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
+				return;
+			}
+			await this.processPlaylist(value, parent, timeToEnd, priorityObject);
+		})());
+	}
+
+	private createRepeatCountDefinitePromise = (
+		value: PlaylistElement, priorityObject: PriorityObject, parent: string, timeToStart: number = -1,
+		): Promise<void> => {
+		const repeatCount: number = <number> value.repeatCount;
 		let counter = 0;
-		// check if some conditions equals emitted parameters
-		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
-			debug('Starting trigger: %O', triggerInfo.trigger);
-			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
-			set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
-			while (get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)
-				&& counter < 2) {
-				await this.processPlaylist(triggerMedia);
+		return ((async () => {
+			let newParent = generateParentId(parent);
+			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
+			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
+				return;
+			}
+			while (counter < repeatCount) {
+				await this.processPlaylist(value, newParent, repeatCount, priorityObject);
 				counter += 1;
 			}
-			// trigger finished playing by itself, cancel it
-			debug('Cancelling trigger: %O', triggerInfo.trigger);
-			const regionInfo = this.triggersEndless[triggerInfo.trigger].regionInfo;
-			set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
-			await this.cancelPreviousMedia(regionInfo);
+		})());
+	}
 
-			// remove info about trigger
-			debug('Deleting trigger info: %O', triggerInfo.trigger);
-			delete this.triggersEndless[triggerInfo.trigger];
+	private createRepeatCountIndefinitePromise = (
+		value: PlaylistElement, priorityObject: PriorityObject, parent: string, endTime: number, key: string,
+		): Promise<void> => {
+		return ((async () => {
+			// when endTime is not set, play indefinitely
+			if (endTime === 0) {
+				let newParent = generateParentId(key);
+				await this.runEndlessLoop(async () => {
+					await this.processPlaylist(value, newParent, endTime, priorityObject);
+				});
+				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
+			} else if (endTime > 0 && endTime <= 1000) {
+				let newParent = generateParentId(key);
+				if (key.startsWith('seq')) {
+					newParent = parent.replace('par', 'seq');
+				}
+				await this.processPlaylist(value, newParent, endTime, priorityObject);
+			} else {
+				let newParent = generateParentId(key);
+				while (Date.now() <= endTime) {
+					await this.processPlaylist(value, newParent, endTime, priorityObject);
+					// force stop because new version of smil file was detected
+					if (this.getCancelFunction()) {
+						return;
+					}
+				}
+			}
+		})());
+	}
+
+	/**
+	 * checks if conditional expression is true or false and if there is other element
+	 * which can be played in playlist, if not sets default await time
+	 * @param value - current element in playlist
+	 * @param arrayIndex - index of element in media array ( only for seq tag )
+	 * @param length - length of media array
+	 */
+	private checkConditionalDefaultAwait = async (value: PlaylistElement, arrayIndex: number = -1, length: number = -1): Promise<boolean> => {
+		if (arrayIndex === -1) {
+			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+				debug('Conditional expression : %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
+					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+					await sleep(SMILScheduleEnum.defaultAwait);
+				}
+				return true;
+			}
+		} else {
+			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				if (arrayIndex === length - 1
+					&& setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
+					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
+					await sleep(SMILScheduleEnum.defaultAwait);
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private processRfidAntenna = async (smilObject: SMILFileObject, sensor: ParsedSensor, tag: number, action: string) => {
+		debug('RfId tag: %s %s on antenna: %s', tag, action, sensor.id);
+		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
+		// check if some conditions equals emitted parameters
+		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
+			await this.processTrigger(smilObject, triggerInfo);
 			return;
 		}
 		// if no condition to activate trigger was found, stop it if its already running
@@ -1125,6 +1264,11 @@ export class Playlist {
 
 		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
 
+		// create currentlyPlayingPriority for trigger nested region
+		if (regionInfo.regionName !== parentRegion.regionName) {
+			this.currentlyPlayingPriority[regionInfo.regionName] = this.currentlyPlayingPriority[parentRegion.regionName];
+		}
+
 		debug('waiting image duration: %s from element: %s', duration, element.id);
 		// pause function for how long should media stay on display screen
 		while (duration !== 0 && !get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop
@@ -1244,7 +1388,20 @@ export class Playlist {
 		}
 
 		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause') {
-			await Promise.all(this.currentlyPlaying[regionInfo.regionName].promiseFunction!);
+			debug('waiting for previous promise: %O', media);
+			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
+		}
+
+		if (media.hasOwnProperty(SMILTriggersEnum.triggerValue) && !get(this.triggersEndless, `${media.triggerValue}.play`, false)) {
+			debug('trigger was cancelled prematurely: %s', media.triggerValue);
+			return false;
+		}
+
+		await this.handleTriggers(media);
+
+		// nothing played before ( trigger case )
+		if (isNil(this.currentlyPlayingPriority[regionInfo.regionName])) {
+			return true;
 		}
 
 		// playlist was already stopped/paused during await
@@ -1382,7 +1539,13 @@ export class Playlist {
 					video.playing = false;
 				}
 
-				while (this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0) {
+				// create currentlyPlayingPriority for trigger nested region
+				if (regionInfo.regionName !== parentRegion.regionName) {
+					this.currentlyPlayingPriority[regionInfo.regionName] = this.currentlyPlayingPriority[parentRegion.regionName];
+				}
+
+				while (!isNil(this.currentlyPlayingPriority[regionInfo.regionName])
+				&& this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0) {
 					video.playing = false;
 					await sleep(100);
 					console.log('video paused ' + video.src);
