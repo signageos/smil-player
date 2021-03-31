@@ -810,16 +810,17 @@ export class Playlist {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
+	 * @param nextMedia
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
 		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
 		switch (this.currentlyPlaying[regionInfo.regionName].media) {
 			case 'video':
-				await sleep(50);
+				await sleep(200);
 				await this.cancelPreviousVideo(regionInfo);
 				break;
 			case 'html':
-				await sleep(50);
+				await sleep(200);
 				this.cancelPreviousImage(regionInfo);
 				break;
 			default:
@@ -943,7 +944,6 @@ export class Playlist {
 
 				this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
 					element.style.visibility = 'visible';
-					await sleep(100);
 					await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
 					debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
