@@ -551,7 +551,7 @@ describe('Playlist tools component', () => {
 			testStartString = `wallclock(R/${formatDate(moment().add(7, 'days'))}/P1D)`;
 			responseTimeObject = parseSmilSchedule(testStartString);
 			// schedule start in 7 days from now
-			expect(Math.abs(601200000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T00:00:00').valueOf());
 
 			testStartString = `wallclock(2020-07-16T12:00)`;
@@ -585,7 +585,7 @@ describe('Playlist tools component', () => {
 			let testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			// scheduled in 3 days
-			expect(Math.abs(255599000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			expect(Math.abs(259199003 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(3, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
 			mediaDuration = 2;
@@ -595,7 +595,7 @@ describe('Playlist tools component', () => {
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			// scheduled in  days 6
-			expect(Math.abs(514800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+			expect(Math.abs(518400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(6, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
 			mediaDuration = 4;
@@ -616,7 +616,7 @@ describe('Playlist tools component', () => {
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-			expect(Math.abs(waitMilis - responseTimeObject.timeToStart - 3600000)).to.be.lessThan(1000);
+			expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(waitDays, 'day').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd))
 				.to.be.lessThan(1000);
 
@@ -627,7 +627,7 @@ describe('Playlist tools component', () => {
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(mediaDuration, 'hours'))}/P1D)`, `+w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			// scheduled in  days 5
-			expect(Math.abs(432000000 - responseTimeObject.timeToStart - 3600000)).to.be.lessThan(1000);
+			expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
 		});
@@ -661,7 +661,7 @@ describe('Playlist tools component', () => {
 			testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-			expect(Math.abs(waitMilis - responseTimeObject.timeToStart - 3600000)).to.be.lessThan(1000);
+			expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(waitDays, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd))
 				.to.be.lessThan(1000);
 
@@ -672,7 +672,7 @@ describe('Playlist tools component', () => {
 			testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days').add(mediaDuration, 'hours'))}/P1D)`, `-w${dayOfWeek}`);
 			responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 			// should play in 5 days
-			expect(Math.abs(432000000 - responseTimeObject.timeToStart - 3600000)).to.be.lessThan(1000);
+			expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 			expect(Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
 		});
