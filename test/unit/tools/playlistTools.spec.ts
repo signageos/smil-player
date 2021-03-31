@@ -489,6 +489,7 @@ describe('Playlist tools component', () => {
 		});
 	});
 
+	// TODO: vyresit posun casu
 	describe('Playlist tools component parseSmilSchedule tests', () => {
 		it('Should return correct times for how long to wait and how long to play', async () => {
 			// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01T07:00:00/P1D)

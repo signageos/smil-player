@@ -73,10 +73,7 @@ export class Files {
 			return false;
 		}
 
-		if (!await this.sos.fileSystem.exists({
-			storageUnit: internalStorageUnit,
-			filePath: createLocalFilePath(localFilePath, media.src),
-		})) {
+		if (!await this.fileExists(internalStorageUnit, createLocalFilePath(localFilePath, media.src))) {
 			debug(`File does not exist: %s  downloading`, media.src);
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
@@ -132,10 +129,7 @@ export class Files {
 	}
 
 	public getOrCreateMediaInfoFile = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
-		if (!await this.sos.fileSystem.exists({
-			storageUnit: internalStorageUnit,
-			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-		})) {
+		if (!await this.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))) {
 			debug('MediaInfo file not found, creating json object');
 			return createJsonStructureMediaInfo(filesList);
 		}
@@ -188,10 +182,7 @@ export class Files {
 	 */
 	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
 		for (const path of Object.values(FileStructure)) {
-			if (await this.sos.fileSystem.exists({
-				storageUnit: internalStorageUnit,
-				filePath: path,
-			})) {
+			if (await this.fileExists(internalStorageUnit, path)) {
 				debug(`Filepath already exists: %O`, path);
 				continue;
 			}
