@@ -45,7 +45,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 		audio: [],
 		intro: [],
 	};
-	const playableMedia = {
+	const playableMedia: SMILPlaylist = {
 		playlist: {},
 	};
 	const triggerList: TriggerList = {
@@ -68,44 +68,82 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
 
 	// traverse json as tree of nodes
-	new JefNode(playableMedia.playlist).filter(
-		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
-		// detect intro element, may not exist
-		if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
-			new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
-				if (!isNil(introNode.key)
-					&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-					debug('Intro element found: %O', introNode.parent.value);
-					downloads.intro.push(introNode.parent.value);
-				}
-			});
-		}
+	extractDataFromPlaylist(playableMedia, downloads, triggerList);
 
-		if (!isNil(node.key)
-			&& XmlTags.extractedElements.includes(removeDigits(node.key))) {
-			// create media arrays for easy download/update check
-			if (!Array.isArray(node.value)) {
-				node.value = [node.value];
-
-			}
-			node.value.forEach((element: SMILMediaSingle) => {
-				if (!containsElement(downloads[removeDigits(node.key)], <string> element.src)) {
-					// @ts-ignore
-					downloads[removeDigits(node.key)].push(element);
-				}
-			});
-		}
-
-		if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
-			triggerList.triggers![node.value.begin!] = merge(triggerList.triggers![node.value.begin!], node.value);
-		}
-	});
+	removeDataFromPlaylist(playableMedia);
 
 	debug('Extracted regions object: %O', regions);
 	debug('Extracted playableMedia object: %O', playableMedia);
 	debug('Extracted downloads object: %O', downloads);
 
 	return Object.assign({}, regions, playableMedia, downloads, triggerList);
+}
+
+/**
+ * removes unnecessary data from playlist ( intro, infinite loops, triggers ) so we dont need to worry about it later in the code
+ * @param playableMedia
+ */
+function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
+			// delete intro from playlist, may not exist
+			if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
+				return node.parent;
+			}
+
+			// delete prefetch object from playlist, may not exist
+			if (node.key === 'prefetch') {
+				return node.parent;
+			}
+
+			// delete triggers from playlist, triggers are played on demand
+			if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
+				// return node.parent;
+				return node;
+			}
+
+		});
+}
+
+/**
+ * traverse json object represented as tree and extracts data for media downloads and trigger objects
+ * @param playableMedia
+ * @param downloads
+ * @param triggerList
+ */
+function extractDataFromPlaylist(playableMedia: SMILPlaylist, downloads: DownloadsList, triggerList: TriggerList) {
+	new JefNode(playableMedia.playlist).filter(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
+			// detect intro element, may not exist
+			if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
+				new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
+					if (!isNil(introNode.key)
+						&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
+						debug('Intro element found: %O', introNode.parent.value);
+						downloads.intro.push(introNode.parent.value);
+					}
+				});
+			}
+
+			if (!isNil(node.key)
+				&& XmlTags.extractedElements.includes(removeDigits(node.key))) {
+				// create media arrays for easy download/update check
+				if (!Array.isArray(node.value)) {
+					node.value = [node.value];
+
+				}
+				node.value.forEach((element: SMILMediaSingle) => {
+					if (!containsElement(downloads[removeDigits(node.key)], <string> element.src)) {
+						// @ts-ignore
+						downloads[removeDigits(node.key)].push(element);
+					}
+				});
+			}
+
+			if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
+				triggerList.triggers![node.value.begin!] = merge(triggerList.triggers![node.value.begin!], node.parent.value);
+			}
+		});
 }
 
 function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {

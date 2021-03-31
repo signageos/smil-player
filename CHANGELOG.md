@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.3.0] - 2021-03-12
 ### Fixed
+- bug with multiple widgets ids in same region
+- bug with widgets extension remaining in code for laster media
+- multiple components code refactor
+
+### Added
+- keyboard support for triggers
+- ability to play triggers based on repeatCount attribute
+- improved image/widget performance
+- improved xml parsing and playlist generation
+
+## [1.3.0] - 2021-03-12
+### Fixed
 - fixed wrong order when processing sequences of elements without seq or par tags
 - improved performance during conditional playback
 - fixed cypress tests timeouts

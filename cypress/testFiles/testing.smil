@@ -1,32 +1,76 @@
-<!--<smil>-->
-<!--    <head>-->
-<!--        <meta http-equiv="refresh" content="10"/>-->
-<!--        <layout>-->
-<!--            <root-layout width="1920" height="1080" backgroundColor="#000000"/>-->
-<!--            <region regionName="ckluuizvd009499mhmahigmrr" left="0" top="0" width="960" height="1080" z-index="0" backgroundColor="#000000"/>-->
-<!--            <region regionName="ckluvxtet87841zl4caobnpsf" left="960" top="0" width="960" height="1080" z-index="0" backgroundColor="#000000"/>-->
-<!--        </layout>-->
-<!--    </head>-->
-<!--    <body>-->
-<!--        <par>-->
-<!--            <seq end="__prefetchEnd.endEvent">-->
-<!--                <seq repeatCount="indefinite">-->
-<!--                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/global/smil-placeholders/loading-horizontal.png" dur="5s" fit="fill"/>-->
-<!--                </seq>-->
-<!--            </seq>-->
-<!--            <par begin="__prefetchEnd.endEvent">-->
-<!--                <seq repeatCount="indefinite">-->
-<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiV2VhdGhlck1vZHVsZSIsImNhbXBhaWduSWQiOiJja2x1ejV2cXQyOTg4NzF6a3d2azFvOTMxMSIsImFwcFVybCI6Imh0dHBzOi8vc3RhZ2Uuc2lnbmFnZWxhYi5jb20vYXBpL2dyYXBocWwifQ.wgt" type="application/widget" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
 
-<!--                                <ref src="https://example.com" type="text/html" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="30"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF" />
+            <region regionName="video" left="0" top="0" width="1080" height="1920" z-index="1" backgroundColor="#FFFFFF" mediaAlign="topLeft" />
+        </layout>
 
-<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiUnNzRmVlZE1vZHVsZSIsImNhbXBhaWduSWQiOiJja201MWlvcGY5MjY5MXptZTVrbDk0dGFhIiwiYXBwVXJsIjoiaHR0cHM6Ly9zdGFnZS5zaWduYWdlbGFiLmNvbS9hcGkvZ3JhcGhxbCJ9.wgt" type="application/widget" dur="5s" region="ckluuizvd009499mhmahigmrr"/>-->
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
 
-<!--                </seq>-->
-<!--                <seq repeatCount="indefinite">-->
-<!--                                <ref src="https://stage.signagelab.com/api/widget/eyJ0eXBlIjoiUnNzRmVlZE1vZHVsZSIsImNhbXBhaWduSWQiOiJja200ejhscHUyMzYwMXpxbHI3M2F4bzlsIiwiYXBwVXJsIjoiaHR0cHM6Ly9zdGFnZS5zaWduYWdlbGFiLmNvbS9hcGkvZ3JhcGhxbCJ9.wgt" type="application/widget" dur="5s" region="ckluvxtet87841zl4caobnpsf"/>-->
-<!--                </seq>-->
-<!--            </par>-->
-<!--        </par>-->
-<!--    </body>-->
-<!--</smil>-->
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://butikstv.centrumkanalen.com/play/report/?player=384</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
+
+    </head>
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par> <!-- 1 -->
+
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="https://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4" />
+                </seq>
+            </seq>
+
+
+
+            <seq>
+                <!-- Laddar in bilder och filmer innan spellistan börjar spelas-->
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/ec68be28e3250fb4245730b47d679cee_md5_BTVRENDER18027.mp4" />
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/c5314f7a4b14775ec6d720725bc5198e_md5_18032.png" />
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/6971ebf8a053b0a7c8fc4e335ce00d80_md5_BTVRENDER18028.mp4" />
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/25867117513df7fccac18f12de31d9d9_md5_18029.png" />
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/f736c3c2e3674fed7bfd1784936740c3_md5_BTVRENDER18030.mp4" />
+                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/6e80b8505b55b1a8d7554a3990c9c304_md5_BTVRENDER18031.mp4" />
+
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+
+            <!-- Spellistan startar -->
+            <seq begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+
+
+
+
+
+
+                <video src="https://butikstv.centrumkanalen.com/play/render/image/ec68be28e3250fb4245730b47d679cee_md5_BTVRENDER18027.mp4" id="annons0" fit="hidden" region="video" ><param name="cacheControl" value="auto"/></video>
+                <img src="https://butikstv.centrumkanalen.com/play/render/image/c5314f7a4b14775ec6d720725bc5198e_md5_18032.png" id="annons1" dur="5s" fit="hidden" region="video" expr="4=adapi-weekday()"><param name="cacheControl" value="auto"/></img>
+                <video src="https://butikstv.centrumkanalen.com/play/render/image/6971ebf8a053b0a7c8fc4e335ce00d80_md5_BTVRENDER18028.mp4" id="annons2" fit="hidden" region="video" expr="5=adapi-weekday()"><param name="cacheControl" value="auto"/></video>
+                <img src="https://butikstv.centrumkanalen.com/play/render/image/25867117513df7fccac18f12de31d9d9_md5_18029.png" id="annons3" dur="10s" fit="hidden" region="video" ><param name="cacheControl" value="auto"/></img>
+                <video src="https://butikstv.centrumkanalen.com/play/render/image/f736c3c2e3674fed7bfd1784936740c3_md5_BTVRENDER18030.mp4" id="annons4" fit="hidden" region="video" expr="3=adapi-weekday()"><param name="cacheControl" value="auto"/></video>
+                <video src="https://butikstv.centrumkanalen.com/play/render/image/6e80b8505b55b1a8d7554a3990c9c304_md5_BTVRENDER18031.mp4" id="annons5" fit="hidden" region="video" ><param name="cacheControl" value="auto"/></video>
+
+
+
+
+
+            </seq> <!-- Spellistan slut -->
+
+        </par> <!-- /1 -->
+    </body>
+</smil>
