@@ -7,44 +7,48 @@ import set = require('lodash/set');
 import { isEqual } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
-import {
-	RegionAttributes,
-	RegionsObject,
-	SMILFileObject,
-	SMILVideo,
-	CurrentlyPlaying,
-	CurrentlyPlayingPriority,
-	PriorityObject,
-	SMILFile,
-	SMILImage,
-	PlaylistElement,
-	SMILWidget,
-	SMILMedia,
-	SMILMediaNoVideo,
-	SMILIntro, SosHtmlElement, TriggerList, ParsedTriggerCondition,
-	ParsedSensor, PlayingInfo,
-} from '../../models';
-import {
-	FileStructure,
-	SMILScheduleEnum,
-	XmlTags,
-	HtmlEnum,
-	SMILTriggersEnum,
-	DeviceInfo,
-	SMILEnums,
-	ConditionalExprEnum,
-} from '../../enums';
+
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getRandomInt } from '../files/tools';
-import {
-	debug, getRegionInfo, sleep, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
-	createDomElement, removeDigits, createPriorityObject,
-	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired,
-} from './tools';
 import { Files } from '../files/files';
-import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAntenna";
+import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
+import { SMILEnums } from '../../enums/generalEnums';
+import { XmlTags } from '../../enums/xmlEnums';
+import { DeviceInfo } from '../../enums/deviceEnums';
+import { HtmlEnum } from '../../enums/htmlEnums';
+import { ConditionalExprEnum } from '../../enums/conditionalEnums';
+import { SMILTriggersEnum } from '../../enums/triggerEnums';
+import { FileStructure } from '../../enums/fileEnums';
+import { SMILScheduleEnum } from '../../enums/scheduleEnums';
+import { ParsedSensor, ParsedTriggerCondition, TriggerList } from '../../models/triggerModels';
+import { SMILFile, SMILFileObject } from '../../models/filesModels';
+import { RegionAttributes, RegionsObject } from '../../models/xmlJsonModels';
+import { CurrentlyPlaying, CurrentlyPlayingPriority, PlayingInfo, PlaylistElement } from '../../models/playlistModels';
+import { PriorityObject } from '../../models/priorityModels';
+import {
+	SMILImage,
+	SMILIntro,
+	SMILMedia,
+	SMILMediaNoVideo,
+	SMILVideo,
+	SMILWidget,
+	SosHtmlElement,
+} from '../../models/mediaModels';
+import { isConditionalExpExpired } from './tools/conditionalTools';
+import {
+	debug,
+	extractAdditionalInfo,
+	generateParentId,
+	getIndexOfPlayingMedia,
+	getLastArrayItem, getRegionInfo,
+	removeDigits,
+	sleep,
+} from './tools/generalTools';
+import { parseSmilSchedule } from './tools/wallclockTools';
+import { createDomElement, createHtmlElement } from './tools/htmlTools';
+import { setDefaultAwait, setElementDuration } from './tools/scheduleTools';
+import { createPriorityObject } from './tools/priorityTools';
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
@@ -63,7 +67,7 @@ export class Playlist {
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
-		// TODO: will be handled diffrently in the future when we have units tests for sos sdk
+		// TODO: will be handled differently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
 		this.playerId = get(sos, 'config.playerId', '');
 	}
@@ -464,7 +468,7 @@ export class Playlist {
 				let arrayIndex = 0;
 				for (const valueElement of value) {
 					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
-						const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
+						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (arrayIndex === value.length - 1 && setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
 							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
@@ -538,7 +542,6 @@ export class Playlist {
 	}
 
 	public watchTriggers = async(smilObject: SMILFileObject) => {
-
 		this.watchKeyboardInput(smilObject);
 		await this.watchRfidAntena(smilObject);
 	}
@@ -810,7 +813,6 @@ export class Playlist {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
-	 * @param nextMedia
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
 		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
@@ -895,6 +897,7 @@ export class Playlist {
 
 	/**
 	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
+	 * @param value
 	 * @param arrayIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param priorityRegionName - name of currently playing region stored in currentlyPlayingPriority object
 	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array

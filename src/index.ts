@@ -2,17 +2,20 @@
 import { applyFetchPolyfill } from './polyfills/fetch';
 applyFetchPolyfill();
 import sos from '@signageos/front-applet';
+import { isNil } from 'lodash';
+import Debug from 'debug';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+
 import { processSmil } from './components/xmlParser/xmlParse';
 import { Files } from './components/files/files';
 import { Playlist } from './components/playlist/playlist';
-import { FileStructure, SMILEnums } from './enums';
-import { SMILFile, SMILFileObject } from './models';
-import { isNil } from 'lodash';
-import Debug from 'debug';
+import { SMILEnums } from './enums/generalEnums';
 import { createLocalFilePath, getFileName } from './components/files/tools';
-import { sleep, resetBodyContent, errorVisibility } from './components/playlist/tools';
+import { FileStructure } from './enums/fileEnums';
+import { SMILFile, SMILFileObject } from './models/filesModels';
+import { errorVisibility, sleep } from './components/playlist/tools/generalTools';
+import { resetBodyContent } from './components/playlist/tools/htmlTools';
 const files = new Files(sos);
 
 const debug = Debug('@signageos/smil-player:main');
@@ -112,6 +115,7 @@ async function startSmil(smilUrl: string) {
 			debug('One smil iteration finished');
 		} catch (err) {
 			debug('Unexpected error : %O', err);
+			await sleep(SMILEnums.defaultRefresh * 1000);
 		}
 	}
 }

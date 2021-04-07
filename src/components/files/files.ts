@@ -2,22 +2,20 @@ import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 const isUrl = require('is-url-superb');
 import moment from 'moment';
-import { FileStructure } from '../../enums';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
-import {
-	CheckETagFunctions, MergedDownloadList,
-	SMILAudio,
-	SMILFile,
-	SMILFileObject,
-	SMILImage,
-	SMILVideo,
-	SMILWidget,
-	MediaInfoObject,
-} from '../../models';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getPath, isValidLocalPath, createDownloadPath,
 	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject } from './tools';
 import { debug } from './tools';
+import { FileStructure } from '../../enums/fileEnums';
+import {
+	CheckETagFunctions,
+	MediaInfoObject,
+	MergedDownloadList,
+	SMILFile,
+	SMILFileObject,
+} from '../../models/filesModels';
+import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../models/mediaModels';
 
 export class Files {
 	private sos: FrontApplet;
