@@ -63,9 +63,6 @@ export const mockSMILFileParsed99 = {
 										higher: "stop", pauseDisplay: "hide", par: {
 											begin: "0",
 											par: [{
-												repeatCount: "indefinite",
-												seq: [{dur: "60s"}],
-											}, {
 												seq: {
 													repeatCount: "indefinite",
 													ref1: {
