@@ -7,4 +7,3 @@ export enum SMILEnums {
 	videoDurationOffset = 1000,
 	defaultVideoDuration = 0,
 }
-
