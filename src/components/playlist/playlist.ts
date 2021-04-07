@@ -399,7 +399,7 @@ export class Playlist {
 			}
 
 			if (key === 'par') {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 
 				if (Array.isArray(value)) {
 					value.forEach((elem) => {
@@ -457,7 +457,7 @@ export class Playlist {
 			}
 
 			if (key === 'seq') {
-				let newParent = generateParentId('seq');
+				let newParent = generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
@@ -664,7 +664,7 @@ export class Playlist {
 		const repeatCount: number = <number> value.repeatCount;
 		let counter = 0;
 		return ((async () => {
-			let newParent = generateParentId(parent);
+			let newParent = generateParentId(parent, value);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
 			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
 				return;
@@ -682,19 +682,19 @@ export class Playlist {
 		return ((async () => {
 			// when endTime is not set, play indefinitely
 			if (endTime === 0) {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				await this.runEndlessLoop(async () => {
 					await this.processPlaylist(value, newParent, endTime, priorityObject);
 				});
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000) {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
 				}
 				await this.processPlaylist(value, newParent, endTime, priorityObject);
 			} else {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				while (Date.now() <= endTime) {
 					await this.processPlaylist(value, newParent, endTime, priorityObject);
 					// force stop because new version of smil file was detected
