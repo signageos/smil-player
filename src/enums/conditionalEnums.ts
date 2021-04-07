@@ -1,0 +1,17 @@
+export enum ConditionalExprEnum {
+	exprTag = 'expr',
+	compareConst = 'compare',
+	currentDate = 'date',
+	currentDateUTC = 'gmdate',
+	currentTime = 'time',
+	currentTimeUTC = 'gmtime',
+	substringAfter = 'substring-after',
+	substring = 'substring',
+	weekDay = 'weekday',
+	weekDayUTC = 'gmweekday',
+	playerId = 'smil-playerId',
+	playerName = 'smil-playerName',
+	dateFormat = 'YYYY-MM-DD',
+	timeFormat = 'HH:mm:ss',
+	dateAndTimeFormat = 'YYYY-MM-DDTHH:mm:ss',
+}
