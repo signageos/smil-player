@@ -1,6 +1,7 @@
 import * as chai from 'chai';
-import { checkConditionalExp } from '../../../src/components/playlist/tools';
-import moment from "moment";
+import moment from 'moment';
+
+import { checkConditionalExp } from '../../../src/components/playlist/tools/conditionalTools';
 
 const expect = chai.expect;
 
