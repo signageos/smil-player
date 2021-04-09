@@ -18,10 +18,11 @@
     </body>
 </smil>
 ```
-## Supported SMIL  playlist tags
+## Supported SMIL playlist tags
 - par and seq are fully supported
 - smil timings ( wallclock, repeatCount ) are fully supported
-- priorityClass and excl are treated as seq tags in this PoC version
+- priorityClass and excl are fully supported
+- conditional expressions are fully supported https://www.a-smil.org/index.php/Conditional_play
 
 ## Necessary attributes in SMIL file
 - region name has to be specified in one of these two ways
@@ -29,9 +30,20 @@
 <region regionName="widget12"..../>
 <region xml:id="widget12" .... />
 ```
-- accepts only url to SMIL file ( form input at main page ), local storage is not supported
+- accepts only url to SMIL file ( form input at main page )
 - url to SMIL file can be also passed as smilUrl variable via SoS timings
-- all files ( audio, video.. ) must be stored on remote server,  local storage is not supported
+- all files ( audio, video.. ) must be stored on remote server
+- it is possible to specify path to files in two ways, if file url is specified by relative path,
+absolute path is build by combining smil url and relative path
+```
+absolute
+    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
+relative
+    <video src="assets/landscape1.mp4" />
+    
+    if smil path is https://static.signageos.io/testing.smil then absolute path for video will be https://static.signageos.io/assets/landscape1.mp4
+```
+
 
 ## Supported features
 - sequential and parallel play of audio, video, image and widget
@@ -47,6 +59,7 @@
 - supports media scheduling using wallclock definition
 - supports playing media loops using repeatCount attribute, possible to combine with wallclock
 - supports sensors-based triggers
+- supports keyboard-based triggers
 - supports conditional expressions
 
 ## NOT supported features
