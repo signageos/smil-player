@@ -73,6 +73,13 @@ Complex tests for front-end part of application and media playing are missing fo
     3. run application => __npm start__
     4. steps above should complete without any error, your application is running on __http://your.pc.ip.address:8090__
 
+## How to build PRODUCTION version
+
+``` sh
+npm install
+npm run build --production
+```
+
 ## Debugging
 It is possible to turn on debug messages using browser dev console. Type in __localStorage.debug = '@signageos/smil-player:*'__ 
 for debugging all modules, if you wish to debug specific component, replace wildcard with the name of the component

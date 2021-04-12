@@ -18,10 +18,10 @@
     </body>
 </smil>
 ```
-## Supported SMIL  playlist tags
+## Supported SMIL playlist tags
 - par and seq are fully supported
 - smil timings ( wallclock, repeatCount ) are fully supported
-- priorityClass and excl are treated as seq tags in this PoC version
+- priorityClass and excl
 
 ## Necessary attributes in SMIL file
 - region name has to be specified in one of these two ways
@@ -48,9 +48,7 @@
 - supports playing media loops using repeatCount attribute, possible to combine with wallclock
 - supports sensors-based triggers
 - supports conditional expressions
-
-## NOT supported features
-- not able to process files stored in local storage
+- supports keyboard-based triggers
 
 ### Used technology
 - webpack, typescript, mocha, xml2js, json-easy-filter
@@ -69,4 +67,20 @@ echo 'export NPM_REGISTRY_URL="https://npm.signageos.io"' >> ~/.bashrc
 echo 'export NPM_REGISTRY_HOST="npm.signageos.io"' >> ~/.bashrc
 echo 'export NPM_AUTH_TOKEN="__PASTE_YOUR_SECRET_TOKEN__"' >> ~/.bashrc
 cp .npmrc.template .npmrc
+```
+
+## Quick deployment
+
+```sh
+npm install
+npm run build --production
+
+// delete "sos" item in package.json
+
+// login to signageOS
+sos login
+// upload the SMIL Player applet to signageOS
+sos applet upload
+
+// once the SMIL Player is uploaded, deploy to any supported device
 ```
