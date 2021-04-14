@@ -37,4 +37,5 @@ export enum SMILUrls {
 	noAdditionalPar = 'http://localhost:3000/noAdditionalPar.smil',
 	noAdditionalSeq = 'http://localhost:3000/noAdditionalSeq.smil',
 	wallclockRepeatCount = 'http://localhost:3000/wallclockRepeatCount.smil',
+	triggersKeyboard = 'http://localhost:3000/triggersKeyboard.smil',
 }

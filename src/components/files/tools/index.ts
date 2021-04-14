@@ -1,7 +1,7 @@
 import Debug from 'debug';
 import * as path from 'path';
 import { corsAnywhere } from '../../../../config/parameters';
-import { MediaInfoObject, MergedDownloadList } from "../../../models";
+import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 export const debug = Debug('@signageos/smil-player:filesModule');
 // regExp for valid path testing
 const reg = new RegExp('^([A-Za-z]:|[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)((/[A-Za-z0-9_.-]+)*)$');
