@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - improved smil stability
 - added logic to remove infinite loops and unnecessary elements
+- improve readme and documentation
 
 ## [1.4.0] - 2021-03-31
 ### Fixed
