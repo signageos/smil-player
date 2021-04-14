@@ -5,6 +5,7 @@ import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/moc
 import { mockSMILFileParsed99 } from '../../../src/components/playlist/mock/mock99';
 import { mockSMILFileParsedRegionAlias } from '../../../src/components/playlist/mock/mockRegionAlias';
 import { mockSMILFileTriggers } from '../../../src/components/playlist/mock/mockTriggers';
+import { mockBrokenSmil } from '../../../src/components/playlist/mock/mockBrokenSmil';
 import { triggerRfid } from '../../../src/components/playlist/mock/mockTriggerRfId';
 
 import * as chai from 'chai';
@@ -13,6 +14,23 @@ const expect = chai.expect;
 describe('XmlParse tools component', () => {
 
 	describe('XmlParse tools component tests', () => {
+		it('Should parse whole xml file correctly file broken smil', async () => {
+			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/broken.smil', 'utf8');
+			const smilObject = await processSmil(xmlFile);
+			// checking file arrays for download
+			expect(smilObject.video.length).to.be.eql(2);
+			expect(smilObject.audio.length).to.be.eql(0);
+			expect(smilObject.ref.length).to.be.eql(0);
+			expect(smilObject.img.length).to.be.eql(0);
+			expect(smilObject.intro.length).to.be.eql(1);
+			//checking playlist
+			expect(smilObject.playlist).to.be.eql(mockBrokenSmil.playlist);
+			//checking regions object
+			expect(smilObject.region).to.be.eql(mockBrokenSmil.region);
+			// checking whole smil object
+			expect(smilObject).to.be.eql(mockBrokenSmil);
+		});
+
 		it('Should parse whole xml file correctly file triggers', async () => {
 			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/triggers.smil', 'utf8');
 			const smilObject = await processSmil(xmlFile);

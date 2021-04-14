@@ -7,44 +7,48 @@ import set = require('lodash/set');
 import { isEqual } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
-import {
-	RegionAttributes,
-	RegionsObject,
-	SMILFileObject,
-	SMILVideo,
-	CurrentlyPlaying,
-	CurrentlyPlayingPriority,
-	PriorityObject,
-	SMILFile,
-	SMILImage,
-	PlaylistElement,
-	SMILWidget,
-	SMILMedia,
-	SMILMediaNoVideo,
-	SMILIntro, SosHtmlElement, TriggerList, ParsedTriggerCondition,
-	ParsedSensor, PlayingInfo,
-} from '../../models';
-import {
-	FileStructure,
-	SMILScheduleEnum,
-	XmlTags,
-	HtmlEnum,
-	SMILTriggersEnum,
-	DeviceInfo,
-	SMILEnums,
-	ConditionalExprEnum,
-} from '../../enums';
+
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getRandomInt } from '../files/tools';
-import {
-	debug, getRegionInfo, sleep, parseSmilSchedule,
-	setElementDuration, createHtmlElement, extractAdditionalInfo, setDefaultAwait,
-	createDomElement, removeDigits, createPriorityObject,
-	generateParentId, getIndexOfPlayingMedia, getLastArrayItem, isConditionalExpExpired,
-} from './tools';
 import { Files } from '../files/files';
-import { RfidAntennaEvent } from "@signageos/front-applet/es6/Sensors/IRfidAntenna";
+import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
+import { SMILEnums } from '../../enums/generalEnums';
+import { XmlTags } from '../../enums/xmlEnums';
+import { DeviceInfo } from '../../enums/deviceEnums';
+import { HtmlEnum } from '../../enums/htmlEnums';
+import { ConditionalExprEnum } from '../../enums/conditionalEnums';
+import { SMILTriggersEnum } from '../../enums/triggerEnums';
+import { FileStructure } from '../../enums/fileEnums';
+import { SMILScheduleEnum } from '../../enums/scheduleEnums';
+import { ParsedSensor, ParsedTriggerCondition, TriggerList } from '../../models/triggerModels';
+import { SMILFile, SMILFileObject } from '../../models/filesModels';
+import { RegionAttributes, RegionsObject } from '../../models/xmlJsonModels';
+import { CurrentlyPlaying, CurrentlyPlayingPriority, PlayingInfo, PlaylistElement } from '../../models/playlistModels';
+import { PriorityObject } from '../../models/priorityModels';
+import {
+	SMILImage,
+	SMILIntro,
+	SMILMedia,
+	SMILMediaNoVideo,
+	SMILVideo,
+	SMILWidget,
+	SosHtmlElement,
+} from '../../models/mediaModels';
+import { isConditionalExpExpired } from './tools/conditionalTools';
+import {
+	debug,
+	extractAdditionalInfo,
+	generateParentId,
+	getIndexOfPlayingMedia,
+	getLastArrayItem, getRegionInfo,
+	removeDigits,
+	sleep,
+} from './tools/generalTools';
+import { parseSmilSchedule } from './tools/wallclockTools';
+import { createDomElement, createHtmlElement } from './tools/htmlTools';
+import { setDefaultAwait, setElementDuration } from './tools/scheduleTools';
+import { createPriorityObject } from './tools/priorityTools';
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
@@ -63,7 +67,7 @@ export class Playlist {
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
 		this.files = files;
-		// TODO: will be handled diffrently in the future when we have units tests for sos sdk
+		// TODO: will be handled differently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
 		this.playerId = get(sos, 'config.playerId', '');
 	}
@@ -399,7 +403,7 @@ export class Playlist {
 			}
 
 			if (key === 'par') {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 
 				if (Array.isArray(value)) {
 					value.forEach((elem) => {
@@ -457,14 +461,14 @@ export class Playlist {
 			}
 
 			if (key === 'seq') {
-				let newParent = generateParentId('seq');
+				let newParent = generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
 				let arrayIndex = 0;
 				for (const valueElement of value) {
 					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
-						const {timeToStart, timeToEnd} = parseSmilSchedule(valueElement.begin, valueElement.end);
+						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (arrayIndex === value.length - 1 && setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
 							debug('No active sequence find in wallclock schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
@@ -538,7 +542,6 @@ export class Playlist {
 	}
 
 	public watchTriggers = async(smilObject: SMILFileObject) => {
-
 		this.watchKeyboardInput(smilObject);
 		await this.watchRfidAntena(smilObject);
 	}
@@ -664,7 +667,7 @@ export class Playlist {
 		const repeatCount: number = <number> value.repeatCount;
 		let counter = 0;
 		return ((async () => {
-			let newParent = generateParentId(parent);
+			let newParent = generateParentId(parent, value);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
 			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
 				return;
@@ -682,19 +685,19 @@ export class Playlist {
 		return ((async () => {
 			// when endTime is not set, play indefinitely
 			if (endTime === 0) {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				await this.runEndlessLoop(async () => {
 					await this.processPlaylist(value, newParent, endTime, priorityObject);
 				});
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000) {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
 				}
 				await this.processPlaylist(value, newParent, endTime, priorityObject);
 			} else {
-				let newParent = generateParentId(key);
+				let newParent = generateParentId(key, value);
 				while (Date.now() <= endTime) {
 					await this.processPlaylist(value, newParent, endTime, priorityObject);
 					// force stop because new version of smil file was detected
@@ -810,7 +813,6 @@ export class Playlist {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
-	 * @param nextMedia
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
 		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
@@ -895,6 +897,7 @@ export class Playlist {
 
 	/**
 	 * plays images, widgets and audio, creates htmlElement, appends to DOM and waits for specified duration before resolving function
+	 * @param value
 	 * @param arrayIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param priorityRegionName - name of currently playing region stored in currentlyPlayingPriority object
 	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
@@ -1159,143 +1162,147 @@ export class Playlist {
 	private playVideo = async (
 		video: SMILVideo, priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 		) => {
-		// TODO: implement check to sos library
-		if (video.localFilePath === '') {
-			debug('Video: %O has empty localFilepath: %O', video);
-			return;
-		}
+		try {
+			// TODO: implement check to sos library
+			if (video.localFilePath === '') {
+				debug('Video: %O has empty localFilepath: %O', video);
+				return;
+			}
 
-		if (isConditionalExpExpired(video, this.playerName, this.playerId)) {
-			debug('Conditional expression: %s, for video: %O is false', video.expr!, video);
-			return;
-		}
+			if (isConditionalExpExpired(video, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for video: %O is false', video.expr!, video);
+				return;
+			}
 
-		debug('Playing video: %O', video);
+			debug('Playing video: %O', video);
 
-		const parentRegion = video.regionInfo;
-		let regionInfo = await this.handleTriggers(video);
+			const parentRegion = video.regionInfo;
+			let regionInfo = await this.handleTriggers(video);
 
-		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
-		// prepare if video is not same as previous one played
-		if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
-		&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
-			debug('Preparing video: %O', video);
-			await this.sos.video.prepare(
-				video.localFilePath,
-				regionInfo.left,
-				regionInfo.top,
-				regionInfo.width,
-				regionInfo.height,
-				config.videoOptions,
-			);
-		}
-
-		this.videoPreparing[regionInfo.regionName] = video;
-
-		if (!(await this.shouldWaitAndContinue(video, regionInfo, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast))) {
-			return;
-		}
-
-		debug('Playing video after promise all: %O', video);
-
-		this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
-			try {
-				await this.sos.video.play(
+			const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
+			// prepare if video is not same as previous one played
+			if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
+				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
+				debug('Preparing video: %O', video);
+				await this.sos.video.prepare(
 					video.localFilePath,
 					regionInfo.left,
 					regionInfo.top,
 					regionInfo.width,
 					regionInfo.height,
+					config.videoOptions,
 				);
+			}
 
-				// cancel if video is not same as previous one played in the same region
-				if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
-					&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
-					debug('cancelling media: %s from video: %s', this.currentlyPlaying[regionInfo.regionName].src, video.src);
-					await this.cancelPreviousMedia(regionInfo);
-				}
+			this.videoPreparing[regionInfo.regionName] = video;
 
-				// cancel if video is not same as previous one played in the parent region ( triggers case )
-				if (parentRegion.regionName !== regionInfo.regionName
-					&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-					debug('cancelling media from parent region: %s from video: %s', this.currentlyPlaying[parentRegion.regionName].src, video.src);
-					await this.cancelPreviousMedia(parentRegion);
-				}
+			if (!(await this.shouldWaitAndContinue(video, regionInfo, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast))) {
+				return;
+			}
 
-				this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
+			debug('Playing video after promise all: %O', video);
 
-				debug('Starting playing video onceEnded function - single video: %O', video);
-
-				const promiseRaceArray = [];
-				promiseRaceArray.push(this.sos.video.onceEnded(
-					video.localFilePath,
-					regionInfo.left,
-					regionInfo.top,
-					regionInfo.width,
-					regionInfo.height,
-				));
-
-				// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
-				// so playback can continue
-				// TODO: fix in webos app
-				if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
-					debug('Got duration: %s for video: %O', video.dur!, video);
-					promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
-				}
-
+			this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
 				try {
-					await Promise.race(promiseRaceArray);
-				} catch (err) {
-					debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
-				}
-
-				debug('Playing video finished: %O', video);
-
-				// stopped because of higher priority playlist will start to play
-				if (this.currentlyPlayingPriority[regionInfo.regionName][index].player.stop) {
-					await this.sos.video.stop(
+					await this.sos.video.play(
 						video.localFilePath,
-						video.regionInfo.left,
-						video.regionInfo.top,
-						video.regionInfo.width,
-						video.regionInfo.height,
+						regionInfo.left,
+						regionInfo.top,
+						regionInfo.width,
+						regionInfo.height,
 					);
-					video.playing = false;
-				}
 
-				// create currentlyPlayingPriority for trigger nested region
-				if (regionInfo.regionName !== parentRegion.regionName) {
-					this.currentlyPlayingPriority[regionInfo.regionName] = this.currentlyPlayingPriority[parentRegion.regionName];
-				}
+					// cancel if video is not same as previous one played in the same region
+					if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
+						&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
+						debug('cancelling media: %s from video: %s', this.currentlyPlaying[regionInfo.regionName].src, video.src);
+						await this.cancelPreviousMedia(regionInfo);
+					}
 
-				while (!isNil(this.currentlyPlayingPriority[regionInfo.regionName])
-				&& this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0) {
-					video.playing = false;
-					await sleep(100);
-					// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
+					// cancel if video is not same as previous one played in the parent region ( triggers case )
+					if (parentRegion.regionName !== regionInfo.regionName
+						&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
+						debug('cancelling media from parent region: %s from video: %s', this.currentlyPlaying[parentRegion.regionName].src, video.src);
+						await this.cancelPreviousMedia(parentRegion);
+					}
+
+					this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
+
+					debug('Starting playing video onceEnded function - single video: %O', video);
+
+					const promiseRaceArray = [];
+					promiseRaceArray.push(this.sos.video.onceEnded(
+						video.localFilePath,
+						regionInfo.left,
+						regionInfo.top,
+						regionInfo.width,
+						regionInfo.height,
+					));
+
+					// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
+					// so playback can continue
+					// TODO: fix in webos app
+					if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+						debug('Got duration: %s for video: %O', video.dur!, video);
+						promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
+					}
+
+					try {
+						await Promise.race(promiseRaceArray);
+					} catch (err) {
+						debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
+					}
+
+					debug('Playing video finished: %O', video);
+
+					// stopped because of higher priority playlist will start to play
+					if (this.currentlyPlayingPriority[regionInfo.regionName][index].player.stop) {
+						await this.sos.video.stop(
+							video.localFilePath,
+							video.regionInfo.left,
+							video.regionInfo.top,
+							video.regionInfo.width,
+							video.regionInfo.height,
+						);
+						video.playing = false;
+					}
+
+					// create currentlyPlayingPriority for trigger nested region
+					if (regionInfo.regionName !== parentRegion.regionName) {
+						this.currentlyPlayingPriority[regionInfo.regionName] = this.currentlyPlayingPriority[parentRegion.regionName];
+					}
+
+					while (!isNil(this.currentlyPlayingPriority[regionInfo.regionName])
+					&& this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0) {
+						video.playing = false;
+						await sleep(100);
+						// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
+						if (this.getCancelFunction()) {
+							await this.cancelPreviousMedia(regionInfo);
+							debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
+							this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
+							break;
+						}
+					}
+					// no video.stop function so one video can be played gapless in infinite loop
+					// stopping is handled by cancelPreviousMedia function
+					// force stop video only when reloading smil file due to new version of smil
 					if (this.getCancelFunction()) {
 						await this.cancelPreviousMedia(regionInfo);
 						debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 						this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
-						break;
+						return;
 					}
-				}
-				// no video.stop function so one video can be played gapless in infinite loop
-				// stopping is handled by cancelPreviousMedia function
-				// force stop video only when reloading smil file due to new version of smil
-				if (this.getCancelFunction()) {
-					await this.cancelPreviousMedia(regionInfo);
+
 					debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
-					return;
+				} catch (err) {
+					debug('Unexpected error: %O occurred during single video playback: O%', err, video);
 				}
-
-				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
-				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
-			} catch (err) {
-				debug('Unexpected error: %O occurred during single video playback: O%', err, video);
-			}
-		})()];
+			})()];
+		} catch (err) {
+			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
+		}
 	}
 
 	private setupIntroVideo = async (video: SMILVideo, internalStorageUnit: IStorageUnit, region: RegionsObject) => {

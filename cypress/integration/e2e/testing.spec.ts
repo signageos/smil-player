@@ -8,6 +8,5 @@ describe("wallclockNoActiveSeq.smil test", () => {
 		cy.iframe().find('#SMILUrl').clear().type('http://localhost:3000/testing.smil');
 		cy.wait(CypressTimeouts.submitTimeout);
 		cy.iframe().find('#SMILUrlWrapper').submit();
-
 	});
 });

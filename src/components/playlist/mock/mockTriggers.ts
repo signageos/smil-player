@@ -76,9 +76,6 @@ export const mockSMILFileTriggers = {
 										par: {
 											begin: "0",
 											par: [{
-												repeatCount: "indefinite",
-												seq: [{dur: "60s"}],
-											}, {
 												seq: {
 													repeatCount: "1",
 													video1: {

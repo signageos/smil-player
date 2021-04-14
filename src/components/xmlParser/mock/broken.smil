@@ -1,0 +1,235 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90"/>
+        <sensors>
+            <sensor type="rfid" id="rfid1" driver="nexmosphere">
+                <option name="address">003</option>
+            </sensor>
+            <sensor type="rfid" id="rfid2" driver="nexmosphere">
+                <option name="address">005</option>
+            </sensor>
+            <sensor type="rfid" id="rfid3" driver="nexmosphere">
+                <option name="address">007</option>
+                <option name="test5">111</option>
+            </sensor>
+        </sensors>
+        <triggers>
+            <trigger id="trigger3" condition="or">
+                <condition origin="rfid1" data="1" action="placed"/>
+                <condition origin="rfid2" data="2" action="placed"/>
+            </trigger>
+            <trigger id="trigger2" condition="or">
+                <condition origin="rfid3" data="3" action="placed"/>
+            </trigger>
+        </triggers>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
+                    backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft">
+                <region regionName="video1" left="0" top="0" width="640" height="720" z-index="1"
+                        backgroundColor="transparent"/>
+                <region regionName="video2" left="640" top="0" width="640" height="720" z-index="1"
+                        backgroundColor="transparent"/>
+            </region>
+
+            <region regionName="widget13" left="1280" top="0" width="640" height="506" z-index="1"
+                    backgroundColor="transparent"/>
+
+            <region regionName="widget14" left="1280" top="506" width="640" height="574" z-index="1"
+                    backgroundColor="transparent"/>
+
+        </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>http://butikstv.centrumkanalen.com/play/report/?player=99</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
+
+    </head>
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par> <!-- 1 -->
+
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"/>
+                </seq>
+            </seq>
+
+
+            <seq>
+                <!-- Laddar in bilder och filmer innan spellistan börjar spelas-->
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/filmer/9820.mp4"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/filmer/likabehandlingsdag2020.mp4"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/filmer/untitled.mp4"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/10510.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"/>
+                <prefetch
+                        src="http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"/>
+                <prefetch src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"/>
+
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+
+            <!-- Spellistan startar -->
+
+
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl repeatCount="indefinite">
+
+                    <priorityClass lower="never" peer="stop" higher="stop"> <!-- Tillagt 2 -->
+                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:00:00/P1D)">
+                            <seq repeatCount="indefinite">
+                                <excl begin="0" repeatCount="indefinite">
+                                    <priorityClass higher="stop" pauseDisplay="hide">
+
+                                        <par begin="0">
+
+
+                                            <par repeatCount="indefinite">
+                                                <seq dur="60s"/> <!-- specify refresh interval here , the refresh interval is a MUST -->
+                                                <seq>
+                                                    <prefetch
+                                                            src="http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"/>
+                                                    <prefetch
+                                                            src="http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"/>
+                                                    <prefetch
+                                                            src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"/>
+                                                    <prefetch
+                                                            src="http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"/>
+                                                </seq>
+                                            </par>
+
+                                            <par repeatCount="indefinite">
+                                            </par>
+
+                                            <seq repeatCount="indefinite">
+                                            </seq>
+
+                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+
+                                            </excl>
+
+                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                                <priorityClass lower="never" peer="stop" higher="stop">
+
+                                                </priorityClass>
+                                            </excl>
+
+                                            <excl repeatCount="indefinite">
+
+                                            </excl>
+
+                                            <excl repeatCount="indefinite">
+                                                <priorityClass lower="never" peer="stop" higher="stop">
+
+                                                </priorityClass>
+                                            </excl>
+
+                                            <priorityClass lower="never" peer="stop" higher="stop">
+
+                                            </priorityClass>
+
+                                            <par repeatCount="indefinite">
+                                                <seq repeatCount="1">
+                                                    <seq repeatCount="1">
+                                                        <seq repeatCount="1">
+                                                        </seq>
+                                                    </seq>
+                                                </seq>
+                                            </par>
+
+                                            <seq repeatCount="indefinite">
+                                                <par repeatCount="2">
+                                                    <par repeatCount="2">
+                                                        <par repeatCount="121">
+                                                            <par repeatCount="333">
+                                                            </par>
+                                                        </par>
+                                                    </par>
+                                                </par>
+                                            </seq>
+
+                                            <par begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                                <seq repeatCount="1">
+                                                    <seq repeatCount="1">
+                                                        <seq repeatCount="1">
+                                                        </seq>
+                                                    </seq>
+                                                </seq>
+                                            </par>
+
+                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                                <par repeatCount="2">
+                                                    <par repeatCount="2">
+                                                        <par repeatCount="121">
+                                                            <par repeatCount="333">
+                                                            </par>
+                                                        </par>
+                                                    </par>
+                                                </par>
+                                            </seq>
+
+                                            <par>
+                                                <seq repeatCount="1">
+                                                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                           type="application/widget" region="video">
+                                                        <param name="cacheControl" value="onlyIfCached"/>
+                                                    </video>
+                                                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                           type="application/widget" region="video">
+                                                        <param name="cacheControl" value="onlyIfCached"/>
+                                                    </video>
+
+                                                </seq>
+                                            </par>
+
+                                            <seq repeatCount="indefinite">
+                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                       type="application/widget" region="video">
+                                                    <param name="cacheControl" value="onlyIfCached"/>
+                                                </video>
+                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                       type="application/widget" region="video">
+                                                    <param name="cacheControl" value="onlyIfCached"/>
+                                                </video>
+
+                                            </seq>
+
+                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                       type="application/widget" region="video">
+                                                    <param name="cacheControl" value="onlyIfCached"/>
+                                                </video>
+                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                       type="application/widget" region="video">
+                                                    <param name="cacheControl" value="onlyIfCached"/>
+                                                </video>
+
+                                            </seq>
+                                        </par>
+                                    </priorityClass>
+                                </excl>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                </excl> <!-- 1 -->
+            </par>
+        </par> <!-- /1 -->
+    </body>
+</smil>
