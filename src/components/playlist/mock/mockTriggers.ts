@@ -47,7 +47,14 @@ export const mockSMILFileTriggers = {
 		},
 	},
 	refresh: 90,
-	rootLayout: {width: "1920", height: "1080", backgroundColor: "#FFFFFF", top: "0", left: "0"},
+	rootLayout: {
+		width: "1920",
+		height: "1080",
+		backgroundColor: "#FFFFFF",
+		top: "0",
+		left: "0",
+		regionName: "rootLayout",
+	},
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",

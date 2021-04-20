@@ -51,6 +51,7 @@ export const mockBrokenSmil = {
 		width: "1920",
 		height: "1080",
 		backgroundColor: "#FFFFFF",
+		regionName: "rootLayout",
 		top: "0",
 		left: "0",
 	},
