@@ -1,5 +1,7 @@
 // declare const jQuery: any;
 import { applyFetchPolyfill } from './polyfills/fetch';
+// @ts-ignore
+import backupImage from '../public/backupImage/backupImage.jpg';
 applyFetchPolyfill();
 import sos from '@signageos/front-applet';
 import { isNil } from 'lodash';
@@ -14,7 +16,7 @@ import { SMILEnums } from './enums/generalEnums';
 import { createLocalFilePath, getFileName } from './components/files/tools';
 import { FileStructure } from './enums/fileEnums';
 import { SMILFile, SMILFileObject } from './models/filesModels';
-import { errorVisibility, sleep } from './components/playlist/tools/generalTools';
+import { generateBackupImagePlaylist, getDefaultRegion, sleep } from './components/playlist/tools/generalTools';
 import { resetBodyContent } from './components/playlist/tools/htmlTools';
 const files = new Files(sos);
 
@@ -27,6 +29,8 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	// enable endless loop for checking files updated
 	playlist.setCheckFilesLoop(true);
 
+	resetBodyContent();
+
 	const smilFile: SMILFile = {
 		src: smilUrl,
 	};
@@ -35,6 +39,19 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 	files.setSmilUrl(smilUrl);
+
+	try {
+		if (!isNil(sos.config.backupImageUrl) && !isNil(await files.fetchLastModified(sos.config.backupImageUrl))) {
+			forceDownload = true;
+			const backupImageObject = {
+				src: sos.config.backupImageUrl,
+			};
+			downloadPromises = await files.parallelDownloadAllFiles(internalStorageUnit, [backupImageObject], FileStructure.images, forceDownload);
+			await Promise.all(downloadPromises);
+		}
+	} catch (err) {
+		debug('Unexpected error occurred during backup image download : %O', err);
+	}
 
 	let smilFileContent: string = '';
 
@@ -59,33 +76,53 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 		} catch (err) {
 			debug('Unexpected error occurred during smil file download : %O', err);
-			// allow error display only during manual start
-			if (!sos.config.smilUrl) {
-				errorVisibility(true);
+			debug('Starting to play backup image');
+			const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
+			playlist.setBackgroundImageUrl(backupImageUrl);
+			const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
+			const regionInfo = <SMILFileObject> getDefaultRegion();
+
+			await playlist.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit);
+			if (isNil(sos.config.backupImageUrl)) {
+				backupPlaylist.seq.img.localFilePath = backupImageUrl;
 			}
+			await playlist.processPlaylist(backupPlaylist);
 			await sleep(SMILEnums.defaultDownloadRetry * 1000);
 		}
 	}
 
-	resetBodyContent();
+	try {
+		const smilObject: SMILFileObject = await processSmil(smilFileContent);
+		debug('SMIL file parsed: %O', smilObject);
 
-	const smilObject: SMILFileObject = await processSmil(smilFileContent);
-	debug('SMIL file parsed: %O', smilObject);
+		// download and play intro file if exists ( image or video )
+		if (smilObject.intro.length > 0) {
+			await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
+		} else {
+			// no intro
+			debug('No intro element found');
+			downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+			await Promise.all(downloadPromises);
+			debug('SMIL media files download finished');
+			await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+		}
 
-	// download and play intro file if exists ( image or video )
-	if (smilObject.intro.length > 0) {
-		await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
-	} else {
-		// no intro
-		debug('No intro element found');
-		downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
-		await Promise.all(downloadPromises);
-		debug('SMIL media files download finished');
-		await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+		debug('Starting to process parsed smil file');
+		await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
+	} catch (err) {
+		debug('Unexpected error during xml parse: %O', err);
+		debug('Starting to play backup image');
+		const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
+		playlist.setBackgroundImageUrl(backupImageUrl);
+		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, 'indefinite');
+		const regionInfo = <SMILFileObject> getDefaultRegion();
+
+		await playlist.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit);
+		if (isNil(sos.config.backupImageUrl)) {
+			backupPlaylist.seq.img.localFilePath = backupImageUrl;
+		}
+		await playlist.processPlaylist(backupPlaylist);
 	}
-
-	debug('Starting to process parsed smil file');
-	await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
 }
 
 async function startSmil(smilUrl: string) {
