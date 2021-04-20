@@ -294,6 +294,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 				// add left and top values for intro play
 				regionsObject.rootLayout.top = '0';
 				regionsObject.rootLayout.left = '0';
+				regionsObject.rootLayout.regionName = 'rootLayout';
 			}
 
 			if (rootKey === SMILEnums.region) {

@@ -810,6 +810,32 @@ export class Playlist {
 		return this.cancelFunction;
 	}
 
+	private checkRegionsForCancellation = async (
+		element: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, parentRegion: RegionAttributes,
+		) => {
+		// cancel element played in default region
+		if (!isNil(this.currentlyPlaying[SMILEnums.defaultRegion])
+			&& !isNil(get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src'))
+			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src) {
+			debug('cancelling media: %s in default region from element: %s', this.currentlyPlaying[SMILEnums.defaultRegion].src, element.src);
+			await this.cancelPreviousMedia(this.currentlyPlaying[SMILEnums.defaultRegion].regionInfo);
+		}
+
+		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
+			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
+			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
+			debug('cancelling media: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
+			await this.cancelPreviousMedia(regionInfo);
+		}
+
+		// cancel if video is not same as previous one played in the parent region ( triggers case )
+		if (parentRegion.regionName !== regionInfo.regionName
+			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
+			debug('cancelling media from parent region: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
+			await this.cancelPreviousMedia(parentRegion);
+		}
+	}
+
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
@@ -969,21 +995,8 @@ export class Playlist {
 		): Promise<void> => {
 
 		debug('Starting to play element: %O', element);
-		// set invisible previous element in region for gapless playback if it differs from current element
-		// TODO: check also default region
-		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
-			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
-			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
-			debug('cancelling media: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
-			await this.cancelPreviousMedia(regionInfo);
-		}
 
-		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (parentRegion.regionName !== regionInfo.regionName
-			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-			debug('cancelling media from parent region: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
-			await this.cancelPreviousMedia(parentRegion);
-		}
+		await this.checkRegionsForCancellation(element, regionInfo, parentRegion);
 
 		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
 
@@ -1212,19 +1225,7 @@ export class Playlist {
 						regionInfo.height,
 					);
 
-					// cancel if video is not same as previous one played in the same region
-					if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
-						&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
-						debug('cancelling media: %s from video: %s', this.currentlyPlaying[regionInfo.regionName].src, video.src);
-						await this.cancelPreviousMedia(regionInfo);
-					}
-
-					// cancel if video is not same as previous one played in the parent region ( triggers case )
-					if (parentRegion.regionName !== regionInfo.regionName
-						&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-						debug('cancelling media from parent region: %s from video: %s', this.currentlyPlaying[parentRegion.regionName].src, video.src);
-						await this.cancelPreviousMedia(parentRegion);
-					}
+					await this.checkRegionsForCancellation(video, regionInfo, parentRegion);
 
 					this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
 
