@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- fix bug with default region not having proper name
+
+### Added
+- added support for backup image if smil-player fails on smil file download or smil xml parse
+functionality supports image stored directly in smil repo or on remote server.
+
 ## [1.5.0] - 2021-04-14
 ### Fixed
 - bug with new parent generated during each iteration of playlist
