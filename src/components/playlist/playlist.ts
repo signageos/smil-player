@@ -17,7 +17,7 @@ import { SMILEnums } from '../../enums/generalEnums';
 import { XmlTags } from '../../enums/xmlEnums';
 import { DeviceInfo } from '../../enums/deviceEnums';
 import { HtmlEnum } from '../../enums/htmlEnums';
-import { ConditionalExprEnum } from '../../enums/conditionalEnums';
+import { ExprTag } from '../../enums/conditionalEnums';
 import { SMILTriggersEnum } from '../../enums/triggerEnums';
 import { FileStructure } from '../../enums/fileEnums';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
@@ -350,7 +350,7 @@ export class Playlist {
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
 			if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
-				debug('Conditional expression: %s, for value: %O is false', elem[ConditionalExprEnum.exprTag]!, elem);
+				debug('Conditional expression: %s, for value: %O is false', elem[ExprTag]!, elem);
 				if (arrayIndex === 0 && setDefaultAwait(value, this.playerName, this.playerId)
 					=== SMILScheduleEnum.defaultAwait) {
 					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
@@ -724,7 +724,7 @@ export class Playlist {
 	private checkConditionalDefaultAwait = async (value: PlaylistElement, arrayIndex: number = -1, length: number = -1): Promise<boolean> => {
 		if (arrayIndex === -1) {
 			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-				debug('Conditional expression : %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				debug('Conditional expression : %s, for value: %O is false', value[ExprTag]!, value);
 				if (setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait)  {
 					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
 					await sleep(SMILScheduleEnum.defaultAwait);
@@ -733,7 +733,7 @@ export class Playlist {
 			}
 		} else {
 			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-				debug('Conditional expression: %s, for value: %O is false', value[ConditionalExprEnum.exprTag]!, value);
+				debug('Conditional expression: %s, for value: %O is false', value[ExprTag]!, value);
 				if (arrayIndex === length - 1
 					&& setDefaultAwait(<PlaylistElement[]> value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait) {
 					debug('No active sequence find in conditional expression schedule, setting default await: %s', SMILScheduleEnum.defaultAwait);
