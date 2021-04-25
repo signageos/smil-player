@@ -1,6 +1,7 @@
 import moment from 'moment';
 import he from 'he';
 import split, { Options } from 'split-string';
+import ical from 'ical';
 
 import { SMILMediaSingle } from '../../../models/mediaModels';
 import { PlaylistElement } from '../../../models/playlistModels';
@@ -15,6 +16,7 @@ import {
 } from '../../../enums/conditionalEnums';
 import { setDefaultAwait } from './scheduleTools';
 import { debug, generateCurrentDate } from './generalTools';
+import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';
 
 export function isConditionalExpExpired(
@@ -103,6 +105,27 @@ export function checkConditionalExpr(expression: string, playerName: string, pla
 	}
 
 	return executeConditionalExpr(expression, playerName, playerId);
+}
+
+/**
+ * Evaluates expression comparing icsString expr="adapi-compare(adapi-ics(),'icsString')"
+ * @param icsData - expression string without first argument such as 'icsString'
+ */
+function compareIcsExpr(icsData: string): boolean {
+	const calendar = ical.parseICS(icsData);
+	const events = Object.values(calendar).filter((i) => i.type === 'VEVENT');
+	return events.some((event) => {
+		const currentDate = generateCurrentDate(false);
+		const closedPastStart = event.rrule?.before(currentDate.toDate(), true);
+		const durationMs = typeof event.duration === 'string'
+			// if duration is in event, parse and use it
+			? parseRFC5545Duration(event.duration)
+			// if no duration in event, get it from difference of start & end date
+			: event.start && event.end ? event.end.valueOf() - event.start.valueOf() : 0;
+		const closedPastEnd = moment(closedPastStart).add(durationMs);
+		console.log(currentDate, closedPastStart, closedPastEnd);
+		return currentDate.isBetween(closedPastStart, closedPastEnd, 'milliseconds', '[]');
+	});
 }
 
 /**
@@ -292,6 +315,10 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 			comparable.comparator = comparable.comparator && swapComparator(comparable.comparator);
 		} else {
 			throw new Error(`Comparing two functions are currently not supported. One side has to be const: ${element}`);
+		}
+
+		if (funcArg.func === ConditionalExprFunction.ics) {
+			return compareIcsExpr(constArg.constValue);
 		}
 
 		// Evaluates expression comparing playerId expr="adapi-compare(smil-playerId(),'playerId')"

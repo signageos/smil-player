@@ -12,6 +12,7 @@ export enum ConditionalExprFunction {
 	weekDayUTC = 'gmweekday',
 	playerId = 'smil-playerId',
 	playerName = 'smil-playerName',
+	ics = 'ics',
 }
 
 export enum ConditionalExprFormat {

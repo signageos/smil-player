@@ -335,6 +335,60 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		});
 	});
 
+	describe('Playlist tools component checkConditionalExprSafe ICS tests', () => {
+
+		const icsExample1 = 'BEGIN:VCALENDAR\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Adobe//AEM Screens//EN\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:20210421T120000\r\nRRULE:FREQ=DAILY;UNTIL=20210422T144100\r\nDTSTAMP:20210420T144143\r\nCREATED:20210420T144143\r\nUID:a0effdca-ab09-46e6-b4d7-4fbd1937ca47\r\nDESCRIPTION:\r\nSUMMARY:Daily Event\r\nDURATION:PT6H\r\nEND:VEVENT\r\nEND:VCALENDAR';
+
+		it('Should return correct response', () => {
+			let testExpression = `adapi-compare(adapi-ics(), '${icsExample1}')`;
+
+			// event starting edge
+			MockDate.set('2021-04-21T11:59:59');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			MockDate.set('2021-04-21T12:00:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			// event ending edge
+			MockDate.set('2021-04-21T17:59:59');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			MockDate.set('2021-04-21T18:00:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			MockDate.set('2021-04-21T18:00:01');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			// Still running event & even end date did not reached
+			MockDate.set('2021-04-22T14:40:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			// time is after endDate but event already started using recurrency rule
+			MockDate.set('2021-04-22T14:41:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			MockDate.set('2021-04-22T14:42:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+
+			// Next day recurrency is not valid
+			MockDate.set('2021-04-23T11:59:59');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			MockDate.set('2021-04-23T12:00:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			MockDate.set('2021-04-23T17:59:59');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			MockDate.set('2021-04-23T18:00:00');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+			MockDate.set('2021-04-23T18:00:01');
+			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+
+		});
+	});
+
 	describe('Playlist tools component checkConditionalExprSafe advanced expressions - AND', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
