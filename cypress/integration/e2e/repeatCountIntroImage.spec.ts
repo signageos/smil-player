@@ -8,8 +8,8 @@ describe("repeatCountIntroImage.smil test", () => {
 		cy.iframe().find('#SMILUrl').clear().type(SMILUrls.repeatCountIntroImage);
 		cy.wait(CypressTimeouts.submitTimeout);
 		cy.iframe().find('#SMILUrlWrapper').submit();
-		cy.iframe().find('img[id*="landscape2.jpg-undefined"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[id*="landscape2.jpg-undefined"]'), 0, 0, 1920, 1080);
+		cy.iframe().find('img[id*="landscape2.jpg-rootLayout"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.iframe().find('img[id*="landscape2.jpg-rootLayout"]'), 0, 0, 1920, 1080);
 
 		cy.get('video[src*="videos/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		testCoordinates(cy.get('video[src*="videos/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"]'), 0, 0, 1920, 1080);

@@ -5,6 +5,7 @@ import moment from 'moment';
 import hash from 'object-hash';
 
 import {
+	BackupPlaylist,
 	CurrentlyPlayingRegion,
 	InfiniteLoopObject,
 	PlaylistElement,
@@ -187,6 +188,31 @@ export function generateParentId(tagName: string, value: any): string {
 		debug('Error during parent generation: %O', err);
 		return `${tagName}-undefined`;
 	}
+}
+
+export function generateBackupImagePlaylist(imageUrl: string, repeatCount: string): BackupPlaylist {
+	return {
+		seq: {
+			repeatCount: repeatCount,
+			img: {
+				src: imageUrl,
+				dur: '10',
+				localFilePath: '',
+			},
+		},
+	};
+}
+
+export function getDefaultRegion() {
+	return {
+		rootLayout: {
+			width: `${document.documentElement.clientWidth}`,
+			height: `${document.documentElement.clientHeight}`,
+			top: `0`,
+			left: `0`,
+			regionName: SMILEnums.defaultRegion,
+		},
+	};
 }
 
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {

@@ -15,6 +15,7 @@ export type RootLayout = {
 	left: string,
 	top: string,
 	backgroundColor: string,
+	regionName: string,
 };
 
 export type XmlSmilObject = {
