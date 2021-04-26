@@ -73,4 +73,5 @@ export const mockParsed234Layout = {
 	left: 0,
 	top: 0,
 	backgroundColor: "#FFFFFF",
+	regionName: "rootLayout",
 };

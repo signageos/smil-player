@@ -53,8 +53,9 @@ import { createPriorityObject } from './tools/priorityTools';
 export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
-	private playerName: string;
-	private playerId: string;
+	private readonly playerName: string;
+	private readonly playerId: string;
+	private backgroundImageUrl: string;
 	private files: Files;
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
@@ -70,6 +71,10 @@ export class Playlist {
 		// TODO: will be handled differently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
 		this.playerId = get(sos, 'config.playerId', '');
+	}
+
+	public setBackgroundImageUrl(backgroundImageUrl: string) {
+		this.backgroundImageUrl = backgroundImageUrl;
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
@@ -250,6 +255,7 @@ export class Playlist {
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param isTrigger - boolean value determining if function is processing trigger playlist or ordinary playlist
 	 */
+		// TODO: fix naming
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[] | TriggerList, region: SMILFileObject, internalStorageUnit: IStorageUnit,
 		isTrigger: boolean = false,
@@ -293,7 +299,7 @@ export class Playlist {
 				}
 
 				for (const elem of value) {
-					if (isUrl(elem.src)) {
+					if (isUrl(elem.src) || this.backgroundImageUrl === elem.src) {
 						const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
 							storageUnit: internalStorageUnit,
 							filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
@@ -404,7 +410,6 @@ export class Playlist {
 
 			if (key === 'par') {
 				let newParent = generateParentId(key, value);
-
 				if (Array.isArray(value)) {
 					value.forEach((elem) => {
 						const controlTag = key === 'seq' ? key : 'par';
@@ -810,6 +815,32 @@ export class Playlist {
 		return this.cancelFunction;
 	}
 
+	private checkRegionsForCancellation = async (
+		element: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, parentRegion: RegionAttributes,
+		) => {
+		// cancel element played in default region
+		if (!isNil(this.currentlyPlaying[SMILEnums.defaultRegion])
+			&& !isNil(get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src'))
+			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src) {
+			debug('cancelling media: %s in default region from element: %s', this.currentlyPlaying[SMILEnums.defaultRegion].src, element.src);
+			await this.cancelPreviousMedia(this.currentlyPlaying[SMILEnums.defaultRegion].regionInfo);
+		}
+
+		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
+			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
+			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
+			debug('cancelling media: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
+			await this.cancelPreviousMedia(regionInfo);
+		}
+
+		// cancel if video is not same as previous one played in the parent region ( triggers case )
+		if (parentRegion.regionName !== regionInfo.regionName
+			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
+			debug('cancelling media from parent region: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
+			await this.cancelPreviousMedia(parentRegion);
+		}
+	}
+
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
@@ -969,21 +1000,8 @@ export class Playlist {
 		): Promise<void> => {
 
 		debug('Starting to play element: %O', element);
-		// set invisible previous element in region for gapless playback if it differs from current element
-		// TODO: check also default region
-		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
-			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
-			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
-			debug('cancelling media: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
-			await this.cancelPreviousMedia(regionInfo);
-		}
 
-		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (parentRegion.regionName !== regionInfo.regionName
-			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-			debug('cancelling media from parent region: %s from image: %s', this.currentlyPlaying[regionInfo.regionName].src, element.id);
-			await this.cancelPreviousMedia(parentRegion);
-		}
+		await this.checkRegionsForCancellation(element, regionInfo, parentRegion);
 
 		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
 
@@ -1169,6 +1187,7 @@ export class Playlist {
 				return;
 			}
 
+			// TODO: possible infinite loop
 			if (isConditionalExpExpired(video, this.playerName, this.playerId)) {
 				debug('Conditional expression: %s, for video: %O is false', video.expr!, video);
 				return;
@@ -1212,19 +1231,7 @@ export class Playlist {
 						regionInfo.height,
 					);
 
-					// cancel if video is not same as previous one played in the same region
-					if (get(this.currentlyPlaying[regionInfo.regionName], 'playing')
-						&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src) {
-						debug('cancelling media: %s from video: %s', this.currentlyPlaying[regionInfo.regionName].src, video.src);
-						await this.cancelPreviousMedia(regionInfo);
-					}
-
-					// cancel if video is not same as previous one played in the parent region ( triggers case )
-					if (parentRegion.regionName !== regionInfo.regionName
-						&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-						debug('cancelling media from parent region: %s from video: %s', this.currentlyPlaying[parentRegion.regionName].src, video.src);
-						await this.cancelPreviousMedia(parentRegion);
-					}
+					await this.checkRegionsForCancellation(video, regionInfo, parentRegion);
 
 					this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
 
@@ -1421,8 +1428,8 @@ export class Playlist {
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[value.regionInfo.regionName]);
 
-		debug('Playing media sequentially: %O with parent: %s', value, parent);
-		if (isUrl(value.src)) {
+		if (isUrl(value.src) || this.backgroundImageUrl === value.src) {
+			debug('Playing media : %O with parent: %s', value, parent);
 			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
 				debug('Conditional expression: %s, for video: %O is false', value.expr!, value);
 				return;

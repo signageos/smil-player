@@ -7,6 +7,19 @@ export type PrefetchObject = {
 	},
 };
 
+export type BackupElement = {
+	repeatCount: string,
+	img: {
+		src: string,
+		dur: string,
+		localFilePath: string;
+	},
+};
+
+export type BackupPlaylist = {
+	seq: BackupElement,
+};
+
 export type PlaylistElement = {
 	expr?: string,
 	begin?: string,

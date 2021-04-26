@@ -60,6 +60,14 @@ module.exports = (_env, argv) => {
                     ],
                     enforce: "post"
                 },
+				{
+					test: /\.(png|jpe?g|gif)$/i,
+					use: [
+						{
+							loader: 'file-loader',
+						},
+					],
+				},
             ],
         },
         plugins: [
