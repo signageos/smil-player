@@ -109,7 +109,7 @@ describe('Files tools component', () => {
 
 			for (let i = 0; i < validUrls.length; i += 1) {
 				const response = createDownloadPath(validUrls[i]);
-				const responseNumber: number = parseInt(response.split('?v=')[1]);
+				const responseNumber: number = parseInt(response.split('?__smil_version=')[1]);
 				expect(responseNumber).to.be.lessThan(1000000);
 				expect(responseNumber > 0).to.be.equal(true);
 			}
