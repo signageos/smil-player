@@ -2,6 +2,7 @@ import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 const isUrl = require('is-url-superb');
 import moment from 'moment';
+import path from 'path';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { getFileName, getPath, isValidLocalPath, createDownloadPath,
@@ -201,20 +202,23 @@ export class Files {
 	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
-		for (let path in FileStructure) {
-			const downloadedFiles = await this.sos.fileSystem.listFiles( { filePath: get(FileStructure, path), storageUnit: internalStorageUnit });
+		for (let structPath in FileStructure) {
+			const downloadedFiles = await this.sos.fileSystem.listFiles({
+				filePath: get(FileStructure, structPath),
+				storageUnit: internalStorageUnit,
+			});
 
 			for (let storedFile of downloadedFiles) {
+				const storedFileName = path.basename(storedFile.filePath);
 				let found = false;
 				for (let smilFile of smilMediaArray) {
-					if (getFileName(storedFile.filePath) === getFileName(smilFile.src)) {
+					if (storedFileName === getFileName(smilFile.src)) {
 						debug(`File found in new SMIL file: %s`, storedFile.filePath);
 						found = true;
 						break;
 					}
 				}
-				if (!found && (getFileName(storedFile.filePath) !== getFileName(smilUrl))
-				&& (getFileName(storedFile.filePath).indexOf(FileStructure.smilMediaInfoFileName) === -1)) {
+				if (!found && storedFileName !== getFileName(smilUrl) && !storedFileName.includes(FileStructure.smilMediaInfoFileName)) {
 					// delete only path with files, not just folders
 					if (storedFile.filePath.indexOf('.') > -1) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
