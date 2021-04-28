@@ -18,6 +18,12 @@ import {
 } from '../../models/filesModels';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../models/mediaModels';
 
+declare global {
+	interface Window {
+		getAuthHeaders?: (url: string) => Record<string, string>;
+	}
+}
+
 export class Files {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
@@ -157,12 +163,15 @@ export class Files {
 				promises.push((async () => {
 					try {
 						debug(`Downloading file: %s`, filesList[i].src);
+						const downloadUrl = createDownloadPath(filesList[i].src);
+						const authHeaders = window.getAuthHeaders?.(downloadUrl);
 						await this.sos.fileSystem.downloadFile(
 							{
 								storageUnit: internalStorageUnit,
 								filePath: createLocalFilePath(localFilePath, filesList[i].src),
 							},
-							createDownloadPath(filesList[i].src),
+							downloadUrl,
+							authHeaders,
 						);
 					} catch (err) {
 						debug(`Unexpected error: %O during downloading file: %s`, err, filesList[i].src);
@@ -272,9 +281,12 @@ export class Files {
 
 	public fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
 		try {
-			const response = await fetch(createDownloadPath(fileSrc), {
+			const downloadUrl = createDownloadPath(fileSrc);
+			const authHeaders = window.getAuthHeaders?.(downloadUrl);
+			const response = await fetch(downloadUrl, {
 				method: 'HEAD',
 				headers: {
+					...authHeaders,
 					Accept: 'application/json',
 				},
 				mode: 'cors',
