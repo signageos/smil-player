@@ -35,7 +35,9 @@ export function isValidLocalPath(filePath: string) {
 }
 
 export function createDownloadPath(sourceUrl: string): string {
-	return `${corsAnywhere}${sourceUrl}?v=${getRandomInt(1000000)}`;
+	const parsedUrl = URL.parse(sourceUrl, true);
+	parsedUrl.query.__smil_version = getRandomInt(1000000).toString();
+	return `${corsAnywhere}${URL.format(parsedUrl)}`;
 }
 
 export function createLocalFilePath(localFilePath: string, src: string): string {
