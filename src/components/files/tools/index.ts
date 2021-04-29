@@ -10,6 +10,11 @@ export function getRandomInt(max: number) {
 	return Math.floor(Math.random() * Math.floor(max));
 }
 
+export function isRelativePath(filePath: string) {
+	const parsedUrl = URL.parse(filePath);
+	return !parsedUrl.host;
+}
+
 export function getFileName(url: string) {
 	if (!url) {
 		return url;

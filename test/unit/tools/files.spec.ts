@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { createDownloadPath, getFileName, getPath } from '../../../src/components/files/tools';
+import { createDownloadPath, getFileName, getPath, isRelativePath } from '../../../src/components/files/tools';
 
 const expect = chai.expect;
 
@@ -77,5 +77,22 @@ describe('Files tools component', () => {
 			}
 		});
 
+	});
+
+	describe('isRelativePath', () => {
+		const data = [
+			['/root/path', true],
+			['root/path', true],
+			['http://example.com/root/path', false],
+			['https://localhost/root/path', false],
+			['https://10.0.0.1/root/path', false],
+			['https://10.0.0.1', false],
+		] as const;
+
+		data.forEach(([filePath, expected]) => {
+			it(`should return ${expected} only on ${filePath} paths`, () => {
+				expect(isRelativePath(filePath)).equal(expected);
+			});
+		});
 	});
 });

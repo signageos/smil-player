@@ -78,7 +78,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			debug('Unexpected error occurred during smil file download : %O', err);
 			debug('Starting to play backup image');
 			const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
-			playlist.setBackgroundImageUrl(backupImageUrl);
 			const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
 			const regionInfo = <SMILFileObject> getDefaultRegion();
 
@@ -113,7 +112,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		debug('Unexpected error during xml parse: %O', err);
 		debug('Starting to play backup image');
 		const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
-		playlist.setBackgroundImageUrl(backupImageUrl);
 		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, 'indefinite');
 		const regionInfo = <SMILFileObject> getDefaultRegion();
 
