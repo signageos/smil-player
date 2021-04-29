@@ -5,8 +5,8 @@ import moment from 'moment';
 import path from 'path';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, isValidLocalPath, createDownloadPath,
-	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject } from './tools';
+import { getFileName, getPath, createDownloadPath,
+	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, isRelativePath } from './tools';
 import { debug } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
 import {
@@ -156,7 +156,7 @@ export class Files {
 		for (let i = 0; i < filesList.length; i += 1) {
 			const file = filesList[i];
 			// check for local urls to files (media/file.mp4)
-			if (!isUrl(file.src) && isValidLocalPath(file.src)) {
+			if (!isUrl(file.src)) {
 				file.src = `${getPath(this.smilFileUrl)}/${file.src}`;
 			}
 			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, file, mediaInfoObject);

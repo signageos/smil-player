@@ -5,8 +5,6 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { checksumString } from './checksum';
 export const debug = Debug('@signageos/smil-player:filesModule');
-// regExp for valid path testing
-const reg = new RegExp('^([A-Za-z]:|[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+)*)((/[A-Za-z0-9_.-]+)*)$');
 
 export function getRandomInt(max: number) {
 	return Math.floor(Math.random() * Math.floor(max));
@@ -28,10 +26,6 @@ export function getFileName(url: string) {
 
 export function getPath(filePath: string) {
 	return path.dirname(filePath);
-}
-
-export function isValidLocalPath(filePath: string) {
-	return reg.test(filePath);
 }
 
 export function createDownloadPath(sourceUrl: string): string {

@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { createDownloadPath, getFileName, getPath, isValidLocalPath } from '../../../src/components/files/tools';
+import { createDownloadPath, getFileName, getPath } from '../../../src/components/files/tools';
 
 const expect = chai.expect;
 
@@ -59,44 +59,6 @@ describe('Files tools component', () => {
 			for (let i = 0; i < filesPaths.length; i += 1) {
 				const response = getPath(filesPaths[i]);
 				expect(response).to.be.equal(parsedFilePaths[i]);
-			}
-		});
-
-		it('Should validate given path', () => {
-			const validFilesPaths = [
-				'bucketname/filename.ext',
-				'bucket.name/filename.ext',
-				'bucket.name/dir1/filename.ext',
-				'bucket.name/dir2/filename.ext',
-				'bucket.name/2015-01-17/15.00_description.ext',
-				'valid.bucket.name._-0123456789/filename.ext',
-				'filename',
-				'filename.mp4',
-				'test/file/name/testing.mp3',
-				'test/file/name/testing',
-			];
-
-			for (let i = 0; i < validFilesPaths.length; i += 1) {
-				const response = isValidLocalPath(validFilesPaths[i]);
-				expect(response).to.be.equal(true);
-			}
-
-			const invalidFilesPaths = [
-				'/bucket.name/dir/filename',
-				'/bucket.name/dir/filename/',
-				'.bucket.name/dir/filename.ext',
-				'bucket*name/filename.ext',
-				'adapi:blankScreen',
-				'bucket*name/fi<>lename.ext',
-				'bucket*name/fil::ename.ext',
-				'adapi:blankScreen/mp4.mp4',
-				'adapi:blankScreen/mp4',
-				'C:\\dir1\\blah.txt',
-			];
-
-			for (let i = 0; i < invalidFilesPaths.length; i += 1) {
-				const response = isValidLocalPath(invalidFilesPaths[i]);
-				expect(response).to.be.equal(false);
 			}
 		});
 
