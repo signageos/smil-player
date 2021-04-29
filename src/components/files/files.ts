@@ -71,7 +71,9 @@ export class Files {
 		internalStorageUnit: IStorageUnit, localFilePath: string, media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
 	): Promise<boolean> => {
-		const currentLastModified = await this.fetchLastModified(media.src);
+		const currentLastModified = 'fetchLastModified' in media && media.fetchLastModified
+			? await media.fetchLastModified()
+			: await this.fetchLastModified(media.src);
 		// file was not found
 		if (isNil(currentLastModified)) {
 			debug(`File was not found on remote server: %O `, media.src);
@@ -152,29 +154,34 @@ export class Files {
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
 
 		for (let i = 0; i < filesList.length; i += 1) {
+			const file = filesList[i];
 			// check for local urls to files (media/file.mp4)
-			if (!isUrl(filesList[i].src) && isValidLocalPath(filesList[i].src)) {
-				filesList[i].src = `${getPath(this.smilFileUrl)}/${filesList[i].src}`;
+			if (!isUrl(file.src) && isValidLocalPath(file.src)) {
+				file.src = `${getPath(this.smilFileUrl)}/${file.src}`;
 			}
-			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, filesList[i], mediaInfoObject);
+			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, file, mediaInfoObject);
 
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
-			if (isUrl(filesList[i].src) && (forceDownload || shouldUpdate)) {
+			if (isUrl(file.src) && (forceDownload || shouldUpdate)) {
 				promises.push((async () => {
 					try {
-						debug(`Downloading file: %s`, filesList[i].src);
-						const downloadUrl = createDownloadPath(filesList[i].src);
+						debug(`Downloading file: %s`, file.src);
+						const downloadUrl = createDownloadPath(file.src);
 						const authHeaders = window.getAuthHeaders?.(downloadUrl);
-						await this.sos.fileSystem.downloadFile(
-							{
-								storageUnit: internalStorageUnit,
-								filePath: createLocalFilePath(localFilePath, filesList[i].src),
-							},
-							downloadUrl,
-							authHeaders,
-						);
+						if ('download' in file && file.download) {
+							await file.download();
+						} else {
+							await this.sos.fileSystem.downloadFile(
+								{
+									storageUnit: internalStorageUnit,
+									filePath: createLocalFilePath(localFilePath, file.src),
+								},
+								downloadUrl,
+								authHeaders,
+							);
+						}
 					} catch (err) {
-						debug(`Unexpected error: %O during downloading file: %s`, err, filesList[i].src);
+						debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 					}
 				})());
 			}
@@ -189,15 +196,15 @@ export class Files {
 	 * @param internalStorageUnit - persistent storage unit
 	 */
 	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
-		for (const path of Object.values(FileStructure)) {
-			if (await this.fileExists(internalStorageUnit, path)) {
-				debug(`Filepath already exists: %O`, path);
+		for (const structPath of Object.values(FileStructure)) {
+			if (await this.fileExists(internalStorageUnit, structPath)) {
+				debug(`Filepath already exists: %O`, structPath);
 				continue;
 			}
-			debug(`Create directory structure: %O`, path);
+			debug(`Create directory structure: %O`, structPath);
 			await this.sos.fileSystem.createDirectory({
 				storageUnit: internalStorageUnit,
-				filePath: path,
+				filePath: structPath,
 			});
 		}
 	}
@@ -310,27 +317,30 @@ export class Files {
 		): Promise<any[]> => {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
+			const file = filesList[i];
 			try {
-				if (isUrl(filesList[i].src)) {
-					const newLastModified = await this.fetchLastModified(filesList[i].src);
+				if (isUrl(file.src)) {
+					const newLastModified = 'fetchLastModified' in file && file.fetchLastModified
+						? await file.fetchLastModified()
+						: await this.fetchLastModified(file.src);
 					if (isNil(newLastModified)) {
-						debug(`File was not found on remote server: %O `, filesList[i].src);
+						debug(`File was not found on remote server: %O `, file.src);
 						continue;
 					}
 
-					debug(`Fetched new last-modified header: %s for file: %O `, newLastModified, filesList[i].src);
+					debug(`Fetched new last-modified header: %s for file: %O `, newLastModified, file.src);
 
-					if (isNil(filesList[i].lastModified)) {
-						filesList[i].lastModified = moment(newLastModified).valueOf();
+					if (isNil(file.lastModified)) {
+						file.lastModified = moment(newLastModified).valueOf();
 					}
 
-					if ((<number> filesList[i].lastModified) < moment(newLastModified).valueOf()) {
-						debug(`New version of file detected: %O`, filesList[i].src);
-						promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [filesList[i]], localFilePath, true));
+					if ((<number> file.lastModified) < moment(newLastModified).valueOf()) {
+						debug(`New version of file detected: %O`, file.src);
+						promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [file], localFilePath, true));
 					}
 				}
 			} catch (err) {
-					debug('Error occurred: %O during checking file version: %O', err, filesList[i]);
+					debug('Error occurred: %O during checking file version: %O', err, file);
 			}
 		}
 		return promises;
