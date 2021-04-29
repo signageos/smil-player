@@ -1,7 +1,6 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
 import isObject = require('lodash/isObject');
-const isUrl = require('is-url-superb');
 import get = require('lodash/get');
 import set = require('lodash/set');
 import { isEqual } from 'lodash';
@@ -55,7 +54,6 @@ export class Playlist {
 	private cancelFunction: boolean = false;
 	private readonly playerName: string;
 	private readonly playerId: string;
-	private backgroundImageUrl: string;
 	private files: Files;
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
@@ -71,10 +69,6 @@ export class Playlist {
 		// TODO: will be handled differently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
 		this.playerId = get(sos, 'config.playerId', '');
-	}
-
-	public setBackgroundImageUrl(backgroundImageUrl: string) {
-		this.backgroundImageUrl = backgroundImageUrl;
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
@@ -299,30 +293,28 @@ export class Playlist {
 				}
 
 				for (const elem of value) {
-					if (isUrl(elem.src) || this.backgroundImageUrl === elem.src) {
-						const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
-							storageUnit: internalStorageUnit,
-							filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
-						});
-						// in case of web page as widget, leave localFilePath blank
-						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
+					const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
+						storageUnit: internalStorageUnit,
+						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
+					});
+					// in case of web page as widget, leave localFilePath blank
+					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
-						// check if video has duration defined due to webos bug
-						if (key.startsWith('video')) {
-							elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
-						}
-						elem.regionInfo = getRegionInfo(region, elem.region);
-						extractAdditionalInfo(elem);
+					// check if video has duration defined due to webos bug
+					if (key.startsWith('video')) {
+						elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
+					}
+					elem.regionInfo = getRegionInfo(region, elem.region);
+					extractAdditionalInfo(elem);
 
-						// element will be played only on trigger emit in nested region
-						if (isTrigger) {
-							elem.triggerValue = triggerName;
-						}
+					// element will be played only on trigger emit in nested region
+					if (isTrigger) {
+						elem.triggerValue = triggerName;
+					}
 
-						// create placeholders in DOM for images and widgets to speedup playlist processing
-						if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-							elem.id = createDomElement(elem, htmlElement, key, isTrigger);
-						}
+					// create placeholders in DOM for images and widgets to speedup playlist processing
+					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
+						elem.id = createDomElement(elem, htmlElement, key, isTrigger);
 					}
 				}
 				// reset widget exprension for next elements
@@ -1428,24 +1420,22 @@ export class Playlist {
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[value.regionInfo.regionName]);
 
-		if (isUrl(value.src) || this.backgroundImageUrl === value.src) {
-			debug('Playing media : %O with parent: %s', value, parent);
-			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-				debug('Conditional expression: %s, for video: %O is false', value.expr!, value);
-				return;
-			}
-			// widget with website url as datasource
-			if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
-				value.localFilePath = value.src;
-				await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
-				return;
-			}
-			if (htmlElement === 'audio') {
-				await this.playAudio(value.localFilePath);
-				return;
-			}
-			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+		debug('Playing media : %O with parent: %s', value, parent);
+		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug('Conditional expression: %s, for video: %O is false', value.expr!, value);
+			return;
 		}
+		// widget with website url as datasource
+		if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
+			value.localFilePath = value.src;
+			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+			return;
+		}
+		if (htmlElement === 'audio') {
+			await this.playAudio(value.localFilePath);
+			return;
+		}
+		await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
 	}
 
 	/**
