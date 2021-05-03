@@ -80,6 +80,12 @@ npm install
 npm run build --production
 ```
 
+## Configuration options
+
+- `smilUrl` is used for passing URL of the smil file
+- `backupImageUrl` is used for defining a failover image that will be shown in case the smil file is corrupted or fatal error occurs during playback 
+- `serialPortDevice` is used for defining device address used for serial communication (like Nexmosphere sensors)
+
 ## Debugging
 It is possible to turn on debug messages using browser dev console. Type in __localStorage.debug = '@signageos/smil-player:*'__ 
 for debugging all modules, if you wish to debug specific component, replace wildcard with the name of the component
