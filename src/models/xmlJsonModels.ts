@@ -23,6 +23,7 @@ export type XmlSmilObject = {
 		head: {
 			meta: [{
 				content: string,
+				log: string,
 			}],
 			layout: RegionsObject,
 		},
@@ -39,6 +40,7 @@ export type XmlHeadObject = {
 
 export type SMILMetaObject = {
 	content: string,
+	log: string,
 };
 
 export type RegionAttributes = {
