@@ -547,7 +547,7 @@ export class Playlist {
 		let serialPort;
 		try {
 			serialPort = await this.sos.hardware.openSerialPort({
-				device: <string> SMILTriggersEnum.nexmoDevice,
+				device: (this.sos.config.serialPortDevice ?? <string> SMILTriggersEnum.nexmoDevice),
 				baudRate: <number> SMILTriggersEnum.nexmoBaudRate,
 			});
 		} catch (err) {
