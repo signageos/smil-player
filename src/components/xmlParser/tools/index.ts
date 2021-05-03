@@ -190,8 +190,11 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		meta = [meta];
 	}
 	for (const metaRecord of meta) {
-		if (metaRecord.hasOwnProperty(SMILTriggersEnum.metaContent)) {
+		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
 			regions.refresh = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+		}
+		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
+			regions.log = metaRecord.log === 'true';
 		}
 	}
 }
@@ -249,6 +252,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
 		refresh: 0,
+		log: false,
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
