@@ -143,7 +143,12 @@ export class Files {
 
 		const response = await this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
 			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)});
-		return JSON.parse(response);
+		try {
+			return JSON.parse(response);
+		} catch (error) {
+			debug('Cannot parse smil meta media info', error);
+			return createJsonStructureMediaInfo(filesList);
+		}
 	}
 
 	public parallelDownloadAllFiles = async (
