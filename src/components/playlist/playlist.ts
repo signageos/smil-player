@@ -9,7 +9,7 @@ import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getRandomInt } from '../files/tools';
+import { getFileName, createVersionedUrl, copyQueryParameters } from '../files/tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { SMILEnums } from '../../enums/generalEnums';
@@ -932,51 +932,54 @@ export class Playlist {
 		value: SMILMediaNoVideo, arrayIndex: number,
 		priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 	): Promise<void> => {
-			try {
-				let element = <HTMLElement> document.getElementById(<string> value.id);
+		try {
+			let element = <HTMLElement> document.getElementById(<string> value.id);
 
-				// set correct duration
-				const parsedDuration: number = setElementDuration(value.dur);
+			// set correct duration
+			const parsedDuration: number = setElementDuration(value.dur);
 
-				// add query parameter to invalidate cache on devices
-				if (element.getAttribute('src') === null) {
+			// add query parameter to invalidate cache on devices
+			if (element.getAttribute('src') === null) {
+				const doesSupportQueryParams = await this.doesSupportQueryParametersCompatibilityMode();
+				let src = value.localFilePath;
+				if (doesSupportQueryParams) {
 					// BrightSign does not support query parameters in filesystem
-					if (await this.doesSupportQueryParametersCompatibilityMode()) {
-						element.setAttribute('src', `${value.localFilePath}?v=${getRandomInt(1000000)}`);
-					} else {
-						element.setAttribute('src', value.localFilePath);
-					}
+					src = createVersionedUrl(src);
+					// TODO this would not work & break BS. Solve it other way in future before merge
+					src = copyQueryParameters(value.src, src);
 				}
-
-				const sosHtmlElement: SosHtmlElement = {
-					src: <string> element.getAttribute('src'),
-					id: element.id,
-					regionInfo: value.regionInfo,
-					localFilePath:  value.localFilePath,
-				};
-
-				if (!isNil(value.triggerValue)) {
-					sosHtmlElement.triggerValue = value.triggerValue;
-				}
-
-				const parentRegion = value.regionInfo;
-				let localRegionInfo = await this.handleTriggers(sosHtmlElement, element);
-
-				if (!(await this.shouldWaitAndContinue(
-					sosHtmlElement, localRegionInfo, priorityRegionName, arrayIndex, previousPlayingIndex, endTime, isLast,
-				))) {
-					return;
-				}
-
-				this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
-					element.style.visibility = 'visible';
-					await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
-					debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
-					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
-				})()];
-			} catch (err) {
-				debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+				element.setAttribute('src', src);
 			}
+
+			const sosHtmlElement: SosHtmlElement = {
+				src: <string> element.getAttribute('src'),
+				id: element.id,
+				regionInfo: value.regionInfo,
+				localFilePath:  value.localFilePath,
+			};
+
+			if (!isNil(value.triggerValue)) {
+				sosHtmlElement.triggerValue = value.triggerValue;
+			}
+
+			const parentRegion = value.regionInfo;
+			let localRegionInfo = await this.handleTriggers(sosHtmlElement, element);
+
+			if (!(await this.shouldWaitAndContinue(
+				sosHtmlElement, localRegionInfo, priorityRegionName, arrayIndex, previousPlayingIndex, endTime, isLast,
+			))) {
+				return;
+			}
+
+			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
+				element.style.visibility = 'visible';
+				await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
+				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
+				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
+			})()];
+		} catch (err) {
+			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+		}
 	}
 
 	/**

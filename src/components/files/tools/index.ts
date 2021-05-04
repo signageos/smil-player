@@ -1,5 +1,6 @@
 import Debug from 'debug';
 import * as path from 'path';
+import * as querystring from 'querystring';
 import * as URL from 'url';
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
@@ -34,9 +35,24 @@ export function getPath(filePath: string) {
 }
 
 export function createDownloadPath(sourceUrl: string): string {
+	return `${corsAnywhere}${createVersionedUrl(sourceUrl)}`;
+}
+
+export function createVersionedUrl(sourceUrl: string): string {
 	const parsedUrl = URL.parse(sourceUrl, true);
+	const searchLength = parsedUrl.search?.length ?? 0;
+	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
 	parsedUrl.query.__smil_version = getRandomInt(1000000).toString();
-	return `${corsAnywhere}${URL.format(parsedUrl)}`;
+	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
+}
+
+export function copyQueryParameters(fromUrl: string, toUrl: string) {
+	const parsedFromUrl = URL.parse(fromUrl, true);
+	const parsedToUrl = URL.parse(toUrl, true);
+	const searchLength = parsedToUrl.search?.length ?? 0;
+	const toUrlWithoutSearch = toUrl.substr(0, toUrl.length - searchLength);
+	Object.assign(parsedToUrl.query, parsedFromUrl.query);
+	return toUrlWithoutSearch + '?' + querystring.encode(parsedToUrl.query);
 }
 
 export function createLocalFilePath(localFilePath: string, src: string): string {
