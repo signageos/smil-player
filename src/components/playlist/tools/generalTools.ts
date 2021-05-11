@@ -232,16 +232,6 @@ export function generateCurrentDate(utc: boolean) {
 	return moment();
 }
 
-/**
- * finds index of nth occurrence of substring specified by count
- * @param string - t,est,
- * @param subString ,
- * @param count 2 = returns second index of ',' in string 't,est,'
- */
-export function getPosition(string: string, subString: string, count: number) {
-	return string.split(subString, count).join(subString).length;
-}
-
 export function removeDigits(expr: string): string {
 	return expr.replace(/[0-9]/g, '');
 }
