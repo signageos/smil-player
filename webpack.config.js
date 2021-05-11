@@ -73,7 +73,7 @@ module.exports = (_env, argv) => {
         plugins: [
             new webpack.EnvironmentPlugin({
                 ...argv.mode === 'development' ? {
-                    CORS_ANYWHERE: 'http://localhost:8086/',
+                    CORS_ANYWHERE: process.env.CORS_ANYWHERE || 'http://localhost:8086/',
                 } : {},
             }),
             new CheckerPlugin(),
