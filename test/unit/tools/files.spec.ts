@@ -14,14 +14,22 @@ describe('Files tools component', () => {
 				'../file.png',
 				'./../../../idontknow.mp3',
 				'fileName.mp4',
+				'https://butikstv.centrumkanalen.com/localFile/inFolder/something/my fi $ le.txt',
+				`https://butikstv.centrumkanalen.com/play/smil/234.smil?some=var&xxx=yyy`,
+				`filesystem:https://butikstv.centrumkanalen.com/persistent/play/smil/234.smil?some=var&xxx=yyy`,
+				'',
 			];
 			const fileNames = [
-				'234.smil',
-				'10826.png',
+				'234_e978d68b.smil',
+				'10826_d7be1ea5.png',
 				'myfile.txt',
 				'file.png',
 				'idontknow.mp3',
 				'fileName.mp4',
+				'my-fi-le_28eee269.txt',
+				'234_0d7ef620.smil',
+				'234_866496b7.smil',
+				'',
 			];
 
 			for (let i = 0; i < filesPaths.length; i += 1) {
@@ -101,7 +109,7 @@ describe('Files tools component', () => {
 
 			for (let i = 0; i < validUrls.length; i += 1) {
 				const response = createDownloadPath(validUrls[i]);
-				const responseNumber: number = parseInt(response.split('?v=')[1]);
+				const responseNumber: number = parseInt(response.split('?__smil_version=')[1]);
 				expect(responseNumber).to.be.lessThan(1000000);
 				expect(responseNumber > 0).to.be.equal(true);
 			}
