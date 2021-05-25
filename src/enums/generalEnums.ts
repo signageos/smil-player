@@ -1,5 +1,7 @@
 export enum SMILEnums {
 	region = 'region',
+	transition = 'transition',
+	transitionType = 'transIn',
 	rootLayout = 'root-layout',
 	defaultRegion = 'rootLayout',
 	img = 'img',

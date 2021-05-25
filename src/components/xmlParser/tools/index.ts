@@ -13,7 +13,7 @@ import {
 	RegionAttributes,
 	RegionsObject,
 	RootLayout,
-	SMILMetaObject,
+	SMILMetaObject, TransitionAttributes, TransitionsObject,
 	XmlHeadObject,
 } from '../../../models/xmlJsonModels';
 import { SMILMediaSingle } from '../../../models/mediaModels';
@@ -343,4 +343,34 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	});
 
 	return regionsObject;
+}
+
+export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObject {
+	const transitionsObject: TransitionsObject = {
+		transition: {},
+	};
+	Object.keys(xmlObject).forEach((rootKey: any) => {
+		if (rootKey === SMILEnums.transition) {
+			// multiple regions in layout element
+			if (Array.isArray(xmlObject[rootKey])) {
+				// iterate over array of objects
+				Object.keys(xmlObject[rootKey]).forEach((index: any) => {
+					if (xmlObject[rootKey][index].hasOwnProperty('transitionName')) {
+						transitionsObject.transition[xmlObject[rootKey][index].regionName] = <TransitionAttributes> xmlObject[rootKey][index];
+					} else {
+						transitionsObject.transition[xmlObject[rootKey][index][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey][index];
+
+					}
+				});
+			} else {
+				if (xmlObject[rootKey].hasOwnProperty('transitionName')) {
+					transitionsObject.transition[xmlObject[rootKey].transition] = <TransitionAttributes> xmlObject[rootKey];
+				} else {
+					transitionsObject.transition[xmlObject[rootKey][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey];
+				}
+			}
+		}
+	});
+
+	return transitionsObject;
 }

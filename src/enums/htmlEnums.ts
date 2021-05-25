@@ -7,6 +7,7 @@ export enum HtmlEnum {
 	left = 'left',
 	widgetRoot = '/index.html',
 	video = 'video',
+	transitionStyleId = 'transitions',
 }
 
 export enum ObjectFitEnum {

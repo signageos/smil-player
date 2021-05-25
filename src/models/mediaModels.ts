@@ -37,6 +37,7 @@ export type SMILImage = {
 	fit?: string,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
+	transitionInfo?: TransitionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,

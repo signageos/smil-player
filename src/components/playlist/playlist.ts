@@ -1,6 +1,8 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
 import isObject = require('lodash/isObject');
+import cloneDeep = require('lodash/cloneDeep');
+import moment from 'moment';
 import get = require('lodash/get');
 import set = require('lodash/set');
 import { isEqual } from 'lodash';
@@ -20,9 +22,9 @@ import { ExprTag } from '../../enums/conditionalEnums';
 import { SMILTriggersEnum } from '../../enums/triggerEnums';
 import { FileStructure } from '../../enums/fileEnums';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
-import { ParsedSensor, ParsedTriggerCondition, TriggerList } from '../../models/triggerModels';
+import { ParsedSensor, ParsedTriggerCondition, TriggerList, TriggerObject } from '../../models/triggerModels';
 import { SMILFile, SMILFileObject } from '../../models/filesModels';
-import { RegionAttributes, RegionsObject } from '../../models/xmlJsonModels';
+import { RegionAttributes, RegionsObject, TransitionAttributes } from '../../models/xmlJsonModels';
 import { CurrentlyPlaying, CurrentlyPlayingPriority, PlayingInfo, PlaylistElement } from '../../models/playlistModels';
 import { PriorityObject } from '../../models/priorityModels';
 import {
@@ -45,8 +47,8 @@ import {
 	sleep,
 } from './tools/generalTools';
 import { parseSmilSchedule } from './tools/wallclockTools';
-import { createDomElement, createHtmlElement } from './tools/htmlTools';
-import { setDefaultAwait, setElementDuration } from './tools/scheduleTools';
+import { createDomElement, createHtmlElement, removeTransitionCss, setTransitionCss, addEventOnTriggerWidget } from './tools/htmlTools';
+import { findDuration, setDefaultAwait, setElementDuration } from './tools/scheduleTools';
 import { createPriorityObject } from './tools/priorityTools';
 
 export class Playlist {
@@ -306,6 +308,14 @@ export class Playlist {
 					}
 					elem.regionInfo = getRegionInfo(region, elem.region);
 					extractAdditionalInfo(elem);
+
+					if (key.startsWith(SMILEnums.img) && elem.hasOwnProperty(SMILEnums.transitionType)) {
+						if (!isNil(get(region.transition, elem.transIn, undefined))) {
+							elem.transitionInfo = <TransitionAttributes> get(region.transition, elem.transIn, undefined);
+						} else {
+							debug(`No corresponding transition found for element: %O, with transitionType: %s`, elem, elem.transIn);
+						}
+					}
 
 					// element will be played only on trigger emit in nested region
 					if (isTrigger && triggerName !== '') {
@@ -976,9 +986,11 @@ export class Playlist {
 	 */
 	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string) => {
 		debug('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
+		const nextElement = cloneDeep(get(this.currentlyPlaying[regionName], 'nextElement'));
 		this.currentlyPlaying[regionName] = <PlayingInfo> element;
 		this.currentlyPlaying[regionName].media = tag;
 		this.currentlyPlaying[regionName].playing = true;
+		this.currentlyPlaying[regionName].nextElement = nextElement;
 	}
 
 	/**
@@ -1032,7 +1044,9 @@ export class Playlist {
 	): Promise<void> => {
 		try {
 			let element = <HTMLElement> document.getElementById(<string> value.id);
-
+			if (value.hasOwnProperty('transitionInfo')) {
+				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+			}
 			// set correct duration
 			const parsedDuration: number = setElementDuration(value.dur);
 
@@ -1070,10 +1084,22 @@ export class Playlist {
 			}
 
 			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
+				let transitionDuration = 0;
+				const hasTransition = value.hasOwnProperty('transitionInfo');
+				if (hasTransition) {
+					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
+					element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+				}
 				element.style.visibility = 'visible';
-				await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
+				await this.waitMediaOnScreen(
+					localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex, element, transitionDuration, taskStartDate,
+				);
 				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
+
+				if (hasTransition) {
+					removeTransitionCss(element);
+				}
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
@@ -1087,9 +1113,13 @@ export class Playlist {
 	 * @param duration - how long should media stay on screen
 	 * @param element - displayed HTML element
 	 * @param arrayIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
+	 * @param elementHtml
+	 * @param transitionDuration
+	 * @param taskStartDate
 	 */
 	private waitMediaOnScreen = async (
 		regionInfo: RegionAttributes, parentRegion: RegionAttributes, duration: number, element: SosHtmlElement, arrayIndex: number,
+		elementHtml: HTMLElement, transitionDuration: number, taskStartDate: Date,
 		): Promise<void> => {
 
 		debug('Starting to play element: %O', element);
@@ -1105,7 +1135,7 @@ export class Playlist {
 
 		debug('waiting image duration: %s from element: %s', duration, element.id);
 		// pause function for how long should media stay on display screen
-		while (duration !== 0 && !get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop
+		while (duration > 0 && !get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop
 		// @ts-ignore
 		&& get(this.currentlyPlaying, `${regionInfo.regionName}.player`) !== 'stop') {
 			while (get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.contentPause !== 0) {
@@ -1115,9 +1145,14 @@ export class Playlist {
 					await this.cancelPreviousMedia(regionInfo);
 				}
 			}
-			duration--;
-			await sleep(1000);
+			if (transitionDuration !== 0 && duration === transitionDuration
+			&& this.currentlyPlaying[regionInfo.regionName].nextElement.type === 'html') {
+				setTransitionCss(elementHtml, this.currentlyPlaying[regionInfo.regionName].nextElement.id, transitionDuration);
+			}
+			duration -= 100;
+			await sleep(100);
 		}
+
 		debug('element playing finished: %O', element);
 	}
 
@@ -1222,8 +1257,16 @@ export class Playlist {
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
 		}
 
-		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause') {
+		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
+			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo> {};
+		}
+
+		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause'
+		&& this.promiseAwaiting[regionInfo.regionName].promiseFunction.length > 0) {
 			debug('waiting for previous promise: %O', media);
+			this.currentlyPlaying[regionInfo.regionName].nextElement = media;
+			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
+				get(media, 'localFilePath', 'default').indexOf(FileStructure.images) > -1 ? 'html' : 'video';
 			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 		}
 

@@ -17,7 +17,8 @@ import { createLocalFilePath, getFileName } from './components/files/tools';
 import { FileStructure } from './enums/fileEnums';
 import { SMILFile, SMILFileObject } from './models/filesModels';
 import { generateBackupImagePlaylist, getDefaultRegion, sleep } from './components/playlist/tools/generalTools';
-import { resetBodyContent } from './components/playlist/tools/htmlTools';
+import { resetBodyContent, setTransitionsDefinition } from './components/playlist/tools/htmlTools';
+
 const files = new Files(sos);
 
 const debug = Debug('@signageos/smil-player:main');
@@ -39,6 +40,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 	files.setSmilUrl(smilUrl);
+	resetBodyContent();
 
 	try {
 		if (!isNil(sos.config.backupImageUrl) && !isNil(await files.fetchLastModified(sos.config.backupImageUrl))) {
@@ -93,6 +95,13 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	try {
 		const smilObject: SMILFileObject = await processSmil(smilFileContent);
 		debug('SMIL file parsed: %O', smilObject);
+
+		await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
+
+		// set variable to enable/disable events logs
+		files.setSmiLogging(smilObject.log);
+
+		setTransitionsDefinition(smilObject);
 
 		// download and play intro file if exists ( image or video )
 		if (smilObject.intro.length > 0) {
