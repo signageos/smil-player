@@ -38,6 +38,7 @@ export enum SMILUrls {
 	noAdditionalSeq = 'http://localhost:3000/noAdditionalSeq.smil',
 	wallclockRepeatCount = 'http://localhost:3000/wallclockRepeatCount.smil',
 	triggersKeyboard = 'http://localhost:3000/triggersKeyboard.smil',
+	triggersMouse = 'http://localhost:3000/triggersMouse.smil',
 	brokenXml = 'http://localhost:3000/brokenXml.smil',
 	nonExisting = 'http://localhost:3000/none',
 }
