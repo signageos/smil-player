@@ -2,9 +2,12 @@ import Debug from 'debug';
 import * as path from 'path';
 import * as querystring from 'querystring';
 import * as URL from 'url';
+import get = require('lodash/get');
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
+import { ItemType } from "../../../models/reportingModels";
 import { checksumString } from './checksum';
+
 export const debug = Debug('@signageos/smil-player:filesModule');
 
 export function getRandomInt(max: number) {
@@ -69,4 +72,27 @@ export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): Me
 
 export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: any) {
 	jsonObject[attr] = value;
+}
+
+export function mapFileType(filePath: string): ItemType {
+	const mapObject = <const> {
+		smil: 'smil',
+		images: 'image',
+		videos: 'video',
+		widgets: 'ref',
+		audios: 'audio',
+	};
+	const fileType = filePath.substring(filePath.lastIndexOf('/'));
+	return get(mapObject, fileType, 'unknown');
+}
+
+export function createSourceReportObject(localFilePath: string, fileSrc: string, type: string = '') {
+	return {
+		filePath: {
+			path: localFilePath,
+			storage: type,
+		},
+		uri: fileSrc,
+		localUri: localFilePath,
+	};
 }
