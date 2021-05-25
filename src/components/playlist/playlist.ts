@@ -304,7 +304,7 @@ export class Playlist {
 
 					// check if video has duration defined due to webos bug
 					if (key.startsWith('video')) {
-						elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
+						elem.fullVideoDuration = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
 					}
 					elem.regionInfo = getRegionInfo(region, elem.region);
 					extractAdditionalInfo(elem);
@@ -1393,9 +1393,16 @@ export class Playlist {
 					// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 					// so playback can continue
 					// TODO: fix in webos app
+					if (get(video, 'fullVideoDuration', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+						debug('Got fullVideoDuration: %s for video: %O', video.fullVideoDuration!, video);
+						promiseRaceArray.push(sleep(video.fullVideoDuration! + SMILEnums.videoDurationOffset));
+					}
+
+					// if video has specified duration in smil file, cancel it after given duration passes
 					if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
-						debug('Got duration: %s for video: %O', video.dur!, video);
-						promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
+						const parsedDuration: number = setElementDuration(video.dur!);
+						debug('Got dur: %s for video: %O', parsedDuration, video);
+						promiseRaceArray.push(sleep(parsedDuration));
 					}
 
 					try {
@@ -1405,6 +1412,8 @@ export class Playlist {
 					}
 
 					debug('Playing video finished: %O', video);
+
+					await this.files.sendMediaReport(video, taskStartDate, 'video');
 
 					// stopped because of higher priority playlist will start to play
 					if (this.currentlyPlayingPriority[regionInfo.regionName][index].player.stop) {
