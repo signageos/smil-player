@@ -78,14 +78,7 @@ export type SMILIntro = {
 };
 
 export type SMILMedia =
-	SMILImage
-	| SMILImage []
-	| SMILWidget
-	| SMILWidget[]
-	| SMILAudio
-	| SMILAudio[]
-	| SMILVideo
-	| SMILVideo[];
+	SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
 
 export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
 export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILAudio;

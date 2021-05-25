@@ -20,7 +20,6 @@ import { generateBackupImagePlaylist, getDefaultRegion, sleep } from './componen
 import { resetBodyContent, setTransitionsDefinition } from './components/playlist/tools/htmlTools';
 
 const files = new Files(sos);
-
 const debug = Debug('@signageos/smil-player:main');
 
 async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet) {
@@ -29,8 +28,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	playlist.disableLoop(false);
 	// enable endless loop for checking files updated
 	playlist.setCheckFilesLoop(true);
-
-	resetBodyContent();
 
 	const smilFile: SMILFile = {
 		src: smilUrl,
