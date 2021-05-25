@@ -563,6 +563,7 @@ export class Playlist {
 			});
 		} catch (err) {
 			debug('Error occurred during Nexmosphere trigger initialization: %O', err);
+			await this.files.sendGeneralErrorReport(err.message);
 			return;
 		}
 
@@ -585,6 +586,7 @@ export class Playlist {
 						await this.processRfidAntenna(smilObject, sensor, tag, RfidAntennaEvent.PICKED);
 					} catch (err) {
 						debug('Unexpected error occurred at sensor: %O with tag: %s', sensor, tag);
+						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PLACED, async (tag: number) => {
@@ -649,7 +651,6 @@ export class Playlist {
 	}
 
 	private watchKeyboardInput = (smilObject: SMILFileObject) => {
-
 		let state = {
 			buffer: [],
 			lastKeyTime: Date.now(),
@@ -1035,13 +1036,14 @@ export class Playlist {
 	 * @param priorityRegionName - name of currently playing region stored in currentlyPlayingPriority object
 	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
 	 * @param previousPlayingIndex - index of previously playing content in currentlyPlayingPriority[priorityRegionName] array
-	 * @param endTime - when should playlist end, specified either in date in milis or how many times should playlist play
+	 * @param endTime - when should playlist end, specified either in date in millis or how many times should playlist play
 	 * @param isLast - if this media is last element in current playlist
 	 */
 	private playTimedMedia = async (
 		value: SMILMediaNoVideo, arrayIndex: number,
 		priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 	): Promise<void> => {
+		const taskStartDate = moment().toDate();
 		try {
 			let element = <HTMLElement> document.getElementById(<string> value.id);
 			if (value.hasOwnProperty('transitionInfo')) {
@@ -1103,6 +1105,7 @@ export class Playlist {
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+			await this.files.sendMediaReport(value, taskStartDate, value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image', err.message);
 		}
 	}
 
@@ -1154,6 +1157,9 @@ export class Playlist {
 		}
 
 		debug('element playing finished: %O', element);
+
+		await this.files.sendMediaReport(element, taskStartDate, element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image');
+
 	}
 
 	/**
@@ -1317,6 +1323,7 @@ export class Playlist {
 	private playVideo = async (
 		video: SMILVideo, priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 		) => {
+		const taskStartDate = moment().toDate();
 		try {
 			// TODO: implement check to sos library
 			if (video.localFilePath === '') {
@@ -1442,10 +1449,12 @@ export class Playlist {
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
 				} catch (err) {
 					debug('Unexpected error: %O occurred during single video playback: O%', err, video);
+					await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
 				}
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
+			await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
 		}
 	}
 

@@ -119,6 +119,9 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 		await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
 	} catch (err) {
 		debug('Unexpected error during xml parse: %O', err);
+
+		await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src, err.message);
+
 		debug('Starting to play backup image');
 		const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
 		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, 'indefinite');

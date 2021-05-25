@@ -5,8 +5,11 @@ import moment from 'moment';
 import path from 'path';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getPath, createDownloadPath,
-	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, isRelativePath } from './tools';
+import {
+	getFileName, getPath, createDownloadPath,
+	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, mapFileType,
+	createSourceReportObject, isRelativePath,
+} from './tools';
 import { debug } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
 import {
@@ -16,7 +19,8 @@ import {
 	SMILFile,
 	SMILFileObject,
 } from '../../models/filesModels';
-import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../models/mediaModels';
+import { SMILAudio, SMILImage, SMILMediaNoVideo, SMILVideo, SMILWidget, SosHtmlElement }  from '../../models/mediaModels';
+import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
 
 declare global {
 	interface Window {
@@ -27,6 +31,7 @@ declare global {
 export class Files {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
+	private smilLogging: boolean = false;
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -34,6 +39,63 @@ export class Files {
 
 	public setSmilUrl(url: string) {
 		this.smilFileUrl = url;
+	}
+
+	public setSmiLogging(smilLogging: boolean) {
+		this.smilLogging = smilLogging;
+	}
+
+	public sendReport = async (message: Report) => {
+		if (this.smilLogging) {
+			await this.sos.command.dispatch(message);
+		}
+	}
+
+	public sendGeneralErrorReport = async (message: string) => {
+		await this.sendReport({
+			type: 'SMIL.Error',
+			failedAt: moment().toDate(),
+			errorMessage: message,
+		});
+	}
+
+	public sendDownloadReport = async (
+		fileType: ItemType, localFilePath: string, internalStorageUnit: IStorageUnit, fileSrc: string,
+		taskStartDate: Date, errMessage: string | null = null,
+		) => {
+		await this.sendReport({
+			type: 'SMIL.FileDownloaded',
+			itemType: fileType,
+			source: createSourceReportObject(localFilePath, fileSrc, internalStorageUnit.type),
+			startedAt: taskStartDate,
+			succeededAt: isNil(errMessage) ? moment().toDate() : null,
+			failedAt: isNil(errMessage) ? null : moment().toDate(),
+			errorMessage: errMessage,
+		});
+	}
+
+	public sendMediaReport = async (
+		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement, taskStartDate: Date, itemType: MediaItemType, errMessage: string | null = null,
+	) => {
+		await this.sendReport({
+			type: 'SMIL.MediaPlayed',
+			itemType: itemType,
+			source: createSourceReportObject(value.localFilePath, value.src),
+			startedAt: taskStartDate,
+			endedAt: isNil(errMessage) ? moment().toDate() : null,
+			failedAt: isNil(errMessage) ? null : moment().toDate(),
+			errorMessage: errMessage,
+		});
+	}
+
+	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
+		await this.sendReport(<Report> {
+			type: 'SMIL.PlaybackStarted',
+			source: createSourceReportObject(localFilePath, src),
+			succeededAt: isNil(errMessage) ? moment().toDate() : null,
+			failedAt: isNil(errMessage) ? null : moment().toDate(),
+			errorMessage: errMessage,
+		});
 	}
 
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
@@ -120,6 +182,7 @@ export class Files {
 			},                                   true);
 		} catch (err) {
 			debug('Unexpected error occured during deleting file from persistent storage: %s', filePath);
+			await this.sendGeneralErrorReport(err.message);
 		}
 	}
 
@@ -155,6 +218,8 @@ export class Files {
 		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[], localFilePath: string, forceDownload: boolean = false,
 	): Promise<any[]> => {
 		const promises: Promise<any>[] = [];
+		const taskStartDate = moment().toDate();
+		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(internalStorageUnit, filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
 
@@ -164,10 +229,12 @@ export class Files {
 			if (isRelativePath(file.src)) {
 				file.src = `${getPath(this.smilFileUrl)}/${file.src}`;
 			}
+
 			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, file, mediaInfoObject);
 
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
 			if (forceDownload || shouldUpdate) {
+				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 				promises.push((async () => {
 					try {
 						debug(`Downloading file: %s`, file.src);
@@ -185,8 +252,11 @@ export class Files {
 								authHeaders,
 							);
 						}
+						await this.sendDownloadReport(fileType, fullLocalFilePath, internalStorageUnit, file.src, taskStartDate);
+
 					} catch (err) {
 						debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+						await this.sendDownloadReport(fileType, fullLocalFilePath, internalStorageUnit, file.src, taskStartDate, err.message);
 					}
 				})());
 			}

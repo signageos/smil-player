@@ -9,4 +9,6 @@ export enum SMILEnums {
 	defaultDownloadRetry = 60,
 	videoDurationOffset = 1000,
 	defaultVideoDuration = 0,
+	metaContent = 'content',
+	metaLog = 'log',
 }
