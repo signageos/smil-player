@@ -13,7 +13,7 @@ import {
 	getLastArrayItem, getRegionInfo, getStringToIntDefault, isNotPrefetchLoop, sleep,
 } from '../../../src/components/playlist/tools/generalTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
-import { setDefaultAwait, setElementDuration } from '../../../src/components/playlist/tools/scheduleTools';
+import { setDefaultAwait, setElementDuration, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
 
 const expect = chai.expect;
 
@@ -144,11 +144,11 @@ describe('Playlist tools component', () => {
 			];
 
 			const parentIds = [
-				'seq-f51219a042b95660455114736b882cc8541e7c0a',
-				'par-0f7249b4f6431f960652bb217c7d743556e051c9',
-				'priorityClass-1dc8738ae29359a855f69b5b4cbb44086e54e2fb',
-				'excl-a62e064745e5487790405fd01cf1fbe6eb8d0078',
-				'Something-d7654a79defcb018e060eeb028f1915f4e326d81',
+				'seq-50af0f3e4b3e765352ec6cba149db5f7',
+				'par-7e12fe876abb29990a9195aeeeb846c6',
+				'priorityClass-102bbcdc5b67ed8dc19af2bb0bb7b9ce',
+				'excl-0b3510264759cb397ccca49b226355f8',
+				'Something-2dc079c76f9e9d96e381878e30045dfd',
 			];
 			for (let i = 0; i < testTagNames.length; i += 1) {
 				let response = generateParentId(testTagNames[i], testObjects[i]);
@@ -336,12 +336,12 @@ describe('Playlist tools component', () => {
 				undefined,
 			];
 			const duration = [
-				999,
+				999000,
 				999999,
-				5,
-				5,
-				200,
-				5,
+				5000,
+				5000,
+				200000,
+				5000,
 			];
 
 			for (let i = 0; i < durationStrings.length; i += 1) {
@@ -484,6 +484,85 @@ describe('Playlist tools component', () => {
 				const {timeRecord, dayInfo} = extractDayInfo(testingStrings[i]);
 				expect(timeRecord).to.be.equal(responses[i].timeRecord);
 				expect(dayInfo).to.be.equal(responses[i].dayInfo);
+			}
+		});
+	});
+
+	describe('Playlist tools component findDuration', () => {
+		it('Should find duration in nested object', async () => {
+			const testingObjects = [
+				{
+					seq: {
+						begin: "trigger3",
+						dur: "duration",
+						video6: {
+							src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
+							id: "annons1",
+							fit: "hidden",
+							region: "video",
+							param: {name: "cacheControl", value: "auto"},
+						},
+					},
+				},
+				{
+					par: {
+						begin: "trigger3",
+						dur: "11s",
+						video6: {
+							src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
+							id: "annons1",
+							fit: "hidden",
+							region: "video",
+							param: {name: "cacheControl", value: "auto"},
+						},
+					},
+				},
+				{
+					excl: {
+						priorityClass: {
+							seq: {
+								begin: "trigger3",
+								dur: "888",
+								video6: {
+									src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
+									id: "annons1",
+									fit: "hidden",
+									region: "video",
+									param: {name: "cacheControl", value: "auto"},
+								},
+							},
+						},
+					},
+				},
+				{
+					excl: {
+						priorityClass: {
+							peer: "none",
+							par: {
+								begin: "trigger3",
+								video6: {
+									src: "https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4",
+									id: "annons1",
+									fit: "hidden",
+									region: "video",
+									param: {name: "cacheControl", value: "auto"},
+								},
+							},
+						},
+					},
+				},
+			];
+
+			const responses = [
+				'duration',
+				'11s',
+				'888',
+				undefined,
+			];
+
+			for (let i = 0; i < testingObjects.length; i += 1) {
+				const duration = findDuration(testingObjects[i]);
+				expect(duration).to.be.equal(responses[i]);
 			}
 		});
 	});
