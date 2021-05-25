@@ -1,7 +1,6 @@
 export enum SMILTriggersEnum {
 	triggerFormat = 'trigger',
 	triggerValue = 'triggerValue',
-	metaContent = 'content',
 	sensorRfid = 'rfid',
 	sensorNexmo = 'nexmosphere',
 	nexmoDevice = '/dev/ttyUSB0',
@@ -9,4 +8,7 @@ export enum SMILTriggersEnum {
 	keyStrokeDelay = 1000,
 	keyboardPrefix = 'keyboard',
 	keyboardEventType = 'keydown',
+	mousePrefix = 'mouse',
+	mouseEventType = 'click',
+	touchEventType = 'touchend',
 }

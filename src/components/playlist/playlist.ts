@@ -248,18 +248,18 @@ export class Playlist {
 	 * @param region - regions object with information about all regions
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param isTrigger - boolean value determining if function is processing trigger playlist or ordinary playlist
+	 * @param triggerName
 	 */
 		// TODO: fix naming
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[] | TriggerList, region: SMILFileObject, internalStorageUnit: IStorageUnit,
-		isTrigger: boolean = false,
+		isTrigger: boolean = false, triggerName: string = '',
 	): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
-		let triggerName: string = '';
 		for (let [key, loopValue] of Object.entries(playlist)) {
-			triggerName = key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat) ? loopValue : triggerName;
+			triggerName = (key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat)) ? loopValue : triggerName;
 			// skip processing string values like "repeatCount": "indefinite"
 			if (!isObject(loopValue)) {
 				continue;
@@ -308,7 +308,7 @@ export class Playlist {
 					extractAdditionalInfo(elem);
 
 					// element will be played only on trigger emit in nested region
-					if (isTrigger) {
+					if (isTrigger && triggerName !== '') {
 						elem.triggerValue = triggerName;
 					}
 
@@ -320,7 +320,7 @@ export class Playlist {
 				// reset widget exprension for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, region, internalStorageUnit, isTrigger);
+				await this.getAllInfo(value, region, internalStorageUnit, isTrigger, triggerName);
 			}
 		}
 	}
@@ -540,6 +540,7 @@ export class Playlist {
 
 	public watchTriggers = async(smilObject: SMILFileObject) => {
 		this.watchKeyboardInput(smilObject);
+		this.watchOnTouchOnClick(smilObject);
 		await this.watchRfidAntena(smilObject);
 	}
 
@@ -581,9 +582,59 @@ export class Playlist {
 						await this.processRfidAntenna(smilObject, sensor, tag, RfidAntennaEvent.PLACED);
 					} catch (err) {
 						debug('Unexpected error occurred at sensor: %O with tag: %s', sensor, tag);
+						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
 			}
+		}
+	}
+
+	private watchOnTouchOnClick = (smilObject: SMILFileObject) => {
+		window.parent.document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+
+		document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+
+		window.parent.document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+
+		document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+	}
+
+	private processOnTouchOnClick = async (smilObject: SMILFileObject) => {
+		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`];
+
+		// smil file does not support mouse/touch events
+		if (isNil(triggerInfo)) {
+			return;
+		}
+
+		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+
+		if (get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)) {
+			return;
+		}
+
+		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+
+		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`])
+			&& !get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)
+		&& !isNil(triggerMedia)) {
+			debug('Starting trigger: %O', triggerInfo.trigger);
+			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
+			const stringDuration = findDuration(triggerMedia);
+			if (!isNil(stringDuration)) {
+				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				return;
+			}
+
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 		}
 	}
 
@@ -614,11 +665,27 @@ export class Playlist {
 			buffer = [...state.buffer, key];
 		}
 		let bufferString = buffer.join('');
+
+		for (let [triggerId, ] of Object.entries(smilObject.triggerSensorInfo)) {
+			const trimmedTriggerId = triggerId.replace(`${SMILTriggersEnum.keyboardPrefix}-`, '');
+			if (bufferString.startsWith(trimmedTriggerId)) {
+				bufferString = trimmedTriggerId;
+			}
+		}
+
 		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`];
 
 		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`])
 			&& !get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)) {
-			await this.processTrigger(smilObject, triggerInfo);
+			debug('Starting trigger: %O', triggerInfo.trigger);
+			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+			const stringDuration = findDuration(triggerMedia);
+			if (!isNil(stringDuration)) {
+				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				return;
+			}
+
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			buffer = [];
 		}
 
@@ -626,11 +693,44 @@ export class Playlist {
 		return state;
 	}
 
-	private processTrigger = async (
-		smilObject: SMILFileObject, triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+	private processTriggerDuration = async (
+		triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+		triggerMedia: TriggerObject, stringDuration: string,
+	) => {
+		const durationMillis = setElementDuration(stringDuration);
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
+		let play = true;
+
+		const promises = [];
+
+		promises.push((async () => {
+			while (play) {
+				await this.processPlaylist(triggerMedia);
+			}
+		})());
+
+		promises.push((async () => {
+			while (get(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`) + durationMillis > Date.now()) {
+				await sleep(100);
+			}
+			play = false;
+		})());
+
+		await Promise.race(promises);
+
+		// trigger finished playing by itself, cancel it
+		debug('Cancelling trigger: %O', triggerInfo.trigger);
+		const regionInfo = this.triggersEndless[triggerInfo.trigger].regionInfo;
+
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
+		await this.cancelPreviousMedia(regionInfo);
+
+	}
+
+	private processTriggerRepeatCount = async (
+		triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+		triggerMedia: TriggerObject,
 		) => {
-		debug('Starting trigger: %O', triggerInfo.trigger);
-		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
 		set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
 		await this.processPlaylist(triggerMedia);
 		await Promise.all(this.promiseAwaiting[this.triggersEndless[triggerInfo.trigger].regionInfo.regionName].promiseFunction!);
@@ -641,9 +741,6 @@ export class Playlist {
 		set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
 		await this.cancelPreviousMedia(regionInfo);
 
-		// remove info about trigger
-		debug('Deleting trigger info: %O', triggerInfo.trigger);
-		delete this.triggersEndless[triggerInfo.trigger];
 	}
 
 	private createDefaultPromise = (
@@ -742,7 +839,8 @@ export class Playlist {
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		// check if some conditions equals emitted parameters
 		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
-			await this.processTrigger(smilObject, triggerInfo);
+			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			return;
 		}
 
@@ -1081,8 +1179,9 @@ export class Playlist {
 
 			// if this trigger has already assigned region take it,
 			// else find first free region in nested regions, if none is free, take first one
-			regionInfo = !isNil(this.triggersEndless[<string> media.triggerValue].regionInfo) ?
+			regionInfo = !isNil(get(this.triggersEndless[<string> media.triggerValue], 'regionInfo')) ?
 				this.triggersEndless[<string> media.triggerValue].regionInfo : regionInfo.region[this.findFirstFreeRegion(regionInfo.region)];
+
 			set(this.triggersEndless, `${media.triggerValue}.regionInfo`, regionInfo);
 
 			debug('Found free region: %s for trigger: %O', regionInfo.regionName, media);
@@ -1864,7 +1963,10 @@ export class Playlist {
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any> elem.controlledPlaylist;
 					// same playlist is played again, increase count to track how many times it was already played
-					infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
+					// not for triggers or infinite playlists
+					if (isNil(value.triggerValue) && endTime !== 0) {
+						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
+					}
 					currentIndex = arrayIndex;
 					break;
 				}
@@ -1877,7 +1979,8 @@ export class Playlist {
 					infoObject.controlledPlaylist = <any> elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
 					// increase times played only if first media in chain is playing again
-					if (isEqual(elem.isFirstInPlaylist, infoObject.media)) {
+					// not for triggers or infinite playlists
+					if (isEqual(elem.isFirstInPlaylist, infoObject.media) && isNil(value.triggerValue) && endTime !== 0) {
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					// remember first in playlist
