@@ -55,6 +55,7 @@ export const mockSMILFileTriggers = {
 		left: "0",
 		regionName: "rootLayout",
 	},
+	log: true,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",
@@ -145,6 +146,7 @@ export const mockSMILFileTriggers = {
 		driver: "nexmosphere",
 		address: "005",
 	}, {type: "rfid", id: "rfid3", driver: "nexmosphere", address: "007", test5: "111"}],
+	transition: {},
 	triggerSensorInfo: {
 		"rfid1-1": {
 			trigger: "trigger3",

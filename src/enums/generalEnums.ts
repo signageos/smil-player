@@ -1,5 +1,7 @@
 export enum SMILEnums {
 	region = 'region',
+	transition = 'transition',
+	transitionType = 'transIn',
 	rootLayout = 'root-layout',
 	defaultRegion = 'rootLayout',
 	img = 'img',
@@ -7,4 +9,6 @@ export enum SMILEnums {
 	defaultDownloadRetry = 60,
 	videoDurationOffset = 1000,
 	defaultVideoDuration = 0,
+	metaContent = 'content',
+	metaLog = 'log',
 }

@@ -55,6 +55,7 @@ export const mockBrokenSmil = {
 		top: "0",
 		left: "0",
 	},
+	log: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",
@@ -200,6 +201,14 @@ export const mockBrokenSmil = {
 		address: "007",
 		test5: "111",
 	}],
+	transition: {
+		bwt: {
+			dur: "1s",
+			subtype: "crossfade",
+			type: "fade",
+			"xml:id": "bwt",
+		},
+	},
 	triggerSensorInfo: {
 		"rfid1-1": {
 			trigger: "trigger3",

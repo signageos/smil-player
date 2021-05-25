@@ -1,8 +1,10 @@
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
+import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
-import hash from 'object-hash';
+const hasher = require('node-object-hash');
+const hashSortCoerce = hasher({ alg: 'md5' });
 
 import {
 	BackupPlaylist,
@@ -19,6 +21,8 @@ import { XmlTags } from '../../../enums/xmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../../models/mediaModels';
+
+export const debug = Debug('@signageos/smil-player:playlistModule');
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
 	return `${getFileName(filepath)}-${regionName}-${key}`;
@@ -47,8 +51,6 @@ export function checkSlowDevice(deviceType: string): boolean {
 export function getLastArrayItem(array: any[]): any {
 	return array[array.length - 1];
 }
-
-export const debug = Debug('@signageos/smil-player:playlistModule');
 
 function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
 	return get(obj, path, 'notFound') === 'notFound';
@@ -182,9 +184,17 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
 export function generateParentId(tagName: string, value: any): string {
 	try {
-		return `${tagName}-${hash(value)}`;
+
+		// TODO: add logic to remove these properties from second playback of triggers
+		// if (value.hasOwnProperty('video4')) {
+		// 	delete value.video4.promiseFunction;
+		// 	delete value.video4.media;
+		// 	delete value.video4.playing;
+		// 	delete value.video4.player;
+		// }
+
+		return `${tagName}-${hashSortCoerce.hash(inspect(value))}`;
 	} catch (err) {
-		// object-hash has bug when value is passed from inside unresolved promise ( happends when playlist is no longer active
 		debug('Error during parent generation: %O', err);
 		return `${tagName}-undefined`;
 	}

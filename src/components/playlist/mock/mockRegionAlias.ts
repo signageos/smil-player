@@ -20,6 +20,7 @@ export const mockSMILFileParsedRegionAlias = {
 		left: "0",
 		regionName: "rootLayout",
 	},
+	log: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml", style: "background-color:#FFFFFF", par: {
 			seq: [{
@@ -264,6 +265,7 @@ export const mockSMILFileParsedRegionAlias = {
 		video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4"},
 	}],
 	sensors: [],
+	transition: {},
 	triggerSensorInfo: {},
 	triggers: {},
 };

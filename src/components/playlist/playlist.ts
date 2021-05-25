@@ -1,7 +1,8 @@
 import isNil = require('lodash/isNil');
 import isNaN = require('lodash/isNaN');
 import isObject = require('lodash/isObject');
-const isUrl = require('is-url-superb');
+import cloneDeep = require('lodash/cloneDeep');
+import moment from 'moment';
 import get = require('lodash/get');
 import set = require('lodash/set');
 import { isEqual } from 'lodash';
@@ -10,7 +11,7 @@ import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, getRandomInt } from '../files/tools';
+import { getFileName, createVersionedUrl, copyQueryParameters } from '../files/tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { SMILEnums } from '../../enums/generalEnums';
@@ -21,9 +22,9 @@ import { ExprTag } from '../../enums/conditionalEnums';
 import { SMILTriggersEnum } from '../../enums/triggerEnums';
 import { FileStructure } from '../../enums/fileEnums';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
-import { ParsedSensor, ParsedTriggerCondition, TriggerList } from '../../models/triggerModels';
+import { ParsedSensor, ParsedTriggerCondition, TriggerList, TriggerObject } from '../../models/triggerModels';
 import { SMILFile, SMILFileObject } from '../../models/filesModels';
-import { RegionAttributes, RegionsObject } from '../../models/xmlJsonModels';
+import { RegionAttributes, RegionsObject, TransitionAttributes } from '../../models/xmlJsonModels';
 import { CurrentlyPlaying, CurrentlyPlayingPriority, PlayingInfo, PlaylistElement } from '../../models/playlistModels';
 import { PriorityObject } from '../../models/priorityModels';
 import {
@@ -46,16 +47,16 @@ import {
 	sleep,
 } from './tools/generalTools';
 import { parseSmilSchedule } from './tools/wallclockTools';
-import { createDomElement, createHtmlElement } from './tools/htmlTools';
-import { setDefaultAwait, setElementDuration } from './tools/scheduleTools';
+import { createDomElement, createHtmlElement, removeTransitionCss, setTransitionCss, addEventOnTriggerWidget } from './tools/htmlTools';
+import { findDuration, setDefaultAwait, setElementDuration } from './tools/scheduleTools';
 import { createPriorityObject } from './tools/priorityTools';
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
+	private playingIntro: boolean = false;
 	private readonly playerName: string;
 	private readonly playerId: string;
-	private backgroundImageUrl: string;
 	private files: Files;
 	private sos: FrontApplet;
 	// hold reference to all currently playing content in each region
@@ -71,10 +72,6 @@ export class Playlist {
 		// TODO: will be handled differently in the future when we have units tests for sos sdk
 		this.playerName = get(sos, 'config.playerName', '');
 		this.playerId = get(sos, 'config.playerId', '');
-	}
-
-	public setBackgroundImageUrl(backgroundImageUrl: string) {
-		this.backgroundImageUrl = backgroundImageUrl;
 	}
 
 	public setCheckFilesLoop(checkFilesLoop: boolean) {
@@ -167,10 +164,12 @@ export class Playlist {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
 					imageElement = await this.setupIntroImage(<SMILImage> get(intro, `${media}`), internalStorageUnit, smilObject, media);
+					this.setCurrentlyPlaying(<SMILImage> get(intro, `${media}`), 'html', SMILEnums.defaultRegion);
 				}
 				break;
 			default:
 				await this.setupIntroVideo(<SMILVideo> get(intro, `${media}`), internalStorageUnit, smilObject);
+				this.setCurrentlyPlaying(<SMILVideo> get(intro, `${media}`), 'video', SMILEnums.defaultRegion);
 		}
 
 		debug('Intro media downloaded: %O', intro);
@@ -180,14 +179,6 @@ export class Playlist {
 		await this.playIntroLoop(media, intro, downloadPromises, smilObject, internalStorageUnit, smilUrl);
 
 		debug('Playing intro finished: %O', intro);
-
-		switch (removeDigits(media)) {
-			case HtmlEnum.img:
-				imageElement.style.visibility = 'hidden';
-				break;
-			default:
-				await this.endIntroVideo(<SMILVideo> get(intro, `${media}`));
-		}
 	}
 
 	/**
@@ -254,18 +245,18 @@ export class Playlist {
 	 * @param region - regions object with information about all regions
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param isTrigger - boolean value determining if function is processing trigger playlist or ordinary playlist
+	 * @param triggerName
 	 */
 		// TODO: fix naming
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[] | TriggerList, region: SMILFileObject, internalStorageUnit: IStorageUnit,
-		isTrigger: boolean = false,
+		isTrigger: boolean = false, triggerName: string = '',
 	): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
-		let triggerName: string = '';
 		for (let [key, loopValue] of Object.entries(playlist)) {
-			triggerName = key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat) ? loopValue : triggerName;
+			triggerName = (key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat)) ? loopValue : triggerName;
 			// skip processing string values like "repeatCount": "indefinite"
 			if (!isObject(loopValue)) {
 				continue;
@@ -299,36 +290,42 @@ export class Playlist {
 				}
 
 				for (const elem of value) {
-					if (isUrl(elem.src) || this.backgroundImageUrl === elem.src) {
-						const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
-							storageUnit: internalStorageUnit,
-							filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
-						});
-						// in case of web page as widget, leave localFilePath blank
-						elem.localFilePath = mediaFile ? mediaFile.localUri : '';
+					const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
+						storageUnit: internalStorageUnit,
+						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
+					});
+					// in case of web page as widget, leave localFilePath blank
+					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
-						// check if video has duration defined due to webos bug
-						if (key.startsWith('video')) {
-							elem.dur = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
-						}
-						elem.regionInfo = getRegionInfo(region, elem.region);
-						extractAdditionalInfo(elem);
+					// check if video has duration defined due to webos bug
+					if (key.startsWith('video')) {
+						elem.fullVideoDuration = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
+					}
+					elem.regionInfo = getRegionInfo(region, elem.region);
+					extractAdditionalInfo(elem);
 
-						// element will be played only on trigger emit in nested region
-						if (isTrigger) {
-							elem.triggerValue = triggerName;
+					if (key.startsWith(SMILEnums.img) && elem.hasOwnProperty(SMILEnums.transitionType)) {
+						if (!isNil(get(region.transition, elem.transIn, undefined))) {
+							elem.transitionInfo = <TransitionAttributes> get(region.transition, elem.transIn, undefined);
+						} else {
+							debug(`No corresponding transition found for element: %O, with transitionType: %s`, elem, elem.transIn);
 						}
+					}
 
-						// create placeholders in DOM for images and widgets to speedup playlist processing
-						if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-							elem.id = createDomElement(elem, htmlElement, key, isTrigger);
-						}
+					// element will be played only on trigger emit in nested region
+					if (isTrigger && triggerName !== '') {
+						elem.triggerValue = triggerName;
+					}
+
+					// create placeholders in DOM for images and widgets to speedup playlist processing
+					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
+						elem.id = createDomElement(elem, htmlElement, key, isTrigger);
 					}
 				}
 				// reset widget exprension for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, region, internalStorageUnit, isTrigger);
+				await this.getAllInfo(value, region, internalStorageUnit, isTrigger, triggerName);
 			}
 		}
 	}
@@ -548,6 +545,7 @@ export class Playlist {
 
 	public watchTriggers = async(smilObject: SMILFileObject) => {
 		this.watchKeyboardInput(smilObject);
+		this.watchOnTouchOnClick(smilObject);
 		await this.watchRfidAntena(smilObject);
 	}
 
@@ -555,11 +553,12 @@ export class Playlist {
 		let serialPort;
 		try {
 			serialPort = await this.sos.hardware.openSerialPort({
-				device: <string> SMILTriggersEnum.nexmoDevice,
+				device: (this.sos.config.serialPortDevice ?? <string> SMILTriggersEnum.nexmoDevice),
 				baudRate: <number> SMILTriggersEnum.nexmoBaudRate,
 			});
 		} catch (err) {
 			debug('Error occurred during Nexmosphere trigger initialization: %O', err);
+			await this.files.sendGeneralErrorReport(err.message);
 			return;
 		}
 
@@ -582,6 +581,7 @@ export class Playlist {
 						await this.processRfidAntenna(smilObject, sensor, tag, RfidAntennaEvent.PICKED);
 					} catch (err) {
 						debug('Unexpected error occurred at sensor: %O with tag: %s', sensor, tag);
+						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PLACED, async (tag: number) => {
@@ -589,14 +589,63 @@ export class Playlist {
 						await this.processRfidAntenna(smilObject, sensor, tag, RfidAntennaEvent.PLACED);
 					} catch (err) {
 						debug('Unexpected error occurred at sensor: %O with tag: %s', sensor, tag);
+						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
 			}
 		}
 	}
 
-	private watchKeyboardInput = (smilObject: SMILFileObject) => {
+	private watchOnTouchOnClick = (smilObject: SMILFileObject) => {
+		window.parent.document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
 
+		document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+
+		window.parent.document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+
+		document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+			await this.processOnTouchOnClick(smilObject);
+		});
+	}
+
+	private processOnTouchOnClick = async (smilObject: SMILFileObject) => {
+		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`];
+
+		// smil file does not support mouse/touch events
+		if (isNil(triggerInfo)) {
+			return;
+		}
+
+		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+
+		if (get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)) {
+			return;
+		}
+
+		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+
+		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`])
+			&& !get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)
+		&& !isNil(triggerMedia)) {
+			debug('Starting trigger: %O', triggerInfo.trigger);
+			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
+			const stringDuration = findDuration(triggerMedia);
+			if (!isNil(stringDuration)) {
+				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				return;
+			}
+
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+		}
+	}
+
+	private watchKeyboardInput = (smilObject: SMILFileObject) => {
 		let state = {
 			buffer: [],
 			lastKeyTime: Date.now(),
@@ -622,11 +671,27 @@ export class Playlist {
 			buffer = [...state.buffer, key];
 		}
 		let bufferString = buffer.join('');
+
+		for (let [triggerId, ] of Object.entries(smilObject.triggerSensorInfo)) {
+			const trimmedTriggerId = triggerId.replace(`${SMILTriggersEnum.keyboardPrefix}-`, '');
+			if (bufferString.startsWith(trimmedTriggerId)) {
+				bufferString = trimmedTriggerId;
+			}
+		}
+
 		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`];
 
 		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`])
 			&& !get(this.triggersEndless, `${triggerInfo.trigger}.play`, false)) {
-			await this.processTrigger(smilObject, triggerInfo);
+			debug('Starting trigger: %O', triggerInfo.trigger);
+			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+			const stringDuration = findDuration(triggerMedia);
+			if (!isNil(stringDuration)) {
+				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				return;
+			}
+
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			buffer = [];
 		}
 
@@ -634,11 +699,44 @@ export class Playlist {
 		return state;
 	}
 
-	private processTrigger = async (
-		smilObject: SMILFileObject, triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+	private processTriggerDuration = async (
+		triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+		triggerMedia: TriggerObject, stringDuration: string,
+	) => {
+		const durationMillis = setElementDuration(stringDuration);
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
+		let play = true;
+
+		const promises = [];
+
+		promises.push((async () => {
+			while (play) {
+				await this.processPlaylist(triggerMedia);
+			}
+		})());
+
+		promises.push((async () => {
+			while (get(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`) + durationMillis > Date.now()) {
+				await sleep(100);
+			}
+			play = false;
+		})());
+
+		await Promise.race(promises);
+
+		// trigger finished playing by itself, cancel it
+		debug('Cancelling trigger: %O', triggerInfo.trigger);
+		const regionInfo = this.triggersEndless[triggerInfo.trigger].regionInfo;
+
+		set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
+		await this.cancelPreviousMedia(regionInfo);
+
+	}
+
+	private processTriggerRepeatCount = async (
+		triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+		triggerMedia: TriggerObject,
 		) => {
-		debug('Starting trigger: %O', triggerInfo.trigger);
-		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
 		set(this.triggersEndless, `${triggerInfo.trigger}.play`, true);
 		await this.processPlaylist(triggerMedia);
 		await Promise.all(this.promiseAwaiting[this.triggersEndless[triggerInfo.trigger].regionInfo.regionName].promiseFunction!);
@@ -649,9 +747,6 @@ export class Playlist {
 		set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
 		await this.cancelPreviousMedia(regionInfo);
 
-		// remove info about trigger
-		debug('Deleting trigger info: %O', triggerInfo.trigger);
-		delete this.triggersEndless[triggerInfo.trigger];
 	}
 
 	private createDefaultPromise = (
@@ -750,7 +845,8 @@ export class Playlist {
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		// check if some conditions equals emitted parameters
 		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
-			await this.processTrigger(smilObject, triggerInfo);
+			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			return;
 		}
 
@@ -819,16 +915,15 @@ export class Playlist {
 		element: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, parentRegion: RegionAttributes,
 		) => {
 		// cancel element played in default region
-		if (!isNil(this.currentlyPlaying[SMILEnums.defaultRegion])
-			&& !isNil(get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src'))
-			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src) {
+		if (get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src
+			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'playing')) {
 			debug('cancelling media: %s in default region from element: %s', this.currentlyPlaying[SMILEnums.defaultRegion].src, element.src);
+			this.playingIntro = false;
 			await this.cancelPreviousMedia(this.currentlyPlaying[SMILEnums.defaultRegion].regionInfo);
 		}
 
-		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
-			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
-			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
+		if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src
+			&& get(this.currentlyPlaying[regionInfo.regionName], 'playing')) {
 			debug('cancelling media: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
 			await this.cancelPreviousMedia(regionInfo);
 		}
@@ -886,9 +981,11 @@ export class Playlist {
 	 */
 	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string) => {
 		debug('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
+		const nextElement = cloneDeep(get(this.currentlyPlaying[regionName], 'nextElement'));
 		this.currentlyPlaying[regionName] = <PlayingInfo> element;
 		this.currentlyPlaying[regionName].media = tag;
 		this.currentlyPlaying[regionName].playing = true;
+		this.currentlyPlaying[regionName].nextElement = nextElement;
 	}
 
 	/**
@@ -933,58 +1030,77 @@ export class Playlist {
 	 * @param priorityRegionName - name of currently playing region stored in currentlyPlayingPriority object
 	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
 	 * @param previousPlayingIndex - index of previously playing content in currentlyPlayingPriority[priorityRegionName] array
-	 * @param endTime - when should playlist end, specified either in date in milis or how many times should playlist play
+	 * @param endTime - when should playlist end, specified either in date in millis or how many times should playlist play
 	 * @param isLast - if this media is last element in current playlist
 	 */
 	private playTimedMedia = async (
 		value: SMILMediaNoVideo, arrayIndex: number,
 		priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 	): Promise<void> => {
-			try {
-				let element = <HTMLElement> document.getElementById(<string> value.id);
-
-				// set correct duration
-				const parsedDuration: number = setElementDuration(value.dur);
-
-				// add query parameter to invalidate cache on devices
-				if (element.getAttribute('src') === null) {
-					// BrightSign does not support query parameters in filesystem
-					if (await this.doesSupportQueryParametersCompatibilityMode()) {
-						element.setAttribute('src', `${value.localFilePath}?v=${getRandomInt(1000000)}`);
-					} else {
-						element.setAttribute('src', value.localFilePath);
-					}
-				}
-
-				const sosHtmlElement: SosHtmlElement = {
-					src: <string> element.getAttribute('src'),
-					id: element.id,
-					regionInfo: value.regionInfo,
-					localFilePath:  value.localFilePath,
-				};
-
-				if (!isNil(value.triggerValue)) {
-					sosHtmlElement.triggerValue = value.triggerValue;
-				}
-
-				const parentRegion = value.regionInfo;
-				let localRegionInfo = await this.handleTriggers(sosHtmlElement, element);
-
-				if (!(await this.shouldWaitAndContinue(
-					sosHtmlElement, localRegionInfo, priorityRegionName, arrayIndex, previousPlayingIndex, endTime, isLast,
-				))) {
-					return;
-				}
-
-				this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
-					element.style.visibility = 'visible';
-					await this.waitMediaOnScreen(localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex);
-					debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
-					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
-				})()];
-			} catch (err) {
-				debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+		const taskStartDate = moment().toDate();
+		try {
+			let element = <HTMLElement> document.getElementById(<string> value.id);
+			if (value.hasOwnProperty('transitionInfo')) {
+				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
 			}
+			// set correct duration
+			const parsedDuration: number = setElementDuration(value.dur);
+
+			// add query parameter to invalidate cache on devices
+			if (element.getAttribute('src') === null) {
+				const doesSupportQueryParams = await this.doesSupportQueryParametersCompatibilityMode();
+				let src = value.localFilePath;
+				if (doesSupportQueryParams) {
+					// BrightSign does not support query parameters in filesystem
+					src = createVersionedUrl(src);
+					// TODO this would not work & break BS. Solve it other way in future before merge
+					src = copyQueryParameters(value.src, src);
+				}
+				element.setAttribute('src', src);
+			}
+
+			const sosHtmlElement: SosHtmlElement = {
+				src: <string> element.getAttribute('src'),
+				id: element.id,
+				regionInfo: value.regionInfo,
+				localFilePath:  value.localFilePath,
+			};
+
+			if (!isNil(value.triggerValue)) {
+				sosHtmlElement.triggerValue = value.triggerValue;
+			}
+
+			const parentRegion = value.regionInfo;
+			let localRegionInfo = await this.handleTriggers(sosHtmlElement, element);
+
+			if (!(await this.shouldWaitAndContinue(
+				sosHtmlElement, localRegionInfo, priorityRegionName, arrayIndex, previousPlayingIndex, endTime, isLast,
+			))) {
+				return;
+			}
+
+			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
+				let transitionDuration = 0;
+				const hasTransition = value.hasOwnProperty('transitionInfo');
+				if (hasTransition) {
+					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
+					element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+				}
+				element.style.visibility = 'visible';
+				await this.waitMediaOnScreen(
+					localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex, element, transitionDuration, taskStartDate,
+				);
+				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
+				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
+
+				if (hasTransition) {
+					removeTransitionCss(element);
+				}
+			})()];
+		} catch (err) {
+			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+			await this.files.sendMediaReport(value, taskStartDate, value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image', err.message);
+		}
 	}
 
 	/**
@@ -994,9 +1110,13 @@ export class Playlist {
 	 * @param duration - how long should media stay on screen
 	 * @param element - displayed HTML element
 	 * @param arrayIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
+	 * @param elementHtml
+	 * @param transitionDuration
+	 * @param taskStartDate
 	 */
 	private waitMediaOnScreen = async (
 		regionInfo: RegionAttributes, parentRegion: RegionAttributes, duration: number, element: SosHtmlElement, arrayIndex: number,
+		elementHtml: HTMLElement, transitionDuration: number, taskStartDate: Date,
 		): Promise<void> => {
 
 		debug('Starting to play element: %O', element);
@@ -1012,7 +1132,7 @@ export class Playlist {
 
 		debug('waiting image duration: %s from element: %s', duration, element.id);
 		// pause function for how long should media stay on display screen
-		while (duration !== 0 && !get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop
+		while (duration > 0 && !get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop
 		// @ts-ignore
 		&& get(this.currentlyPlaying, `${regionInfo.regionName}.player`) !== 'stop') {
 			while (get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.contentPause !== 0) {
@@ -1022,10 +1142,18 @@ export class Playlist {
 					await this.cancelPreviousMedia(regionInfo);
 				}
 			}
-			duration--;
-			await sleep(1000);
+			if (transitionDuration !== 0 && duration === transitionDuration
+			&& this.currentlyPlaying[regionInfo.regionName].nextElement.type === 'html') {
+				setTransitionCss(elementHtml, this.currentlyPlaying[regionInfo.regionName].nextElement.id, transitionDuration);
+			}
+			duration -= 100;
+			await sleep(100);
 		}
+
 		debug('element playing finished: %O', element);
+
+		await this.files.sendMediaReport(element, taskStartDate, element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image');
+
 	}
 
 	/**
@@ -1074,8 +1202,9 @@ export class Playlist {
 	 */
 	private handleTriggers = async (media: SMILVideo | SosHtmlElement, element: HTMLElement | undefined = undefined) => {
 		let regionInfo = media.regionInfo;
+		await sleep(50);
 		while (await this.isRegionOrNestedActive(regionInfo) && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
-			debug('Cant play video because its region is occupied by trigger. video: %O, region: %O', media, regionInfo);
+			debug('Cant play media because its region is occupied by trigger. video: %O, region: %O', media, regionInfo);
 			await sleep(150);
 		}
 
@@ -1086,8 +1215,9 @@ export class Playlist {
 
 			// if this trigger has already assigned region take it,
 			// else find first free region in nested regions, if none is free, take first one
-			regionInfo = !isNil(this.triggersEndless[<string> media.triggerValue].regionInfo) ?
+			regionInfo = !isNil(get(this.triggersEndless[<string> media.triggerValue], 'regionInfo')) ?
 				this.triggersEndless[<string> media.triggerValue].regionInfo : regionInfo.region[this.findFirstFreeRegion(regionInfo.region)];
+
 			set(this.triggersEndless, `${media.triggerValue}.regionInfo`, regionInfo);
 
 			debug('Found free region: %s for trigger: %O', regionInfo.regionName, media);
@@ -1128,8 +1258,16 @@ export class Playlist {
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
 		}
 
-		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause') {
+		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
+			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo> {};
+		}
+
+		if (this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour !== 'pause'
+		&& this.promiseAwaiting[regionInfo.regionName].promiseFunction.length > 0) {
 			debug('waiting for previous promise: %O', media);
+			this.currentlyPlaying[regionInfo.regionName].nextElement = media;
+			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
+				get(media, 'localFilePath', 'default').indexOf(FileStructure.images) > -1 ? 'html' : 'video';
 			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 		}
 
@@ -1161,6 +1299,7 @@ export class Playlist {
 			&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime > 1000)
 			|| (this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed >= endTime
 				&& endTime !== 0)) {
+
 			this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
 			debug('Playtime for playlist: %O was exceeded, exiting', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 			return false;
@@ -1180,6 +1319,7 @@ export class Playlist {
 	private playVideo = async (
 		video: SMILVideo, priorityRegionName: string, currentIndex: number, previousPlayingIndex: number, endTime: number, isLast: boolean,
 		) => {
+		const taskStartDate = moment().toDate();
 		try {
 			// TODO: implement check to sos library
 			if (video.localFilePath === '') {
@@ -1199,6 +1339,7 @@ export class Playlist {
 			let regionInfo = await this.handleTriggers(video);
 
 			const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
+
 			// prepare if video is not same as previous one played
 			if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
 				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
@@ -1214,7 +1355,6 @@ export class Playlist {
 			}
 
 			this.videoPreparing[regionInfo.regionName] = video;
-
 			if (!(await this.shouldWaitAndContinue(video, regionInfo, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast))) {
 				return;
 			}
@@ -1249,9 +1389,16 @@ export class Playlist {
 					// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 					// so playback can continue
 					// TODO: fix in webos app
+					if (get(video, 'fullVideoDuration', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
+						debug('Got fullVideoDuration: %s for video: %O', video.fullVideoDuration!, video);
+						promiseRaceArray.push(sleep(video.fullVideoDuration! + SMILEnums.videoDurationOffset));
+					}
+
+					// if video has specified duration in smil file, cancel it after given duration passes
 					if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
-						debug('Got duration: %s for video: %O', video.dur!, video);
-						promiseRaceArray.push(sleep(video.dur! + SMILEnums.videoDurationOffset));
+						const parsedDuration: number = setElementDuration(video.dur!);
+						debug('Got dur: %s for video: %O', parsedDuration, video);
+						promiseRaceArray.push(sleep(parsedDuration));
 					}
 
 					try {
@@ -1261,6 +1408,8 @@ export class Playlist {
 					}
 
 					debug('Playing video finished: %O', video);
+
+					await this.files.sendMediaReport(video, taskStartDate, 'video');
 
 					// stopped because of higher priority playlist will start to play
 					if (this.currentlyPlayingPriority[regionInfo.regionName][index].player.stop) {
@@ -1305,10 +1454,12 @@ export class Playlist {
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
 				} catch (err) {
 					debug('Unexpected error: %O occurred during single video playback: O%', err, video);
+					await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
 				}
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
+			await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
 		}
 	}
 
@@ -1336,6 +1487,7 @@ export class Playlist {
 		image.localFilePath = currentImageDetails.localUri;
 		debug('Setting-up intro image: %O', image);
 		const element: HTMLElement = createHtmlElement(HtmlEnum.img, image.localFilePath, image.regionInfo, key);
+		image.id = element.id;
 		element.style.visibility = 'visible';
 		element.setAttribute('src', image.localFilePath);
 		document.body.appendChild(element);
@@ -1347,12 +1499,10 @@ export class Playlist {
 		media: string, intro: SMILIntro, downloadPromises: Promise<Function[]>[],
 		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
 	): Promise<void> => {
-		let playingIntro = true;
 		const promises = [];
+		this.playingIntro = true;
 		promises.push((async () => {
-			while (playingIntro) {
-				debug('Playing intro');
-
+			while (this.playingIntro) {
 				switch (removeDigits(media)) {
 					case SMILEnums.img:
 						await sleep(1000);
@@ -1364,17 +1514,16 @@ export class Playlist {
 		})());
 
 		promises.push((async () => {
-			Promise.all(downloadPromises).then(async () =>  {
+			await Promise.all(downloadPromises).then(async () =>  {
 				// prepares everything needed for processing playlist
 				await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
 
 				// all files are downloaded, stop intro
-				debug('SMIL media files download finished, stopping intro ' + playingIntro);
-				playingIntro = false;
+				debug('SMIL media files download finished, stopping intro');
 			});
 		})());
 
-		await Promise.all(promises);
+		await Promise.race(promises);
 	}
 
 	private playIntroVideo = async (video: SMILVideo) => {
@@ -1397,17 +1546,6 @@ export class Playlist {
 		debug('Playing intro video after onceEnded: %O', video);
 	}
 
-	private endIntroVideo = async (video: SMILVideo) => {
-		debug('Ending intro video: %O', video);
-		await this.sos.video.stop(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-		);
-	}
-
 	/**
 	 * iterate through array of images, widgets or audios
 	 * @param value - object or array of object of type SMILAudio | SMILImage | SMILWidget
@@ -1428,24 +1566,22 @@ export class Playlist {
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[value.regionInfo.regionName]);
 
-		if (isUrl(value.src) || this.backgroundImageUrl === value.src) {
-			debug('Playing media : %O with parent: %s', value, parent);
-			if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-				debug('Conditional expression: %s, for video: %O is false', value.expr!, value);
-				return;
-			}
-			// widget with website url as datasource
-			if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
-				value.localFilePath = value.src;
-				await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
-				return;
-			}
-			if (htmlElement === 'audio') {
-				await this.playAudio(value.localFilePath);
-				return;
-			}
-			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+		debug('Playing media : %O with parent: %s', value, parent);
+		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug('Conditional expression: %s, for video: %O is false', value.expr!, value);
+			return;
 		}
+		// widget with website url as datasource
+		if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
+			value.localFilePath = value.src;
+			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+			return;
+		}
+		if (htmlElement === 'audio') {
+			await this.playAudio(value.localFilePath);
+			return;
+		}
+		await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
 	}
 
 	/**
@@ -1871,7 +2007,10 @@ export class Playlist {
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any> elem.controlledPlaylist;
 					// same playlist is played again, increase count to track how many times it was already played
-					infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
+					// not for triggers or infinite playlists
+					if (isNil(value.triggerValue) && endTime !== 0) {
+						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
+					}
 					currentIndex = arrayIndex;
 					break;
 				}
@@ -1884,7 +2023,8 @@ export class Playlist {
 					infoObject.controlledPlaylist = <any> elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
 					// increase times played only if first media in chain is playing again
-					if (isEqual(elem.isFirstInPlaylist, infoObject.media)) {
+					// not for triggers or infinite playlists
+					if (isEqual(elem.isFirstInPlaylist, infoObject.media) && isNil(value.triggerValue) && endTime !== 0) {
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					// remember first in playlist

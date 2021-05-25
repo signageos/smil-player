@@ -5,6 +5,6 @@ export enum SMILScheduleEnum {
 	neverPlay = -3600000,
 	playImmediately = 0,
 	defaultAwait = 20000,
-	defaultDuration = 5,
+	defaultDuration = 5000,
 	infiniteDuration = 999999,
 }

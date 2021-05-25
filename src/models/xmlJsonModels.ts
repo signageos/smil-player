@@ -6,6 +6,14 @@ export type RegionsObject = {
 	},
 	rootLayout?: RootLayout,
 	refresh: number,
+	log: boolean,
+	[key: string]: any,
+};
+
+export type TransitionsObject = {
+	transition: {
+		[key: string]: TransitionAttributes,
+	},
 	[key: string]: any,
 };
 
@@ -23,6 +31,7 @@ export type XmlSmilObject = {
 		head: {
 			meta: [{
 				content: string,
+				log: string,
 			}],
 			layout: RegionsObject,
 		},
@@ -39,6 +48,7 @@ export type XmlHeadObject = {
 
 export type SMILMetaObject = {
 	content: string,
+	log: string,
 };
 
 export type RegionAttributes = {
@@ -51,4 +61,10 @@ export type RegionAttributes = {
 	fit?: string,
 	region: RegionAttributes | RegionAttributes[],
 	[key: string]: any,
+};
+
+export type TransitionAttributes = {
+	type: string,
+	subType: string,
+	dur: string,
 };

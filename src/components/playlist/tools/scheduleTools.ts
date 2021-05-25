@@ -1,10 +1,12 @@
 import moment from "moment";
 import isNil = require('lodash/isNil');
+import isObject = require('lodash/isObject');
 
 import { PlaylistElement } from '../../../models/playlistModels';
 import { isConditionalExpExpired } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { parseSmilSchedule } from './wallclockTools';
+import { removeDigits } from "./generalTools";
 
 /**
  * function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
@@ -74,7 +76,7 @@ export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: st
  * how long should image, audio, widget stay on the screen
  * @param dur - duration of element specified in smil file
  */
-export function setElementDuration(dur: string): number {
+export function setElementDuration(dur: string | undefined): number {
 	if (dur === 'indefinite') {
 		return SMILScheduleEnum.infiniteDuration;
 	}
@@ -84,12 +86,25 @@ export function setElementDuration(dur: string): number {
 		return SMILScheduleEnum.defaultDuration;
 	}
 
+	// replace wrong decimal delimiter
+	dur = dur.replace(/,/g, ".");
 	// leave only digits in duration string ( can contain s character )
-	dur = dur.replace(/[^0-9]/g, "");
+	dur = dur.replace(/[^0-9.]/g, "");
 	// empty string or NaN
 	if (isNaN(Number(dur)) || dur.length === 0) {
 		return SMILScheduleEnum.defaultDuration;
 	}
 
-	return parseInt(dur, 10);
+	return parseFloat(dur) * 1000;
+}
+
+export function findDuration(elem: PlaylistElement): string | undefined {
+	for (let [key, value] of Object.entries(elem)) {
+		if (key === 'dur') {
+			return <string> value;
+		}
+		if (isObject(value) && removeDigits(key) !== 'img' && removeDigits(key) !== 'ref' && removeDigits(key) !== 'video') {
+			return findDuration(<any> value);
+		}
+	}
 }

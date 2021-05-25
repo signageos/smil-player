@@ -7,8 +7,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - fix bug with default region not having proper name
+- fix bug with wrong repeatCount for triggers
+- fix bug with parent generation hashing algorithm
+- improved intro handling
+- improved playlist sanitization
+- improve media url validation
+- improved conditional expressions handling
 
 ### Added
+- added smil event reporting support
+- added onClick/onTouch triggers with duration specified in seconds
+- added support for image to image crossfade transition
+- added optional `serialPortDevice` in sos.config to dynamically define device address for serial communication
+- added support for fixed video duration
+- added support for widgets with query parameters
+- added support for auth headers for media download
+- added ICS format implementation for conditional expression
+- added support for smil files with no active content
 - added support for backup image if smil-player fails on smil file download or smil xml parse
 functionality supports image stored directly in smil repo or on remote server.
 

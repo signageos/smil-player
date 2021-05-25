@@ -2,6 +2,8 @@ import { SMILAudio, SMILImage, SMILIntro, SMILVideo, SMILWidget } from './mediaM
 
 export type TriggerObject = {
 	begin: string,
+	repeatCount: string,
+	dur: string,
 	[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[] | string,
 };
 
