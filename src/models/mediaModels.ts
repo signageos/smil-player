@@ -1,10 +1,11 @@
-import { RegionAttributes } from './xmlJsonModels';
+import { RegionAttributes, TransitionAttributes } from './xmlJsonModels';
 
 export type SMILVideo = {
 	expr?: string,
 	src: string,
 	fit?: string,
-	dur?: number,
+	dur?: string,
+	fullVideoDuration?: number,
 	region: string,
 	lastModified?: number,
 	localFilePath: string,
