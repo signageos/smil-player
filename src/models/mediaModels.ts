@@ -1,10 +1,11 @@
-import { RegionAttributes } from './xmlJsonModels';
+import { RegionAttributes, TransitionAttributes } from './xmlJsonModels';
 
 export type SMILVideo = {
 	expr?: string,
 	src: string,
 	fit?: string,
-	dur?: number,
+	dur?: string,
+	fullVideoDuration?: number,
 	region: string,
 	lastModified?: number,
 	localFilePath: string,
@@ -37,6 +38,7 @@ export type SMILImage = {
 	fit?: string,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
+	transitionInfo?: TransitionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,
@@ -76,14 +78,7 @@ export type SMILIntro = {
 };
 
 export type SMILMedia =
-	SMILImage
-	| SMILImage []
-	| SMILWidget
-	| SMILWidget[]
-	| SMILAudio
-	| SMILAudio[]
-	| SMILVideo
-	| SMILVideo[];
+	SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
 
 export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
 export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILAudio;

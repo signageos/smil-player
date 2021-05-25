@@ -43,7 +43,7 @@
 			<seq end="__prefetchEnd.endEvent">
 				<seq repeatCount="indefinite">
 					<!-- Play waiting prompt -->
-					<video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/loader.mp4" />
+					<video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
 				</seq>
 			</seq>
 
@@ -120,6 +120,7 @@
 													<img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="video">
 														<param name="cacheControl" value="auto" />
 													</img>
+													<ref dur="indefinite" src="adapi:blankScreen" />
 												</seq>
 											</par>
 										</par>
@@ -139,8 +140,6 @@
 
 				</excl> <!-- 1 -->
 			</par>
-
-
 		</par> <!-- /1 -->
 	</body>
 </smil>

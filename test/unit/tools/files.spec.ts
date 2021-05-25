@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { createDownloadPath, getFileName, getPath, isValidLocalPath } from '../../../src/components/files/tools';
+import { createDownloadPath, getFileName, getPath, isRelativePath } from '../../../src/components/files/tools';
 
 const expect = chai.expect;
 
@@ -62,44 +62,6 @@ describe('Files tools component', () => {
 			}
 		});
 
-		it('Should validate given path', () => {
-			const validFilesPaths = [
-				'bucketname/filename.ext',
-				'bucket.name/filename.ext',
-				'bucket.name/dir1/filename.ext',
-				'bucket.name/dir2/filename.ext',
-				'bucket.name/2015-01-17/15.00_description.ext',
-				'valid.bucket.name._-0123456789/filename.ext',
-				'filename',
-				'filename.mp4',
-				'test/file/name/testing.mp3',
-				'test/file/name/testing',
-			];
-
-			for (let i = 0; i < validFilesPaths.length; i += 1) {
-				const response = isValidLocalPath(validFilesPaths[i]);
-				expect(response).to.be.equal(true);
-			}
-
-			const invalidFilesPaths = [
-				'/bucket.name/dir/filename',
-				'/bucket.name/dir/filename/',
-				'.bucket.name/dir/filename.ext',
-				'bucket*name/filename.ext',
-				'adapi:blankScreen',
-				'bucket*name/fi<>lename.ext',
-				'bucket*name/fil::ename.ext',
-				'adapi:blankScreen/mp4.mp4',
-				'adapi:blankScreen/mp4',
-				'C:\\dir1\\blah.txt',
-			];
-
-			for (let i = 0; i < invalidFilesPaths.length; i += 1) {
-				const response = isValidLocalPath(invalidFilesPaths[i]);
-				expect(response).to.be.equal(false);
-			}
-		});
-
 		it('Should return valid path', () => {
 			const validUrls = [
 				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg',
@@ -115,5 +77,22 @@ describe('Files tools component', () => {
 			}
 		});
 
+	});
+
+	describe('isRelativePath', () => {
+		const data = [
+			['/root/path', true],
+			['root/path', true],
+			['http://example.com/root/path', false],
+			['https://localhost/root/path', false],
+			['https://10.0.0.1/root/path', false],
+			['https://10.0.0.1', false],
+		] as const;
+
+		data.forEach(([filePath, expected]) => {
+			it(`should return ${expected} only on ${filePath} paths`, () => {
+				expect(isRelativePath(filePath)).equal(expected);
+			});
+		});
 	});
 });

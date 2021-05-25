@@ -38,6 +38,7 @@ export type CurrentlyPlaying = {
 export type PlayingInfo = {
 	player?: string,
 	promiseFunction?: any[],
+	nextElement?: any,
 } & SosHtmlElement & SMILVideo;
 
 export type CurrentlyPlayingPriority = {

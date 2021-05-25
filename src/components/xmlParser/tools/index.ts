@@ -5,6 +5,7 @@ import isNil from 'lodash/isNil';
 import cloneDeep = require('lodash/cloneDeep');
 import get from 'lodash/get';
 import merge from 'lodash/merge';
+import isUrl from "is-url-superb";
 
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
@@ -12,7 +13,7 @@ import {
 	RegionAttributes,
 	RegionsObject,
 	RootLayout,
-	SMILMetaObject,
+	SMILMetaObject, TransitionAttributes, TransitionsObject,
 	XmlHeadObject,
 } from '../../../models/xmlJsonModels';
 import { SMILMediaSingle } from '../../../models/mediaModels';
@@ -29,6 +30,7 @@ import {
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
+import { isRelativePath } from '../../files/tools';
 
 export const debug = Debug('@signageos/smil-player:xmlParseModule');
 
@@ -111,20 +113,45 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 				return node;
 			}
 
+			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
+			if ((!isUrl(get(node.value, 'src', 'default')) && !isRelativePath(get(node.value, 'src', 'default')))
+			|| get(node.value, 'src', 'default') === '') {
+				return node;
+			}
+		});
+
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
 			// remove all infinite loops from playlist
-			if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
-				new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
-					if (!isNil(introNode.key)
-						&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-						foundMedia = true;
-					}
-				});
+			if (!isNil(node.key) && XmlTags.structureTags.includes(node.key)) {
+				foundMedia = removeNodes(node);
 				if (!foundMedia) {
 					return node.parent;
 				}
-				foundMedia = false;
 			}
 		});
+
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
+			// remove all infinite loops from playlist
+			if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
+				foundMedia = removeNodes(node);
+				if (!foundMedia) {
+					return node.parent;
+				}
+			}
+		});
+}
+
+function removeNodes(node: { key: string; value: any; parent: { key: string; value: any; } }): boolean {
+	let foundMedia = false;
+	new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
+		if (!isNil(introNode.key)
+			&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
+			foundMedia = true;
+		}
+	});
+	return foundMedia;
 }
 
 /**
@@ -190,8 +217,11 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		meta = [meta];
 	}
 	for (const metaRecord of meta) {
-		if (metaRecord.hasOwnProperty(SMILTriggersEnum.metaContent)) {
+		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
 			regions.refresh = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+		}
+		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
+			regions.log = metaRecord.log === 'true';
 		}
 	}
 }
@@ -227,17 +257,20 @@ function parseTriggersInfo(triggers: SMILTriggers): ParsedTriggerInfo {
 				stringCondition = condition;
 				continue;
 			}
-			finalTriggers[`${condition.origin}-${condition.data}`]
-				= isNil(finalTriggers[`${condition.origin}-${condition.data}`]) ? {} : finalTriggers[`${condition.origin}-${condition.data}`];
 
-			finalTriggers[`${condition.origin}-${condition.data}`].trigger = trigger.id;
-			finalTriggers[`${condition.origin}-${condition.data}`].stringCondition = stringCondition;
+			const dataSuffix = !isNil(condition.data) ? `-${condition.data}` : '';
 
-			finalTriggers[`${condition.origin}-${condition.data}`].condition
-				= isNil(finalTriggers[`${condition.origin}-${condition.data}`].condition) ?
-				[] : finalTriggers[`${condition.origin}-${condition.data}`].condition;
+			finalTriggers[`${condition.origin}${dataSuffix}`]
+				= isNil(finalTriggers[`${condition.origin}${dataSuffix}`]) ? {} : finalTriggers[`${condition.origin}${dataSuffix}`];
 
-			finalTriggers[`${condition.origin}-${condition.data}`].condition.push({
+			finalTriggers[`${condition.origin}${dataSuffix}`].trigger = trigger.id;
+			finalTriggers[`${condition.origin}${dataSuffix}`].stringCondition = stringCondition;
+
+			finalTriggers[`${condition.origin}${dataSuffix}`].condition
+				= isNil(finalTriggers[`${condition.origin}${dataSuffix}`].condition) ?
+				[] : finalTriggers[`${condition.origin}${dataSuffix}`].condition;
+
+			finalTriggers[`${condition.origin}${dataSuffix}`].condition.push({
 				action: condition.action,
 			});
 		}
@@ -249,6 +282,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
 		refresh: 0,
+		log: false,
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
@@ -309,4 +343,34 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	});
 
 	return regionsObject;
+}
+
+export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObject {
+	const transitionsObject: TransitionsObject = {
+		transition: {},
+	};
+	Object.keys(xmlObject).forEach((rootKey: any) => {
+		if (rootKey === SMILEnums.transition) {
+			// multiple regions in layout element
+			if (Array.isArray(xmlObject[rootKey])) {
+				// iterate over array of objects
+				Object.keys(xmlObject[rootKey]).forEach((index: any) => {
+					if (xmlObject[rootKey][index].hasOwnProperty('transitionName')) {
+						transitionsObject.transition[xmlObject[rootKey][index].regionName] = <TransitionAttributes> xmlObject[rootKey][index];
+					} else {
+						transitionsObject.transition[xmlObject[rootKey][index][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey][index];
+
+					}
+				});
+			} else {
+				if (xmlObject[rootKey].hasOwnProperty('transitionName')) {
+					transitionsObject.transition[xmlObject[rootKey].transition] = <TransitionAttributes> xmlObject[rootKey];
+				} else {
+					transitionsObject.transition[xmlObject[rootKey][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey];
+				}
+			}
+		}
+	});
+
+	return transitionsObject;
 }

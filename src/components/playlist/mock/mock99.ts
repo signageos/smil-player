@@ -56,6 +56,7 @@ export const mockSMILFileParsed99 = {
 		left: "0",
 		regionName: "rootLayout",
 	},
+	log: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml", style: "background-color:#FFFFFF", par: {
 			seq: [], par: {
@@ -149,19 +150,6 @@ export const mockSMILFileParsed99 = {
 								},
 							},
 						},
-					}, {
-						lower: "never",
-						peer: "stop",
-						higher: "stop",
-						par: {
-							begin: "wallclock(R/2011-01-01T00:00:00/P1D)",
-							end: "wallclock(R/2011-01-01T23:59:59/P1D)",
-							seq: {
-								begin: "0",
-								dur: "indefinite",
-								ref9: {dur: "indefinite", src: "adapi:blankScreen"},
-							},
-						},
 					}],
 				},
 			},
@@ -223,6 +211,7 @@ export const mockSMILFileParsed99 = {
 		video0: {src: "http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4"},
 	}],
 	sensors: [],
+	transition: {},
 	triggerSensorInfo: {},
 	triggers: {},
 };

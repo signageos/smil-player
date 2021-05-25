@@ -8,10 +8,13 @@ describe("wallclockNoActivePar.smil test", () => {
 		cy.iframe().find('#SMILUrl').clear().type(SMILUrls.noActivePar);
 		cy.wait(CypressTimeouts.submitTimeout);
 		cy.iframe().find('#SMILUrlWrapper').submit();
-		cy.get('video[src*="videos/loader.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.get('video[src*="videos/loader.mp4"]'), 0, 0, 1920, 1080);
+		cy.get('video[src*="videos/loader_fe864e57.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.get('video[src*="videos/loader_fe864e57.mp4"]'), 0, 0, 1920, 1080);
 		cy.wait(CypressTimeouts.videoTransitionTimeout);
-		cy.get('video[src*="videos/loader.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		cy.get('video[src*="videos/loader_fe864e57.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		cy.wait(CypressTimeouts.videoTransitionTimeout);
+		cy.get('video[src*="videos/loader_fe864e57.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.get('video[src*="videos/loader_fe864e57.mp4"]'), 0, 0, 1920, 1080);
 
 	});
 });

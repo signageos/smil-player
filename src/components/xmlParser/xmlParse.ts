@@ -1,9 +1,16 @@
 import * as xml2js from 'xml2js';
-import { debug, extractDataFromPlaylist, extractRegionInfo, parseHeadInfo, removeDataFromPlaylist } from './tools';
+import {
+	debug,
+	extractDataFromPlaylist,
+	extractRegionInfo,
+	extractTransitionsInfo,
+	parseHeadInfo,
+	removeDataFromPlaylist,
+} from './tools';
 import { XmlTags } from '../../enums/xmlEnums';
 import { TriggerList, } from '../../models/triggerModels';
 import { DownloadsList, SMILFileObject } from '../../models/filesModels';
-import { RegionsObject, XmlSmilObject, } from '../../models/xmlJsonModels';
+import { RegionsObject, TransitionsObject, XmlSmilObject } from '../../models/xmlJsonModels';
 import { SMILPlaylist } from '../../models/playlistModels';
 
 let tagNameCounter = 0;
@@ -47,6 +54,7 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 	debug('Xml file parsed to json object: %O', xmlObject);
 
 	const regions = <RegionsObject> extractRegionInfo(xmlObject.smil.head.layout);
+	const transitions = <TransitionsObject> extractTransitionsInfo(xmlObject.smil.head.layout);
 
 	parseHeadInfo(xmlObject.smil.head, regions, triggerList);
 	playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
@@ -56,11 +64,11 @@ async function parseXml(xmlFile: string): Promise<SMILFileObject> {
 
 	removeDataFromPlaylist(playableMedia);
 
-	debug('Extracted regions object: %O', regions);
+	debug('Extracted transitions object: %O', transitions);
 	debug('Extracted playableMedia object: %O', playableMedia);
 	debug('Extracted downloads object: %O', downloads);
 
-	return Object.assign({}, regions, playableMedia, downloads, triggerList);
+	return Object.assign({}, regions, playableMedia, downloads, triggerList, transitions);
 }
 
 export async function processSmil(xmlFile: string): Promise<SMILFileObject> {
