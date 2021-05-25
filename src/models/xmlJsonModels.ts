@@ -6,6 +6,14 @@ export type RegionsObject = {
 	},
 	rootLayout?: RootLayout,
 	refresh: number,
+	log: boolean,
+	[key: string]: any,
+};
+
+export type TransitionsObject = {
+	transition: {
+		[key: string]: TransitionAttributes,
+	},
 	[key: string]: any,
 };
 
@@ -53,4 +61,10 @@ export type RegionAttributes = {
 	fit?: string,
 	region: RegionAttributes | RegionAttributes[],
 	[key: string]: any,
+};
+
+export type TransitionAttributes = {
+	type: string,
+	subType: string,
+	dur: string,
 };
