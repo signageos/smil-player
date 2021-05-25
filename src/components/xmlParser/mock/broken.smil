@@ -23,6 +23,7 @@
             </trigger>
         </triggers>
         <layout>
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s" />
             <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
             <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
                     backgroundColor="#FFFFFF"
