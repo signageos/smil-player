@@ -1,60 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <smil>
     <head>
-        <meta http-equiv="refresh" content="10"/>
+        <meta content="60" http-equiv="Refresh"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="ckmusyw120204p1mhosi6hyja" left="0" top="0" width="1920" height="1080" z-index="0" backgroundColor="#000000"/>
+            <root-layout backgroundColor="#000000" height="1080" width="1920"/>
+            <region height="1080" left="0" regionName="w1920h1080t0l0" top="0" width="1920" z-index="1"/>
         </layout>
-
-        <metadata>
-            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
-
-                <subscriptionList>
-
-                    <subscription>
-                        <type>SystemReport</type>
-                        <action>https://butikstv.centrumkanalen.com/play/report/?player=384</action>
-                        <method>put</method>
-                    </subscription>
-
-                </subscriptionList>
-
-            </x-server>
-        </metadata>
-
-
     </head>
-    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
-
-        <par> <!-- 1 -->
-
+    <body>
+        <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <!-- Play waiting prompt -->
-                    <video src="https://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4" />
+                    <img src="https://deploy.screenfood.com:443/lightplayer/public/smil_loading_landscape.png"/>
                 </seq>
             </seq>
-
-
-
             <seq>
-                <!-- Laddar in bilder och filmer innan spellistan börjar spelas-->
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/ec68be28e3250fb4245730b47d679cee_md5_BTVRENDER18027.mp4" />
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/c5314f7a4b14775ec6d720725bc5198e_md5_18032.png" />
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/6971ebf8a053b0a7c8fc4e335ce00d80_md5_BTVRENDER18028.mp4" />
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/25867117513df7fccac18f12de31d9d9_md5_18029.png" />
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/f736c3c2e3674fed7bfd1784936740c3_md5_BTVRENDER18030.mp4" />
-                <prefetch src="https://butikstv.centrumkanalen.com/play/render/image/6e80b8505b55b1a8d7554a3990c9c304_md5_BTVRENDER18031.mp4" />
-
-                <seq id="__prefetchEnd" dur="1s"/>
+                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/46624279a73fd990b0e31282a5723347.mp4"/>
+                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/afWrapperHtml.html?af=/sf/new/media/af_717e1c6f59f703a4c6480d56a56341a6_2eceaf385b26/index.html?time=12345"/>
+                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/ab74c5a584bf220d9d7a9f3eed5c7bd7.mp4"/>
+                <seq dur="1" id="__prefetchEnd"/>
             </seq>
-
-            <!-- Spellistan startar -->
-            <seq begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <video src="https://butikstv.centrumkanalen.com/play/render/image/ec68be28e3250fb4245730b47d679cee_md5_BTVRENDER18027.mp4" id="annons0" fit="hidden" ><param name="cacheControl" value="auto"/></video>
-                <img src="https://butikstv.centrumkanalen.com/play/render/image/c5314f7a4b14775ec6d720725bc5198e_md5_18032.png" id="annons1" dur="5s" fit="hidden" region="video" expr="4=adapi-weekday()"><param name="cacheControl" value="auto"/></img>
-            </seq> <!-- Spellistan slut -->
-
-        </par> <!-- /1 -->
+            <par begin="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video dur="6" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/46624279a73fd990b0e31282a5723347.mp4"/>
+                    <ref dur="10" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/afWrapperHtml.html?af=/sf/new/media/af_717e1c6f59f703a4c6480d56a56341a6_2eceaf385b26/index.html?time=12345"/>
+                    <video dur="13" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/ab74c5a584bf220d9d7a9f3eed5c7bd7.mp4"/>
+                </seq>
+            </par>
+        </par>
     </body>
 </smil>

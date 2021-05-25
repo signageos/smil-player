@@ -1,6 +1,7 @@
 <smil>
     <head>
         <meta http-equiv="Refresh" content="90"/>
+        <meta log="true"/>
         <sensors>
             <sensor type="rfid" id="rfid1" driver="nexmosphere">
                 <option name="address">003</option>
