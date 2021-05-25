@@ -230,17 +230,20 @@ function parseTriggersInfo(triggers: SMILTriggers): ParsedTriggerInfo {
 				stringCondition = condition;
 				continue;
 			}
-			finalTriggers[`${condition.origin}-${condition.data}`]
-				= isNil(finalTriggers[`${condition.origin}-${condition.data}`]) ? {} : finalTriggers[`${condition.origin}-${condition.data}`];
 
-			finalTriggers[`${condition.origin}-${condition.data}`].trigger = trigger.id;
-			finalTriggers[`${condition.origin}-${condition.data}`].stringCondition = stringCondition;
+			const dataSuffix = !isNil(condition.data) ? `-${condition.data}` : '';
 
-			finalTriggers[`${condition.origin}-${condition.data}`].condition
-				= isNil(finalTriggers[`${condition.origin}-${condition.data}`].condition) ?
-				[] : finalTriggers[`${condition.origin}-${condition.data}`].condition;
+			finalTriggers[`${condition.origin}${dataSuffix}`]
+				= isNil(finalTriggers[`${condition.origin}${dataSuffix}`]) ? {} : finalTriggers[`${condition.origin}${dataSuffix}`];
 
-			finalTriggers[`${condition.origin}-${condition.data}`].condition.push({
+			finalTriggers[`${condition.origin}${dataSuffix}`].trigger = trigger.id;
+			finalTriggers[`${condition.origin}${dataSuffix}`].stringCondition = stringCondition;
+
+			finalTriggers[`${condition.origin}${dataSuffix}`].condition
+				= isNil(finalTriggers[`${condition.origin}${dataSuffix}`].condition) ?
+				[] : finalTriggers[`${condition.origin}${dataSuffix}`].condition;
+
+			finalTriggers[`${condition.origin}${dataSuffix}`].condition.push({
 				action: condition.action,
 			});
 		}
