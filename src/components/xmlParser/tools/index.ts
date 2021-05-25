@@ -5,6 +5,7 @@ import isNil from 'lodash/isNil';
 import cloneDeep = require('lodash/cloneDeep');
 import get from 'lodash/get';
 import merge from 'lodash/merge';
+import isUrl from "is-url-superb";
 
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
@@ -29,6 +30,7 @@ import {
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
+import { isRelativePath } from '../../files/tools';
 
 export const debug = Debug('@signageos/smil-player:xmlParseModule');
 
@@ -111,20 +113,45 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 				return node;
 			}
 
+			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
+			if ((!isUrl(get(node.value, 'src', 'default')) && !isRelativePath(get(node.value, 'src', 'default')))
+			|| get(node.value, 'src', 'default') === '') {
+				return node;
+			}
+		});
+
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
 			// remove all infinite loops from playlist
-			if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
-				new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
-					if (!isNil(introNode.key)
-						&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-						foundMedia = true;
-					}
-				});
+			if (!isNil(node.key) && XmlTags.structureTags.includes(node.key)) {
+				foundMedia = removeNodes(node);
 				if (!foundMedia) {
 					return node.parent;
 				}
-				foundMedia = false;
 			}
 		});
+
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; parent: { key: string; value: any; } }) => {
+			// remove all infinite loops from playlist
+			if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
+				foundMedia = removeNodes(node);
+				if (!foundMedia) {
+					return node.parent;
+				}
+			}
+		});
+}
+
+function removeNodes(node: { key: string; value: any; parent: { key: string; value: any; } }): boolean {
+	let foundMedia = false;
+	new JefNode(node.parent.value).filter((introNode: { key: string; value: any; parent: { key: string; value: any; } }) => {
+		if (!isNil(introNode.key)
+			&& XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
+			foundMedia = true;
+		}
+	});
+	return foundMedia;
 }
 
 /**
