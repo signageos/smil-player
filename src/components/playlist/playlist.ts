@@ -54,6 +54,7 @@ import { createPriorityObject } from './tools/priorityTools';
 export class Playlist {
 	private checkFilesLoop: boolean = true;
 	private cancelFunction: boolean = false;
+	private playingIntro: boolean = false;
 	private readonly playerName: string;
 	private readonly playerId: string;
 	private files: Files;
@@ -163,10 +164,12 @@ export class Playlist {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
 					imageElement = await this.setupIntroImage(<SMILImage> get(intro, `${media}`), internalStorageUnit, smilObject, media);
+					this.setCurrentlyPlaying(<SMILImage> get(intro, `${media}`), 'html', SMILEnums.defaultRegion);
 				}
 				break;
 			default:
 				await this.setupIntroVideo(<SMILVideo> get(intro, `${media}`), internalStorageUnit, smilObject);
+				this.setCurrentlyPlaying(<SMILVideo> get(intro, `${media}`), 'video', SMILEnums.defaultRegion);
 		}
 
 		debug('Intro media downloaded: %O', intro);
@@ -176,14 +179,6 @@ export class Playlist {
 		await this.playIntroLoop(media, intro, downloadPromises, smilObject, internalStorageUnit, smilUrl);
 
 		debug('Playing intro finished: %O', intro);
-
-		switch (removeDigits(media)) {
-			case HtmlEnum.img:
-				imageElement.style.visibility = 'hidden';
-				break;
-			default:
-				await this.endIntroVideo(<SMILVideo> get(intro, `${media}`));
-		}
 	}
 
 	/**
@@ -920,16 +915,15 @@ export class Playlist {
 		element: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, parentRegion: RegionAttributes,
 		) => {
 		// cancel element played in default region
-		if (!isNil(this.currentlyPlaying[SMILEnums.defaultRegion])
-			&& !isNil(get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src'))
-			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src) {
+		if (get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src
+			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'playing')) {
 			debug('cancelling media: %s in default region from element: %s', this.currentlyPlaying[SMILEnums.defaultRegion].src, element.src);
+			this.playingIntro = false;
 			await this.cancelPreviousMedia(this.currentlyPlaying[SMILEnums.defaultRegion].regionInfo);
 		}
 
-		if (!isNil(this.currentlyPlaying[regionInfo.regionName])
-			&& !isNil(get(this.currentlyPlaying[regionInfo.regionName], 'src'))
-			&& get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src) {
+		if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== element.src
+			&& get(this.currentlyPlaying[regionInfo.regionName], 'playing')) {
 			debug('cancelling media: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
 			await this.cancelPreviousMedia(regionInfo);
 		}
@@ -1208,8 +1202,9 @@ export class Playlist {
 	 */
 	private handleTriggers = async (media: SMILVideo | SosHtmlElement, element: HTMLElement | undefined = undefined) => {
 		let regionInfo = media.regionInfo;
+		await sleep(50);
 		while (await this.isRegionOrNestedActive(regionInfo) && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
-			debug('Cant play video because its region is occupied by trigger. video: %O, region: %O', media, regionInfo);
+			debug('Cant play media because its region is occupied by trigger. video: %O, region: %O', media, regionInfo);
 			await sleep(150);
 		}
 
@@ -1304,6 +1299,7 @@ export class Playlist {
 			&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime > 1000)
 			|| (this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed >= endTime
 				&& endTime !== 0)) {
+
 			this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast);
 			debug('Playtime for playlist: %O was exceeded, exiting', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 			return false;
@@ -1343,6 +1339,7 @@ export class Playlist {
 			let regionInfo = await this.handleTriggers(video);
 
 			const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
+
 			// prepare if video is not same as previous one played
 			if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
 				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
@@ -1358,7 +1355,6 @@ export class Playlist {
 			}
 
 			this.videoPreparing[regionInfo.regionName] = video;
-
 			if (!(await this.shouldWaitAndContinue(video, regionInfo, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast))) {
 				return;
 			}
@@ -1491,6 +1487,7 @@ export class Playlist {
 		image.localFilePath = currentImageDetails.localUri;
 		debug('Setting-up intro image: %O', image);
 		const element: HTMLElement = createHtmlElement(HtmlEnum.img, image.localFilePath, image.regionInfo, key);
+		image.id = element.id;
 		element.style.visibility = 'visible';
 		element.setAttribute('src', image.localFilePath);
 		document.body.appendChild(element);
@@ -1502,12 +1499,10 @@ export class Playlist {
 		media: string, intro: SMILIntro, downloadPromises: Promise<Function[]>[],
 		smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string,
 	): Promise<void> => {
-		let playingIntro = true;
 		const promises = [];
+		this.playingIntro = true;
 		promises.push((async () => {
-			while (playingIntro) {
-				debug('Playing intro');
-
+			while (this.playingIntro) {
 				switch (removeDigits(media)) {
 					case SMILEnums.img:
 						await sleep(1000);
@@ -1519,17 +1514,16 @@ export class Playlist {
 		})());
 
 		promises.push((async () => {
-			Promise.all(downloadPromises).then(async () =>  {
+			await Promise.all(downloadPromises).then(async () =>  {
 				// prepares everything needed for processing playlist
 				await this.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
 
 				// all files are downloaded, stop intro
-				debug('SMIL media files download finished, stopping intro ' + playingIntro);
-				playingIntro = false;
+				debug('SMIL media files download finished, stopping intro');
 			});
 		})());
 
-		await Promise.all(promises);
+		await Promise.race(promises);
 	}
 
 	private playIntroVideo = async (video: SMILVideo) => {
@@ -1550,17 +1544,6 @@ export class Playlist {
 			video.regionInfo.height,
 		);
 		debug('Playing intro video after onceEnded: %O', video);
-	}
-
-	private endIntroVideo = async (video: SMILVideo) => {
-		debug('Ending intro video: %O', video);
-		await this.sos.video.stop(
-			video.localFilePath,
-			video.regionInfo.left,
-			video.regionInfo.top,
-			video.regionInfo.width,
-			video.regionInfo.height,
-		);
 	}
 
 	/**
