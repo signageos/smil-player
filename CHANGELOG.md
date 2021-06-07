@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Fixed
+- fix bug with single priorityClass not working properly
+- fix rare bug with playing blank image ( no source )
+
 ## [1.6.0] - 2021-05-27
 ### Fixed
 - fix bug with default region not having proper name
