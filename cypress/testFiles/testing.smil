@@ -1,31 +1,35 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <smil>
     <head>
-        <meta content="60" http-equiv="Refresh"/>
+        <meta http-equiv="refresh" content="30"/>
         <layout>
-            <root-layout backgroundColor="#000000" height="1080" width="1920"/>
-            <region height="1080" left="0" regionName="w1920h1080t0l0" top="0" width="1920" z-index="1"/>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="ckmusyw120204p1mhosi6hyja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://deploy.screenfood.com:443/lightplayer/public/smil_loading_landscape.png"/>
+                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/01/ckju2zzo400050ymp0msze3m0.jpeg" dur="5s" fit="fill"/>
                 </seq>
             </seq>
-            <seq>
-                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/46624279a73fd990b0e31282a5723347.mp4"/>
-                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/afWrapperHtml.html?af=/sf/new/media/af_717e1c6f59f703a4c6480d56a56341a6_2eceaf385b26/index.html?time=12345"/>
-                <prefetch src="https://deploy.screenfood.com:443/sf/new/media/ab74c5a584bf220d9d7a9f3eed5c7bd7.mp4"/>
-                <seq dur="1" id="__prefetchEnd"/>
-            </seq>
-            <par begin="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <video dur="6" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/46624279a73fd990b0e31282a5723347.mp4"/>
-                    <ref dur="10" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/afWrapperHtml.html?af=/sf/new/media/af_717e1c6f59f703a4c6480d56a56341a6_2eceaf385b26/index.html?time=12345"/>
-                    <video dur="13" region="w1920h1080t0l0" src="https://deploy.screenfood.com:443/sf/new/media/ab74c5a584bf220d9d7a9f3eed5c7bd7.mp4"/>
-                </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <par>
+                    <seq repeatCount="indefinite">
+                        <excl>
+                            <priorityClass>
+                                <!-- START [GalleryModule] LB_Nisa_SL_1 (ckpgtxq8012138271zldl6gn3q5o) -->
+                                <seq repeatCount="1">
+                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4s6sq000g12pig6kb1pks.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
+                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4rbnv000e12pi3e8sggr8.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
+                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4qtyu000d12pi3zx24g68.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
+                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe49uf1000612pi34x3huqe.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
+                                </seq>
+                                <!-- END [GalleryModule] LB_Nisa_SL_1 (ckpgtxq8012138271zldl6gn3q5o) -->
+                            </priorityClass>
+                        </excl>
+                    </seq>
+                </par>
             </par>
         </par>
     </body>

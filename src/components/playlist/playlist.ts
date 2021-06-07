@@ -1039,6 +1039,12 @@ export class Playlist {
 	): Promise<void> => {
 		const taskStartDate = moment().toDate();
 		try {
+
+			if (value.localFilePath === '') {
+				debug('Html element: %O has empty localFilepath: %O', value);
+				return;
+			}
+
 			let element = <HTMLElement> document.getElementById(<string> value.id);
 			if (value.hasOwnProperty('transitionInfo')) {
 				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
@@ -1942,6 +1948,8 @@ export class Playlist {
 				,    this.currentlyPlayingPriority[priorityRegionName][currentIndex], priorityRegionName);
 			// some playlist was paused by this one, unpause it
 			const pausedIndex = this.currentlyPlayingPriority[priorityRegionName][currentIndex].controlledPlaylist;
+			// reset counter for finished playlist
+			this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed = 0;
 			if (!isNil(pausedIndex)) {
 				debug('Un paused priority dependant playlist: %O for region: %s'
 					,    this.currentlyPlayingPriority[priorityRegionName][pausedIndex], priorityRegionName);
