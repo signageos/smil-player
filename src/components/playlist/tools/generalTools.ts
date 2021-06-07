@@ -1,5 +1,7 @@
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
+import unset = require('lodash/unset');
+import isObject = require('lodash/isObject');
 import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
@@ -18,7 +20,7 @@ import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { SMILEnums } from '../../../enums/generalEnums';
+import { SMILEnums, parentGenerationRemove } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../../models/mediaModels';
 
@@ -184,19 +186,23 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
 export function generateParentId(tagName: string, value: any): string {
 	try {
-
-		// TODO: add logic to remove these properties from second playback of triggers
-		// if (value.hasOwnProperty('video4')) {
-		// 	delete value.video4.promiseFunction;
-		// 	delete value.video4.media;
-		// 	delete value.video4.playing;
-		// 	delete value.video4.player;
-		// }
-
-		return `${tagName}-${hashSortCoerce.hash(inspect(value))}`;
+		let clone = cloneDeep(value);
+		removeNestedProperties(clone, parentGenerationRemove);
+		return `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
 	} catch (err) {
 		debug('Error during parent generation: %O', err);
 		return `${tagName}-undefined`;
+	}
+}
+
+export function removeNestedProperties(object: any, propertiesArray: string[]): void {
+	for (let [objKey, objValue] of Object.entries(object)) {
+		if (propertiesArray.includes(objKey)) {
+			unset(object, objKey);
+		}
+		if (isObject(objValue)) {
+			removeNestedProperties(objValue, propertiesArray);
+		}
 	}
 }
 
