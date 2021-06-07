@@ -1942,6 +1942,8 @@ export class Playlist {
 				,    this.currentlyPlayingPriority[priorityRegionName][currentIndex], priorityRegionName);
 			// some playlist was paused by this one, unpause it
 			const pausedIndex = this.currentlyPlayingPriority[priorityRegionName][currentIndex].controlledPlaylist;
+			// reset counter for finished playlist
+			this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed = 0;
 			if (!isNil(pausedIndex)) {
 				debug('Un paused priority dependant playlist: %O for region: %s'
 					,    this.currentlyPlayingPriority[priorityRegionName][pausedIndex], priorityRegionName);

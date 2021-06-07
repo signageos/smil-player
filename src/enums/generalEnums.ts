@@ -12,3 +12,11 @@ export enum SMILEnums {
 	metaContent = 'content',
 	metaLog = 'log',
 }
+
+export const parentGenerationRemove = [
+	'promiseFunction',
+	'media',
+	'playing',
+	'player',
+	'lastModified',
+];
