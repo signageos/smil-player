@@ -1039,6 +1039,12 @@ export class Playlist {
 	): Promise<void> => {
 		const taskStartDate = moment().toDate();
 		try {
+
+			if (value.localFilePath === '') {
+				debug('Html element: %O has empty localFilepath: %O', value);
+				return;
+			}
+
 			let element = <HTMLElement> document.getElementById(<string> value.id);
 			if (value.hasOwnProperty('transitionInfo')) {
 				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
