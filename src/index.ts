@@ -53,10 +53,11 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 	}
 
 	let smilFileContent: string = '';
+	let xmlOkParsed: boolean = false;
 
 	// wait for successful download of SMIL file, if download or read from internal storage fails
 	// wait for one minute and then try to download it again
-	while (smilFileContent === '') {
+	while (smilFileContent === '' || !xmlOkParsed) {
 		try {
 			// download SMIL file if device has internet connection and smil file exists on remote server
 			if (!isNil(await files.fetchLastModified(smilFile.src))) {
@@ -73,8 +74,42 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			debug('SMIL file downloaded');
 			downloadPromises = [];
 
+			const smilObject: SMILFileObject = await processSmil(smilFileContent);
+			debug('SMIL file parsed: %O', smilObject);
+
+			await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
+
+			// set variable to enable/disable events logs
+			files.setSmiLogging(smilObject.log);
+
+			setTransitionsDefinition(smilObject);
+
+			// download and play intro file if exists ( image or video )
+			if (smilObject.intro.length > 0) {
+				await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
+			} else {
+				// no intro
+				debug('No intro element found');
+				downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+				await Promise.all(downloadPromises);
+				debug('SMIL media files download finished');
+				await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+			}
+
+			// smil processing ok, end loop
+			xmlOkParsed = true;
+			debug('Starting to process parsed smil file');
+			await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
+
 		} catch (err) {
-			debug('Unexpected error occurred during smil file download : %O', err);
+
+			if (smilFileContent === '') {
+				debug('Unexpected error occurred during smil file download : %O', err);
+			} else {
+				debug('Unexpected error during xml parse: %O', err);
+				await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src, err.message);
+			}
+
 			debug('Starting to play backup image');
 			const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
 			const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
@@ -87,48 +122,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			await playlist.processPlaylist(backupPlaylist);
 			await sleep(SMILEnums.defaultDownloadRetry * 1000);
 		}
-	}
-
-	try {
-		const smilObject: SMILFileObject = await processSmil(smilFileContent);
-		debug('SMIL file parsed: %O', smilObject);
-
-		await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
-
-		// set variable to enable/disable events logs
-		files.setSmiLogging(smilObject.log);
-
-		setTransitionsDefinition(smilObject);
-
-		// download and play intro file if exists ( image or video )
-		if (smilObject.intro.length > 0) {
-			await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
-		} else {
-			// no intro
-			debug('No intro element found');
-			downloadPromises = await files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
-			await Promise.all(downloadPromises);
-			debug('SMIL media files download finished');
-			await playlist.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
-		}
-
-		debug('Starting to process parsed smil file');
-		await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
-	} catch (err) {
-		debug('Unexpected error during xml parse: %O', err);
-
-		await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src, err.message);
-
-		debug('Starting to play backup image');
-		const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
-		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, 'indefinite');
-		const regionInfo = <SMILFileObject> getDefaultRegion();
-
-		await playlist.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit);
-		if (isNil(sos.config.backupImageUrl)) {
-			backupPlaylist.seq.img.localFilePath = backupImageUrl;
-		}
-		await playlist.processPlaylist(backupPlaylist);
 	}
 }
 
