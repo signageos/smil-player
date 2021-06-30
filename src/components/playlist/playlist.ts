@@ -194,29 +194,33 @@ export class Playlist {
 		smilFile: SMILFile,
 	): Promise<void> => {
 		const promises = [];
-		promises.push((async () => {
-			while (this.checkFilesLoop) {
-				debug('Prepare ETag check for smil media files prepared');
-				const {
-					fileEtagPromisesMedia: fileEtagPromisesMedia,
-					fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-				} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
+		if (smilObject.refresh !== SMILEnums.dontUpdateRefresh) {
+			promises.push((async () => {
+				while (this.checkFilesLoop) {
+					debug('Prepare ETag check for smil media files prepared');
+					const {
+						fileEtagPromisesMedia: fileEtagPromisesMedia,
+						fileEtagPromisesSMIL: fileEtagPromisesSMIL,
+					} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
 
-				debug('Last modified check for smil media files prepared');
-				await sleep(smilObject.refresh * 1000);
-				debug('Checking files for changes');
-				let responseFiles = await Promise.all(fileEtagPromisesSMIL);
-				responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
-				for (const response of responseFiles) {
-					if (response.length > 0) {
-						debug('One of the files changed, restarting loop');
-						this.disableLoop(true);
-						this.setCheckFilesLoop(false);
-						break;
+					debug('Last modified check for smil media files prepared');
+					await sleep(smilObject.refresh * 1000);
+					debug('Checking files for changes');
+					let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+					responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+					for (const response of responseFiles) {
+						if (response.length > 0) {
+							debug('One of the files changed, restarting loop');
+							this.disableLoop(true);
+							this.setCheckFilesLoop(false);
+							break;
+						}
 					}
 				}
-			}
-		})());
+			})());
+		} else {
+			debug(`Media update interval set to ${SMILEnums.dontUpdateRefresh}, smil media files will not be updated on change`);
+		}
 
 		promises.push((async () => {
 			// endless processing of smil playlist
