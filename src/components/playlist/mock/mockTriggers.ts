@@ -56,6 +56,7 @@ export const mockSMILFileTriggers = {
 		regionName: "rootLayout",
 	},
 	log: true,
+	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",

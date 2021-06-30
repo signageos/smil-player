@@ -56,6 +56,7 @@ export const mockBrokenSmil = {
 		left: "0",
 	},
 	log: false,
+	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml",
 		style: "background-color:#FFFFFF",
