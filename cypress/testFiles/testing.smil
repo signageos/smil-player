@@ -1,35 +1,37 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="30"/>
+        <meta http-equiv="refresh" content="10"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="ckmusyw120204p1mhosi6hyja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182cccc" />
+
+            <!-- define the screen layout, in this case single fullscreen zone -->
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
         </layout>
     </head>
     <body>
         <par>
+
+            <!-- Play this intro video as long as the resources being prefetched -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/01/ckju2zzo400050ymp0msze3m0.jpeg" dur="5s" fit="fill"/>
+                    <!-- Play waiting prompt -->
+                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
                 </seq>
             </seq>
+
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <par>
-                    <seq repeatCount="indefinite">
-                        <excl>
-                            <priorityClass>
-                                <!-- START [GalleryModule] LB_Nisa_SL_1 (ckpgtxq8012138271zldl6gn3q5o) -->
-                                <seq repeatCount="1">
-                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4s6sq000g12pig6kb1pks.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
-                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4rbnv000e12pi3e8sggr8.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
-                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe4qtyu000d12pi3zx24g68.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
-                                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/06/ckpe49uf1000612pi34x3huqe.jpeg" dur="10s" fit="fill" region="ckmusyw120204p1mhosi6hyja"/>
-                                </seq>
-                                <!-- END [GalleryModule] LB_Nisa_SL_1 (ckpgtxq8012138271zldl6gn3q5o) -->
-                            </priorityClass>
-                        </excl>
-                    </seq>
-                </par>
+
+                <!-- indefinite loop of media files in the selected order -->
+                <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
+                <seq repeatCount="indefinite">
+                    <video src="https://statttttic.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
+                    <img dur="3s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" region="main" fit="fill"></img>
+                    <img dur="3s" src="https://signaaaaaageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="main" fit="fill"></img>
+                    <ref src="https://signageeeeeeos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="bottomWidget" dur="20s"></ref>
+                    <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main" soundLevel="0%"></video>
+                </seq>
             </par>
         </par>
     </body>

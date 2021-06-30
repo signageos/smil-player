@@ -1,7 +1,7 @@
 import { doesNotExist, testCoordinates, numberOfElementsExists } from '../../tools/tools';
 import { CypressTimeouts, SMILUrls } from '../../enums/enums';
 
-describe("conditionalMediaElement.smil test", () => {
+describe("noAdditionalPar.smil test", () => {
 	it("processes smil file correctly", () => {
 		cy.visit("/");
 		cy.frameLoaded('iframe');
