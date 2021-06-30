@@ -1,7 +1,7 @@
 import { testCoordinates } from '../../tools/tools';
 import { CypressTimeouts, SMILUrls } from '../../enums/enums';
 
-describe("repeatCountIntroVideo.smil test", () => {
+describe("correctOrder.smil test", () => {
 	it("processes smil file correctly", () => {
 		cy.visit("/");
 		cy.frameLoaded('iframe');

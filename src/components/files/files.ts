@@ -100,19 +100,23 @@ export class Files {
 
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < widgets.length; i++) {
-			if (isUrl(widgets[i].src) && widgets[i].src.indexOf('.wgt') > -1) {
-				debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
-				await this.sos.fileSystem.extractFile(
-					{
-						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
-					},
-					{
-						storageUnit: internalStorageUnit,
-						filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
-					},
-					'zip',
-				);
+			try {
+				if (isUrl(widgets[i].src) && widgets[i].src.indexOf('.wgt') > -1) {
+					debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
+					await this.sos.fileSystem.extractFile(
+						{
+							storageUnit: internalStorageUnit,
+							filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
+						},
+						{
+							storageUnit: internalStorageUnit,
+							filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
+						},
+						'zip',
+					);
+				}
+			} catch (err) {
+				debug(`Unexpected error: %O occurred during widget extract: %O`, err, widgets[i]);
 			}
 		}
 	}
@@ -160,6 +164,8 @@ export class Files {
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
 		}
+
+		debug(`File is already downloaded in internal storage: %O `, media.src);
 		return false;
 	}
 
