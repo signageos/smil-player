@@ -1,6 +1,6 @@
 <smil>
 	<head>
-		<meta http-equiv="Refresh" content="444" />
+		<meta http-equiv="Refresh" content="-1" />
 		<layout>
 			<root-layout width="1920" height="1080" backgroundColor="#FFFFFF" />
 

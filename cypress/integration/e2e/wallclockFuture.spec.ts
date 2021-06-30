@@ -1,7 +1,7 @@
 import { testCoordinates, doesNotExist } from '../../tools/tools';
 import { CypressTimeouts, SMILUrls } from '../../enums/enums';
 
-describe("wallclockNoActivePar.smil test", () => {
+describe("wallclockFuture.smil test", () => {
 	it("processes smil file correctly", () => {
 		cy.visit("/");
 		cy.frameLoaded('iframe');
