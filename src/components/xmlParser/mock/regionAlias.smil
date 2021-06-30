@@ -1,6 +1,6 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="60"/>
+        <meta http-equiv="Refresh" content="60" onlySmilUpdate="true"/>
         <layout>
             <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
             <region xml:id="video" left="0" top="0" width="1080" height="1920" z-index="1" backgroundColor="#FFFFFF"
