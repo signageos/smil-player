@@ -164,6 +164,8 @@ export class Files {
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
 		}
+
+		debug(`File is already downloaded in internal storage: %O `, media.src);
 		return false;
 	}
 
