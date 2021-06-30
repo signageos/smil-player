@@ -21,6 +21,7 @@ export const mockSMILFileParsed234 = {
 		regionName: "rootLayout",
 	},
 	log: false,
+	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: "http://www.w3.org/1999/xhtml", style: "background-color:#FFFFFF", par: {
 			seq: [{

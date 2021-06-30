@@ -1,6 +1,6 @@
 <smil>
 	<head>
-		<meta http-equiv="Refresh" content="-1" />
+		<meta http-equiv="Refresh" content="10" onlySmilUpdate="true"/>
 		<layout>
 			<root-layout width="1920" height="1080" backgroundColor="#FFFFFF" />
 
