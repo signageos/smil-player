@@ -302,7 +302,7 @@ export class Playlist {
 					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
 					// check if video has duration defined due to webos bug
-					if (key.startsWith('video')) {
+					if (key.startsWith('video') && mediaFile) {
 						elem.fullVideoDuration = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
 					}
 					elem.regionInfo = getRegionInfo(region, elem.region);
