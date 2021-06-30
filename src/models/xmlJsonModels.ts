@@ -6,6 +6,7 @@ export type RegionsObject = {
 	},
 	rootLayout?: RootLayout,
 	refresh: number,
+	onlySmilFileUpdate: boolean,
 	log: boolean,
 	[key: string]: any,
 };
@@ -32,6 +33,7 @@ export type XmlSmilObject = {
 			meta: [{
 				content: string,
 				log: string,
+				onlySmilUpdate: string,
 			}],
 			layout: RegionsObject,
 		},
@@ -49,6 +51,7 @@ export type XmlHeadObject = {
 export type SMILMetaObject = {
 	content: string,
 	log: string,
+	onlySmilUpdate: string,
 };
 
 export type RegionAttributes = {

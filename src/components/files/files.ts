@@ -354,10 +354,17 @@ export class Files {
 		let fileEtagPromisesSMIL: Promise<any>[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
 
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images));
-		fileEtagPromisesMedia = fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		// check for media updates only if its not switched off in the smil file
+		if (!smilObject.onlySmilFileUpdate) {
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		}
 
 		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkLastModified(internalStorageUnit, [smilFile], FileStructure.rootFolder));
 
