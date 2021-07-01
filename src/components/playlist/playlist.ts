@@ -16,7 +16,6 @@ import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { SMILEnums } from '../../enums/generalEnums';
 import { XmlTags } from '../../enums/xmlEnums';
-import { DeviceInfo } from '../../enums/deviceEnums';
 import { HtmlEnum } from '../../enums/htmlEnums';
 import { ExprTag } from '../../enums/conditionalEnums';
 import { SMILTriggersEnum } from '../../enums/triggerEnums';
@@ -1054,14 +1053,11 @@ export class Playlist {
 
 			// add query parameter to invalidate cache on devices
 			if (element.getAttribute('src') === null) {
-				const doesSupportQueryParams = await this.doesSupportQueryParametersCompatibilityMode();
 				let src = value.localFilePath;
-				if (doesSupportQueryParams) {
-					// BrightSign does not support query parameters in filesystem
-					src = createVersionedUrl(src);
-					// TODO this would not work & break BS. Solve it other way in future before merge
-					src = copyQueryParameters(value.src, src);
-				}
+				// BrightSign does not support query parameters in filesystem
+				src = createVersionedUrl(src);
+				// TODO this would not work & break BS. Solve it other way in future before merge
+				src = copyQueryParameters(value.src, src);
 				element.setAttribute('src', src);
 			}
 
@@ -1160,16 +1156,6 @@ export class Playlist {
 
 		await this.files.sendMediaReport(element, taskStartDate, element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image');
 
-	}
-
-	/**
-	 * Function to determine if device supports query parameters in filesystem. Its mechanism to invalidate cache used
-	 * in updating smil media on the fly without restarting device. Only device which does not support this feature is brightsign
-	 * but its needed there. Brightsign works fine without query parameters.
-	 */
-	// TODO: add this feature to SoS module itself
-	private doesSupportQueryParametersCompatibilityMode = async (): Promise<boolean> => {
-		return (await this.sos.management.app.getType() !== DeviceInfo.brightsign);
 	}
 
 	/**
