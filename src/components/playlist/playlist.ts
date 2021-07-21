@@ -1054,9 +1054,7 @@ export class Playlist {
 			// add query parameter to invalidate cache on devices
 			if (element.getAttribute('src') === null) {
 				let src = value.localFilePath;
-				// BrightSign does not support query parameters in filesystem
 				src = createVersionedUrl(src);
-				// TODO this would not work & break BS. Solve it other way in future before merge
 				src = copyQueryParameters(value.src, src);
 				element.setAttribute('src', src);
 			}

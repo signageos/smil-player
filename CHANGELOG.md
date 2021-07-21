@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Query parameters of HTML widgets for Brightsign devices
+- Add cross-env build support
+- Add support of deleting on systems that are not unix-based
 
 ## [1.7.0] - 2021-06-30
 ### Fixed

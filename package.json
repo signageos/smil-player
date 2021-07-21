@@ -10,7 +10,7 @@
     "package.json"
   ],
   "engines": {
-    "node": ">=12.0.0",
+    "node": ">=14.0.0",
     "npm": ">=6.10.2"
   },
   "scripts": {
@@ -22,9 +22,10 @@
     "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
     "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
     "upload-applet": "sos applet upload",
-    "clean": "rm -rf cache dist/*",
+    "clean": "del-cli --force cache dist/*",
     "prepare": "npm run clean && npm run build",
     "build": "npm run clean && webpack --display-modules",
+    "build-prod": "npm run clean && cross-env NODE_ENV=production webpack --display-modules",
     "build-test": "tsc",
     "start": "webpack-dev-server --mode development --open-emulator",
     "start-cypress": "webpack-dev-server --mode none --open-emulator",
@@ -76,13 +77,15 @@
     "@types/object-hash": "^2.1.0",
     "async": "^3.2.0",
     "chai": "^4.2.0",
+    "cross-env": "^7.0.3",
     "debug": "^4.1.1",
+    "del-cli": "^4.0.1",
     "express": "^4.17.1",
     "he": "1.2.0",
     "ical": "git+https://github.com/signageos/ical.js.git#afa98010e0c593b1c49131bb3d884a497fee317a",
     "is-url-superb": "^3.0.0",
     "json-easy-filter": "^0.3.1",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "mocha": "^7.1.1",
     "moment": "^2.26.0",
     "node-object-hash": "^2.3.1",
