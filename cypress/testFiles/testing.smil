@@ -1,37 +1,50 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="10"/>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <layout>
-            <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182cccc" />
-
-            <!-- define the screen layout, in this case single fullscreen zone -->
-            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
+            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
+            <region regionName="ckr1xuxzk558071zieiykxgfty" left="0" top="0" width="1080" height="864" z-index="1" backgroundColor="#000000"/>
+            <region regionName="ckr1xv4gx561181zieffc7ngc0" left="0" top="864" width="1080" height="864" z-index="1" backgroundColor="#000000"/>
+            <region regionName="ckr1xvbok564281zie7nykgqzp" left="0" top="1728" width="1080" height="192" z-index="1" backgroundColor="#000000"/>
         </layout>
     </head>
     <body>
         <par>
-
-            <!-- Play this intro video as long as the resources being prefetched -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <!-- Play waiting prompt -->
-                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
+                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckrbrnudv00000xoc0vic4wzj.png" dur="5s" fit="fill"/>
                 </seq>
             </seq>
-
-            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-
-                <!-- indefinite loop of media files in the selected order -->
-                <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
-                <seq repeatCount="indefinite">
-                    <video src="https://statttttic.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
-                    <img dur="3s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" region="main" fit="fill"></img>
-                    <img dur="3s" src="https://signaaaaaageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="main" fit="fill"></img>
-                    <ref src="https://signageeeeeeos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="bottomWidget" dur="20s"></ref>
-                    <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main" soundLevel="0%"></video>
-                </seq>
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- START [GalleryModule] Galerie (ckr1xx2wj587261zieaot3065d) -->
+                        <seq repeatCount="1">
+                            <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="ckr1xuxzk558071zieiykxgfty" fit="fill"></img>
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" region="ckr1xuxzk558071zieiykxgfty" soundLevel="0%"></video>
+                            <img dur="10s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="ckr1xuxzk558071zieiykxgfty" fit="fill"></img>
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" region="ckr1xuxzk558071zieiykxgfty" soundLevel="0%"></video>                        </seq>
+                        <!-- END [GalleryModule] Galerie (ckr1xx2wj587261zieaot3065d) -->
+                    </seq>
+                </par>
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- START [DeviceDebugModule] Info (ckr1yp6wk26241zkb9m8bxy5b) -->
+                        <seq repeatCount="1">
+                            <ref src="https://stage.signagelab.com/api/module/device-debug.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=ckr1yp6wk26241zkb9m8bxy5b&amp;deviceId=ckr206g6n138281zo521k5omj3&amp;hash=d16c528776acb6ffc68054df159fc3ed" type="application/widget" dur="10s" region="ckr1xv4gx561181zieffc7ngc0"/>
+                        </seq>
+                        <!-- END [DeviceDebugModule] Info (ckr1yp6wk26241zkb9m8bxy5b) -->
+                    </seq>
+                </par>
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- START [MarqueeModule] Text (ckr1yptjf40731zkbucoqgeaq) -->
+                        <seq repeatCount="1">
+                            <ref src="https://stage.signagelab.com/api/module/marquee.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=ckr1yptjf40731zkbucoqgeaq&amp;deviceId=ckr206g6n138281zo521k5omj3&amp;hash=a167ec40bab4d844b3026da3489eb5de" type="application/widget" dur="15s" region="ckr1xvbok564281zie7nykgqzp"/>
+                        </seq>
+                        <!-- END [MarqueeModule] Text (ckr1yptjf40731zkbucoqgeaq) -->
+                    </seq>
+                </par>
             </par>
         </par>
     </body>
