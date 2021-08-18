@@ -1045,9 +1045,8 @@ export class Playlist {
 			}
 
 			let element = <HTMLElement> document.getElementById(<string> value.id);
-			if (value.hasOwnProperty('transitionInfo')) {
-				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
-			}
+			element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+
 			// set correct duration
 			const parsedDuration: number = setElementDuration(value.dur);
 
@@ -1084,8 +1083,8 @@ export class Playlist {
 				const hasTransition = value.hasOwnProperty('transitionInfo');
 				if (hasTransition) {
 					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
-					element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
 				}
+				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
 				element.style.visibility = 'visible';
 				await this.waitMediaOnScreen(
 					localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex, element, transitionDuration, taskStartDate,
@@ -1096,6 +1095,8 @@ export class Playlist {
 				if (hasTransition) {
 					removeTransitionCss(element);
 				}
+
+				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) - 2}`);
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);

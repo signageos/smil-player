@@ -154,7 +154,6 @@ export function setTransitionCss(element: HTMLElement, id: string, transitionDur
 }
 
 export function removeTransitionCss(element: HTMLElement) {
-	element.style.setProperty('z-index', '1');
 	element.style.removeProperty('animation');
 	element.style.removeProperty('-webkit-animation');
 	element.style.removeProperty('-moz-animation');
