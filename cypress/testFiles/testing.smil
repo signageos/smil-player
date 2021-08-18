@@ -1,51 +1,39 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta http-equiv="Refresh" content="999999"/>
         <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
-            <region regionName="ckr1xuxzk558071zieiykxgfty" left="0" top="0" width="1080" height="864" z-index="1" backgroundColor="#000000"/>
-            <region regionName="ckr1xv4gx561181zieffc7ngc0" left="0" top="864" width="1080" height="864" z-index="1" backgroundColor="#000000"/>
-            <region regionName="ckr1xvbok564281zie7nykgqzp" left="0" top="1728" width="1080" height="192" z-index="1" backgroundColor="#000000"/>
+            <root-layout width="1920" height="1080" background="#000000"/>
+            <region width="1920" height="1080" backgroundColor="#000000" regionName="main" left="0" top="0" z-index="1"
+                    mediaAlign="center"/>
+            <transition id="fade3s" xml:id="fade3s" type="fade" subtype="crossfade" dur="3s"/>
         </layout>
     </head>
     <body>
         <par>
-            <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckrbrnudv00000xoc0vic4wzj.png" dur="5s" fit="fill"/>
-                </seq>
+            <seq>
+                <prefetch
+                        src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810684/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/jf0fkuwcog0hbf9qxdvw.jpg"/>
+                <prefetch
+                        src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810685/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/lq9kiz18clo9w1fl5jlz.png"/>
+                <seq id="__prefetchEnd" dur="1s"/>
             </seq>
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <par>
-                    <seq repeatCount="indefinite">
-                        <!-- START [GalleryModule] Galerie (ckr1xx2wj587261zieaot3065d) -->
-                        <seq repeatCount="1">
-                            <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="ckr1xuxzk558071zieiykxgfty" fit="fill"></img>
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" region="ckr1xuxzk558071zieiykxgfty" soundLevel="0%"></video>
-                            <img dur="10s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="ckr1xuxzk558071zieiykxgfty" fit="fill"></img>
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" region="ckr1xuxzk558071zieiykxgfty" soundLevel="0%"></video>                        </seq>
-                        <!-- END [GalleryModule] Galerie (ckr1xx2wj587261zieaot3065d) -->
-                    </seq>
-                </par>
-                <par>
-                    <seq repeatCount="indefinite">
-                        <!-- START [DeviceDebugModule] Info (ckr1yp6wk26241zkb9m8bxy5b) -->
-                        <seq repeatCount="1">
-                            <ref src="https://stage.signagelab.com/api/module/device-debug.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=ckr1yp6wk26241zkb9m8bxy5b&amp;deviceId=ckr206g6n138281zo521k5omj3&amp;hash=d16c528776acb6ffc68054df159fc3ed" type="application/widget" dur="10s" region="ckr1xv4gx561181zieffc7ngc0"/>
-                        </seq>
-                        <!-- END [DeviceDebugModule] Info (ckr1yp6wk26241zkb9m8bxy5b) -->
-                    </seq>
-                </par>
-                <par>
-                    <seq repeatCount="indefinite">
-                        <!-- START [MarqueeModule] Text (ckr1yptjf40731zkbucoqgeaq) -->
-                        <seq repeatCount="1">
-                            <ref src="https://stage.signagelab.com/api/module/marquee.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=ckr1yptjf40731zkbucoqgeaq&amp;deviceId=ckr206g6n138281zo521k5omj3&amp;hash=a167ec40bab4d844b3026da3489eb5de" type="application/widget" dur="15s" region="ckr1xvbok564281zie7nykgqzp"/>
-                        </seq>
-                        <!-- END [MarqueeModule] Text (ckr1yptjf40731zkbucoqgeaq) -->
-                    </seq>
-                </par>
+                <seq expr="compare(time(), '00:00:00') >= 0 and [compare(time(), '23:59:59') <= 0 or [compare(time(), '00:00:00') >= 0 and compare(time(), '00:00:00') < 0]]">
+                    <img region="main" dur="5s" transIn="fade3s"
+                         src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810684/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/jf0fkuwcog0hbf9qxdvw.jpg"
+                         fit="meetBest"/>
+                    <img region="main" dur="5s"
+                         src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810685/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/lq9kiz18clo9w1fl5jlz.png"
+                         fit="meetBest"/>
+
+                    <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="main" dur="5s">
+                        <param name="cacheControl" value="onlyIfCached" />
+                    </ref>
+
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
+                </seq>
             </par>
         </par>
     </body>
 </smil>
+

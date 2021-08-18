@@ -34,6 +34,10 @@ export function getStringToIntDefault(value: string): number {
 	return parseInt(value) || 0;
 }
 
+export function removeWhitespace(str: string) {
+	return str.replace(/\s/g, '');
+}
+
 export function errorVisibility(visible: boolean) {
 	const display = visible ? 'block' : 'none';
 
