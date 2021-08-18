@@ -16,7 +16,7 @@ import { SMILEnums } from './enums/generalEnums';
 import { createLocalFilePath, getFileName } from './components/files/tools';
 import { FileStructure } from './enums/fileEnums';
 import { SMILFile, SMILFileObject } from './models/filesModels';
-import { generateBackupImagePlaylist, getDefaultRegion, sleep } from './components/playlist/tools/generalTools';
+import { generateBackupImagePlaylist, getDefaultRegion, sleep, removeWhitespace } from './components/playlist/tools/generalTools';
 import { resetBodyContent, setTransitionsDefinition } from './components/playlist/tools/htmlTools';
 
 const files = new Files(sos);
@@ -161,8 +161,9 @@ async function startSmil(smilUrl: string) {
 	await sos.onReady();
 	if (sos.config.smilUrl) {
 		debug('sOS is ready');
-		debug('Smil file url is: %s', sos.config.smilUrl);
-		await startSmil(sos.config.smilUrl);
+		const smilUrl = removeWhitespace(sos.config.smilUrl);
+		debug('Smil file url is: %s', smilUrl);
+		await startSmil(smilUrl);
 	}
 })();
 
@@ -170,7 +171,7 @@ async function startSmil(smilUrl: string) {
 const smilForm = <HTMLElement> document.getElementById('SMILUrlWrapper');
 smilForm.onsubmit = async function (event: Event) {
 	event.preventDefault();
-	const smilUrl = (<HTMLInputElement> document.getElementById('SMILUrl')).value;
+	const smilUrl = removeWhitespace((<HTMLInputElement> document.getElementById('SMILUrl')).value);
 	debug('Smil file url is: %s', smilUrl);
 	await startSmil(smilUrl);
 };
