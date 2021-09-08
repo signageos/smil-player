@@ -3,8 +3,8 @@ import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/moc
 import { mockSMILFileTriggers } from '../../../src/components/playlist/mock/mockTriggers';
 import { mockSMILFileTriggersNoTopLeft } from '../../../src/components/playlist/mock/mockTriggersNoTopLeft';
 import { mockParsedNestedRegion, mockParsed234Layout, mockParsed234Region, mockParsedNestedRegionNoTopLeft } from '../../../src/components/playlist/mock/mockRegions';
-import { Playlist } from '../../../src/components/playlist/playlist';
-import { Files } from '../../../src/components/files/files';
+// import { Playlist } from '../../../src/components/playlist/playlist';
+// import { Files } from '../../../src/components/files/files';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import {
 	extractAdditionalInfo,
@@ -303,27 +303,27 @@ describe('Playlist tools component', () => {
 		});
 	});
 
-	describe('Playlist tools component runEndlessLoop, disableLoop tests', () => {
-		it('Should stop endless loop after given amount of time', async () => {
-			const sos: any = {
-				fileSystem: 'notSet',
-				video: 'notSet',
-				management: 'notSet',
-				hardware: 'notSet',
-			};
-			const files = new Files(sos);
-			const playlist = new Playlist(sos, files);
-			const interval = 1000;
-			const start = Date.now();
-			await playlist.runEndlessLoop(async () => {
-				await sleep(interval);
-				playlist.disableLoop(true);
-			});
-			const end = Date.now();
-			const timeWaited = end - start;
-			expect(Math.abs(interval - timeWaited)).to.be.lessThan(50);
-		});
-	});
+	// describe('Playlist tools component runEndlessLoop, disableLoop tests', () => {
+	// 	it('Should stop endless loop after given amount of time', async () => {
+	// 		const sos: any = {
+	// 			fileSystem: 'notSet',
+	// 			video: 'notSet',
+	// 			management: 'notSet',
+	// 			hardware: 'notSet',
+	// 		};
+	// 		const files = new Files(sos);
+	// 		const playlist = new Playlist(sos, files);
+	// 		const interval = 1000;
+	// 		const start = Date.now();
+	// 		await playlist.runEndlessLoop(async () => {
+	// 			await sleep(interval);
+	// 			playlist.disableLoop(true);
+	// 		});
+	// 		const end = Date.now();
+	// 		const timeWaited = end - start;
+	// 		expect(Math.abs(interval - timeWaited)).to.be.lessThan(50);
+	// 	});
+	// });
 
 	describe('Playlist tools component setDuration', () => {
 		it('Should return correct duration for various inputs', async () => {
