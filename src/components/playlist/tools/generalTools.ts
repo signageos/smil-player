@@ -6,7 +6,6 @@ import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
 const hasher = require('node-object-hash');
-const hashSortCoerce = hasher({ alg: 'md5' });
 
 import {
 	BackupPlaylist,
@@ -25,6 +24,7 @@ import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../../models/mediaModels';
 
 export const debug = Debug('@signageos/smil-player:playlistModule');
+export const hashSortCoerce = hasher({ alg: 'md5' });
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
 	return `${getFileName(filepath)}-${regionName}-${key}`;

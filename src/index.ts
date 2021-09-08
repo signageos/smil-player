@@ -18,16 +18,15 @@ import { FileStructure } from './enums/fileEnums';
 import { SMILFile, SMILFileObject } from './models/filesModels';
 import { generateBackupImagePlaylist, getDefaultRegion, sleep, removeWhitespace } from './components/playlist/tools/generalTools';
 import { resetBodyContent, setTransitionsDefinition } from './components/playlist/tools/htmlTools';
+import { SMILScheduleEnum } from './enums/scheduleEnums';
 
 const files = new Files(sos);
 const debug = Debug('@signageos/smil-player:main');
+const playlist = new Playlist(sos, files);
 
-async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet) {
-	const playlist = new Playlist(sos, files);
-	// enable internal endless loops for playing media
+export async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet, playIntro: boolean = true) {
+	// allow endless functions to play endlessly
 	playlist.disableLoop(false);
-	// enable endless loop for checking files updated
-	playlist.setCheckFilesLoop(true);
 
 	const smilFile: SMILFile = {
 		src: smilUrl,
@@ -37,7 +36,6 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 	// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 	files.setSmilUrl(smilUrl);
-	resetBodyContent();
 
 	try {
 		if (!isNil(sos.config.backupImageUrl) && !isNil(await files.fetchLastModified(sos.config.backupImageUrl))) {
@@ -75,6 +73,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			downloadPromises = [];
 
 			const smilObject: SMILFileObject = await processSmil(smilFileContent);
+			// const regionsHash = hashSortCoerce.hash(inspect(Object.assign({}, smilObject.region, smilObject.rootLayout)));
 			debug('SMIL file parsed: %O', smilObject);
 
 			await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
@@ -84,8 +83,9 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 			setTransitionsDefinition(smilObject);
 
-			// download and play intro file if exists ( image or video )
-			if (smilObject.intro.length > 0) {
+			// download and play intro file if exists  ( image or video ) and if its first iteration of playlist
+			// seamlessly updated playlist dont start with intro
+			if ( smilObject.intro.length > 0 && playIntro) {
 				await playlist.playIntro(smilObject, internalStorageUnit, smilUrl);
 			} else {
 				// no intro
@@ -98,6 +98,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 
 			// smil processing ok, end loop
 			xmlOkParsed = true;
+
 			debug('Starting to process parsed smil file');
 			await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
 
@@ -119,7 +120,7 @@ async function main(internalStorageUnit: IStorageUnit, smilUrl: string, thisSos:
 			if (isNil(sos.config.backupImageUrl)) {
 				backupPlaylist.seq.img.localFilePath = backupImageUrl;
 			}
-			await playlist.processPlaylist(backupPlaylist);
+			await playlist.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
 			await sleep(SMILEnums.defaultDownloadRetry * 1000);
 		}
 	}
@@ -146,10 +147,18 @@ async function startSmil(smilUrl: string) {
 		}
 	}
 
+	resetBodyContent();
+
 	while (true) {
 		try {
+			const startVersion = playlist.getPlaylistVersion();
+			debug('One smil iteration finished START' + startVersion);
 			await main(internalStorageUnit, smilUrl, sos);
-			debug('One smil iteration finished');
+			const finishVersion = playlist.getPlaylistVersion();
+			if (startVersion < finishVersion) {
+				debug('Playlist ended and was replaced with new version of playlist');
+				break;
+			}
 		} catch (err) {
 			debug('Unexpected error : %O', err);
 			await sleep(SMILEnums.defaultRefresh * 1000);
