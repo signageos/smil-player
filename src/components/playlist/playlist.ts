@@ -11,7 +11,7 @@ import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import {getFileName, createVersionedUrl, copyQueryParameters, isWidgetUrl} from '../files/tools';
+import { getFileName, createVersionedUrl, copyQueryParameters, isWidgetUrl } from '../files/tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { SMILEnums } from '../../enums/generalEnums';
