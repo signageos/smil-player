@@ -118,7 +118,7 @@ export class Playlist {
 	/**
 	 * runs function given as parameter in endless loop
 	 * @param fn - Function
-	 * @param version
+	 * @param version - smil internal version of current playlist
 	 */
 	public runEndlessLoop = async (fn: Function, version: number = 0) => {
 		while (!this.cancelFunction[version]) {
@@ -250,7 +250,6 @@ export class Playlist {
 				for (const response of responseFiles) {
 					if (response.length > 0) {
 						debug('One of the files changed, restarting loop');
-						// this.disableLoop(true);
 						this.setCheckFilesLoop(false);
 						break;
 					}
@@ -288,7 +287,7 @@ export class Playlist {
 	 * @param region - regions object with information about all regions
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param isTrigger - boolean value determining if function is processing trigger playlist or ordinary playlist
-	 * @param triggerName
+	 * @param triggerName - name of the trigger element
 	 */
 		// TODO: fix naming
 	public getAllInfo = async (
@@ -997,7 +996,7 @@ export class Playlist {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
-	 * @param shouldWait
+	 * @param shouldWait - do not wait during playlist switch media cancellation
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes, shouldWait: boolean = true) => {
 		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
@@ -1183,11 +1182,11 @@ export class Playlist {
 	 * @param regionInfo - information about region when current media belongs to
 	 * @param parentRegion - region overlaping curernt region, trigger case
 	 * @param duration - how long should media stay on screen
-	 * @param element - displayed HTML element
+	 * @param element - displayed SOS HTML element
 	 * @param arrayIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
-	 * @param elementHtml
-	 * @param transitionDuration
-	 * @param taskStartDate
+	 * @param elementHtml - actual HTML element visible on page
+	 * @param transitionDuration - duration of transitions between images
+	 * @param taskStartDate - date when element was dispalyed
 	 * @param version - smil internal version of current playlist
 	 */
 	private waitMediaOnScreen = async (
@@ -1309,7 +1308,7 @@ export class Playlist {
 	 * @param previousPlayingIndex - index of previously playing content in currentlyPlayingPriority[priorityRegionName] array
 	 * @param endTime - when should playlist end, specified either in date in milis or how many times should playlist play
 	 * @param isLast - if this media is last element in current playlist
-	 * @param version
+	 * @param version - smil internal version of current playlist
 	 */
 	private shouldWaitAndContinue = async (
 		media: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, priorityRegionName: string,
@@ -2018,6 +2017,7 @@ export class Playlist {
 			rule 4: smil file was updated force end of playlist
 			rule 5: smil file was updated force end of playlist based on version
 		 */
+		// TODO: refactor condition to separate rules
 		if ((((this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime <= Date.now()
 			&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.endTime > 1000)
 			|| this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed >= endTime)

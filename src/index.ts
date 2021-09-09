@@ -73,7 +73,6 @@ export async function main(internalStorageUnit: IStorageUnit, smilUrl: string, t
 			downloadPromises = [];
 
 			const smilObject: SMILFileObject = await processSmil(smilFileContent);
-			// const regionsHash = hashSortCoerce.hash(inspect(Object.assign({}, smilObject.region, smilObject.rootLayout)));
 			debug('SMIL file parsed: %O', smilObject);
 
 			await files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
