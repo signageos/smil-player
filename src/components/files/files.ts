@@ -8,7 +8,7 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import {
 	getFileName, getPath, createDownloadPath,
 	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, mapFileType,
-	createSourceReportObject, isRelativePath,
+	createSourceReportObject, isRelativePath, isWidgetUrl,
 } from './tools';
 import { debug } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
@@ -101,7 +101,7 @@ export class Files {
 	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
 		for (let i = 0; i < widgets.length; i++) {
 			try {
-				if (isUrl(widgets[i].src) && widgets[i].src.indexOf('.wgt') > -1) {
+				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
 					debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
 					await this.sos.fileSystem.extractFile(
 						{
