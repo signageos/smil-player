@@ -1,0 +1,78 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="20"/>
+        <layout>
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
+
+            <!-- define the screen layout zones in relative % -->
+            <region regionName="top-left" left="0" top="0" width="960" height="540" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="bottom-left" left="0" top="540" width="960" height="540"  z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="top-right" left="960" top="0" width="960" height="540"  z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="bottom-right" left="960" top="540" width="960" height="540"  z-index="1" backgroundColor="#fdc400"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+
+            <!-- Play this intro video as long as the resources being prefetched -->
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                </seq>
+            </seq>
+
+            <!-- Downloading resources into the internal storage -->
+            <seq>
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
+                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
+                <seq id="__prefetchEnd" dur="1s" />
+            </seq>
+
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
+            <par repeatCount="indefinite">
+                <!-- should not play all, inactive conditional -->
+                <par repeatCount="indefinite">
+                    <!-- indefinite loop of media files in the selected order -->
+                    <seq>
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="top-right" dur="20s">
+                            <param name="cacheControl" value="onlyIfCached" />
+                        </ref>
+                    </seq>
+                </par>
+
+                <par repeatCount="indefinite">
+                    <!-- indefinite loop of media files in the selected order -->
+                    <seq>
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.zip" type="application/widget" region="top-left" dur="20s">
+                            <param name="cacheControl" value="onlyIfCached" />
+                        </ref>
+                    </seq>
+                </par>
+
+                <!-- should never play, active conditional -->
+                <par repeatCount="indefinite">
+                    <!-- indefinite loop of media files in the selected order -->
+                    <seq>
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.ipk" type="application/widget" region="bottom-right" dur="20s">
+                            <param name="cacheControl" value="onlyIfCached" />
+                        </ref>
+                    </seq>
+                </par>
+
+                <!-- should not play, inactive conditional -->
+                <par repeatCount="indefinite">
+                    <!-- indefinite loop of media files in the selected order -->
+                    <seq>
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.apk" type="application/widget" region="bottom-left" dur="20s">
+                            <param name="cacheControl" value="onlyIfCached" />
+                        </ref>
+                    </seq>
+                </par>
+            </par>
+        </par>
+    </body>
+</smil>
