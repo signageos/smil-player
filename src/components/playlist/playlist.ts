@@ -11,7 +11,7 @@ import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, createVersionedUrl, copyQueryParameters } from '../files/tools';
+import { getFileName, createVersionedUrl, copyQueryParameters, isWidgetUrl } from '../files/tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { SMILEnums } from '../../enums/generalEnums';
@@ -1563,7 +1563,7 @@ export class Playlist {
 			return;
 		}
 		// widget with website url as datasource
-		if (htmlElement === HtmlEnum.ref && getFileName(value.src).indexOf('.wgt') === -1) {
+		if (htmlElement === HtmlEnum.ref && !isWidgetUrl(value.src)) {
 			value.localFilePath = value.src;
 			await this.playTimedMedia(value, index, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
 			return;

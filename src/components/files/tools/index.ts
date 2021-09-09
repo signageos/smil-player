@@ -7,6 +7,7 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { ItemType } from "../../../models/reportingModels";
 import { checksumString } from './checksum';
+import { WidgetExtensions } from '../../../enums/fileEnums';
 
 export const debug = Debug('@signageos/smil-player:filesModule');
 
@@ -95,4 +96,13 @@ export function createSourceReportObject(localFilePath: string, fileSrc: string,
 		uri: fileSrc,
 		localUri: localFilePath,
 	};
+}
+
+export function isWidgetUrl(widgetUrl: string): boolean {
+	for (const ext of WidgetExtensions) {
+		if (getFileName(widgetUrl).indexOf(ext) > -1) {
+			return true;
+		}
+	}
+	return false;
 }
