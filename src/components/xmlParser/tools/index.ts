@@ -1,5 +1,5 @@
 import Debug from 'debug';
-//@ts-ignore
+// @ts-ignore no ts declaration
 import { JefNode } from 'json-easy-filter';
 import isNil from 'lodash/isNil';
 import cloneDeep = require('lodash/cloneDeep');

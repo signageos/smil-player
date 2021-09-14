@@ -1,0 +1,109 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="10"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="ckmusyw120204p1mhosi6hyja" left="0" top="0" width="960" height="540" z-index="0" backgroundColor="#000000"/>
+            <region regionName="ckmusyw120204p1mhosi6hyjb" left="960" top="0" width="960" height="540" z-index="0" backgroundColor="#000000"/>
+            <region regionName="ckmusyw120204p1mhosi6hyjc" left="0" top="540" width="960" height="540" z-index="0" backgroundColor="#000000"/>
+            <region regionName="ckmusyw120204p1mhosi6hyjd" left="960" top="540" width="960" height="540" z-index="0" backgroundColor="#000000"/>
+        </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://butikstv.centrumkanalen.com/play/report/?player=384</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
+
+    </head>
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par> <!-- 1 -->
+
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="https://butikstv.centrumkanalen.com/play/media/ladd/portrait.mp4" />
+                </seq>
+            </seq>
+
+            <seq repeatCount="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyja">
+                    <param name="cacheControl" value="auto" />
+                </video>
+            </seq>
+
+            <seq repeatCount="indefinite">
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjb">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjb">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjb">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjb">
+                    <param name="cacheControl" value="auto" />
+                </img>
+            </seq>
+
+            <seq repeatCount="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjc">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjc">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjc">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjc">
+                    <param name="cacheControl" value="auto" />
+                </video>
+            </seq>
+
+            <seq repeatCount="indefinite">
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjd">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjd">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="ckmusyw120204p1mhosi6hyjd">
+                    <param name="cacheControl" value="auto" />
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg" id="annons1" dur="5s" fit="hidden" region="ckmusyw120204p1mhosi6hyjd">
+                    <param name="cacheControl" value="auto" />
+                </img>
+            </seq>
+
+        </par> <!-- /1 -->
+    </body>
+</smil>

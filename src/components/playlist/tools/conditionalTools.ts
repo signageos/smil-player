@@ -123,7 +123,6 @@ function compareIcsExpr(icsData: string): boolean {
 			// if no duration in event, get it from difference of start & end date
 			: event.start && event.end ? event.end.valueOf() - event.start.valueOf() : 0;
 		const closedPastEnd = moment(closedPastStart).add(durationMs);
-		console.log(currentDate, closedPastStart, closedPastEnd);
 		return currentDate.isBetween(closedPastStart, closedPastEnd, 'milliseconds', '[]');
 	});
 }

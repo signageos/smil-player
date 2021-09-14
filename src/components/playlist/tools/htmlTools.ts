@@ -75,7 +75,7 @@ export function resetBodyContent() {
 		debug('Error: %O during removing image: %O', err, document.images[document.images.length]);
 	}
 
-	// reset body
+	// reset body content
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
 	document.body.style.margin = '0px';
