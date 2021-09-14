@@ -1,39 +1,145 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="999999"/>
+        <meta http-equiv="Refresh" content="10" onlySmilUpdate="true"/>
         <layout>
-            <root-layout width="1920" height="1080" background="#000000"/>
-            <region width="1920" height="1080" backgroundColor="#000000" regionName="main" left="0" top="0" z-index="1"
-                    mediaAlign="center"/>
-            <transition id="fade3s" xml:id="fade3s" type="fade" subtype="crossfade" dur="3s"/>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF" />
+
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF" mediaAlign="topLeft" />
+
+            <region regionName="topOverlay" left="0" top="0" width="1920" height="68" z-index="9" backgroundColor="transparent" />
+
+            <region regionName="bottomWidget" left="0" bottom="0" width="1280" height="360" z-index="1" backgroundColor="transparent" />
+
+            <region regionName="topRightWidget" left="1280" top="0" width="640" height="506" z-index="1" backgroundColor="transparent" />
+
+            <region regionName="bottomRightWidget" left="1280" top="506" width="640" height="574" z-index="1" backgroundColor="transparent" />
         </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/play/report/?player=99</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
     </head>
-    <body>
+
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <!-- Paralel playback sequence, all below is happening at the same time -->
         <par>
-            <seq>
-                <prefetch
-                        src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810684/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/jf0fkuwcog0hbf9qxdvw.jpg"/>
-                <prefetch
-                        src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810685/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/lq9kiz18clo9w1fl5jlz.png"/>
-                <seq id="__prefetchEnd" dur="1s"/>
-            </seq>
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <seq expr="compare(time(), '00:00:00') >= 0 and [compare(time(), '23:59:59') <= 0 or [compare(time(), '00:00:00') >= 0 and compare(time(), '00:00:00') < 0]]">
-                    <img region="main" dur="5s" transIn="fade3s"
-                         src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810684/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/jf0fkuwcog0hbf9qxdvw.jpg"
-                         fit="meetBest"/>
-                    <img region="main" dur="5s"
-                         src="https://res.cloudinary.com/designage/image/upload/q_auto,f_auto,w_1920,h_1080,/v1625810685/PROFILE/110e1b6c-dc6d-4ce2-8b6e-a31efc86b268/lq9kiz18clo9w1fl5jlz.png"
-                         fit="meetBest"/>
 
-                    <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="main" dur="5s">
-                        <param name="cacheControl" value="onlyIfCached" />
-                    </ref>
-
-                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
+            <!-- Preloader to show something before the full content is loaded and ready -->
+            <!-- This <seq> will happend first followed by the next seq -->
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
                 </seq>
+            </seq>
+
+            <!-- Downloading resources into the internal storage -->
+            <seq>
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
+                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" />
+
+                <seq id="__prefetchEnd" dur="1s" />
+            </seq>
+
+            <!-- Once all ready, the playback of the full content will start -->
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl repeatCount="indefinite">
+                    <priorityClass lower="never" peer="stop" higher="stop">
+                        <!-- Scheduled playback loop -->
+                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                            <seq repeatCount="indefinite">
+                                <excl begin="0" repeatCount="indefinite">
+                                    <priorityClass higher="stop" pauseDisplay="hide">
+                                        <par begin="0">
+                                            <par>
+                                                <seq repeatCount="indefinite">
+                                                    <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/topOverlay.wgt" type="application/widget" region="topOverlay" dur="20s">
+                                                        <param name="cacheControl" value="onlyIfCached" />
+                                                    </ref>
+                                                </seq>
+                                            </par>
+
+
+                                            <par>
+                                                <seq repeatCount="indefinite">
+                                                    <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="bottomWidget" dur="20s">
+                                                        <param name="cacheControl" value="onlyIfCached" />
+                                                    </ref>
+                                                </seq>
+                                            </par>
+
+
+                                            <par>
+                                                <seq repeatCount="indefinite">
+                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_1.png" region="topRightWidget" dur="5s">
+                                                        <param name="cacheControl" value="onlyIfCached" />
+                                                    </img>
+                                                </seq>
+                                            </par>
+
+
+                                            <par>
+                                                <seq repeatCount="2">
+                                                    <!-- no duration specified, testing default duration -->
+                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/widget_image_2.png" region="bottomRightWidget">
+                                                        <param name="cacheControl" value="onlyIfCached" />
+                                                    </img>
+                                                </seq>
+                                            </par>
+                                            <par>
+                                                <seq repeatCount="indefinite">
+                                                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
+                                                        <param name="cacheControl" value="auto" />
+                                                    </video>
+                                                    <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="video">
+                                                        <param name="cacheControl" value="auto" />
+                                                    </video>
+                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                                                        <param name="cacheControl" value="auto" />
+                                                    </img>
+                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                                                        <param name="cacheControl" value="auto" />
+                                                    </img>
+                                                    <ref dur="indefinite" src="adapi:blankScreen" />
+                                                </seq>
+                                            </par>
+                                        </par>
+                                    </priorityClass>
+                                </excl>
+                            </seq>
+                        </par>
+                    </priorityClass>
+
+                    <priorityClass lower="never" peer="stop" higher="stop">
+                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                            <seq begin="0" dur="indefinite">
+                                <ref dur="indefinite" src="adapi:blankScreen" />
+                            </seq>
+                        </par>
+                    </priorityClass>
+
+                </excl> <!-- 1 -->
             </par>
-        </par>
+        </par> <!-- /1 -->
     </body>
 </smil>
-
