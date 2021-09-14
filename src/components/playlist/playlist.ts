@@ -55,7 +55,7 @@ import {
 } from './tools/htmlTools';
 import { findDuration, setDefaultAwait, setElementDuration } from './tools/scheduleTools';
 import { createPriorityObject } from './tools/priorityTools';
-import { main } from "../../index";
+import { main } from '../../index';
 
 export class Playlist {
 	private checkFilesLoop: boolean = true;
@@ -816,7 +816,7 @@ export class Playlist {
 			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
 				return;
 			}
-			while (counter < repeatCount) {
+			while (counter < repeatCount && version >= this.getPlaylistVersion()) {
 				await this.processPlaylist(value, version, newParent, repeatCount, priorityObject);
 				counter += 1;
 			}
@@ -834,7 +834,7 @@ export class Playlist {
 					await this.processPlaylist(value, version, newParent, endTime, priorityObject);
 				},                        version);
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
-			} else if (endTime > 0 && endTime <= 1000) {
+			} else if (endTime > 0 && endTime <= 1000 && version >= this.getPlaylistVersion()) {
 				let newParent = generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
@@ -842,7 +842,7 @@ export class Playlist {
 				await this.processPlaylist(value, version, newParent, endTime, priorityObject);
 			} else {
 				let newParent = generateParentId(key, value);
-				while (Date.now() <= endTime) {
+				while (Date.now() <= endTime && version >= this.getPlaylistVersion()) {
 					await this.processPlaylist(value, version, newParent, endTime, priorityObject);
 					// force stop because new version of smil file was detected
 					if (this.getCancelFunction()) {
