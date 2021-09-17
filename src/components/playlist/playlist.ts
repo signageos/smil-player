@@ -1000,6 +1000,7 @@ export class Playlist {
 	 */
 	private cancelPreviousMedia = async (regionInfo: RegionAttributes, shouldWait: boolean = true) => {
 		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName].media);
+		// TODO: test on slow devices if timeout is still necessary
 		if (shouldWait) {
 			await sleep(200);
 		}
@@ -1407,9 +1408,17 @@ export class Playlist {
 
 			const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[regionInfo.regionName]);
 
-			// prepare if video is not same as previous one played
+			// necessary timeout if playing two elements in loop ( skips timeout for first element in region )
+			// because of wait interval during previous element cancellation to ensure gapless playback
+			// we need to wait here for that cancellation, otherwise previous element will be still registered as playing
+			// and it will not prepare video again for new playback ( video in background case )
+			if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
+				await sleep(300);
+			}
+			// prepare if video is not same as previous one played or if video should be played in background
 			if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
-				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src) {
+				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src
+				|| config.videoOptions.background) {
 				debug('Preparing video: %O', video);
 				await this.sos.video.prepare(
 					video.localFilePath,
