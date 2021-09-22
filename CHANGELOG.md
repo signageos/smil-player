@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - fixed bug with video playback in background not working properly
+- fixed rare bug with malformed files in internal storage
 
 ## [1.8.0] - 2021-09-14
 ### Fixed
