@@ -136,12 +136,18 @@ async function startSmil(smilUrl: string) {
 	debug('File structure created');
 
 	if (await files.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))) {
-		const fileContent = JSON.parse(await files.readFile(
-			internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)));
+		try {
+			const fileContent = JSON.parse(await files.readFile(
+				internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)));
 
-		// delete mediaInfo file only in case that currently played smil is different from previous
-		if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
-			// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+			// delete mediaInfo file only in case that currently played smil is different from previous
+			if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
+				// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+				await files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
+			}
+		} catch (err) {
+			debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
+			// file is malformed, delete from internal storage
 			await files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
 		}
 	}
