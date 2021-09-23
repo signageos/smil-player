@@ -969,6 +969,13 @@ export class Playlist {
 			return;
 		}
 
+		// cancel if video is not same as previous one played in the parent region ( triggers case )
+		if (parentRegion.regionName !== regionInfo.regionName
+			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
+			debug('cancelling media from parent region: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
+			await this.cancelPreviousMedia(parentRegion);
+		}
+
 		// cancel element played in default region
 		if (get(this.currentlyPlaying[SMILEnums.defaultRegion], 'src') !== element.src
 			&& get(this.currentlyPlaying[SMILEnums.defaultRegion], 'playing')) {
@@ -983,13 +990,6 @@ export class Playlist {
 			debug('cancelling media: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
 			await this.cancelPreviousMedia(regionInfo);
 			return;
-		}
-
-		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (parentRegion.regionName !== regionInfo.regionName
-			&& get(this.currentlyPlaying[parentRegion.regionName], 'playing')) {
-			debug('cancelling media from parent region: %s from element: %s', this.currentlyPlaying[regionInfo.regionName].src, element.src);
-			await this.cancelPreviousMedia(parentRegion);
 		}
 	}
 
