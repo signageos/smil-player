@@ -1,0 +1,34 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="30"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
+
+            <region regionName="video" left="0" bottom="10%" width="540" height="608" z-index="1"
+                    backgroundColor="#FFFFFF" mediaAlign="topLeft"/>
+            <region regionName="video2" left="540" bottom="220" width="540" height="608" z-index="1"
+                    backgroundColor="#FFFFFF" mediaAlign="topLeft"/>
+
+        </layout>
+
+    </head>
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par>
+            <par begin="__prefetchEnd.endEvent">
+
+                <par repeatCount="indefinite">
+                    <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                           id="annons0" fit="hidden" region="video">
+                        <param name="cacheControl" value="auto"/>
+                    </video>
+                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+                         id="annons1" dur="5s" fit="hidden" region="video2">
+                        <param name="cacheControl" value="auto"/>
+                    </img>
+                </par> <!-- Spellistan slut -->
+
+            </par> <!-- /1 -->
+        </par> <!-- /1 -->
+    </body>
+</smil>
