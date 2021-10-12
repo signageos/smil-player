@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - fixed bug with video playback in background not working properly
 - fixed rare bug with malformed files in internal storage
+- fixed rare bug with wallClock definitions
+
+### Added
+- Add bottom option to element positioning
 
 ## [1.8.0] - 2021-09-14
 ### Fixed
