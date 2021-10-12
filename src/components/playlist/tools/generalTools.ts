@@ -117,26 +117,43 @@ export function isNotPrefetchLoop(obj: InfiniteLoopObject | PlaylistElement): bo
 
 /**
  * set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
+ * recalculates bottom position to top to work properly with signageOs videos
  * @param regionInfo - represents object with information about dimensions of region specified in smil file
  */
 export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttributes {
 	const resultObject: any = cloneDeep(regionInfo);
-
 	Object.keys(resultObject).forEach((attr: string) => {
 		// sos video does not support values in %
-		if (XmlTags.cssElementsPosition.includes(attr) && resultObject[attr].indexOf('%') > 0) {
+		if (XmlTags.cssElementsPosition.includes(attr)) {
+			if (resultObject[attr].indexOf('%') > 0) {
+				switch (attr) {
+					case 'width':
+						resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
+						break;
+					case 'height':
+						resultObject.height = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.height) / 100);
+						break;
+					case 'left':
+						resultObject.left = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.left) / 100);
+						break;
+					case 'top':
+						resultObject.top = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.top) / 100);
+						break;
+					case 'bottom':
+						resultObject.top = Math.floor(document.documentElement.clientHeight -
+							(document.documentElement.clientHeight * parseInt(resultObject.bottom) / 100 + parseInt(resultObject.height)));
+						delete resultObject.bottom;
+						break;
+					default:
+					// unhandled attribute
+				}
+				return;
+			}
+
 			switch (attr) {
-				case 'width':
-					resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
-					break;
-				case 'height':
-					resultObject.height = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.height) / 100);
-					break;
-				case 'left':
-					resultObject.left = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.left) / 100);
-					break;
-				case 'top':
-					resultObject.top = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.top) / 100);
+				case 'bottom':
+					resultObject.top = document.documentElement.clientHeight - (parseInt(resultObject.bottom) + parseInt(resultObject.height));
+					delete resultObject.bottom;
 					break;
 				default:
 				// unhandled attribute
