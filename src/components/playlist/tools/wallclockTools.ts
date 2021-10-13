@@ -54,14 +54,19 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	// scheduled time to start is in the past
 	if (timeToStart < 0) {
 		// startTime is in the past, endTime in the future and scheduled week day is same as todays week day ( or no weekday specified )
-		if (((timeStart <= nowTime || dateStart < nowDay)
-			&& ((nowTime <= timeEnd) || (dateStart < dateEnd)))
+		if (((timeStart <= nowTime && dateStart <= nowDay)
+			&& ((nowTime <= timeEnd) && (dateStart <= dateEnd)))
 			&& (dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)) {
 			timeToStart = 0;
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 			// when endTime is in future and content should be played without stop overnight for several days
-			if (dateStart < dateEnd) {
+			if (dateStart < dateEnd && splitStringEnd[2] !== 'P1D') {
 				timeToEnd = moment(`${dateEnd}T${timeEnd}`).valueOf();
+			}
+
+			// if wallclock is specified like P1D without endTime, set endtTime as end of the day
+			if (dateStart < dateEnd && splitStringStart[2] === 'P1D') {
+				timeToEnd = moment(`${dateStart}T${timeEnd}`).valueOf();
 			}
 
 			// repeat once every day, startTime in future, dayTime in past
@@ -138,8 +143,13 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	datePart = computeScheduledDate(moment(dateStart), nowTime, timeStart, dateStart, dayInfoStart);
 	timeToStart = moment(`${datePart}T${timeStart}`).valueOf() - nowMillis;
 
-	datePart = computeScheduledDate(moment(dateEnd), nowTime, timeEnd, dateEnd, dayInfoStart);
-	timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
+	// if wallclock is specified like P1D without endTime, set endtTime as end of the day
+	if (dateStart < dateEnd && splitStringStart[2] === 'P1D') {
+		timeToEnd = moment(`${dateStart}T${timeEnd}`).valueOf();
+	} else {
+		datePart = computeScheduledDate(moment(dateEnd), nowTime, timeEnd, dateEnd, dayInfoStart);
+		timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
+	}
 
 	debug('all in future');
 	debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
