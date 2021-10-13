@@ -8,7 +8,7 @@ import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem
 import {
 	getFileName, getPath, createDownloadPath,
 	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, mapFileType,
-	createSourceReportObject, isRelativePath, isWidgetUrl,
+	createSourceReportObject, isRelativePath, shouldNotDownload, isWidgetUrl,
 } from './tools';
 import { debug } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
@@ -231,7 +231,13 @@ export class Files {
 
 		for (let i = 0; i < filesList.length; i += 1) {
 			const file = filesList[i];
-			// check for local urls to files (media/file.mp4)
+
+			// do not download website widgets or video streams
+			if (shouldNotDownload(localFilePath, file)) {
+				debug('Will not download file: %O', file);
+				continue;
+			}
+				// check for local urls to files (media/file.mp4)
 			if (isRelativePath(file.src)) {
 				file.src = `${getPath(this.smilFileUrl)}/${file.src}`;
 			}
@@ -406,6 +412,11 @@ export class Files {
 		let promises: Promise<any>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			const file = filesList[i];
+			// do not check streams for update
+			if (localFilePath === FileStructure.videos && !isNil(get(file, 'isStream'))) {
+				continue;
+			}
+
 			try {
 				const newLastModified = 'fetchLastModified' in file && file.fetchLastModified
 					? await file.fetchLastModified()
