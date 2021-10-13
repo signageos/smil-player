@@ -6,6 +6,8 @@ export type SMILVideo = {
 	fit?: string,
 	dur?: string,
 	fullVideoDuration?: number,
+	isStream?: string,
+	protocol?: string,
 	region: string,
 	lastModified?: number,
 	localFilePath: string,
