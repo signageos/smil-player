@@ -43,4 +43,5 @@ export enum SMILUrls {
 	nonExisting = 'http://localhost:3000/none',
 	notExistingMedia = 'http://localhost:3000/NotExistingMedia.smil',
 	widgetExtensions = 'http://localhost:3000/widgetExtensions.smil',
+	cssBottom = 'http://localhost:3000/cssBottom.smil',
 }

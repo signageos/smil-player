@@ -61,14 +61,28 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		responseTimeObject = parseSmilSchedule(testStartString);
 		// play immediately
 		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T00:00:00').valueOf());
+		expect(responseTimeObject.timeToEnd).to.eql(moment(`${moment().format('YYYY-MM-DD')}T23:59:59`).valueOf());
 
 		// no endTime specified in the future start startN
 		testStartString = `wallclock(R/${formatDate(moment().add(7, 'days'))}/P1D)`;
 		responseTimeObject = parseSmilSchedule(testStartString);
 		// schedule start in 7 days from now
 		expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T00:00:00').valueOf());
+		expect(responseTimeObject.timeToEnd).to.eql(moment(`${moment().add(7, 'days').format('YYYY-MM-DD')}T23:59:59`).valueOf());
+
+		// no endTime specified tomorrow start
+		testStartString = `wallclock(${formatDate(moment().subtract(7, 'hours'))})`;
+		responseTimeObject = parseSmilSchedule(testStartString);
+		// play immediately
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T23:59:59').valueOf());
+
+		// no endTime specified in the future start startN
+		testStartString = `wallclock(${formatDate(moment().add(7, 'days'))})`;
+		responseTimeObject = parseSmilSchedule(testStartString);
+		// schedule start in 7 days from now
+		expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T23:59:59').valueOf());
 
 		testStartString = `wallclock(2020-07-16T12:00)`;
 		testEndString = `wallclock(2020-07-17T19:00)`;
@@ -146,6 +160,32 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 		expect(Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 
+		dayOfWeek = moment().isoWeekday();
+		mediaDuration = 50;
+		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
+		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
+		testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add('500', 'years').add(mediaDuration, 'minutes'))}/P1D)`, `+w${dayOfWeek}`);
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
+
+		dayOfWeek = moment().isoWeekday();
+		mediaDuration = 50;
+		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
+		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().subtract('10', 'minutes'))}/P1D)`, `+w${dayOfWeek}`);
+		testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add('500', 'years').add(mediaDuration, 'minutes'))}/P1D)`, `+w${dayOfWeek}`);
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
+
+		dayOfWeek = moment().isoWeekday();
+		mediaDuration = 50;
+		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
+		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add('10', 'minutes'))}/P1D)`, `+w${dayOfWeek}`);
+		testEndString = formatWeekDate(`wallclock(R/${formatDate(moment().add('500', 'years').add(mediaDuration, 'minutes'))}/P1D)`, `+w${dayOfWeek}`);
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(600000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
 	});
 
 	it('Should return correct times for how long to wait and how long to play - weekdays specified before', async () => {
@@ -191,6 +231,5 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		// should play in 5 days
 		expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 		expect(Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(1000);
-
 	});
 });
