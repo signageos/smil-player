@@ -54,8 +54,9 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	// scheduled time to start is in the past
 	if (timeToStart < 0) {
 		// startTime is in the past, endTime in the future and scheduled week day is same as todays week day ( or no weekday specified )
-		if (((timeStart <= nowTime && dateStart <= nowDay)
+		if ((((timeStart <= nowTime && dateStart <= nowDay)
 			&& ((nowTime <= timeEnd) && (dateStart <= dateEnd)))
+			|| ((timeStart <= nowTime || dateStart <= nowDay) && splitStringStart[2] !== 'P1D'))
 			&& (dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)) {
 			timeToStart = 0;
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
