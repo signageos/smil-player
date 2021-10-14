@@ -44,9 +44,9 @@ describe("conditionalMediaElement.smil test", () => {
 		cy.get('video[src*="videos/video-test_17354648.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 
 		testCoordinates(cy.get('video[src*="videos/video-test_17354648.mp4"]').last(), 0, 0, 960, 540);
-		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-top-right"]'), 0, 960, 960, 540);
-		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-bottom-left"]'), 540, 0, 960, 540);
-		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-bottom-right"]'), 540, 960, 960, 540);
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-top-right-img4"]'), 0, 960, 960, 540);
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-bottom-left-img8"]'), 540, 0, 960, 540);
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-bottom-right-img12"]'), 540, 960, 960, 540);
 
 		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
@@ -62,7 +62,7 @@ describe("conditionalMediaElement.smil test", () => {
 			expectCoordinates(coords, ...video2Coords[correctIndex]);
 		});
 		testCoordinates(cy.get('video[src*="videos/video-test_17354648.mp4"]').last(), 0, 0, 960, 540);
-		testCoordinates(cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]'), 0, 960, 960, 540);
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-top-right-img4"]'), 0, 960, 960, 540);
 
 	});
 });
