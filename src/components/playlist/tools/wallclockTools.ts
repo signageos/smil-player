@@ -61,13 +61,13 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 			timeToStart = 0;
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 			// when endTime is in future and content should be played without stop overnight for several days
-			if (dateStart < dateEnd && splitStringEnd[2] !== 'P1D') {
+			if (dateStart < dateEnd && splitStringEnd[2] !== 'P1D' && splitStringStart[2] !== 'P1D') {
 				timeToEnd = moment(`${dateEnd}T${timeEnd}`).valueOf();
 			}
 
 			// if wallclock is specified like P1D without endTime, set endtTime as end of the day
 			if (dateStart < dateEnd && splitStringStart[2] === 'P1D') {
-				timeToEnd = moment(`${dateStart}T${timeEnd}`).valueOf();
+				timeToEnd = moment(`${nowDay}T${timeEnd}`).valueOf();
 			}
 
 			// repeat once every day, startTime in future, dayTime in past
