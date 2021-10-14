@@ -41,6 +41,7 @@ export enum SMILUrls {
 	triggersMouse = 'http://localhost:3000/triggersMouse.smil',
 	brokenXml = 'http://localhost:3000/brokenXml.smil',
 	nonExisting = 'http://localhost:3000/none',
+	videoStreams = 'http://localhost:3000/videoStreams.smil',
 	notExistingMedia = 'http://localhost:3000/NotExistingMedia.smil',
 	widgetExtensions = 'http://localhost:3000/widgetExtensions.smil',
 	cssBottom = 'http://localhost:3000/cssBottom.smil',
