@@ -1,5 +1,11 @@
 import * as chai from 'chai';
-import { createDownloadPath, getFileName, getPath, isRelativePath } from '../../../src/components/files/tools';
+import {
+	createDownloadPath,
+	getFileName,
+	getPath,
+	getProtocol,
+	isRelativePath,
+} from '../../../src/components/files/tools';
 
 const expect = chai.expect;
 
@@ -74,6 +80,41 @@ describe('Files tools component', () => {
 				const responseNumber: number = parseInt(response.split('?__smil_version=')[1]);
 				expect(responseNumber).to.be.lessThan(1000000);
 				expect(responseNumber > 0).to.be.equal(true);
+			}
+		});
+
+		it('Should return valid protocol', () => {
+			const urls = [
+				'https://www.rmp-streaming.com/media/bbb-360p.mp4',
+				'http://www.rmp-streaming.com/media/bbb-360p.mp4',
+				'rtsp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov',
+				'RTMP://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov',
+				'UDP://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov',
+				'rtp://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov',
+				'HLS://184.72.239.149/vod/mp4:BigBuckBunny_175k.mov',
+				'internal://pc',
+				'internal://dvi',
+				'internal://dp',
+				'internal://hdmi1',
+			];
+
+			const protocol = [
+				'http',
+				'http',
+				'rtsp',
+				'rtmp',
+				'udp',
+				'rtp',
+				'hls',
+				'internal',
+				'internal',
+				'internal',
+				'internal',
+			];
+
+			for (let i = 0; i < urls.length; i += 1) {
+				const response = getProtocol(urls[i]);
+				expect(response).equal(protocol[i]);
 			}
 		});
 
