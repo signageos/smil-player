@@ -20,7 +20,7 @@ describe("repeatCountIntroVideo.smil test", () => {
 
 		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main"]'), 0, 0, 1920, 1080);
+		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img3"]'), 0, 0, 1920, 1080);
 
 		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
@@ -28,7 +28,7 @@ describe("repeatCountIntroVideo.smil test", () => {
 
 		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main"]'), 0, 0, 1920, 1080);
+		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img3"]'), 0, 0, 1920, 1080);
 
 		cy.get('video[src*="videos/video-test_54188510.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
 		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');

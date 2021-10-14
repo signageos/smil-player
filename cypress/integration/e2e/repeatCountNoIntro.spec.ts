@@ -15,28 +15,28 @@ describe("repeatCountNoIntro.smil test", () => {
 		testCoordinates(cy.get('video[src*="videos/video-test_17354648.mp4"]'), 0, 0, 1920, 1080);
 
 		cy.get('video[src*="videos/video-test_17354648.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
-		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]'), 0, 0, 1920, 1080);
+		cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]'), 0, 0, 1920, 1080);
 
-		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
-		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main"]'), 0, 0, 1920, 1080);
+		cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]'), 0, 0, 1920, 1080);
 
-		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
-		testCoordinates(cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]'), 0, 0, 1920, 1080);
+		cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		testCoordinates(cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]'), 0, 0, 1920, 1080);
 
-		cy.iframe().find('img[src*="images/landscape1_68241f63.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
-		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main"]'), 0, 0, 1920, 1080);
+		cy.iframe().find('img[id*="landscape1_7a8cff48.jpg-main-img1"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
+		testCoordinates(cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]'), 0, 0, 1920, 1080);
 
 		cy.get('video[src*="videos/video-test_54188510.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		testCoordinates(cy.get('video[src*="videos/video-test_54188510.mp4"]'), 0, 0, 1920, 1080);
 		cy.wait(CypressTimeouts.videoTransitionTimeout);
 
 		cy.get('video[src*="videos/video-test_54188510.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
-		cy.iframe().find('img[src*="images/landscape2_9a769e36.jpg"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
+		cy.iframe().find('img[id*="landscape2_20622151.jpg-main-img2"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('not.be.visible');
 		testCoordinates(cy.get('video[src*="videos/video-test_54188510.mp4"]'), 0, 0, 1920, 1080);
 
 		cy.get('video[src*="videos/video-test_17354648.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
