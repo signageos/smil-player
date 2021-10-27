@@ -99,7 +99,7 @@ export async function main(internalStorageUnit: IStorageUnit, smilUrl: string, t
 			xmlOkParsed = true;
 
 			debug('Starting to process parsed smil file');
-			await playlist.processingLoop(internalStorageUnit, smilObject, smilFile);
+			await playlist.processingLoop(internalStorageUnit, smilObject, smilFile, playIntro);
 
 		} catch (err) {
 
