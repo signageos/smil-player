@@ -76,8 +76,7 @@ export class Playlist {
 	private promiseAwaiting: any = {};
 	private currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	private triggersEndless: any = {};
-	private playlistVersion: number = -1;
-	private previousPlaylistVersion: number = -1;
+	private playlistVersion: number = 0;
 
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
@@ -95,8 +94,8 @@ export class Playlist {
 		return this.checkFilesLoop;
 	}
 
-	public setPlaylistVersion() {
-		this.playlistVersion += 1;
+	public setPlaylistVersion(num: number) {
+		this.playlistVersion = num;
 	}
 
 	public getPlaylistVersion() {
@@ -224,21 +223,20 @@ export class Playlist {
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param smilFile - representation of actual SMIL file
+	 * @param firstIteration
 	 */
 	public processingLoop = async (
 		internalStorageUnit: IStorageUnit,
 		smilObject: SMILFileObject,
 		smilFile: SMILFile,
+		firstIteration: boolean,
 	): Promise<void> => {
 		const promises = [];
-		this.previousPlaylistVersion = this.playlistVersion;
-		this.setPlaylistVersion();
-		const version = this.playlistVersion;
 
 		promises.push((async () => {
 			// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
-			if (!this.checkFilesLoop) {
-				await sleep(SMILScheduleEnum.fileCheckDelay);
+			while (!this.checkFilesLoop) {
+				await sleep(1000);
 			}
 			while (this.checkFilesLoop) {
 				debug('Prepare ETag check for smil media files prepared');
@@ -265,6 +263,8 @@ export class Playlist {
 		})());
 
 		promises.push((async () => {
+			// check if its first playlist
+			const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 			// endless processing of smil playlist
 			await this.runEndlessLoop(async () => {
 				try {
@@ -973,11 +973,15 @@ export class Playlist {
 		element: SMILVideo | SosHtmlElement, regionInfo: RegionAttributes, parentRegion: RegionAttributes, version: number,
 		) => {
 
-		// enable internal endless loops for playing media
-		if (!this.getCheckFilesLoop() && version > this.previousPlaylistVersion && this.previousPlaylistVersion !== -1) {
-			if (this.getPlaylistVersion() > -1) {
+		// newer playlist starts its playback, cancel older one
+		debug('cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s', version, this.getPlaylistVersion());
+		if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
+			this.setPlaylistVersion(version);
+			if (this.getPlaylistVersion() > 0) {
+				debug('setting up cancel function for index %s', this.getPlaylistVersion() - 1);
 				this.setCancelFunction(true, this.getPlaylistVersion() - 1);
 			}
+			debug('cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s', version, this.getPlaylistVersion());
 			this.setCheckFilesLoop(true);
 			await this.stopAllContent();
 			return;
@@ -1169,7 +1173,7 @@ export class Playlist {
 			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
 				let transitionDuration = 0;
 				if (version < this.playlistVersion) {
-					debug('not playing old version');
+					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
 				}
@@ -1460,7 +1464,7 @@ export class Playlist {
 
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
 				if (version < this.playlistVersion) {
-					debug('not playing old version');
+					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
 				}
