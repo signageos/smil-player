@@ -1,47 +1,49 @@
+<?xml version="1.0"?>
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
+        <meta http-equiv="refresh" content="20"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="ckudtjbc700140g9pqtfil0ex" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <!-- define the screen layout, in this case single fullscreen zone -->
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/loading-horizontal.png" dur="5s" fit="fill"/>
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
+            <!-- Downloading resources into the internal storage -->
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <par>
-                    <seq repeatCount="indefinite">
-                        <!-- START [GalleryModule] Hugport obsah (ckudtof337753461xl144byeldl) -->
-                        <seq repeatCount="1">
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckudr0ixp001212n21g6741oe.jpeg" dur="1" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckudr0l7v001312n2g8fdgs4n.jpeg" dur="1" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckudqzdct000n12n288u77hn9.jpeg" dur="1" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckudr04hb000y12n28k3odujv.png" dur="1" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                        </seq>
-                        <!-- END [GalleryModule] Hugport obsah (ckudtof337753461xl144byeldl) -->
-                        <!-- START [GalleryModule] Book and Bake Sale (ckufjox3s806561xk3nykt8cyy) -->
-                        <seq repeatCount="1" begin="wallclock(2000-01-01T00:00)" end="wallclock(2021-10-19T20:00)">
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckufix7sl000412k8hrmgf954.png" dur="1s" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                        </seq>
-                        <!-- END [GalleryModule] Book and Bake Sale (ckufjox3s806561xk3nykt8cyy) -->
-                        <!-- START [GalleryModule] Kosmos (ckufjy3li917101xir1gczhkq5) -->
-                        <seq repeatCount="2" begin="wallclock(2000-01-01T00:00)" end="wallclock(2021-12-14T20:00)">
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckufjvdbl000812k8ayks4iut.jpeg" dur="1s" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckufk2ehw000912k8drle0r4k.jpeg" dur="1s" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                        </seq>
-                        <!-- END [GalleryModule] Kosmos (ckufjy3li917101xir1gczhkq5) -->
-                        <!-- START [GalleryModule] Erasmus Days 2021 (ckufivnxy425521xk3sutqw3x3) -->
-                        <seq repeatCount="1" begin="wallclock(2000-01-01T00:00)" end="wallclock(2021-10-14T20:00)">
-                            <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckud2d3f01355411xo1kurovzfp/2021/10/ckudqzdct000n12n288u77hn9.jpeg" dur="1s" fit="fill" region="ckudtjbc700140g9pqtfil0ex"/>
-                        </seq>
-                        <!-- END [GalleryModule] Erasmus Days 2021 (ckufivnxy425521xk3sutqw3x3) -->
+                <!-- indefinite loop of media files in the selected order -->
+                <seq repeatCount="indefinite">
+                    <!-- play this sequence once -->
+                    <seq begin="wallclock(2021-10-26T11:00)" end="wallclock(2021-10-26T21:21)" repeatCount="1">
+                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="main">
+                            <param name="cacheControl" value="auto" />
+                        </img>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="main">
+                            <param name="cacheControl" value="auto" />
+                        </img>
+
                     </seq>
-                </par>
+                    <seq begin="wallclock(2021-10-26T21:21)" end="wallclock(2021-10-26T23:59)" repeatCount="1">
+                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main" soundLevel="0%"></video>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="main">
+                            <param name="cacheControl" value="auto" />
+                        </img>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="main">
+                            <param name="cacheControl" value="auto" />
+                        </img>
+
+                    </seq>
+                </seq>
             </par>
         </par>
     </body>
