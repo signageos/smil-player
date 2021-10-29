@@ -57,6 +57,7 @@ export type CurrentlyPlayingRegion = {
 	},
 	parent: string,
 	behaviour: string,
+	version: number,
 	controlledPlaylist: number | null,
 	isFirstInPlaylist: SMILMedia;
 };

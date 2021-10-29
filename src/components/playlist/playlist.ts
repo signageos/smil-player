@@ -1817,12 +1817,15 @@ export class Playlist {
 
 		priorityRegionName = regionInfo.regionName;
 
-		let { currentIndex, previousPlayingIndex } = this.handlePriorityInfoObject(priorityRegionName, value, parent, endTime, priorityObject);
+		let { currentIndex, previousPlayingIndex } =
+			this.handlePriorityInfoObject(priorityRegionName, value, parent, endTime, priorityObject, version);
 		debug('Got currentIndex and previousPlayingIndex: %s, %s for priorityRegionName: %s'
 			,    currentIndex, previousPlayingIndex, priorityRegionName);
 
 		if (this.currentlyPlayingPriority[priorityRegionName].length > 1
-			&& currentIndex !== previousPlayingIndex) {
+			&& currentIndex !== previousPlayingIndex
+			&& this.currentlyPlayingPriority[priorityRegionName][currentIndex].version
+			=== this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].version) {
 			debug('Detected priority conflict for playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 			await this.handlePriorityBeforePlay(priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime);
 		}
@@ -2127,9 +2130,10 @@ export class Playlist {
 	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 * @param priorityObject - information about priority rules for given playlist
+	 * @param version
 	 */
 	private handlePriorityInfoObject = (
-			priorityRegionName: string, value: SMILMedia, parent: string, endTime: number, priorityObject: PriorityObject,
+			priorityRegionName: string, value: SMILMedia, parent: string, endTime: number, priorityObject: PriorityObject, version: number,
 		): {
 		currentIndex: number,
 		previousPlayingIndex: number,
@@ -2147,6 +2151,7 @@ export class Playlist {
 			parent: parent,
 			priority: <PriorityObject> priorityObject,
 			controlledPlaylist: null,
+			version,
 			behaviour: '',
 			isFirstInPlaylist: <SMILMedia> {},
 		};
