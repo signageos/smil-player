@@ -46,8 +46,12 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	let timeToEnd: number;
 
 	// split date and time to array
-	const [dateStart, timeStart] = splitStringStart[1].split('T');
-	const [dateEnd, timeEnd] = splitStringEnd[1].split('T');
+	let [dateStart, timeStart] = splitStringStart[1].split('T');
+	let [dateEnd, timeEnd] = splitStringEnd[1].split('T');
+
+	// in case wallclock string does not have exact time specified (2021-11-01), add default time
+	timeStart = timeStart ?  timeStart : SMILScheduleEnum.defaultTime;
+	timeEnd = timeEnd ?  timeEnd : SMILScheduleEnum.defaultTime;
 
 	let datePart: string = nowDay;
 
