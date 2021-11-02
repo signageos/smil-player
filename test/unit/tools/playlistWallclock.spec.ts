@@ -2,16 +2,25 @@ import * as chai from 'chai';
 import moment from 'moment';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { parseSmilSchedule } from '../../../src/components/playlist/tools/wallclockTools';
+import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 
 const expect = chai.expect;
 
 // TODO: vyresit posun casu
 describe('Playlist tools component parseSmilSchedule tests', () => {
 	it('Should return correct times for how long to wait and how long to play', async () => {
-		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01T07:00:00/P1D)
-		let testStartString = `wallclock(R/${formatDate(moment())}/P1D)`;
-		let testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
+
+		let testStartString = moment().format('YYYY-MM-DD');
+		let testEndString = moment().add(1, 'days').format('YYYY-MM-DD');
 		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(responseTimeObject.timeToStart).to.eql(0);
+		expect(responseTimeObject.timeToEnd).to.eql(moment(`${testEndString}T${SMILScheduleEnum.defaultTime}`).valueOf());
+
+		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01T07:00:00/P1D)
+		testStartString = `wallclock(R/${formatDate(moment())}/P1D)`;
+		testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
 		// parse 2011-01-01T07:00:00 from wallclock(R/2011-01-01T07:00:00/P1D)
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());

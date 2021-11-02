@@ -1,10 +1,10 @@
-<?xml version="1.0"?>
 <smil>
     <head>
-        <meta http-equiv="refresh" content="20"/>
+        <meta http-equiv="refresh" content="20" onlySmilUpdate="true"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
+
             <!-- define the screen layout, in this case single fullscreen zone -->
             <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
         </layout>
@@ -12,37 +12,35 @@
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
+                <seq>
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
                 </seq>
             </seq>
-            <!-- Downloading resources into the internal storage -->
-            <!-- Wait for the prefetch of media files, once done, start the playback -->
+
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <!-- indefinite loop of media files in the selected order -->
-                <seq repeatCount="indefinite">
-                    <!-- play this sequence once -->
-                    <seq begin="wallclock(2021-10-26T11:00)" end="wallclock(2021-10-26T21:21)" repeatCount="1">
-                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main" soundLevel="0%"></video>
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="main">
-                            <param name="cacheControl" value="auto" />
-                        </img>
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="main">
-                            <param name="cacheControl" value="auto" />
-                        </img>
-
-                    </seq>
-                    <seq begin="wallclock(2021-10-26T21:21)" end="wallclock(2021-10-26T23:59)" repeatCount="1">
-                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main" soundLevel="0%"></video>
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="main">
-                            <param name="cacheControl" value="auto" />
-                        </img>
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="main">
-                            <param name="cacheControl" value="auto" />
-                        </img>
-
-                    </seq>
+                <seq begin="wallclock(2021-10-26)" end="wallclock(2021-11-01)" repeatCount="indefinite">
+                    <par>
+                        <seq begin="wallclock(R/2021-10-26T00:00:00/P1D)" end="wallclock(R/2021-10-26T09:3:00/P1D)" repeatCount="indefinite">
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/numbers.mp4" region="main" soundLevel="0%"></video>
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
+                        </seq>
+                        <seq begin="wallclock(R/2021-10-26T11:30:00/P1D)" end="wallclock(R/2021-10-26T14:00:00/P1D)" repeatCount="indefinite">
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/particles.mp4" region="main" soundLevel="0%"></video>
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
+                        </seq>
+                        <seq begin="wallclock(R/2021-10-26T14:00:00/P1D)" end="wallclock(R/2021-10-26T23:59:59/P1D)" repeatCount="indefinite">
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/rain.mp4" region="main" soundLevel="0%"></video>
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
+                        </seq>
+                    </par>
+                </seq>
+                <seq begin="wallclock(2021-11-01)" end="wallclock(2021-11-30)" repeatCount="indefinite">
+                    <par>
+                        <seq begin="wallclock(R/2021-10-30T00:00:00/P1D)" end="wallclock(R/2021-10-30T23:59:59/P1D)" repeatCount="indefinite">
+                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/fire.mp4" region="main" soundLevel="0%"></video>
+                        </seq>
+                    </par>
                 </seq>
             </par>
         </par>

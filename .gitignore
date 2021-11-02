@@ -9,3 +9,4 @@
 /.npmrc
 /cypress/videos/
 /cypress/screenshots/
+/cypress/testFiles/testing.smil
