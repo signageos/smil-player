@@ -123,9 +123,10 @@ export class Playlist {
 	 * runs function given as parameter in endless loop
 	 * @param fn - Function
 	 * @param version - smil internal version of current playlist
+	 * @param conditionalExpr
 	 */
-	public runEndlessLoop = async (fn: Function, version: number = 0) => {
-		while (!this.cancelFunction[version]) {
+	public runEndlessLoop = async (fn: Function, version: number = 0, conditionalExpr: string = '') => {
+		while (!this.cancelFunction[version] && (conditionalExpr === '' || !isConditionalExpExpired({[ExprTag] : conditionalExpr}))) {
 			try {
 				await fn();
 			} catch (err) {
@@ -394,7 +395,7 @@ export class Playlist {
 	 * @param endTime - date in millis when value stops playing
 	 */
 	public processPriorityTag = async (
-		value: PlaylistElement | PlaylistElement[], version: number, parent: string = '', endTime: number = 0,
+		value: PlaylistElement | PlaylistElement[], version: number, parent: string = '', endTime: number = 0, conditionalExpr: string = '',
 	): Promise<Promise<void>[]> => {
 		const promises: Promise<void>[] = [];
 		if (!Array.isArray(value)) {
@@ -416,7 +417,7 @@ export class Playlist {
 
 			const priorityObject = createPriorityObject(elem, arrayIndex);
 			promises.push((async () => {
-				await this.processPlaylist(elem, version, parent, endTime, priorityObject);
+				await this.processPlaylist(elem, version, parent, endTime, priorityObject, conditionalExpr);
 			})());
 			arrayIndex -= 1;
 		}
@@ -432,10 +433,11 @@ export class Playlist {
 	 * @param parent - superordinate element of value
 	 * @param endTime - date in millis when value stops playing
 	 * @param priorityObject - contains data about priority behaviour for given playlist
+	 * @param conditionalExpr
 	 */
 	public processPlaylist = async (
 		playlist: PlaylistElement | PlaylistElement[], version: number, parent: string = '',
-		endTime: number = 0, priorityObject: PriorityObject =  <PriorityObject> {},
+		endTime: number = 0, priorityObject: PriorityObject =  <PriorityObject> {}, conditionalExpr: string = '',
 	) => {
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			// skips processing attributes of elements like repeatCount or wallclock
@@ -455,12 +457,16 @@ export class Playlist {
 
 			let promises: Promise<void>[] = [];
 
+			if (value.hasOwnProperty(ExprTag)) {
+				conditionalExpr = <string> value[ExprTag];
+			}
+
 			if (key === 'excl') {
-				promises = await this.processPriorityTag(value, version, 'seq', endTime);
+				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'priorityClass') {
-				promises = await this.processPriorityTag(value, version, 'seq', endTime);
+				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'par') {
@@ -471,7 +477,10 @@ export class Playlist {
 						const wrapper = {
 							[controlTag]: elem,
 						};
-						promises.push(this.createDefaultPromise(wrapper, version, priorityObject, newParent, endTime));
+						if (elem.hasOwnProperty(ExprTag)) {
+							conditionalExpr = <string> elem[ExprTag];
+						}
+						promises.push(this.createDefaultPromise(wrapper, version, priorityObject, newParent, endTime, -1, conditionalExpr));
 					});
 					await Promise.all(promises);
 					continue;
@@ -492,12 +501,16 @@ export class Playlist {
 						continue;
 					}
 
+					if (value.hasOwnProperty(ExprTag)) {
+						conditionalExpr = <string> value[ExprTag];
+					}
+
 					if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-						promises.push(this.createRepeatCountDefinitePromise(value, priorityObject,  version, 'par', timeToStart));
+						promises.push(this.createRepeatCountDefinitePromise(value, priorityObject,  version, 'par', timeToStart, conditionalExpr));
 						await Promise.all(promises);
 						continue;
 					}
-					promises.push(this.createDefaultPromise(value, version, priorityObject, newParent, timeToEnd, timeToStart));
+					promises.push(this.createDefaultPromise(value, version, priorityObject, newParent, timeToEnd, timeToStart, conditionalExpr));
 					await Promise.all(promises);
 					continue;
 				}
@@ -506,18 +519,22 @@ export class Playlist {
 					continue;
 				}
 
+				if (value.hasOwnProperty(ExprTag)) {
+					conditionalExpr = <string> value[ExprTag];
+				}
+
 				if (value.repeatCount === 'indefinite') {
-					promises.push(this.createRepeatCountIndefinitePromise(value, priorityObject, version, parent, endTime, key));
+					promises.push(this.createRepeatCountIndefinitePromise(value, priorityObject, version, parent, endTime, key, conditionalExpr));
 					await Promise.all(promises);
 					continue;
 				}
 
 				if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
-					promises.push(this.createRepeatCountDefinitePromise(value, priorityObject, version, key));
+					promises.push(this.createRepeatCountDefinitePromise(value, priorityObject, version, key, -1, conditionalExpr));
 					await Promise.all(promises);
 					continue;
 				}
-				promises.push(this.createDefaultPromise(value, version, priorityObject, newParent, endTime));
+				promises.push(this.createDefaultPromise(value, version, priorityObject, newParent, endTime, -1, conditionalExpr));
 			}
 
 			if (key === 'seq') {
@@ -527,6 +544,11 @@ export class Playlist {
 				}
 				let arrayIndex = 0;
 				for (const valueElement of value) {
+
+					if (valueElement.hasOwnProperty(ExprTag)) {
+						conditionalExpr = <string> valueElement[ExprTag];
+					}
+
 					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
 						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
@@ -548,7 +570,7 @@ export class Playlist {
 
 						if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
 							if (timeToStart <= 0) {
-								promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, version, 'seq', timeToStart));
+								promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, version, 'seq', timeToStart, conditionalExpr));
 							}
 							if (!parent.startsWith('par')) {
 								await Promise.all(promises);
@@ -558,7 +580,7 @@ export class Playlist {
 						}
 						// play at least one from array to avoid infinite loop
 						if (value.length === 1 || timeToStart <= 0) {
-							promises.push(this.createDefaultPromise(valueElement, version, priorityObject, newParent, timeToEnd, timeToStart));
+							promises.push(this.createDefaultPromise(valueElement, version, priorityObject, newParent, timeToEnd, timeToStart, conditionalExpr));
 						}
 						if (!parent.startsWith('par')) {
 							await Promise.all(promises);
@@ -574,7 +596,7 @@ export class Playlist {
 					}
 
 					if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
-						promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, version, 'seq'));
+						promises.push(this.createRepeatCountDefinitePromise(valueElement, priorityObject, version, 'seq', -1, conditionalExpr));
 						if (!parent.startsWith('par')) {
 							await Promise.all(promises);
 						}
@@ -582,7 +604,7 @@ export class Playlist {
 					}
 
 					if (valueElement.repeatCount === 'indefinite') {
-						promises.push(this.createRepeatCountIndefinitePromise(valueElement, priorityObject, version, parent, endTime, key));
+						promises.push(this.createRepeatCountIndefinitePromise(valueElement, priorityObject, version, parent, endTime, key, conditionalExpr));
 
 						if (!parent.startsWith('par')) {
 							await Promise.all(promises);
@@ -590,7 +612,7 @@ export class Playlist {
 						continue;
 					}
 
-					promises.push(this.createDefaultPromise(valueElement, version, priorityObject, newParent, endTime));
+					promises.push(this.createDefaultPromise(valueElement, version, priorityObject, newParent, endTime, -1, conditionalExpr));
 					if (!parent.startsWith('par')) {
 						await Promise.all(promises);
 					}
@@ -809,19 +831,21 @@ export class Playlist {
 
 	private createDefaultPromise = (
 		value: PlaylistElement, version: number, priorityObject: PriorityObject, parent: string, timeToEnd: number, timeToStart: number = -1,
+		conditionalExpr: string = '',
 		): Promise<void> => {
 		return ((async () => {
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
 			if (timeToStart > 0 && await this.waitTimeoutOrFileUpdate(timeToStart)) {
 				return;
 			}
-			await this.processPlaylist(value, version, parent, timeToEnd, priorityObject);
+			await this.processPlaylist(value, version, parent, timeToEnd, priorityObject, conditionalExpr);
 		})());
 	}
 
 	private createRepeatCountDefinitePromise = (
 		value: PlaylistElement, priorityObject: PriorityObject, version: number, parent: string, timeToStart: number = -1,
-		): Promise<void> => {
+		conditionalExpr: string = '',
+	): Promise<void> => {
 		const repeatCount: number = <number> value.repeatCount;
 		let counter = 0;
 		return ((async () => {
@@ -831,7 +855,7 @@ export class Playlist {
 				return;
 			}
 			while (counter < repeatCount && version >= this.getPlaylistVersion()) {
-				await this.processPlaylist(value, version, newParent, repeatCount, priorityObject);
+				await this.processPlaylist(value, version, newParent, repeatCount, priorityObject, conditionalExpr);
 				counter += 1;
 			}
 		})());
@@ -839,25 +863,26 @@ export class Playlist {
 
 	private createRepeatCountIndefinitePromise = (
 		value: PlaylistElement, priorityObject: PriorityObject, version: number, parent: string, endTime: number, key: string,
-		): Promise<void> => {
+		conditionalExpr: string = '',
+	): Promise<void> => {
 		return ((async () => {
 			// when endTime is not set, play indefinitely
 			if (endTime === 0) {
 				let newParent = generateParentId(key, value);
 				await this.runEndlessLoop(async () => {
-					await this.processPlaylist(value, version, newParent, endTime, priorityObject);
-				},                        version);
+					await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
+				},                        version, conditionalExpr);
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000 && version >= this.getPlaylistVersion()) {
 				let newParent = generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
 				}
-				await this.processPlaylist(value, version, newParent, endTime, priorityObject);
+				await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 			} else {
 				let newParent = generateParentId(key, value);
 				while (Date.now() <= endTime && version >= this.getPlaylistVersion()) {
-					await this.processPlaylist(value, version, newParent, endTime, priorityObject);
+					await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 					// force stop because new version of smil file was detected
 					if (this.getCancelFunction()) {
 						return;
