@@ -6,6 +6,10 @@ export function formatDate(date: any): string {
 	return date.format('YYYY-MM-DDTHH:mm:ss');
 }
 
+export function formatTime(date: any): string {
+	return date.format('HH:mm:ss');
+}
+
 export function fillWallclock(fileString: string, fileName: string): string {
 	let parsedFileString = fileString;
 	switch (fileName) {
@@ -22,6 +26,10 @@ export function fillWallclock(fileString: string, fileName: string): string {
 		case SMILUrls.wallclockFuture.split('/').pop():
 			parsedFileString = parsedFileString.replace('PRIORITY_1_BEGIN', `wallclock(R/${formatDate(moment().add(20, 'seconds'))}/P1D)`);
 			parsedFileString = parsedFileString.replace('PRIORITY_1_END', `wallclock(R/${formatDate(moment().add(35, 'seconds'))}/P1D)`);
+			break;
+		case SMILUrls.conditionalTimePriority.split('/').pop():
+			parsedFileString = parsedFileString.replace('TIME_BEGIN', `${formatTime(moment().subtract(60, 'seconds'))}`);
+			parsedFileString = parsedFileString.replace('TIME_END', `${formatTime(moment().add(10, 'seconds'))}`);
 			break;
 		default:
 			parsedFileString = parsedFileString.replace('PRIORITY_1_BEGIN', `wallclock(R/${formatDate(moment().add(40, 'seconds'))}/P1D)`);

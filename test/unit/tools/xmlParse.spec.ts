@@ -220,5 +220,95 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].height).to.be.eql(360);
 
 		});
+
+		it('Should parse nested regions correctly - multiple regions bottom, right fixed values', async () => {
+			let testingRegion: any = {
+				regionName: "video",
+				left: "10",
+				top: "10",
+				width: "1280",
+				height: "720",
+				"z-index": "1",
+				backgroundColor: "#FFFFFF",
+				mediaAlign: "topLeft",
+				region: [{
+					regionName: "video1",
+					right: "50",
+					bottom: "100",
+					width: "640",
+					height: "320",
+					"z-index": "1",
+					backgroundColor: "transparent",
+				}, {
+					regionName: "video2",
+					right: "300",
+					bottom: "100",
+					width: "640",
+					height: "720",
+					"z-index": "1",
+					backgroundColor: "transparent",
+				}],
+			};
+
+			testingRegion = parseNestedRegions(testingRegion);
+
+			// first region
+			expect(testingRegion.region[0].top).to.be.eql(310);
+			expect(testingRegion.region[0].left).to.be.eql(590);
+			expect(testingRegion.region[0].width).to.be.eql(640);
+			expect(testingRegion.region[0].height).to.be.eql(320);
+
+			// second region
+			expect(testingRegion.region[1].top).to.be.eql(10);
+			expect(testingRegion.region[1].left).to.be.eql(340);
+			expect(testingRegion.region[1].width).to.be.eql(640);
+			expect(testingRegion.region[1].height).to.be.eql(720);
+
+		});
+
+		it('Should parse nested regions correctly - multiple regions bottom, right percentage values', async () => {
+			let testingRegion: any = {
+				regionName: "video",
+				left: "10",
+				top: "10",
+				width: "1280",
+				height: "720",
+				"z-index": "1",
+				backgroundColor: "#FFFFFF",
+				mediaAlign: "topLeft",
+				region: [{
+					regionName: "video1",
+					right: "10%",
+					bottom: "10%",
+					width: "50%",
+					height: "50%",
+					"z-index": "1",
+					backgroundColor: "transparent",
+				}, {
+					regionName: "video2",
+					right: "0%",
+					bottom: "0%",
+					width: "50%",
+					height: "50%",
+					"z-index": "1",
+					backgroundColor: "transparent",
+				}],
+			};
+
+			testingRegion = parseNestedRegions(testingRegion);
+
+			// first region
+			expect(testingRegion.region[0].top).to.be.eql(298);
+			expect(testingRegion.region[0].left).to.be.eql(522);
+			expect(testingRegion.region[0].width).to.be.eql(640);
+			expect(testingRegion.region[0].height).to.be.eql(360);
+
+			// second region
+			expect(testingRegion.region[1].top).to.be.eql(370);
+			expect(testingRegion.region[1].left).to.be.eql(650);
+			expect(testingRegion.region[1].width).to.be.eql(640);
+			expect(testingRegion.region[1].height).to.be.eql(360);
+
+		});
 	});
 });

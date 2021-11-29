@@ -44,5 +44,6 @@ export enum SMILUrls {
 	videoStreams = 'http://localhost:3000/videoStreams.smil',
 	notExistingMedia = 'http://localhost:3000/NotExistingMedia.smil',
 	widgetExtensions = 'http://localhost:3000/widgetExtensions.smil',
-	cssBottom = 'http://localhost:3000/cssBottom.smil',
+	cssBottom = 'http://localhost:3000/cssBottomAndRight.smil',
+	conditionalTimePriority = 'http://localhost:3000/dynamic/conditionalTimePriority.smil',
 }
