@@ -1,47 +1,49 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="20" onlySmilUpdate="true"/>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <layout>
-            <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
-
-            <!-- define the screen layout, in this case single fullscreen zone -->
-            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="ckr673zdm2283671zixrtqn59ja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
-                <seq>
-                    <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                <seq repeatCount="indefinite">
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg" dur="5s" fit="fill"/>
                 </seq>
             </seq>
 
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <seq begin="wallclock(2021-10-26)" end="wallclock(2021-11-01)" repeatCount="indefinite">
-                    <par>
-                        <seq begin="wallclock(R/2021-10-26T00:00:00/P1D)" end="wallclock(R/2021-10-26T09:3:00/P1D)" repeatCount="indefinite">
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/numbers.mp4" region="main" soundLevel="0%"></video>
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
-                        </seq>
-                        <seq begin="wallclock(R/2021-10-26T11:30:00/P1D)" end="wallclock(R/2021-10-26T14:00:00/P1D)" repeatCount="indefinite">
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/particles.mp4" region="main" soundLevel="0%"></video>
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
-                        </seq>
-                        <seq begin="wallclock(R/2021-10-26T14:00:00/P1D)" end="wallclock(R/2021-10-26T23:59:59/P1D)" repeatCount="indefinite">
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/rain.mp4" region="main" soundLevel="0%"></video>
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/tunnel.mp4" region="main" soundLevel="0%"></video>
-                        </seq>
-                    </par>
-                </seq>
-                <seq begin="wallclock(2021-11-01)" end="wallclock(2021-11-30)" repeatCount="indefinite">
-                    <par>
-                        <seq begin="wallclock(R/2021-10-30T00:00:00/P1D)" end="wallclock(R/2021-10-30T23:59:59/P1D)" repeatCount="indefinite">
-                            <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cineplex/fire.mp4" region="main" soundLevel="0%"></video>
-                        </seq>
-                    </par>
-                </seq>
+                <excl>
+
+
+                    <priorityClass higher="stop" lower="defer" peer="stop">
+                        <par expr="compare(time(),'11:16:40')>0 and compare(time(),'22:52:00')<=0">
+                            <!-- START [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                            <seq repeatCount="indefinite">
+                                <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckr1ymw2300000xkbg8rd0rkz.jpeg" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+                                <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/11/ckvmhe9uh00010xol2lrb2zzz.jpeg" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+                            </seq>
+                            <!-- END [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                        </par>
+                    </priorityClass>
+
+                    <priorityClass higher="stop" lower="defer" peer="stop">
+                        <par>
+                            <!-- START [GalleryModule] normalni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                            <seq repeatCount="1">
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/other/Tomas/2021-11-23%2017_27_52-Devices%20_%20Signagelab%20CMS.png" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/other/Tomas/2021-11-23%2013_53_22-P%C5%99ihl%C3%A1%C5%A1en%C3%AD%20_%20Signagelab%20CMS.png" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+                            </seq>
+                            <!-- END [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                        </par>
+                    </priorityClass>
+
+
+
+
+                </excl>
             </par>
         </par>
     </body>

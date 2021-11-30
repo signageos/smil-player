@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - fixed race condition with seamless update
+- fixed conditional timeFormat issue
+- fixed right and bottom css positioning for regular media and triggers
 
 ## [1.9.0] - 2021-10-14
 ### Fixed

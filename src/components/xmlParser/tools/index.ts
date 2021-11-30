@@ -80,6 +80,33 @@ export function parseNestedRegions(paramValue: RegionAttributes): RegionAttribut
 						}
 						innerValue.top = parseInt(String(value.top)) + parseInt(innerValue.top) || 0;
 						break;
+					case HtmlEnum.bottom:
+						if (innerValue.bottom.indexOf('%') > -1 ) {
+							if (innerValue.height.indexOf('%') > -1) {
+								innerValue.height = String(value.height * parseInt(innerValue.height) / 100);
+							}
+							innerValue.top = Math.max(value.top, Math.floor(value.height -
+								(value.height * parseInt(innerValue.bottom) / 100 + parseInt(innerValue.height)) + parseInt(String(value.top))));
+							delete innerValue.bottom;
+							break;
+						}
+						innerValue.top = Math.max(value.top, value.height -
+							(parseInt(innerValue.bottom) + parseInt(innerValue.height)) + parseInt(String(value.top)));
+						delete innerValue.bottom;
+						break;
+					case HtmlEnum.right:
+						if (innerValue.right.indexOf('%') > -1 ) {
+							if (innerValue.width.indexOf('%') > -1) {
+								innerValue.width = String(value.width * parseInt(innerValue.width) / 100);
+							}
+							innerValue.left = Math.max(value.left, Math.floor(value.width -
+								(value.width * parseInt(innerValue.right) / 100 + parseInt(innerValue.width)) + parseInt(String(value.left))));
+							delete innerValue.right;
+							break;
+						}
+						innerValue.left = Math.max(value.left, value.width - (parseInt(innerValue.right) + parseInt(innerValue.width)));
+						delete innerValue.right;
+						break;
 					default:
 						debug('Unhandled attribute found during nestedRegion parsing: %s', innerRegionKey);
 				}

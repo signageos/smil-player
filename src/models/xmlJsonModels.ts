@@ -60,6 +60,8 @@ export type RegionAttributes = {
 	top: number,
 	width: number,
 	height: number,
+	bottom?: number,
+	right?: number,
 	"z-index"?: number,
 	fit?: string,
 	region: RegionAttributes | RegionAttributes[],

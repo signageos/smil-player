@@ -2,11 +2,11 @@
     <head>
         <meta http-equiv="Refresh" content="30"/>
         <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
 
-            <region regionName="video" left="0" bottom="10%" width="540" height="608" z-index="1"
+            <region regionName="video" right="10%" bottom="10%" width="540" height="608" z-index="1"
                     backgroundColor="#FFFFFF" mediaAlign="topLeft"/>
-            <region regionName="video2" left="540" bottom="220" width="540" height="608" z-index="1"
+            <region regionName="video2" right="555" bottom="220" width="540" height="608" z-index="1"
                     backgroundColor="#FFFFFF" mediaAlign="topLeft"/>
 
         </layout>
