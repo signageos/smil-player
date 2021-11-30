@@ -144,6 +144,11 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 							(document.documentElement.clientHeight * parseInt(resultObject.bottom) / 100 + parseInt(resultObject.height)));
 						delete resultObject.bottom;
 						break;
+					case 'right':
+						resultObject.left = Math.floor(document.documentElement.clientWidth -
+							(document.documentElement.clientWidth * parseInt(resultObject.right) / 100 + parseInt(resultObject.width)));
+						delete resultObject.right;
+						break;
 					default:
 					// unhandled attribute
 				}
@@ -154,6 +159,10 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 				case 'bottom':
 					resultObject.top = document.documentElement.clientHeight - (parseInt(resultObject.bottom) + parseInt(resultObject.height));
 					delete resultObject.bottom;
+					break;
+				case 'right':
+					resultObject.left = document.documentElement.clientWidth - (parseInt(resultObject.right) + parseInt(resultObject.width));
+					delete resultObject.right;
 					break;
 				default:
 				// unhandled attribute

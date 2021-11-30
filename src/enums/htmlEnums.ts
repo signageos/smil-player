@@ -3,6 +3,7 @@ export enum HtmlEnum {
 	ref = 'iframe',
 	top = 'top',
 	bottom = 'bottom',
+	right = 'right',
 	width = 'width',
 	height = 'height',
 	left = 'left',
