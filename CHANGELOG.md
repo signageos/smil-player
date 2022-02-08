@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Fixed
+- added config definition allowing to show required configuration in Box
 - fixed race condition with seamless update
 - fixed conditional timeFormat issue
 - fixed right and bottom css positioning for regular media and triggers
