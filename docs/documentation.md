@@ -29,7 +29,7 @@ Tools folder contains helper functions such as getting file name of path out of 
 ### src/components/playlist
 Component responsible for recursively processing playlist in json format and playing all types of media. 
 Contains function to play video, image, audio and widget as well as some third party web page. For actual playing of media
-it uses mostly SoS sdk functions which you can find more about here https://docs.signageos.io/api/js/content/js-api-introduction. 
+it uses mostly SoS sdk functions which you can find more about here https://sdk.docs.signageos.io/api/js/content/js-api-introduction. 
 
 It contains function which is processing SMIL playlist in an infinite loop, as well as checking if smil file or any other media changed.
 If so, it will stop infinite playlist processing and restart whole process with freshly updated data.
@@ -66,7 +66,7 @@ Complex tests for front-end part of application and media playing are missing fo
 
 ## How to develop
 1. First you need to create signageOs account at https://www.signageos.io/
-2. With account, you can access detailed documentation here https://docs.signageos.io/knowledge-base/setup-developer-environment
+2. With account, you can access detailed documentation here https://docs.signageos.io/hc/en-us/articles/4405070294674-Hello-World-Setup-Developer-Environment
 3. How to run this project:
     1. install node modules => __npm install__
     2. build application => __npm run prepare__, this will create dist folder with compiled source code
@@ -96,7 +96,7 @@ To turn debugging of just delete debug from localStorage: __delete localStorage.
 ## Tools used
 - @signageos/front-applet
 - @signageos/front-display
-- @signageos/cli https://docs.signageos.io/api
+- @signageos/cli https://docs.signageos.io/hc/en-us/articles/4405111438354
 - webpack https://webpack.js.org/
 - tslint
 - debug
@@ -106,8 +106,9 @@ To turn debugging of just delete debug from localStorage: __delete localStorage.
 - lodash
 
 ## Useful links
-https://docs.signageos.io/category/smil-guides
-https://docs.signageos.io/knowledge-base/setup-developer-environment
+[Hello world](https://docs.signageos.io/hc/en-us/articles/4405240988178-Hello-World-SMIL-Playlist)
+[Basics of SMIL](https://docs.signageos.io/hc/en-us/sections/4405646921746-Basics-of-SMIL-Player)
+[Setting up dev environment](https://docs.signageos.io/hc/en-us/articles/4405070294674-Hello-World-Setup-Developer-Environment)
 https://www.w3.org/TR/SMIL3/ \
 http://www.a-smil.org/index.php/Main_Page \
-https://docs.signageos.io/api
+[signageOS JS SDK](https://sdk.docs.signageos.io)
