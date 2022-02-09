@@ -1,6 +1,6 @@
 # SMIL player
 
-- This solution is beta version of [signageOS SMIL Player](https://docs.signageos.io/category/smil-guides) applet.
+- This solution is beta version of [signageOS SMIL Player](https://docs.signageos.io/hc/en-us/articles/4405239673874-Introduction-to-signageOS-SMIL-Player) applet.
 
 ## SMIL mandatory structure
 ```xml
@@ -70,7 +70,7 @@ relative
 - See documentation [here](docs/documentation.md)
 
 ### SMIL documentation
-- See documentation for [SMIL file creation](https://docs.signageos.io/category/smil-docs-guides)
+- See documentation for [SMIL file creation](https://docs.signageos.io/hc/en-us/articles/4405240988178-Hello-World-SMIL-Playlist)
 
 ## Development
 For development internally in signageOS team, there are a few specifics. We are using internal private NPM registry, so please copy the template .npmrc.template to .npmrc and adjust your local PC ~/.bashrc file as below (for unix systems, for Win add environment variables in windows This PC options).

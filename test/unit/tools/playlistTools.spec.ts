@@ -248,8 +248,8 @@ describe('Playlist tools component', () => {
 	describe('Playlist tools component setDefaultAwait tests', () => {
 		it('Should return correct value to await', async () => {
 			const testSchedules = [[{
-				'begin': 'wallclock(2022-01-01T09:00)',
-				'end': 'wallclock(2022-12-01T12:00)',
+				'begin': 'wallclock(2030-01-01T09:00)',
+				'end': 'wallclock(2030-12-01T12:00)',
 				'repeatCount': '1',
 				'video': [],
 			}, {
@@ -268,13 +268,13 @@ describe('Playlist tools component', () => {
 				'repeatCount': '1',
 				'img': [],
 			}], [{
-				'begin': 'wallclock(2022-01-01T09:00)',
-				'end': 'wallclock(2022-12-01T12:00)',
+				'begin': 'wallclock(2030-01-01T09:00)',
+				'end': 'wallclock(2030-12-01T12:00)',
 				'repeatCount': '1',
 				'video': [],
 			}, {
-				'begin': 'wallclock(2022-07-16T12:00)',
-				'end': 'wallclock(2022-07-17T19:00)',
+				'begin': 'wallclock(2030-07-16T12:00)',
+				'end': 'wallclock(2030-07-17T19:00)',
 				'repeatCount': '1',
 				'img': [],
 			}], [{
