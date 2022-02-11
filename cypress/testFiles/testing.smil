@@ -1,49 +1,71 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta http-equiv="refresh" content="10" expr="anionoinon=9"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="ckr673zdm2283671zixrtqn59ja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+            <!-- define the screen resolution -->
+            <root-layout width="100%" height="100%" backgroundColor="#18182c" />
+
+            <!-- define the screen layout zones in relative % -->
+            <region regionName="background" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
+            <region regionName="overlay" left="0" top="0" width="100%" height="100%" z-index="3" backgroundColor="transparent"/>
+            <region regionName="left01" left="0%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="left02" left="0%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="left03" left="0%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right01" left="50%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right02" left="50%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right03" left="50%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
         </layout>
     </head>
     <body>
         <par>
+
+            <!-- Play this intro video as long as the resources being prefetched -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg" dur="5s" fit="fill"/>
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
                 </seq>
             </seq>
 
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <excl>
-
-
-                    <priorityClass higher="stop" lower="defer" peer="stop">
-                        <par expr="compare(time(),'11:16:40')>0 and compare(time(),'22:52:00')<=0">
-                            <!-- START [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
-                            <seq repeatCount="indefinite">
-                                <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckr1ymw2300000xkbg8rd0rkz.jpeg" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
-                                <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/11/ckvmhe9uh00010xol2lrb2zzz.jpeg" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
-                            </seq>
-                            <!-- END [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                <seq repeatCount="1">
+                    <par>
+                        <!-- indefinite loop of media files in the selected order -->
+                        <par repeatCount="indefinite">
+                            <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/background.png" region="background"></img>
                         </par>
-                    </priorityClass>
-
-                    <priorityClass higher="stop" lower="defer" peer="stop">
-                        <par>
-                            <!-- START [GalleryModule] normalni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
-                            <seq repeatCount="1">
-                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/other/Tomas/2021-11-23%2017_27_52-Devices%20_%20Signagelab%20CMS.png" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
-                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/other/Tomas/2021-11-23%2013_53_22-P%C5%99ihl%C3%A1%C5%A1en%C3%AD%20_%20Signagelab%20CMS.png" dur="5s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
-                            </seq>
-                            <!-- END [GalleryModule] stredni priorita (ckwdoxd2a116171xlkfzlbdrvx) -->
+                    </par>
+                    <!-- TWO <par> playlists are here, they will play together side by side, both in their respective region -->
+                    <par>
+                        <!-- indefinite loop of media files in the selected order
+                        -->
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Chicken+Sandwich&amp;text=Delicious&amp;number=1&amp;image=original_01.png" region="left01" type="application/widget" dur="15s" />
                         </par>
-                    </priorityClass>
-
-
-
-
-                </excl>
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Deluxe&amp;text=Delicious&amp;number=2&amp;image=original_02.png" region="left02" type="application/widget" dur="15s" />
+                        </par>
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Nuggets&amp;text=Delicious&amp;number=3&amp;image=original_03.png" region="left03" type="application/widget" dur="15s" />
+                        </par>
+                    </par>
+                    <par>
+                        <!-- indefinite loop of media files in the selected order -->
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken+Sandwich&amp;text=Delicious&amp;number=4&amp;image=spicy_01.png" region="right01" type="application/widget" dur="15s" />
+                        </par>
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Deluxe&amp;text=Delicious&amp;number=5&amp;image=spicy_02.png" region="right02" type="application/widget" dur="15s" />
+                        </par>
+                        <par repeatCount="indefinite">
+                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken-n-Strips&amp;text=Delicious&amp;number=6&amp;image=spicy_03.png" region="right03" type="application/widget" dur="15s" />
+                        </par>
+                    </par>
+                    <seq repeatCount="1">
+                        <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" region="background" z-index="4"></img>
+                    </seq>
+                </seq>
             </par>
         </par>
     </body>
