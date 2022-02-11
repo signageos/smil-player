@@ -1158,8 +1158,10 @@ export class Playlist {
 				return;
 			}
 
+			let valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
+
 			let element = <HTMLElement> document.getElementById(<string> value.id);
-			element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+			element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) + 1 + valueZIndex }`);
 
 			// set correct duration
 			const parsedDuration: number = setElementDuration(value.dur);
@@ -1206,7 +1208,7 @@ export class Playlist {
 				if (hasTransition) {
 					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
 				}
-				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+				element.style.setProperty(HtmlEnum.zIndex, `${parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) + 1}`);
 				element.style.visibility = 'visible';
 				await this.waitMediaOnScreen(
 					localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex, element, transitionDuration, taskStartDate, version,
@@ -1218,7 +1220,7 @@ export class Playlist {
 					removeTransitionCss(element);
 				}
 
-				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) - 2}`);
+				element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) - 2 - valueZIndex }`);
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);

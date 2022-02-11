@@ -10,6 +10,7 @@ export enum HtmlEnum {
 	widgetRoot = '/index.html',
 	video = 'video',
 	transitionStyleId = 'transitions',
+	zIndex = 'z-index',
 }
 
 export enum ObjectFitEnum {
