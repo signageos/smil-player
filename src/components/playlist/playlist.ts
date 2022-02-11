@@ -240,23 +240,28 @@ export class Playlist {
 				await sleep(1000);
 			}
 			while (this.checkFilesLoop) {
-				debug('Prepare ETag check for smil media files prepared');
-				const {
-					fileEtagPromisesMedia: fileEtagPromisesMedia,
-					fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-				} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
+				if (isNil(smilObject.refresh.expr) || !isConditionalExpExpired(smilObject.refresh)) {
+					debug('Prepare ETag check for smil media files prepared');
+					const {
+						fileEtagPromisesMedia: fileEtagPromisesMedia,
+						fileEtagPromisesSMIL: fileEtagPromisesSMIL,
+					} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
 
-				debug('Last modified check for smil media files prepared');
-				await sleep(smilObject.refresh * 1000);
-				debug('Checking files for changes');
-				let responseFiles = await Promise.all(fileEtagPromisesSMIL);
-				responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
-				for (const response of responseFiles) {
-					if (response.length > 0) {
-						debug('One of the files changed, restarting loop');
-						this.setCheckFilesLoop(false);
-						break;
+					debug('Last modified check for smil media files prepared');
+					await sleep(smilObject.refresh.refreshInterval * 1000);
+					debug('Checking files for changes');
+					let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+					responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+					for (const response of responseFiles) {
+						if (response.length > 0) {
+							debug('One of the files changed, restarting loop');
+							this.setCheckFilesLoop(false);
+							break;
+						}
 					}
+				} else {
+					debug('Conditional expression for files update is false: %s', smilObject.refresh.expr);
+					await sleep(smilObject.refresh.refreshInterval * 1000);
 				}
 			}
 			// no await

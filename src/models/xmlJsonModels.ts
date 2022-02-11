@@ -5,7 +5,10 @@ export type RegionsObject = {
 		[key: string]: RegionAttributes,
 	},
 	rootLayout?: RootLayout,
-	refresh: number,
+	refresh: {
+		refreshInterval: number,
+		expr?: string,
+	},
 	onlySmilFileUpdate: boolean,
 	log: boolean,
 	[key: string]: any,
@@ -52,6 +55,7 @@ export type SMILMetaObject = {
 	content: string,
 	log: string,
 	onlySmilUpdate: string,
+	expr?: string,
 };
 
 export type RegionAttributes = {
