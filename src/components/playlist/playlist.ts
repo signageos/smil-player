@@ -77,6 +77,7 @@ export class Playlist {
 	private currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	private triggersEndless: any = {};
 	private playlistVersion: number = 0;
+	private foundNewPlaylist: boolean = false;
 
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
@@ -1013,6 +1014,7 @@ export class Playlist {
 			}
 			debug('cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s', version, this.getPlaylistVersion());
 			this.setCheckFilesLoop(true);
+			this.foundNewPlaylist = false;
 			await this.stopAllContent();
 			return;
 		}
@@ -1204,7 +1206,7 @@ export class Playlist {
 
 			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
 				let transitionDuration = 0;
-				if (version < this.playlistVersion) {
+				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
 					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
@@ -1220,6 +1222,7 @@ export class Playlist {
 				);
 				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
+				debug('Finished checking iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 
 				if (hasTransition) {
 					removeTransitionCss(element);
@@ -1389,6 +1392,9 @@ export class Playlist {
 			this.currentlyPlaying[regionInfo.regionName].nextElement = media;
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
 				get(media, 'localFilePath', 'default').indexOf(FileStructure.images) > -1 ? 'html' : 'video';
+			if (version > this.playlistVersion) {
+				this.foundNewPlaylist = true;
+			}
 			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 		}
 
@@ -1408,7 +1414,6 @@ export class Playlist {
 		if (get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].player.stop
 			|| get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].player.contentPause !== 0
 			|| get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].behaviour === 'pause') {
-			// || this.getCancelFunction()) {
 			debug(
 				'Playlist was stopped/paused by higher priority during await: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex],
 			);
@@ -1495,7 +1500,7 @@ export class Playlist {
 			debug('Playing video after promise all: %O', video);
 
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
-				if (version < this.playlistVersion) {
+				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
 					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
@@ -1864,6 +1869,7 @@ export class Playlist {
 
 		this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.playing = true;
 		await this.playElement(value, version, key, parent, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+		debug('finished playing element: %O', value);
 	}
 
 	/**
