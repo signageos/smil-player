@@ -11,7 +11,10 @@ export const mockSMILFileParsedRegionAlias = {
 			mediaAlign: "center",
 		},
 	},
-	refresh: 60,
+	refresh: {
+		expr: undefined,
+		refreshInterval: 60,
+	},
 	rootLayout: {
 		width: "1080",
 		height: "1920",

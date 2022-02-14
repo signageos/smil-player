@@ -47,7 +47,10 @@ export const mockSMILFileParsed99 = {
 			backgroundColor: "transparent",
 		},
 	},
-	refresh: 90,
+	refresh: {
+		expr: undefined,
+		refreshInterval: 90,
+	},
 	rootLayout: {
 		width: "1920",
 		height: "1080",

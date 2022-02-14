@@ -224,7 +224,7 @@ export function extractDataFromPlaylist(playableMedia: SMILPlaylist, downloads: 
 
 export function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
 	// use default value at start
-	regions.refresh = SMILEnums.defaultRefresh;
+	regions.refresh.refreshInterval = SMILEnums.defaultRefresh;
 
 	if (!isNil(metaObjects.meta)) {
 		parseMetaInfo(metaObjects.meta, regions);
@@ -245,7 +245,8 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 	}
 	for (const metaRecord of meta) {
 		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
-			regions.refresh = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+			regions.refresh.refreshInterval = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate.toLowerCase().trim() === 'true';
@@ -311,7 +312,9 @@ function parseTriggersInfo(triggers: SMILTriggers): ParsedTriggerInfo {
 export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
-		refresh: 0,
+		refresh: {
+			refreshInterval: 0,
+		},
 		onlySmilFileUpdate: false,
 		log: false,
 	};

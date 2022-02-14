@@ -29,6 +29,7 @@ export type SMILAudio = {
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,
+	"z-index": string,
 };
 
 export type SMILImage = {
@@ -44,6 +45,7 @@ export type SMILImage = {
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,
+	"z-index": string,
 };
 
 export type SMILWidget = {
@@ -58,6 +60,7 @@ export type SMILWidget = {
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,
+	"z-index": string,
 };
 
 export type SosHtmlElement = {

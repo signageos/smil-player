@@ -77,6 +77,7 @@ export class Playlist {
 	private currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	private triggersEndless: any = {};
 	private playlistVersion: number = 0;
+	private foundNewPlaylist: boolean = false;
 
 	constructor(sos: FrontApplet, files: Files) {
 		this.sos = sos;
@@ -240,23 +241,28 @@ export class Playlist {
 				await sleep(1000);
 			}
 			while (this.checkFilesLoop) {
-				debug('Prepare ETag check for smil media files prepared');
-				const {
-					fileEtagPromisesMedia: fileEtagPromisesMedia,
-					fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-				} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
+				if (isNil(smilObject.refresh.expr) || !isConditionalExpExpired(smilObject.refresh)) {
+					debug('Prepare ETag check for smil media files prepared');
+					const {
+						fileEtagPromisesMedia: fileEtagPromisesMedia,
+						fileEtagPromisesSMIL: fileEtagPromisesSMIL,
+					} = await this.files.prepareLastModifiedSetup(internalStorageUnit, smilObject, smilFile);
 
-				debug('Last modified check for smil media files prepared');
-				await sleep(smilObject.refresh * 1000);
-				debug('Checking files for changes');
-				let responseFiles = await Promise.all(fileEtagPromisesSMIL);
-				responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
-				for (const response of responseFiles) {
-					if (response.length > 0) {
-						debug('One of the files changed, restarting loop');
-						this.setCheckFilesLoop(false);
-						break;
+					debug('Last modified check for smil media files prepared');
+					await sleep(smilObject.refresh.refreshInterval * 1000);
+					debug('Checking files for changes');
+					let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+					responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+					for (const response of responseFiles) {
+						if (response.length > 0) {
+							debug('One of the files changed, restarting loop');
+							this.setCheckFilesLoop(false);
+							break;
+						}
 					}
+				} else {
+					debug('Conditional expression for files update is false: %s', smilObject.refresh.expr);
+					await sleep(smilObject.refresh.refreshInterval * 1000);
 				}
 			}
 			// no await
@@ -1008,6 +1014,7 @@ export class Playlist {
 			}
 			debug('cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s', version, this.getPlaylistVersion());
 			this.setCheckFilesLoop(true);
+			this.foundNewPlaylist = false;
 			await this.stopAllContent();
 			return;
 		}
@@ -1158,8 +1165,10 @@ export class Playlist {
 				return;
 			}
 
+			let valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
+
 			let element = <HTMLElement> document.getElementById(<string> value.id);
-			element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+			element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) + 1 + valueZIndex }`);
 
 			// set correct duration
 			const parsedDuration: number = setElementDuration(value.dur);
@@ -1197,7 +1206,7 @@ export class Playlist {
 
 			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
 				let transitionDuration = 0;
-				if (version < this.playlistVersion) {
+				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
 					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
@@ -1206,19 +1215,20 @@ export class Playlist {
 				if (hasTransition) {
 					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
 				}
-				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) + 1}`);
+				element.style.setProperty(HtmlEnum.zIndex, `${parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) + 1}`);
 				element.style.visibility = 'visible';
 				await this.waitMediaOnScreen(
 					localRegionInfo, parentRegion, parsedDuration, sosHtmlElement, arrayIndex, element, transitionDuration, taskStartDate, version,
 				);
 				debug('Finished iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
+				debug('Finished checking iteration of playlist: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex]);
 
 				if (hasTransition) {
 					removeTransitionCss(element);
 				}
 
-				element.style.setProperty('z-index', `${parseInt(element.style.getPropertyValue('z-index')) - 2}`);
+				element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) - 2 - valueZIndex }`);
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
@@ -1382,6 +1392,9 @@ export class Playlist {
 			this.currentlyPlaying[regionInfo.regionName].nextElement = media;
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
 				get(media, 'localFilePath', 'default').indexOf(FileStructure.images) > -1 ? 'html' : 'video';
+			if (version > this.playlistVersion) {
+				this.foundNewPlaylist = true;
+			}
 			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 		}
 
@@ -1401,7 +1414,6 @@ export class Playlist {
 		if (get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].player.stop
 			|| get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].player.contentPause !== 0
 			|| get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[currentIndex].behaviour === 'pause') {
-			// || this.getCancelFunction()) {
 			debug(
 				'Playlist was stopped/paused by higher priority during await: %O', this.currentlyPlayingPriority[priorityRegionName][currentIndex],
 			);
@@ -1488,7 +1500,7 @@ export class Playlist {
 			debug('Playing video after promise all: %O', video);
 
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
-				if (version < this.playlistVersion) {
+				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
 					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
 					return;
@@ -1857,6 +1869,7 @@ export class Playlist {
 
 		this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.playing = true;
 		await this.playElement(value, version, key, parent, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
+		debug('finished playing element: %O', value);
 	}
 
 	/**
