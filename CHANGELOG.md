@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - added config definition allowing to show required configuration in Box
+- added optional z-index attribute to img and ref tag in smil file
+- added conditional expression to smil data refresh configuration
 - fixed race condition with seamless update
 - fixed conditional timeFormat issue
 - fixed right and bottom css positioning for regular media and triggers
