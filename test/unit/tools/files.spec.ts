@@ -26,15 +26,15 @@ describe('Files tools component', () => {
 				'',
 			];
 			const fileNames = [
-				'234_e978d68b.smil',
-				'10826_d7be1ea5.png',
+				'234_80a6d0b5.smil',
+				'10826_802ae426.png',
 				'myfile.txt',
 				'file.png',
 				'idontknow.mp3',
 				'fileName.mp4',
-				'my-fi-le_28eee269.txt',
-				'234_0d7ef620.smil',
-				'234_866496b7.smil',
+				'my-fi-le_45af7f07.txt',
+				'234_80a6d0b5.smil',
+				'234_e214f441.smil',
 				'',
 			];
 
