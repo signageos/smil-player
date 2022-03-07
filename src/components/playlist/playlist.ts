@@ -1206,13 +1206,14 @@ export class Playlist {
 				return;
 			}
 
+			if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
+				debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
+				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
+				return;
+			}
+
 			this.promiseAwaiting[localRegionInfo.regionName].promiseFunction! = [(async () => {
 				let transitionDuration = 0;
-				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
-					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
-					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
-					return;
-				}
 				const hasTransition = value.hasOwnProperty('transitionInfo');
 				if (hasTransition) {
 					transitionDuration = setElementDuration(get(value, 'transitionInfo.dur'));
@@ -1501,12 +1502,13 @@ export class Playlist {
 
 			debug('Playing video after promise all: %O', video);
 
+			if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
+				debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
+				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
+				return;
+			}
+
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction! = [(async () => {
-				if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
-					debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
-					this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
-					return;
-				}
 				try {
 					if (isNil(video.isStream)) {
 						await this.handleVideoPlay(video, params, sosVideoObject, regionInfo, parentRegion, version);
@@ -1591,7 +1593,6 @@ export class Playlist {
 		this.setCurrentlyPlaying(video, 'video', regionInfo.regionName);
 
 		debug('Starting playing video onceEnded function - single video: %O', video);
-
 		promiseRaceArray.push(this.sos.video.onceEnded(
 			video.localFilePath,
 			regionInfo.left,
