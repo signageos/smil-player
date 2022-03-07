@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - fixed conditional timeFormat issue
 - fixed right and bottom css positioning for regular media and triggers
 
+## [Unreleased]
+
+### Added
+- improved seamless update performance
+
 ## [1.9.0] - 2021-10-14
 ### Fixed
 - fixed bug with video playback in background not working properly
