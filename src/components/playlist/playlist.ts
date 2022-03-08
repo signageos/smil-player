@@ -11,7 +11,14 @@ import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 
 import { defaults as config } from '../../../config/parameters';
 import { IFile, IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import { getFileName, createVersionedUrl, copyQueryParameters, getProtocol, isWidgetUrl } from '../files/tools';
+import {
+	getFileName,
+	createVersionedUrl,
+	copyQueryParameters,
+	getProtocol,
+	isWidgetUrl,
+	getSmilVersionUrl,
+} from '../files/tools';
 import { Files } from '../files/files';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import Video from '@signageos/front-applet/es6/FrontApplet/Video/Video';
@@ -1097,7 +1104,7 @@ export class Playlist {
 	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string) => {
 		debug('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
 		const nextElement = cloneDeep(get(this.currentlyPlaying[regionName], 'nextElement'));
-		this.currentlyPlaying[regionName] = <PlayingInfo> element;
+		this.currentlyPlaying[regionName] = <PlayingInfo> cloneDeep(element);
 		this.currentlyPlaying[regionName].media = tag;
 		this.currentlyPlaying[regionName].playing = true;
 		this.currentlyPlaying[regionName].nextElement = nextElement;
@@ -1171,13 +1178,15 @@ export class Playlist {
 			element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) + 1 + valueZIndex }`);
 
 			// set correct duration
-			const parsedDuration: number = setElementDuration(value.dur);
+			const parsedDuration = setElementDuration(value.dur);
 
 			debug(`%O`, value);
 
+			const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
+
 			let src = value.localFilePath;
 			// BrightSign does not support query parameters in filesystem
-			src = createVersionedUrl(src);
+			src = createVersionedUrl(src, smilUrlVersion);
 			// TODO this would not work & break BS. Solve it other way in future before merge
 			src = copyQueryParameters(value.src, src);
 			// add query parameter to invalidate cache on devices
@@ -1232,6 +1241,8 @@ export class Playlist {
 				}
 
 				element.style.setProperty(HtmlEnum.zIndex, `${ parseInt(element.style.getPropertyValue(HtmlEnum.zIndex)) - 2 - valueZIndex }`);
+
+				debug('finished playing element: %O', value);
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
@@ -1485,6 +1496,13 @@ export class Playlist {
 			if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
 				await sleep(300);
 			}
+
+			if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
+				debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
+				this.handlePriorityWhenDone(priorityRegionName, currentIndex, endTime, isLast, version);
+				return;
+			}
+
 			// prepare if video is not same as previous one played or if video should be played in background
 			if (get(this.currentlyPlaying[regionInfo.regionName], 'src') !== video.src
 				&& get(this.videoPreparing[regionInfo.regionName], 'src') !== video.src
@@ -1565,6 +1583,7 @@ export class Playlist {
 					debug('Unexpected error: %O occurred during single video playback: O%', err, video);
 					await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
 				}
+				debug('finished playing element: %O', video);
 			})()];
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
@@ -1611,7 +1630,7 @@ export class Playlist {
 
 		// if video has specified duration in smil file, cancel it after given duration passes
 		if (get(video, 'dur', SMILEnums.defaultVideoDuration) !== SMILEnums.defaultVideoDuration) {
-			const parsedDuration: number = setElementDuration(video.dur!);
+			const parsedDuration = setElementDuration(video.dur!);
 			debug('Got dur: %s for video: %O', parsedDuration, video);
 			promiseRaceArray.push(sleep(parsedDuration));
 		}
@@ -1872,7 +1891,6 @@ export class Playlist {
 
 		this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.playing = true;
 		await this.playElement(value, version, key, parent, priorityRegionName, currentIndex, previousPlayingIndex, endTime, isLast);
-		debug('finished playing element: %O', value);
 	}
 
 	/**
