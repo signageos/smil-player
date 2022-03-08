@@ -1,19 +1,16 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="10" expr="anionoinon=9"/>
+        <meta http-equiv="refresh" content="20"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="100%" height="100%" backgroundColor="#18182c" />
+            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
 
             <!-- define the screen layout zones in relative % -->
-            <region regionName="background" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
-            <region regionName="overlay" left="0" top="0" width="100%" height="100%" z-index="3" backgroundColor="transparent"/>
-            <region regionName="left01" left="0%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="left02" left="0%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="left03" left="0%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right01" left="50%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right02" left="50%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right03" left="50%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="bottom-left-first" left="0" top="50%" width="25%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="bottom-left-second" left="25%" top="50%" width="25%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
         </layout>
     </head>
     <body>
@@ -27,45 +24,58 @@
                 </seq>
             </seq>
 
+            <!-- Downloading resources into the internal storage -->
+            <seq>
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait1.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.jpg" />
+                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/bunny.mp4" />
+                <seq id="__prefetchEnd" dur="1s" />
+            </seq>
+
             <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <seq repeatCount="1">
-                    <par>
-                        <!-- indefinite loop of media files in the selected order -->
-                        <par repeatCount="indefinite">
-                            <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/background.png" region="background"></img>
-                        </par>
-                    </par>
-                    <!-- TWO <par> playlists are here, they will play together side by side, both in their respective region -->
-                    <par>
-                        <!-- indefinite loop of media files in the selected order
-                        -->
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Chicken+Sandwich&amp;text=Delicious&amp;number=1&amp;image=original_01.png" region="left01" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Deluxe&amp;text=Delicious&amp;number=2&amp;image=original_02.png" region="left02" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Nuggets&amp;text=Delicious&amp;number=3&amp;image=original_03.png" region="left03" type="application/widget" dur="15s" />
-                        </par>
-                    </par>
-                    <par>
-                        <!-- indefinite loop of media files in the selected order -->
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken+Sandwich&amp;text=Delicious&amp;number=4&amp;image=spicy_01.png" region="right01" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Deluxe&amp;text=Delicious&amp;number=5&amp;image=spicy_02.png" region="right02" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken-n-Strips&amp;text=Delicious&amp;number=6&amp;image=spicy_03.png" region="right03" type="application/widget" dur="15s" />
-                        </par>
-                    </par>
-                    <seq repeatCount="1">
-                        <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" region="background" z-index="4"></img>
+
+<!--                &lt;!&ndash; TWO <par> playlists are here, they will play together side by side, both in their respective region &ndash;&gt;-->
+<!--                <par>-->
+<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
+<!--                    <seq repeatCount="indefinite">-->
+<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" region="top-left" soundLevel="0%"></video>-->
+<!--                        <img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-left" fit="meet"></img>-->
+<!--                    </seq>-->
+<!--                </par>-->
+
+<!--                <par>-->
+<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
+<!--                    <seq repeatCount="indefinite">-->
+<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" region="top-right" soundLevel="0%"></video>-->
+<!--                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="top-right" fit="meet"></img>-->
+<!--                    </seq>-->
+<!--                </par>-->
+
+                <par>
+                    <!-- indefinite loop of media files in the selected order -->
+                    <seq repeatCount="indefinite">
+                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait1.jpg" region="bottom-left-first" fit="meet"></img>
                     </seq>
-                </seq>
+                </par>
+
+<!--                <par>-->
+<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
+<!--                    <seq repeatCount="indefinite">-->
+<!--                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.jpg" region="bottom-left-second" fit="meet"></img>-->
+<!--                    </seq>-->
+<!--                </par>-->
+
+<!--                <par>-->
+<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
+<!--                    <seq repeatCount="indefinite">-->
+<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/bunny.mp4" region="bottom-right" soundLevel="0%"></video>-->
+<!--                    </seq>-->
+<!--                </par>-->
             </par>
         </par>
     </body>

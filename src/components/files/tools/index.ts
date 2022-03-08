@@ -9,6 +9,7 @@ import { ItemType } from "../../../models/reportingModels";
 import { checksumString } from './checksum';
 import { WidgetExtensions } from '../../../enums/fileEnums';
 import { FileStructure } from "../../../enums/fileEnums";
+import { isNil } from 'lodash';
 
 export const debug = Debug('@signageos/smil-player:filesModule');
 
@@ -49,12 +50,23 @@ export function createDownloadPath(sourceUrl: string): string {
 	return `${corsAnywhere}${createVersionedUrl(sourceUrl)}`;
 }
 
-export function createVersionedUrl(sourceUrl: string): string {
+export function createVersionedUrl(sourceUrl: string, smilUrlVersion: string | null = null): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
 	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
-	parsedUrl.query.__smil_version = getRandomInt(1000000).toString();
+	parsedUrl.query.__smil_version = !isNil(smilUrlVersion) ? smilUrlVersion : getRandomInt(1000000).toString();
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
+}
+
+export function getSmilVersionUrl(sourceUrl: string | null): string | null {
+	if (isNil(sourceUrl)) {
+		return null;
+	}
+	const query = URLVar.parse(sourceUrl, true).query;
+	if (!isNil(query.__smil_version)) {
+		return query.__smil_version as string;
+	}
+	return null;
 }
 
 export function copyQueryParameters(fromUrl: string, toUrl: string) {
