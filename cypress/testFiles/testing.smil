@@ -2,80 +2,27 @@
     <head>
         <meta http-equiv="refresh" content="20"/>
         <layout>
-            <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
-
-            <!-- define the screen layout zones in relative % -->
-            <region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="bottom-left-first" left="0" top="50%" width="25%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="bottom-left-second" left="25%" top="50%" width="25%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <transition transitionName="toblack1s" type="fade" subtype="crossfade" dur=" 1s" id="toblack1s"/>
+            <root-layout width="100%" height="100%" backgroundColor="#18182C"/>
+            <region regionName="main" left="0" top="0" width="100%" height="100%" z-index="1" backgroundColor="#18182C"/>
         </layout>
     </head>
     <body>
         <par>
-
-            <!-- Play this intro video as long as the resources being prefetched -->
-            <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
-                </seq>
-            </seq>
-
-            <!-- Downloading resources into the internal storage -->
             <seq>
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait1.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/bunny.mp4" />
-                <seq id="__prefetchEnd" dur="1s" />
+                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/0mI1_6P_qNp7Y6uUOa4pZQrJqClQoro36wFXshiO5Uc=_image.png"/>
+                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/C1YxveK24W3kzakwNGOWs_kMGno3moOQka9Kg3HKOQk=_image.png"/>
+                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/BW8gyvzD5Y9qwKrw_zSDIpAkvasZ217JgufpftPYrDc=_1627676712.jpeg"/>
+                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/Dg7n8KNEc48TXhPZqoL3s3vkDc6EoY3ZLG9NNIDIThg=_image_187411181.png"/>
+                <seq id="__prefetchEnd" dur="1s"/>
             </seq>
-
-            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-
-<!--                &lt;!&ndash; TWO <par> playlists are here, they will play together side by side, both in their respective region &ndash;&gt;-->
-<!--                <par>-->
-<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
-<!--                    <seq repeatCount="indefinite">-->
-<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" region="top-left" soundLevel="0%"></video>-->
-<!--                        <img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-left" fit="meet"></img>-->
-<!--                    </seq>-->
-<!--                </par>-->
-
-<!--                <par>-->
-<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
-<!--                    <seq repeatCount="indefinite">-->
-<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" region="top-right" soundLevel="0%"></video>-->
-<!--                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="top-right" fit="meet"></img>-->
-<!--                    </seq>-->
-<!--                </par>-->
-
-                <par>
-                    <!-- indefinite loop of media files in the selected order -->
-                    <seq repeatCount="indefinite">
-                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait1.jpg" region="bottom-left-first" fit="meet"></img>
-                    </seq>
-                </par>
-
-<!--                <par>-->
-<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
-<!--                    <seq repeatCount="indefinite">-->
-<!--                        <img dur="5" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.jpg" region="bottom-left-second" fit="meet"></img>-->
-<!--                    </seq>-->
-<!--                </par>-->
-
-<!--                <par>-->
-<!--                    &lt;!&ndash; indefinite loop of media files in the selected order &ndash;&gt;-->
-<!--                    <seq repeatCount="indefinite">-->
-<!--                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/bunny.mp4" region="bottom-right" soundLevel="0%"></video>-->
-<!--                    </seq>-->
-<!--                </par>-->
+                <seq repeatCount="indefinite">
+                    <img src="https://skoopsignage-prod.s3.amazonaws.com/0mI1_6P_qNp7Y6uUOa4pZQrJqClQoro36wFXshiO5Uc=_image.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
+                    <img src="https://skoopsignage-prod.s3.amazonaws.com/C1YxveK24W3kzakwNGOWs_kMGno3moOQka9Kg3HKOQk=_image.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
+                    <img src="https://skoopsignage-prod.s3.amazonaws.com/BW8gyvzD5Y9qwKrw_zSDIpAkvasZ217JgufpftPYrDc=_1627676712.jpeg" region="main" dur="5" fill="transition" transIn="toblack1s"/>
+                    <img src="https://skoopsignage-prod.s3.amazonaws.com/Dg7n8KNEc48TXhPZqoL3s3vkDc6EoY3ZLG9NNIDIThg=_image_187411181.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
+                </seq>
             </par>
         </par>
     </body>

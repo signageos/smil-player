@@ -73,6 +73,7 @@ export type RegionAttributes = {
 };
 
 export type TransitionAttributes = {
+	transitionName: string,
 	type: string,
 	subType: string,
 	dur: string,
