@@ -390,7 +390,7 @@ export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObj
 				// iterate over array of objects
 				Object.keys(xmlObject[rootKey]).forEach((index: any) => {
 					if (xmlObject[rootKey][index].hasOwnProperty('transitionName')) {
-						transitionsObject.transition[xmlObject[rootKey][index].regionName] = <TransitionAttributes> xmlObject[rootKey][index];
+						transitionsObject.transition[xmlObject[rootKey][index].transitionName] = <TransitionAttributes> xmlObject[rootKey][index];
 					} else {
 						transitionsObject.transition[xmlObject[rootKey][index][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey][index];
 
@@ -398,7 +398,7 @@ export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObj
 				});
 			} else {
 				if (xmlObject[rootKey].hasOwnProperty('transitionName')) {
-					transitionsObject.transition[xmlObject[rootKey].transition] = <TransitionAttributes> xmlObject[rootKey];
+					transitionsObject.transition[xmlObject[rootKey].transitionName] = <TransitionAttributes> xmlObject[rootKey];
 				} else {
 					transitionsObject.transition[xmlObject[rootKey][XmlTags.regionNameAlias]] = <TransitionAttributes> xmlObject[rootKey];
 				}
