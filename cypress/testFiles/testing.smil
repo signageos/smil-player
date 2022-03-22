@@ -1,28 +1,32 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="20"/>
+        <meta http-equiv="Refresh" content="60" />
+        <meta log="true" />
         <layout>
-            <transition transitionName="toblack1s" type="fade" subtype="crossfade" dur=" 1s" id="toblack1s"/>
-            <root-layout width="100%" height="100%" backgroundColor="#18182C"/>
-            <region regionName="main" left="0" top="0" width="100%" height="100%" z-index="1" backgroundColor="#18182C"/>
+            <root-layout width="1920" height="1080" />
+            <region regionName="video" top="0" left="480" width="1440" height="1080" z-index="1" />
+            <region regionName="web" top="0" left="0" width="480" height="1080" z-index="1" />
         </layout>
     </head>
     <body>
         <par>
-            <seq>
-                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/0mI1_6P_qNp7Y6uUOa4pZQrJqClQoro36wFXshiO5Uc=_image.png"/>
-                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/C1YxveK24W3kzakwNGOWs_kMGno3moOQka9Kg3HKOQk=_image.png"/>
-                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/BW8gyvzD5Y9qwKrw_zSDIpAkvasZ217JgufpftPYrDc=_1627676712.jpeg"/>
-                <prefetch src="https://skoopsignage-prod.s3.amazonaws.com/Dg7n8KNEc48TXhPZqoL3s3vkDc6EoY3ZLG9NNIDIThg=_image_187411181.png"/>
-                <seq id="__prefetchEnd" dur="1s"/>
-            </seq>
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+            <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://skoopsignage-prod.s3.amazonaws.com/0mI1_6P_qNp7Y6uUOa4pZQrJqClQoro36wFXshiO5Uc=_image.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
-                    <img src="https://skoopsignage-prod.s3.amazonaws.com/C1YxveK24W3kzakwNGOWs_kMGno3moOQka9Kg3HKOQk=_image.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
-                    <img src="https://skoopsignage-prod.s3.amazonaws.com/BW8gyvzD5Y9qwKrw_zSDIpAkvasZ217JgufpftPYrDc=_1627676712.jpeg" region="main" dur="5" fill="transition" transIn="toblack1s"/>
-                    <img src="https://skoopsignage-prod.s3.amazonaws.com/Dg7n8KNEc48TXhPZqoL3s3vkDc6EoY3ZLG9NNIDIThg=_image_187411181.png" region="main" dur="5" fill="transition" transIn="toblack1s"/>
+                    <img src="https://storage.googleapis.com/prod-vsg-statics/default_branch_landscape_1920.jpeg" />
                 </seq>
+            </seq>
+            <par dur="indefinite" begin="__prefetchEnd.endEvent">
+                <par>
+                    <seq repeatCount="indefinite" begin="wallclock(R/2020-01-01T08:00:00/P1D)" end="wallclock(R/2020-01-01T20:00:00/P1D)">
+                        <video region="video" expr="compare(date(),'2016-01-01T00:00:00')&gt;=0 and compare(date(),'2026-01-01T00:00:00')&lt;=0 and compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0" src="https://api.alpha2.videomood.eu/devices/056bf681225f5dd10a9583a7a4bd556d/media/bec41c3e-dd88-4d12-938f-b56deb33dd20/format/url_hd" soundLevel="100%" />
+                        <video region="video" expr="compare(date(),'2016-01-01T00:00:00')&gt;=0 and compare(date(),'2026-01-01T00:00:00')&lt;=0 and compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0" src="https://api.alpha2.videomood.eu/devices/056bf681225f5dd10a9583a7a4bd556d/media/cfc8ff6c-d91c-4880-9ccd-10acba36ad9b/format/url_hd" soundLevel="100%" />
+                    </seq>
+                </par>
+                <par>
+                    <seq repeatCount="indefinite" begin="wallclock(R/2020-01-01T08:00:00/P1D)" end="wallclock(R/2020-01-01T20:00:00/P1D)">
+                        <ref src="https://www.monicapmslivorno.eu/SERVIZIWEB/portoferraio/tabellone/partenze" dur="indefinite" type="text/html" region="web" />
+                    </seq>
+                </par>
             </par>
         </par>
     </body>
