@@ -523,6 +523,13 @@ export class Playlist {
 						await Promise.all(promises);
 						continue;
 					}
+
+					if (value.repeatCount === 'indefinite') {
+						promises.push(this.createRepeatCountIndefinitePromise(value, priorityObject, version, parent, endTime, key, conditionalExpr));
+						await Promise.all(promises);
+						continue;
+					}
+
 					promises.push(this.createDefaultPromise(value, version, priorityObject, newParent, timeToEnd, timeToStart, conditionalExpr));
 					await Promise.all(promises);
 					continue;
@@ -591,6 +598,17 @@ export class Playlist {
 							arrayIndex += 1;
 							continue;
 						}
+
+						if (valueElement.repeatCount === 'indefinite') {
+							promises.push(this.createRepeatCountIndefinitePromise(valueElement, priorityObject, version, parent, endTime, key, conditionalExpr));
+
+							if (!parent.startsWith('par')) {
+								await Promise.all(promises);
+							}
+							arrayIndex += 1;
+							continue;
+						}
+
 						// play at least one from array to avoid infinite loop
 						if (value.length === 1 || timeToStart <= 0) {
 							promises.push(this.createDefaultPromise(valueElement, version, priorityObject, newParent, timeToEnd, timeToStart, conditionalExpr));

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- fixed wallclock and repeatCount=indefinite edge case bug
+
+### Added
+- improved seamless update performance
+
 ## [1.9.1] - 2022-02-15
 
 ### Fixed
@@ -13,11 +21,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - fixed race condition with seamless update
 - fixed conditional timeFormat issue
 - fixed right and bottom css positioning for regular media and triggers
-
-## [Unreleased]
-
-### Added
-- improved seamless update performance
 
 ## [1.9.0] - 2021-10-14
 ### Fixed
