@@ -1,0 +1,59 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
+            <region regionName="cl10owwfh662331xnqlvq19s88" left="0" top="1728" width="1080" height="192" z-index="1" backgroundColor="#000000"/>
+            <region regionName="cl10oxasf667791xnqlrpy9w4k" left="0" top="0" width="1080" height="1728" z-index="1" backgroundColor="#000000"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-portrait.jpeg" dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- START [MarqueeModule] Text (cl10oybrd693231xnqvfupnfjr) -->
+                        <seq>
+                            <ref src="https://stage.signagelab.com/modules/marquee.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10oybrd693231xnqvfupnfjr&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=7f76e2ce9a5e630b2773efd47f63e58d" type="application/widget" dur="15s" region="cl10owwfh662331xnqlvq19s88"/>
+                        </seq>
+                        <!-- END [MarqueeModule] Text (cl10oybrd693231xnqvfupnfjr) -->
+                    </seq>
+                </par>
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- START [RssFeedModule] rss 5 (cl10p1bs8807121xnqd5vqcxxi) -->
+                        <seq>
+                            <ref src="https://stage.signagelab.com/modules/rss-feed.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10p1bs8807121xnqd5vqcxxi&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=bcde23adb6d4371ebbc2d11711c13a47" preload="false" type="application/widget" dur="15s" region="cl10oxasf667791xnqlrpy9w4k"/>
+                        </seq>
+                        <!-- END [RssFeedModule] rss 5 (cl10p1bs8807121xnqd5vqcxxi) -->
+                        <!-- START [RssFeedModule] rss 3 (cl10p0czq764161xnqeah5m90j) -->
+                        <seq>
+                            <ref src="https://stage.signagelab.com/modules/rss-feed.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10p0czq764161xnqeah5m90j&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=bcde23adb6d4371ebbc2d11711c13a47" preload="false" type="application/widget" dur="15s" region="cl10oxasf667791xnqlrpy9w4k"/>
+                        </seq>
+                        <!--                        &lt;!&ndash; END [RssFeedModule] rss 3 (cl10p0czq764161xnqeah5m90j) &ndash;&gt;-->
+                        <!--                        &lt;!&ndash; START [RssFeedModule] RSS Feed (cl10oz70s720401xnqvo54agmu) &ndash;&gt;-->
+                        <!--                        <seq>-->
+                        <!--                            <ref src="https://stage.signagelab.com/modules/rss-feed.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10oz70s720401xnqvo54agmu&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=bcde23adb6d4371ebbc2d11711c13a47" type="application/widget" dur="15s" region="cl10oxasf667791xnqlrpy9w4k"/>-->
+                        <!--                        </seq>-->
+                        <!--                        &lt;!&ndash; END [RssFeedModule] RSS Feed (cl10oz70s720401xnqvo54agmu) &ndash;&gt;-->
+                        <!--                        &lt;!&ndash; START [RssFeedModule] Rss 2 (cl10ozrw5741921xnqt7mx3hz2) &ndash;&gt;-->
+                        <!--                        <seq>-->
+                        <!--                            <ref src="https://stage.signagelab.com/modules/rss-feed.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10ozrw5741921xnqt7mx3hz2&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=bcde23adb6d4371ebbc2d11711c13a47" type="application/widget" dur="15s" region="cl10oxasf667791xnqlrpy9w4k"/>-->
+                        <!--                        </seq>-->
+                        <!--                        &lt;!&ndash; END [RssFeedModule] Rss 2 (cl10ozrw5741921xnqt7mx3hz2) &ndash;&gt;-->
+                        <!--                        &lt;!&ndash; START [RssFeedModule] rss 4 (cl10p0uqw785591xnqtpjkfozr) &ndash;&gt;-->
+                        <!--                        <seq>-->
+                        <!--                            <ref src="https://stage.signagelab.com/modules/rss-feed.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com&amp;campaignId=cl10p0uqw785591xnqtpjkfozr&amp;deviceId=cl0rx9eq21195011xkohsg1a6dm&amp;hash=bcde23adb6d4371ebbc2d11711c13a47" type="application/widget" dur="15s" region="cl10oxasf667791xnqlrpy9w4k"/>-->
+                        <!--                        </seq>-->
+                        <!--                        &lt;!&ndash; END [RssFeedModule] rss 4 (cl10p0uqw785591xnqtpjkfozr) &ndash;&gt;-->
+                    </seq>
+                </par>
+            </par>
+        </par>
+    </body>
+</smil>
