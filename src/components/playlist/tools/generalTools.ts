@@ -7,11 +7,7 @@ import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
 const hasher = require('node-object-hash');
 
-import {
-	BackupPlaylist,
-	CurrentlyPlayingRegion,
-	PlaylistElement,
-} from '../../../models/playlistModels';
+import { BackupPlaylist, CurrentlyPlayingRegion, PlaylistElement } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
@@ -62,25 +58,39 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 			if (resultObject[attr].indexOf('%') > 0) {
 				switch (attr) {
 					case 'width':
-						resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
+						resultObject.width = Math.floor(
+							(document.documentElement.clientWidth * parseInt(resultObject.width)) / 100,
+						);
 						break;
 					case 'height':
-						resultObject.height = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.height) / 100);
+						resultObject.height = Math.floor(
+							(document.documentElement.clientHeight * parseInt(resultObject.height)) / 100,
+						);
 						break;
 					case 'left':
-						resultObject.left = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.left) / 100);
+						resultObject.left = Math.floor(
+							(document.documentElement.clientWidth * parseInt(resultObject.left)) / 100,
+						);
 						break;
 					case 'top':
-						resultObject.top = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.top) / 100);
+						resultObject.top = Math.floor(
+							(document.documentElement.clientHeight * parseInt(resultObject.top)) / 100,
+						);
 						break;
 					case 'bottom':
-						resultObject.top = Math.floor(document.documentElement.clientHeight -
-							(document.documentElement.clientHeight * parseInt(resultObject.bottom) / 100 + parseInt(resultObject.height)));
+						resultObject.top = Math.floor(
+							document.documentElement.clientHeight -
+								((document.documentElement.clientHeight * parseInt(resultObject.bottom)) / 100 +
+									parseInt(resultObject.height)),
+						);
 						delete resultObject.bottom;
 						break;
 					case 'right':
-						resultObject.left = Math.floor(document.documentElement.clientWidth -
-							(document.documentElement.clientWidth * parseInt(resultObject.right) / 100 + parseInt(resultObject.width)));
+						resultObject.left = Math.floor(
+							document.documentElement.clientWidth -
+								((document.documentElement.clientWidth * parseInt(resultObject.right)) / 100 +
+									parseInt(resultObject.width)),
+						);
 						delete resultObject.right;
 						break;
 					default:
@@ -91,11 +101,15 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 
 			switch (attr) {
 				case 'bottom':
-					resultObject.top = document.documentElement.clientHeight - (parseInt(resultObject.bottom) + parseInt(resultObject.height));
+					resultObject.top =
+						document.documentElement.clientHeight -
+						(parseInt(resultObject.bottom) + parseInt(resultObject.height));
 					delete resultObject.bottom;
 					break;
 				case 'right':
-					resultObject.left = document.documentElement.clientWidth - (parseInt(resultObject.right) + parseInt(resultObject.width));
+					resultObject.left =
+						document.documentElement.clientWidth -
+						(parseInt(resultObject.right) + parseInt(resultObject.width));
 					delete resultObject.right;
 					break;
 				default:
@@ -108,10 +122,10 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	let regionInfo = <RegionAttributes> get(regionObject.region, regionName, regionObject.rootLayout);
+	let regionInfo = <RegionAttributes>get(regionObject.region, regionName, regionObject.rootLayout);
 	// unify regionName for further uses in code ( xml:id -> regionName )
 	if (regionInfo.hasOwnProperty(XmlTags.regionNameAlias)) {
-		regionInfo.regionName = <string> regionInfo[XmlTags.regionNameAlias];
+		regionInfo.regionName = <string>regionInfo[XmlTags.regionNameAlias];
 		delete regionInfo[XmlTags.regionNameAlias];
 	}
 
@@ -123,8 +137,8 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
 	regionInfo = {
 		...regionInfo,
-		...(!isNil(regionInfo.top) && {top: parseInt(String(regionInfo.top))}),
-		...(!isNil(regionInfo.left) && {left: parseInt(String(regionInfo.left))}),
+		...(!isNil(regionInfo.top) && { top: parseInt(String(regionInfo.top)) }),
+		...(!isNil(regionInfo.left) && { left: parseInt(String(regionInfo.left)) }),
 		width: parseInt(String(regionInfo.width)),
 		height: parseInt(String(regionInfo.height)),
 	};
@@ -135,8 +149,9 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
  * extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
  * @param value - represents SMIL media file object
  */
-export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget | SMILImage):
-	SMILVideo | SMILAudio | SMILWidget | SMILImage {
+export function extractAdditionalInfo(
+	value: SMILVideo | SMILAudio | SMILWidget | SMILImage,
+): SMILVideo | SMILAudio | SMILWidget | SMILImage {
 	// extract additional css info which are not specified in region tag.
 	Object.keys(value).forEach((attr: string) => {
 		if (XmlTags.additionalCssExtract.includes(attr)) {

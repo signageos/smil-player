@@ -1,5 +1,5 @@
 import { PriorityObject } from '../../../models/priorityModels';
-import { PriorityDefault } from "../../../enums/priorityEnums";
+import { PriorityDefault } from '../../../enums/priorityEnums';
 
 export function createPriorityObject(priorityClass: PriorityObject, priorityLevel: number): PriorityObject {
 	return {

@@ -1,15 +1,15 @@
-import { CurrentlyPlaying, CurrentlyPlayingPriority, PromiseAwaiting } from "../../../models/playlistModels";
-import { Synchronization } from "../../../models/syncModels";
-import { RegionAttributes } from "../../../models/xmlJsonModels";
-import { debug } from "../tools/generalTools";
-import { isNil } from "lodash";
-import { SMILVideo } from "../../../models/mediaModels";
-import FrontApplet from "@signageos/front-applet/es6/FrontApplet/FrontApplet";
-import { FilesManager } from "../../files/filesManager";
-import { isConditionalExpExpired } from "../tools/conditionalTools";
-import { ExprTag } from "../../../enums/conditionalEnums";
-import { SMILEnums } from "../../../enums/generalEnums";
-import { IPlaylistCommon } from "./IPlaylistCommon";
+import { CurrentlyPlaying, CurrentlyPlayingPriority, PromiseAwaiting } from '../../../models/playlistModels';
+import { Synchronization } from '../../../models/syncModels';
+import { RegionAttributes } from '../../../models/xmlJsonModels';
+import { debug } from '../tools/generalTools';
+import { isNil } from 'lodash';
+import { SMILVideo } from '../../../models/mediaModels';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { FilesManager } from '../../files/filesManager';
+import { isConditionalExpExpired } from '../tools/conditionalTools';
+import { ExprTag } from '../../../enums/conditionalEnums';
+import { SMILEnums } from '../../../enums/generalEnums';
+import { IPlaylistCommon } from './IPlaylistCommon';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: FrontApplet;
@@ -33,11 +33,11 @@ export class PlaylistCommon implements IPlaylistCommon {
 	// disables endless loop for media playing
 	public disableLoop = (value: boolean) => {
 		this.cancelFunction.push(value);
-	}
+	};
 
 	protected getCancelFunction = (): boolean => {
 		return this.cancelFunction[this.cancelFunction.length - 1];
-	}
+	};
 
 	/**
 	 * runs function given as parameter in endless loop
@@ -46,7 +46,10 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 * @param conditionalExpr
 	 */
 	protected runEndlessLoop = async (fn: Function, version: number = 0, conditionalExpr: string = '') => {
-		while (!this.cancelFunction[version] && (conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr }))) {
+		while (
+			!this.cancelFunction[version] &&
+			(conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr }))
+		) {
 			try {
 				await fn();
 			} catch (err) {
@@ -54,23 +57,30 @@ export class PlaylistCommon implements IPlaylistCommon {
 				throw err;
 			}
 		}
-	}
+	};
 
 	protected stopAllContent = async () => {
 		for (let [, region] of Object.entries(this.currentlyPlaying)) {
-			if ('regionInfo' in region && region.regionInfo.regionName !== SMILEnums.defaultRegion
-				&& region.regionInfo.regionName !== 'fullScreenTrigger') {
+			if (
+				'regionInfo' in region &&
+				region.regionInfo.regionName !== SMILEnums.defaultRegion &&
+				region.regionInfo.regionName !== 'fullScreenTrigger'
+			) {
 				await this.cancelPreviousMedia(region.regionInfo);
 			}
 		}
-	}
+	};
 
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
 	 */
 	protected cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
-		debug('Cancelling media in region: %s with tag: %s', regionInfo.regionName, this.currentlyPlaying[regionInfo.regionName]?.media);
+		debug(
+			'Cancelling media in region: %s with tag: %s',
+			regionInfo.regionName,
+			this.currentlyPlaying[regionInfo.regionName]?.media,
+		);
 		switch (this.currentlyPlaying[regionInfo.regionName]?.media) {
 			case 'video':
 				await this.cancelPreviousVideo(regionInfo);
@@ -82,7 +92,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				debug('Element not supported for cancellation');
 				break;
 		}
-	}
+	};
 
 	/**
 	 * sets element which played in current region before currently playing element invisible ( image, widget, video )
@@ -95,7 +105,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				debug('html element was already cancelled');
 				return;
 			}
-			const element = <HTMLImageElement> document.getElementById((this.currentlyPlaying[regionInfo.regionName]).id);
+			const element = <HTMLImageElement>document.getElementById(this.currentlyPlaying[regionInfo.regionName].id);
 			element.style.visibility = 'hidden';
 
 			// previous widget was cancelled, remove src to improve playback performance
@@ -108,7 +118,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 		} catch (err) {
 			await this.cancelPreviousVideo(regionInfo);
 		}
-	}
+	};
 
 	/**
 	 * removes video from DOM which played in current region before currently playing element ( image, widget or video )
@@ -124,7 +134,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 
 			this.currentlyPlaying[regionInfo.regionName].player = 'stop';
 
-			const video = <SMILVideo> this.currentlyPlaying[regionInfo.regionName];
+			const video = <SMILVideo>this.currentlyPlaying[regionInfo.regionName];
 			const sosVideoObject = isNil(video.isStream) ? this.sos.video : this.sos.stream;
 			const videoElement = isNil(video.isStream) ? 'video' : 'stream';
 			const elementUrl = isNil(video.isStream) ? video.localFilePath : video.src;
@@ -151,5 +161,5 @@ export class PlaylistCommon implements IPlaylistCommon {
 		} catch (err) {
 			console.log('error during video cancellation');
 		}
-	}
+	};
 }

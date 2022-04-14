@@ -1,26 +1,25 @@
-import { PlaylistElement, PlaylistOptions } from "../../../models/playlistModels";
-import { TriggerList } from "../../../models/triggerModels";
-import { SMILFileObject } from "../../../models/filesModels";
-import { IStorageUnit, IVideoFile } from "@signageos/front-applet/es6/FrontApplet/FileSystem/types";
-import { SMILTriggersEnum } from "../../../enums/triggerEnums";
-import { XmlTags } from "../../../enums/xmlEnums";
-import { extractAdditionalInfo, getRegionInfo, removeDigits } from "../tools/generalTools";
-import { FileStructure } from "../../../enums/fileEnums";
-import { HtmlEnum } from "../../../enums/htmlEnums";
-import { SMILEnums } from "../../../enums/generalEnums";
-import { convertRelativePathToAbsolute, getFileName, getProtocol } from "../../files/tools";
-import { createDomElement } from "../tools/htmlTools";
-import { isNil, isObject } from "lodash";
-import FrontApplet from "@signageos/front-applet/es6/FrontApplet/FrontApplet";
-import { FilesManager } from "../../files/filesManager";
-import Debug from "debug";
-import { PlaylistCommon } from "../playlistCommon/playlistCommon";
-import { IPlaylistDataPrepare } from "./IPlaylistDataPrepare";
+import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
+import { TriggerList } from '../../../models/triggerModels';
+import { SMILFileObject } from '../../../models/filesModels';
+import { IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { SMILTriggersEnum } from '../../../enums/triggerEnums';
+import { XmlTags } from '../../../enums/xmlEnums';
+import { extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
+import { FileStructure } from '../../../enums/fileEnums';
+import { HtmlEnum } from '../../../enums/htmlEnums';
+import { SMILEnums } from '../../../enums/generalEnums';
+import { convertRelativePathToAbsolute, getFileName, getProtocol } from '../../files/tools';
+import { createDomElement } from '../tools/htmlTools';
+import { isNil, isObject } from 'lodash';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { FilesManager } from '../../files/filesManager';
+import Debug from 'debug';
+import { PlaylistCommon } from '../playlistCommon/playlistCommon';
+import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
 
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
-
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
 	}
@@ -35,15 +34,20 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * @param triggerName - name of the trigger element
 	 */
 	public getAllInfo = async (
-		playlist: PlaylistElement | PlaylistElement[] | TriggerList, smilObject: SMILFileObject, internalStorageUnit: IStorageUnit,
-		smilUrl: string, isTrigger: boolean = false, triggerName: string = '',
+		playlist: PlaylistElement | PlaylistElement[] | TriggerList,
+		smilObject: SMILFileObject,
+		internalStorageUnit: IStorageUnit,
+		smilUrl: string,
+		isTrigger: boolean = false,
+		triggerName: string = '',
 	): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
 		const regionSyncIndex: { [key: string]: number } = {};
 		for (let [key, loopValue] of Object.entries(playlist)) {
-			triggerName = (key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat)) ? loopValue : triggerName;
+			triggerName =
+				key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat) ? loopValue : triggerName;
 			// skip processing string values like "repeatCount": "indefinite"
 			if (!isObject(loopValue)) {
 				continue;
@@ -82,7 +86,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.src = convertRelativePathToAbsolute(elem.src, smilUrl);
 					}
 
-					const mediaFile = <IVideoFile> await this.sos.fileSystem.getFile({
+					const mediaFile = <IVideoFile>await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
 					});
@@ -93,7 +97,9 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					// only for videos downloaded to local storage ( not for streams )
 					if (key.startsWith('video')) {
 						if (mediaFile) {
-							elem.fullVideoDuration = mediaFile.videoDurationMs ? mediaFile.videoDurationMs : SMILEnums.defaultVideoDuration;
+							elem.fullVideoDuration = mediaFile.videoDurationMs
+								? mediaFile.videoDurationMs
+								: SMILEnums.defaultVideoDuration;
 						}
 
 						// extract protocol for video streams
@@ -112,11 +118,18 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					elem.syncIndex = regionSyncIndex[elem.regionInfo.regionName];
 					extractAdditionalInfo(elem);
 
-					if ((key.startsWith(SMILEnums.img) || key.startsWith('ref')) && elem.hasOwnProperty(SMILEnums.transitionType)) {
+					if (
+						(key.startsWith(SMILEnums.img) || key.startsWith('ref')) &&
+						elem.hasOwnProperty(SMILEnums.transitionType)
+					) {
 						if (!isNil(smilObject.transition[elem.transIn])) {
 							elem.transitionInfo = smilObject.transition[elem.transIn];
 						} else {
-							debug(`No corresponding transition found for element: %O, with transitionType: %s`, elem, elem.transIn);
+							debug(
+								`No corresponding transition found for element: %O, with transitionType: %s`,
+								elem,
+								elem.transIn,
+							);
 						}
 					}
 
@@ -136,7 +149,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isTrigger, triggerName);
 			}
 		}
-	}
+	};
 
 	/**
 	 * Performs all necessary actions needed to process playlist ( delete unused files, extract widgets, extract regionInfo for each media )
@@ -144,7 +157,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
 	 */
-	public manageFilesAndInfo = async (smilObject: SMILFileObject, internalStorageUnit: IStorageUnit, smilUrl: string) => {
+	public manageFilesAndInfo = async (
+		smilObject: SMILFileObject,
+		internalStorageUnit: IStorageUnit,
+		smilUrl: string,
+	) => {
 		await this.files.currentFilesSetup(smilObject.ref, internalStorageUnit, smilObject, smilUrl);
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
@@ -154,5 +171,5 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
 		debug('All elements info extracted');
-	}
+	};
 }

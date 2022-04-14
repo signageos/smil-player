@@ -4,7 +4,7 @@ import * as querystring from 'querystring';
 import * as URLVar from 'url';
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
-import { ItemType } from "../../../models/reportingModels";
+import { ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
 import { FileStructure, WidgetExtensions } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
@@ -34,7 +34,10 @@ export function getFileName(url: string) {
 	const parsedUrl = URLVar.parse(url);
 	const filePathChecksum = parsedUrl.host ? `_${checksumString(parsedUrl.host + parsedUrl.pathname, 8)}` : '';
 	const fileName = path.basename(parsedUrl.pathname ?? url);
-	const sanitizedExtname = path.extname(parsedUrl.pathname ?? url).replace(/[^\w\.\-]+/gi, '').substr(0, 10);
+	const sanitizedExtname = path
+		.extname(parsedUrl.pathname ?? url)
+		.replace(/[^\w\.\-]+/gi, '')
+		.substr(0, 10);
 	const sanitizedFileName = decodeURIComponent(fileName.substr(0, fileName.length - sanitizedExtname.length))
 		.replace(/[^\w\.\-]+/gi, '-')
 		.substr(0, 10);
@@ -54,7 +57,11 @@ export function convertRelativePathToAbsolute(src: string, smilFileUrl: string):
 	return isRelativePath(src) ? `${getPath(smilFileUrl)}/${src}` : src;
 }
 
-export function createVersionedUrl(sourceUrl: string, playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
+export function createVersionedUrl(
+	sourceUrl: string,
+	playlistVersion: number = 0,
+	smilUrlVersion: string | null = null,
+): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
 	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
@@ -63,7 +70,10 @@ export function createVersionedUrl(sourceUrl: string, playlistVersion: number = 
 }
 
 export function generateSmilUrlVersion(playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
-	if (!isNil(smilUrlVersion) && playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1))) {
+	if (
+		!isNil(smilUrlVersion) &&
+		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1))
+	) {
 		return smilUrlVersion;
 	}
 
@@ -130,8 +140,10 @@ export function createSourceReportObject(localFilePath: string, fileSrc: string,
 }
 
 export function shouldNotDownload(localFilePath: string, file: MergedDownloadList): boolean {
-	return (localFilePath === FileStructure.widgets && !isWidgetUrl(file.src))
-		|| (localFilePath === FileStructure.videos && file.hasOwnProperty('isStream'));
+	return (
+		(localFilePath === FileStructure.widgets && !isWidgetUrl(file.src)) ||
+		(localFilePath === FileStructure.videos && file.hasOwnProperty('isStream'))
+	);
 }
 
 export function isWidgetUrl(widgetUrl: string): boolean {

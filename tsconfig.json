@@ -20,19 +20,8 @@
 		"emitDecoratorMetadata": true,
 		"esModuleInterop": true,
 		"lib": ["es2017", "scripthost", "dom"],
-		"typeRoots": [
-			"node_modules/@types/",
-			"node_modules/@signageos/lib/libs/"
-		]
+		"typeRoots": ["node_modules/@types/", "node_modules/@signageos/lib/libs/"]
 	},
-	"include": [
-		"src/**/*.ts",
-		"src/**/*.tsx",
-		"test/**/*.ts",
-		"libs/chrome/chrome-plugin.d.ts"
-	],
-	"exclude": [
-		"src/webWorker.ts",
-		"cypress/**/*.ts"
-	]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "libs/chrome/chrome-plugin.d.ts"],
+	"exclude": ["src/webWorker.ts", "cypress/**/*.ts"]
 }

@@ -8,12 +8,12 @@ import {
 	removeDataFromPlaylist,
 } from './tools';
 import { XmlTags } from '../../enums/xmlEnums';
-import { TriggerList, } from '../../models/triggerModels';
+import { TriggerList } from '../../models/triggerModels';
 import { DownloadsList, SMILFileObject } from '../../models/filesModels';
 import { XmlSmilObject } from '../../models/xmlJsonModels';
 import { SMILPlaylist } from '../../models/playlistModels';
-import { parseBooleans } from "xml2js/lib/processors";
-import { IXmlParser } from "./IXmlParser";
+import { parseBooleans } from 'xml2js/lib/processors';
+import { IXmlParser } from './IXmlParser';
 
 export class XmlParser implements IXmlParser {
 	private tagNameCounter: number = 0;
@@ -50,7 +50,7 @@ export class XmlParser implements IXmlParser {
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
 		parseHeadInfo(xmlObject.smil.head, regions, triggerList);
-		playableMedia.playlist = <SMILPlaylist> xmlObject.smil.body;
+		playableMedia.playlist = <SMILPlaylist>xmlObject.smil.body;
 
 		// traverse json as tree of nodes
 		extractDataFromPlaylist(playableMedia, downloads, triggerList);
@@ -62,7 +62,7 @@ export class XmlParser implements IXmlParser {
 		debug('Extracted downloads object: %O', downloads);
 
 		return Object.assign({}, regions, playableMedia, downloads, triggerList, transitions);
-	}
+	};
 
 	/**
 	 * adds unique number to each media attribute in json eg. video => video0
@@ -73,5 +73,5 @@ export class XmlParser implements IXmlParser {
 			return `${tagName}${this.tagNameCounter++}`;
 		}
 		return tagName;
-	}
+	};
 }

@@ -15,7 +15,7 @@ export enum SMILTriggersEnum {
 }
 
 export const FunctionKeys: {
-	[key: string]: string,
+	[key: string]: string;
 } = {
 	Shift: 'Shift',
 	Control: 'Control',

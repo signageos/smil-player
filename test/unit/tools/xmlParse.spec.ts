@@ -13,7 +13,6 @@ import * as chai from 'chai';
 const expect = chai.expect;
 const xmlParser = new XmlParser();
 describe('XmlParse tools component', () => {
-
 	describe('XmlParse tools component tests', () => {
 		it('Should parse whole xml file correctly file broken smil', async () => {
 			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/broken.smil', 'utf8');
@@ -104,22 +103,22 @@ describe('XmlParse tools component', () => {
 
 		it('Should parse nested regions correctly -  single region fixed values', async () => {
 			let testingRegion: any = {
-				regionName: "video",
-				left: "10",
-				top: "10",
-				width: "1280",
-				height: "720",
-				"z-index": "1",
-				backgroundColor: "#FFFFFF",
-				mediaAlign: "topLeft",
+				regionName: 'video',
+				left: '10',
+				top: '10',
+				width: '1280',
+				height: '720',
+				'z-index': '1',
+				backgroundColor: '#FFFFFF',
+				mediaAlign: 'topLeft',
 				region: {
-					regionName: "video1",
-					left: "0",
-					top: "0",
-					width: "640",
-					height: "720",
-					"z-index": "1",
-					backgroundColor: "transparent",
+					regionName: 'video1',
+					left: '0',
+					top: '0',
+					width: '640',
+					height: '720',
+					'z-index': '1',
+					backgroundColor: 'transparent',
 				},
 			};
 
@@ -134,31 +133,34 @@ describe('XmlParse tools component', () => {
 
 		it('Should parse nested regions correctly - multiple regions fixed values', async () => {
 			let testingRegion: any = {
-				regionName: "video",
-				left: "10",
-				top: "10",
-				width: "1280",
-				height: "720",
-				"z-index": "1",
-				backgroundColor: "#FFFFFF",
-				mediaAlign: "topLeft",
-				region: [{
-					regionName: "video1",
-					left: "0",
-					top: "0",
-					width: "640",
-					height: "720",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}, {
-					regionName: "video2",
-					left: "640",
-					top: "0",
-					width: "640",
-					height: "720",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}],
+				regionName: 'video',
+				left: '10',
+				top: '10',
+				width: '1280',
+				height: '720',
+				'z-index': '1',
+				backgroundColor: '#FFFFFF',
+				mediaAlign: 'topLeft',
+				region: [
+					{
+						regionName: 'video1',
+						left: '0',
+						top: '0',
+						width: '640',
+						height: '720',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+					{
+						regionName: 'video2',
+						left: '640',
+						top: '0',
+						width: '640',
+						height: '720',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+				],
 			};
 
 			testingRegion = parseNestedRegions(testingRegion);
@@ -174,36 +176,38 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].left).to.be.eql(650);
 			expect(testingRegion.region[1].width).to.be.eql(640);
 			expect(testingRegion.region[1].height).to.be.eql(720);
-
 		});
 
 		it('Should parse nested regions correctly - multiple regions percentage values', async () => {
 			let testingRegion: any = {
-				regionName: "video",
-				left: "10",
-				top: "10",
-				width: "1280",
-				height: "720",
-				"z-index": "1",
-				backgroundColor: "#FFFFFF",
-				mediaAlign: "topLeft",
-				region: [{
-					regionName: "video1",
-					left: "10%",
-					top: "10%",
-					width: "50%",
-					height: "100%",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}, {
-					regionName: "video2",
-					left: "10%",
-					top: "0%",
-					width: "50%",
-					height: "50%",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}],
+				regionName: 'video',
+				left: '10',
+				top: '10',
+				width: '1280',
+				height: '720',
+				'z-index': '1',
+				backgroundColor: '#FFFFFF',
+				mediaAlign: 'topLeft',
+				region: [
+					{
+						regionName: 'video1',
+						left: '10%',
+						top: '10%',
+						width: '50%',
+						height: '100%',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+					{
+						regionName: 'video2',
+						left: '10%',
+						top: '0%',
+						width: '50%',
+						height: '50%',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+				],
 			};
 
 			testingRegion = parseNestedRegions(testingRegion);
@@ -219,36 +223,38 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].left).to.be.eql(138);
 			expect(testingRegion.region[1].width).to.be.eql(640);
 			expect(testingRegion.region[1].height).to.be.eql(360);
-
 		});
 
 		it('Should parse nested regions correctly - multiple regions bottom, right fixed values', async () => {
 			let testingRegion: any = {
-				regionName: "video",
-				left: "10",
-				top: "10",
-				width: "1280",
-				height: "720",
-				"z-index": "1",
-				backgroundColor: "#FFFFFF",
-				mediaAlign: "topLeft",
-				region: [{
-					regionName: "video1",
-					right: "50",
-					bottom: "100",
-					width: "640",
-					height: "320",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}, {
-					regionName: "video2",
-					right: "300",
-					bottom: "100",
-					width: "640",
-					height: "720",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}],
+				regionName: 'video',
+				left: '10',
+				top: '10',
+				width: '1280',
+				height: '720',
+				'z-index': '1',
+				backgroundColor: '#FFFFFF',
+				mediaAlign: 'topLeft',
+				region: [
+					{
+						regionName: 'video1',
+						right: '50',
+						bottom: '100',
+						width: '640',
+						height: '320',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+					{
+						regionName: 'video2',
+						right: '300',
+						bottom: '100',
+						width: '640',
+						height: '720',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+				],
 			};
 
 			testingRegion = parseNestedRegions(testingRegion);
@@ -264,36 +270,38 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].left).to.be.eql(340);
 			expect(testingRegion.region[1].width).to.be.eql(640);
 			expect(testingRegion.region[1].height).to.be.eql(720);
-
 		});
 
 		it('Should parse nested regions correctly - multiple regions bottom, right percentage values', async () => {
 			let testingRegion: any = {
-				regionName: "video",
-				left: "10",
-				top: "10",
-				width: "1280",
-				height: "720",
-				"z-index": "1",
-				backgroundColor: "#FFFFFF",
-				mediaAlign: "topLeft",
-				region: [{
-					regionName: "video1",
-					right: "10%",
-					bottom: "10%",
-					width: "50%",
-					height: "50%",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}, {
-					regionName: "video2",
-					right: "0%",
-					bottom: "0%",
-					width: "50%",
-					height: "50%",
-					"z-index": "1",
-					backgroundColor: "transparent",
-				}],
+				regionName: 'video',
+				left: '10',
+				top: '10',
+				width: '1280',
+				height: '720',
+				'z-index': '1',
+				backgroundColor: '#FFFFFF',
+				mediaAlign: 'topLeft',
+				region: [
+					{
+						regionName: 'video1',
+						right: '10%',
+						bottom: '10%',
+						width: '50%',
+						height: '50%',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+					{
+						regionName: 'video2',
+						right: '0%',
+						bottom: '0%',
+						width: '50%',
+						height: '50%',
+						'z-index': '1',
+						backgroundColor: 'transparent',
+					},
+				],
 			};
 
 			testingRegion = parseNestedRegions(testingRegion);
@@ -309,7 +317,6 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].left).to.be.eql(650);
 			expect(testingRegion.region[1].width).to.be.eql(640);
 			expect(testingRegion.region[1].height).to.be.eql(360);
-
 		});
 	});
 });

@@ -15,7 +15,7 @@ app.get('/dynamic/:fileName', async (req, res) => {
 	const fileName = req.params.fileName;
 	let fileString = await fs.readFile(`./${TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
 	fileString = fillWallclock(fileString, fileName);
-	res.set({'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml'});
+	res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml' });
 	res.send(fileString);
 });
 

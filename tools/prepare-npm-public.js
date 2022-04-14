@@ -1,23 +1,20 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const packageConfig = require("../package");
+const fs = require('fs');
+const packageConfig = require('../package');
 
 fs.writeFileSync(
-	"./package.json",
+	'./package.json',
 	JSON.stringify(
 		{
 			...packageConfig,
 			publishConfig: {
-				registry: "https://registry.npmjs.org/",
-				access: "public",
+				registry: 'https://registry.npmjs.org/',
+				access: 'public',
 			},
-			files: [
-				'tools',
-				'package.json',
-			],
+			files: ['tools', 'package.json'],
 		},
 		undefined,
 		2,
-	) + "\n",
+	) + '\n',
 );

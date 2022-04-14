@@ -19,12 +19,14 @@ import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';
 
 export function isConditionalExpExpired(
-	element: SMILMediaSingle | PlaylistElement | PlaylistElement[], playerName: string = '', playerId: string = '',
+	element: SMILMediaSingle | PlaylistElement | PlaylistElement[],
+	playerName: string = '',
+	playerId: string = '',
 ): boolean {
 	if (Array.isArray(element)) {
 		return setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
 	}
-	return (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId));
+	return element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId);
 }
 
 /**
@@ -116,11 +118,14 @@ function compareIcsExpr(icsData: string): boolean {
 	return events.some((event) => {
 		const currentDate = generateCurrentDate(false);
 		const closedPastStart = event.rrule?.before(currentDate.toDate(), true);
-		const durationMs = typeof event.duration === 'string'
-			// if duration is in event, parse and use it
-			? parseRFC5545Duration(event.duration)
-			// if no duration in event, get it from difference of start & end date
-			: event.start && event.end ? event.end.valueOf() - event.start.valueOf() : 0;
+		const durationMs =
+			typeof event.duration === 'string'
+				? // if duration is in event, parse and use it
+				  parseRFC5545Duration(event.duration)
+				: // if no duration in event, get it from difference of start & end date
+				event.start && event.end
+				? event.end.valueOf() - event.start.valueOf()
+				: 0;
 		const closedPastEnd = moment(closedPastStart).add(durationMs);
 		return currentDate.isBetween(closedPastStart, closedPastEnd, 'milliseconds', '[]');
 	});
@@ -144,7 +149,9 @@ function compareWeekDayExpr(compareValue: string, comparator: ComparatorChar, is
  */
 function compareSimpleDateExpr(inputValue: string, comparable: ComparableExpr, isUtc: boolean): boolean {
 	const formattedDate = generateCurrentDate(isUtc).format(ConditionalExprFormat.dateFormat);
-	const formattedInputValue = isIsoDate(inputValue) ? moment(inputValue).format(ConditionalExprFormat.dateFormat) : inputValue;
+	const formattedInputValue = isIsoDate(inputValue)
+		? moment(inputValue).format(ConditionalExprFormat.dateFormat)
+		: inputValue;
 
 	return compareValues(formattedDate, formattedInputValue, comparable);
 }
@@ -233,13 +240,14 @@ function parseConditionalExpr(element: string): ParsedExpr {
 
 function detectUnsafeComparator(elementSanitized: string, splitOpts: Options) {
 	// It depends on order of items (more characters has to be first)
-	const allComparators = [
-		...Object.values(ComparatorChar),
-	].sort((a, b) => b.length - a.length);
-	const detected = allComparators.find((comparator) => split(elementSanitized, {
-		...splitOpts,
-		separator: comparator,
-	}).length > 1);
+	const allComparators = [...Object.values(ComparatorChar)].sort((a, b) => b.length - a.length);
+	const detected = allComparators.find(
+		(comparator) =>
+			split(elementSanitized, {
+				...splitOpts,
+				separator: comparator,
+			}).length > 1,
+	);
 	return detected;
 }
 
@@ -293,7 +301,6 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 	}
 
 	if (parsed.func === ConditionalExprFunction.compareConst) {
-
 		const firstParsed = parseConditionalExpr(parsed.args[0]);
 		const secondParsed = parseConditionalExpr(parsed.args[1]);
 		// this is very rare case, where two const values are compared
@@ -312,7 +319,9 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 			constArg = firstParsed;
 			comparable.comparator = comparable.comparator && swapComparator(comparable.comparator);
 		} else {
-			throw new Error(`Comparing two functions are currently not supported. One side has to be const: ${element}`);
+			throw new Error(
+				`Comparing two functions are currently not supported. One side has to be const: ${element}`,
+			);
 		}
 
 		if (funcArg.func === ConditionalExprFunction.ics) {
@@ -355,7 +364,11 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 			if ('func' in parsedFirstFuncArg) {
 				if (parsedFirstFuncArg.func === ConditionalExprFunction.currentDate) {
 					const inputValue = generateCurrentDate(false).format(ConditionalExprFormat.dateAndTimeFormat);
-					return compareValues(parseSubstringAfterExpr(inputValue, delimiter), constArg.constValue, comparable);
+					return compareValues(
+						parseSubstringAfterExpr(inputValue, delimiter),
+						constArg.constValue,
+						comparable,
+					);
 				}
 			} else {
 				throw new Error(`Currently unsupported syntax of substring-after: ${element}`);
@@ -374,24 +387,25 @@ function executeConditionalExpr(element: string, playerName: string = '', player
  */
 function compareValues(firstArgument: string | number, secondArgument: string | number, comparable: ComparableExpr) {
 	// TODO introduce comparison other than "0". It's already available in comparable.compareValue
-	if (firstArgument < secondArgument && (
-		comparable.comparator === ComparatorChar.LT
-		|| comparable.comparator === ComparatorChar.LTE
-	)) {
+	if (
+		firstArgument < secondArgument &&
+		(comparable.comparator === ComparatorChar.LT || comparable.comparator === ComparatorChar.LTE)
+	) {
 		return true;
 	}
 
-	if (firstArgument > secondArgument && (
-		comparable.comparator === ComparatorChar.GT
-		|| comparable.comparator === ComparatorChar.GTE
-	)) {
+	if (
+		firstArgument > secondArgument &&
+		(comparable.comparator === ComparatorChar.GT || comparable.comparator === ComparatorChar.GTE)
+	) {
 		return true;
 	}
 
-	return firstArgument === secondArgument && (
-		comparable.comparator === ComparatorChar.EQ
-		|| comparable.comparator === ComparatorChar.GTE
-		|| comparable.comparator === ComparatorChar.LTE
+	return (
+		firstArgument === secondArgument &&
+		(comparable.comparator === ComparatorChar.EQ ||
+			comparable.comparator === ComparatorChar.GTE ||
+			comparable.comparator === ComparatorChar.LTE)
 	);
 }
 
@@ -400,7 +414,8 @@ function isIsoDate(dateString: string) {
 		return false;
 	}
 	let d = moment(dateString).utc(true);
-	const stringDate = d.toISOString().indexOf('Z') > -1 ? d.toISOString().substring(0, d.toISOString().length - 5) : d.toISOString();
+	const stringDate =
+		d.toISOString().indexOf('Z') > -1 ? d.toISOString().substring(0, d.toISOString().length - 5) : d.toISOString();
 	return stringDate === dateString;
 }
 
