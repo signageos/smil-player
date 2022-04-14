@@ -47,6 +47,11 @@ export class SmilPlayer implements ISmilPlayer {
 		debug('sOS is ready');
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
+
+		if (isNil(smilUrl)) {
+			throw new Error('No valid smil url provided');
+		}
+
 		smilUrl = removeWhitespace(smilUrl);
 
 		debug('Smil file url is: %s', smilUrl);
