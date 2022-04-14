@@ -16,119 +16,19 @@
             background: #18182C;
         }
 
-        #headline {
-            position: absolute;
-            left: 4.95%;
-            right: 75.89%;
-            top: 22.04%;
-            bottom: 70.56%;
-            width: 80%;
-
-            font-family: Muli;
-            font-style: normal;
-            font-weight: 800;
-            font-size: 64px;
-            line-height: 80px;
-
-            color: #545472;
+        @media (orientation: landscape) {
+            body {
+                background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080.jpg') no-repeat center center fixed;
+            }
+        }
+        @media (orientation: portrait) {
+            body {
+                background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080-1.jpg') no-repeat center center fixed;
+            }
         }
 
-        #comment {
-            /* Add your SMIL file URL in the field below and press ENTER */
-
-            position: absolute;
-            left: 4.95%;
-            right: 28.44%;
-            top: 32.13%;
-            bottom: 62.69%;
-
-            font-family: Muli;
-            font-style: normal;
-            font-weight: 800;
-            font-size: 45px;
-            line-height: 56px;
-
-            color: #72727D;
-
-            width: 100vw;
-        }
-
-        #smilForm {
-            position: absolute;
-            left: 4.95%;
-            right: 86.98%;
-            top: 41.11%;
-            bottom: 56.11%;
-            width: 80vw;
-        }
-        #SMILFormText {
-            float: left;
-            font-family: Muli;
-            font-style: normal;
-            font-weight: 800;
-            font-size: 24px;
-            line-height: 53px;
-            text-align: right;
-
-            color: #FFFFFF;
-            margin-right: 16px;
-
-            width: 155px;
-
-        }
-
-        #SMILUrlWrapper {
-            float: left;
-            width: calc(100% - 180px);
-
-        }
-
-        #SMILUrl {
-            width: 100%;
-            background: #6B6B90;
-            border: 2px solid #ABABCA;
-            box-sizing: border-box;
-        }
-
-        #error {
-            position: absolute;
-            left: 40.36%;
-            right: 40.31%;
-            top: 93.43%;
-            bottom: 0%;
-
-            background: #CF5C50;
-            border-radius: 4px;
-
-            height: 70px;
-            display: none;
-
-        }
-
-        input[value='https://'] {
-            font-family: Muli;
-            font-style: normal;
-            font-weight: 800;
-            font-size: 24px;
-            line-height: 30px;
-
-            color: #FFFFFF;
-
-            height: 53px;
-
-        }
-
-        #errorText {
-            font-family: Muli;
-            font-style: normal;
-            font-weight: 800;
-            font-size: 24px;
-            line-height: 70px;
-            color: #FFFFFF;
-            text-align: center;
-            display: none;
-        }
     </style>
+
 </head>
 <body>
 <div id="headline">
