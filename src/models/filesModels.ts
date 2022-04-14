@@ -13,8 +13,8 @@ export type DownloadsList = {
 };
 
 export type CheckETagFunctions = {
-	fileEtagPromisesMedia: Promise<any>[],
-	fileEtagPromisesSMIL: Promise<any>[],
+	fileEtagPromisesMedia: Promise<void>[],
+	fileEtagPromisesSMIL: Promise<void>[],
 };
 
 export type SMILFile = {

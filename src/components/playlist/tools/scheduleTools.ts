@@ -104,7 +104,7 @@ export function findDuration(elem: PlaylistElement): string | undefined {
 			return <string> value;
 		}
 		if (isObject(value) && removeDigits(key) !== 'img' && removeDigits(key) !== 'ref' && removeDigits(key) !== 'video') {
-			return findDuration(<any> value);
+			return findDuration(value);
 		}
 	}
 }
