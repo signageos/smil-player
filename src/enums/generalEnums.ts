@@ -12,6 +12,7 @@ export enum SMILEnums {
 	metaContent = 'content',
 	metaLog = 'log',
 	onlySmilUpdate = 'onlySmilUpdate',
+	syncServer = 'syncServerUrl',
 }
 
 export const parentGenerationRemove = [

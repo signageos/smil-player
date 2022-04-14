@@ -1,10 +1,19 @@
 import { PriorityObject } from './priorityModels';
 import { SMILMedia, SMILVideo, SosHtmlElement } from './mediaModels';
+import { Synchronization } from "./syncModels";
 
 export type PrefetchObject = {
 	prefetch: {
 		src: string,
 	},
+};
+
+export type PlaylistOptions = {
+	cancelFunction: boolean[],
+	currentlyPlaying: CurrentlyPlaying,
+	promiseAwaiting: PromiseAwaiting,
+	currentlyPlayingPriority: CurrentlyPlayingPriority,
+	synchronization: Synchronization,
 };
 
 export type BackupElement = {
@@ -37,8 +46,10 @@ export type CurrentlyPlaying = {
 
 export type PlayingInfo = {
 	player?: string,
-	promiseFunction?: any[],
-	nextElement?: any,
+	promiseFunction?: Function[],
+	nextElement: (SosHtmlElement | SMILVideo) & {
+		type?: string,
+	},
 } & SosHtmlElement & SMILVideo;
 
 export type CurrentlyPlayingPriority = {
@@ -60,6 +71,16 @@ export type CurrentlyPlayingRegion = {
 	version: number,
 	controlledPlaylist: number | null,
 	isFirstInPlaylist: SMILMedia;
+};
+
+export type PromiseAwaiting = {
+	[regionName: string]: (SMILVideo | SosHtmlElement) & {
+		promiseFunction?: Promise<void>[],
+	},
+};
+
+export type VideoPreparing = {
+	[regionName: string]: SMILVideo,
 };
 
 export type SMILPlaylist = {

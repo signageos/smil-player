@@ -7,8 +7,9 @@ export enum SMILScheduleEnum {
 	playImmediately = 0,
 	defaultAwait = 200,
 	defaultDuration = 5000,
-	fileCheckDelay = 5000,
+	fileCheckTimeout = 2000,
 	triggerPlaylistVersion = 9999,
 	backupImagePlaylistVersion = 0,
-	infiniteDuration = 999999,
+	// Number.MAX_SAFE_INTEGER
+	infiniteDuration = 9007199254740991,
 }

@@ -1,17 +1,19 @@
 import { RegionAttributes, TransitionAttributes } from './xmlJsonModels';
+import StreamProtocol from "@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol";
 
 export type SMILVideo = {
+	id?: string,
 	expr?: string,
 	src: string,
 	fit?: string,
 	dur?: string,
+	syncIndex: number,
 	fullVideoDuration?: number,
 	isStream?: string,
 	protocol?: string,
 	region: string,
 	lastModified?: number,
 	localFilePath: string,
-	arguments?: any[],
 	playing?: boolean,
 	regionInfo: RegionAttributes,
 	media?: string,
@@ -23,7 +25,9 @@ export type SMILAudio = {
 	expr?: string,
 	src: string,
 	dur: string,
+	syncIndex: number,
 	fit?: string,
+	preload?: boolean,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
 	localFilePath: string,
@@ -38,7 +42,9 @@ export type SMILImage = {
 	src: string,
 	region: string,
 	dur: string,
+	syncIndex: number,
 	fit?: string,
+	preload?: boolean,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
 	transitionInfo?: TransitionAttributes,
@@ -54,9 +60,12 @@ export type SMILWidget = {
 	src: string,
 	region: string,
 	dur: string,
+	syncIndex: number,
 	fit?: string,
+	preload?: boolean,
 	lastModified?: number,
 	regionInfo: RegionAttributes,
+	transitionInfo?: TransitionAttributes,
 	localFilePath: string,
 	playing?: boolean,
 	triggerValue?: string,
@@ -67,6 +76,7 @@ export type SosHtmlElement = {
 	expr?: string,
 	src: string,
 	id: string,
+	dur?: string,
 	media?: string,
 	playing?: boolean,
 	isTrigger?: boolean,
@@ -79,11 +89,14 @@ export type SMILIntro = {
 	expr?: string,
 	video?: SMILVideo,
 	img?: SMILImage,
-	[key: string]: string | SMILImage | SMILVideo | undefined,
+	regionInfo: RegionAttributes,
+	[key: string]: string | SMILImage | SMILVideo | undefined | RegionAttributes,
 };
 
+export type VideoParams = [string, number, number, number, number, keyof typeof StreamProtocol];
+
 export type SMILMedia =
-	SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
+	SMILImage | SMILWidget | SMILVideo;
 
 export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
-export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILAudio;
+export type SMILMediaNoVideo = SMILImage | SMILWidget;
