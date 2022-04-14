@@ -1,16 +1,24 @@
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
+
 const isUrl = require('is-url-superb');
 import moment from 'moment';
 import path from 'path';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
-	getFileName, getPath, createDownloadPath,
-	createLocalFilePath, createJsonStructureMediaInfo, updateJsonObject, mapFileType,
-	createSourceReportObject, isRelativePath, shouldNotDownload, isWidgetUrl,
+	convertRelativePathToAbsolute,
+	createDownloadPath,
+	createJsonStructureMediaInfo,
+	createLocalFilePath,
+	createSourceReportObject,
+	debug,
+	getFileName,
+	isWidgetUrl,
+	mapFileType,
+	shouldNotDownload,
+	updateJsonObject,
 } from './tools';
-import { debug } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
 import {
 	CheckETagFunctions,
@@ -19,8 +27,18 @@ import {
 	SMILFile,
 	SMILFileObject,
 } from '../../models/filesModels';
-import { SMILAudio, SMILImage, SMILMediaNoVideo, SMILVideo, SMILWidget, SosHtmlElement }  from '../../models/mediaModels';
+import {
+	SMILAudio,
+	SMILImage,
+	SMILMediaNoVideo,
+	SMILVideo,
+	SMILWidget,
+	SosHtmlElement,
+} from '../../models/mediaModels';
 import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { sleep } from "../playlist/tools/generalTools";
+import { SMILScheduleEnum } from "../../enums/scheduleEnums";
+import { IFilesManager } from "./IFilesManager";
 
 declare global {
 	interface Window {
@@ -28,7 +46,7 @@ declare global {
 	}
 }
 
-export class Files {
+export class FilesManager implements IFilesManager {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
 	private smilLogging: boolean = false;
@@ -37,11 +55,11 @@ export class Files {
 		this.sos = sos;
 	}
 
-	public setSmilUrl(url: string) {
+	public setSmilUrl = (url: string) => {
 		this.smilFileUrl = url;
 	}
 
-	public setSmiLogging(smilLogging: boolean) {
+	public setSmiLogging = (smilLogging: boolean) => {
 		this.smilLogging = smilLogging;
 	}
 
@@ -62,7 +80,7 @@ export class Files {
 	public sendDownloadReport = async (
 		fileType: ItemType, localFilePath: string, internalStorageUnit: IStorageUnit, fileSrc: string,
 		taskStartDate: Date, errMessage: string | null = null,
-		) => {
+	) => {
 		await this.sendReport({
 			type: 'SMIL.FileDownloaded',
 			itemType: fileType,
@@ -98,27 +116,14 @@ export class Files {
 		});
 	}
 
-	public extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
-		for (let i = 0; i < widgets.length; i++) {
-			try {
-				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
-					debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
-					await this.sos.fileSystem.extractFile(
-						{
-							storageUnit: internalStorageUnit,
-							filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
-						},
-						{
-							storageUnit: internalStorageUnit,
-							filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
-						},
-						'zip',
-					);
-				}
-			} catch (err) {
-				debug(`Unexpected error: %O occurred during widget extract: %O`, err, widgets[i]);
-			}
-		}
+	public currentFilesSetup = async (
+		widgets: SMILWidget[], internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string,
+	) => {
+		await this.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
+		debug('Unused files deleted');
+
+		await this.extractWidgets(widgets, internalStorageUnit);
+		debug('Widgets extracted');
 	}
 
 	public getFileDetails = async (
@@ -193,8 +198,10 @@ export class Files {
 	}
 
 	public readFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
-		return this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
-			filePath: filePath});
+		return this.sos.fileSystem.readFile({
+			storageUnit: internalStorageUnit,
+			filePath: filePath,
+		});
 	}
 
 	public fileExists = async (internalStorageUnit: IStorageUnit, filePath: string) => {
@@ -204,26 +211,10 @@ export class Files {
 		});
 	}
 
-	public getOrCreateMediaInfoFile = async (internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
-		if (!await this.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))) {
-			debug('MediaInfo file not found, creating json object');
-			return createJsonStructureMediaInfo(filesList);
-		}
-
-		const response = await this.sos.fileSystem.readFile({ storageUnit: internalStorageUnit,
-			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)});
-		try {
-			return JSON.parse(response);
-		} catch (error) {
-			debug('Cannot parse smil meta media info', error);
-			return createJsonStructureMediaInfo(filesList);
-		}
-	}
-
 	public parallelDownloadAllFiles = async (
 		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[], localFilePath: string, forceDownload: boolean = false,
-	): Promise<any[]> => {
-		const promises: Promise<any>[] = [];
+	): Promise<Promise<void>[]> => {
+		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(internalStorageUnit, filesList);
@@ -237,10 +228,9 @@ export class Files {
 				debug('Will not download file: %O', file);
 				continue;
 			}
-				// check for local urls to files (media/file.mp4)
-			if (isRelativePath(file.src)) {
-				file.src = `${getPath(this.smilFileUrl)}/${file.src}`;
-			}
+
+			// check for local urls to files (media/file.mp4)
+			file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
 			const shouldUpdate = await this.shouldUpdateLocalFile(internalStorageUnit, localFilePath, file, mediaInfoObject);
 
@@ -296,13 +286,127 @@ export class Files {
 		}
 	}
 
+	public prepareDownloadMediaSetup = async (
+		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject,
+	): Promise<Promise<void>[]> => {
+		let downloadPromises: Promise<void>[] = [];
+		debug(`Starting to download files %O:`, smilObject);
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
+		downloadPromises = downloadPromises.concat(
+			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		return downloadPromises;
+	}
+
+	public prepareLastModifiedSetup = async (
+		internalStorageUnit: IStorageUnit,
+		smilObject: SMILFileObject,
+		smilFile: SMILFile,
+	): Promise<CheckETagFunctions> => {
+		let fileEtagPromisesMedia: Promise<void>[] = [];
+		let fileEtagPromisesSMIL: Promise<void>[] = [];
+		debug(`Starting to check files for updates %O:`, smilObject);
+
+		// check for media updates only if its not switched off in the smil file
+		if (!smilObject.onlySmilFileUpdate) {
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(await this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(await this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(await this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images));
+			fileEtagPromisesMedia =
+				fileEtagPromisesMedia.concat(await this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets));
+		}
+
+		fileEtagPromisesSMIL =
+			fileEtagPromisesSMIL.concat(await this.checkLastModified(internalStorageUnit, [smilFile], FileStructure.rootFolder));
+
+		return {
+			fileEtagPromisesMedia,
+			fileEtagPromisesSMIL,
+		};
+	}
+
+	public fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
+		try {
+			const downloadUrl = createDownloadPath(fileSrc);
+			const authHeaders = window.getAuthHeaders?.(downloadUrl);
+			const promiseRaceArray = [];
+			promiseRaceArray.push(fetch(downloadUrl, {
+				method: 'HEAD',
+				headers: {
+					...authHeaders,
+					Accept: 'application/json',
+				},
+				mode: 'cors',
+			}));
+			promiseRaceArray.push(sleep(SMILScheduleEnum.fileCheckTimeout));
+
+			const response = await Promise.race(promiseRaceArray) as Response;
+
+			const newLastModified = await response.headers.get('last-modified');
+			return newLastModified ? newLastModified : 0;
+		} catch (err) {
+			debug('Unexpected error occured during lastModified fetch: %O', err);
+			return null;
+		}
+	}
+
+	private getOrCreateMediaInfoFile = async (
+		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],
+	): Promise<MediaInfoObject> => {
+		if (!await this.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))) {
+			debug('MediaInfo file not found, creating json object');
+			return createJsonStructureMediaInfo(filesList);
+		}
+
+		const response = await this.sos.fileSystem.readFile({
+			storageUnit: internalStorageUnit,
+			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+		});
+		try {
+			return JSON.parse(response);
+		} catch (error) {
+			debug('Cannot parse smil meta media info', error);
+			return createJsonStructureMediaInfo(filesList);
+		}
+	}
+
+	private extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
+		for (let i = 0; i < widgets.length; i++) {
+			try {
+				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
+					debug(`Extracting widget: %O to destination path: %O`, widgets[i], `${FileStructure.extracted}	${getFileName(widgets[i].src)}`);
+					await this.sos.fileSystem.extractFile(
+						{
+							storageUnit: internalStorageUnit,
+							filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
+						},
+						{
+							storageUnit: internalStorageUnit,
+							filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
+						},
+						'zip',
+					);
+				}
+			} catch (err) {
+				debug(`Unexpected error: %O occurred during widget extract: %O`, err, widgets[i]);
+			}
+		}
+	}
+
 	/**
 	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param smilUrl -  url to smil file from input
 	 */
-	public deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
+	private deleteUnusedFiles = async (internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
 		for (let structPath in FileStructure) {
@@ -335,71 +439,6 @@ export class Files {
 		}
 	}
 
-	public prepareDownloadMediaSetup = async (
-		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject,
-	): Promise<any[]> => {
-		let downloadPromises: Promise<any>[] = [];
-		debug(`Starting to download files %O:`, smilObject);
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos));
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios));
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images));
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets));
-		return downloadPromises;
-	}
-
-	public prepareLastModifiedSetup = async (
-		internalStorageUnit: IStorageUnit,
-		smilObject: SMILFileObject,
-		smilFile: SMILFile,
-	): Promise<CheckETagFunctions>  => {
-		let fileEtagPromisesMedia: Promise<any>[] = [];
-		let fileEtagPromisesSMIL: Promise<any>[] = [];
-		debug(`Starting to check files for updates %O:`, smilObject);
-
-		// check for media updates only if its not switched off in the smil file
-		if (!smilObject.onlySmilFileUpdate) {
-			fileEtagPromisesMedia =
-				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos));
-			fileEtagPromisesMedia =
-				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios));
-			fileEtagPromisesMedia =
-				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images));
-			fileEtagPromisesMedia =
-				fileEtagPromisesMedia.concat(this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets));
-		}
-
-		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(this.checkLastModified(internalStorageUnit, [smilFile], FileStructure.rootFolder));
-
-		return {
-			fileEtagPromisesMedia,
-			fileEtagPromisesSMIL,
-		};
-	}
-
-	public fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
-		try {
-			const downloadUrl = createDownloadPath(fileSrc);
-			const authHeaders = window.getAuthHeaders?.(downloadUrl);
-			const response = await fetch(downloadUrl, {
-				method: 'HEAD',
-				headers: {
-					...authHeaders,
-					Accept: 'application/json',
-				},
-				mode: 'cors',
-			});
-			const newLastModified = await response.headers.get('last-modified');
-			return newLastModified ? newLastModified : 0;
-		} catch (err) {
-			debug('Unexpected error occured during lastModified fetch: %O', err);
-			return null;
-		}
-	}
-
 	/**
 	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
 	 * @param internalStorageUnit - persistent storage unit
@@ -407,13 +446,13 @@ export class Files {
 	 * @param localFilePath - folder structure specifying path to file
 	 */
 	private checkLastModified = async (
-		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],  localFilePath: string,
-		): Promise<any[]> => {
-		let promises: Promise<any>[] = [];
+		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[], localFilePath: string,
+	): Promise<Promise<void>[]> => {
+		let promises: Promise<void>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
 			const file = filesList[i];
 			// do not check streams for update
-			if (localFilePath === FileStructure.videos && !isNil(get(file, 'isStream'))) {
+			if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
 				continue;
 			}
 
@@ -437,7 +476,7 @@ export class Files {
 					promises = promises.concat(await this.parallelDownloadAllFiles(internalStorageUnit, [file], localFilePath, true));
 				}
 			} catch (err) {
-					debug('Error occurred: %O during checking file version: %O', err, file);
+				debug('Error occurred: %O during checking file version: %O', err, file);
 			}
 		}
 		return promises;
