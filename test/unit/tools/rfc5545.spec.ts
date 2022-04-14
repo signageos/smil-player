@@ -1,12 +1,10 @@
 import * as chai from 'chai';
-import { parseRFC5545Duration } from "../../../src/components/playlist/tools/rfc5545";
+import { parseRFC5545Duration } from '../../../src/components/playlist/tools/rfc5545';
 
 const expect = chai.expect;
 
 describe('Playlist tools RFC 5545', function () {
-
 	describe('parseRFC5545Duration', function () {
-
 		// milliseconds representation
 		const SECOND = 1e3;
 		const MINUTE = 60 * SECOND;
@@ -27,9 +25,10 @@ describe('Playlist tools RFC 5545', function () {
 			['PT2H20M', 2 * HOUR + 20 * MINUTE],
 		] as const;
 
-		testCases.forEach(([str, ms]) => it(`should parse ${str} as ${ms}`, function () {
-			expect(parseRFC5545Duration(str)).equal(ms);
-		}));
-
+		testCases.forEach(([str, ms]) =>
+			it(`should parse ${str} as ${ms}`, function () {
+				expect(parseRFC5545Duration(str)).equal(ms);
+			}),
+		);
 	});
 });

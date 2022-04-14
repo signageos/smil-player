@@ -1,4 +1,4 @@
-import { ComparatorChar, ConditionalExprFunction } from "../enums/conditionalEnums";
+import { ComparatorChar, ConditionalExprFunction } from '../enums/conditionalEnums';
 
 export type ComparableExpr = {
 	comparator?: ComparatorChar;

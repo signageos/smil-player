@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment from 'moment';
 
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { SmilScheduleObject } from '../../../models/scheduleModels';
@@ -10,7 +10,10 @@ import { debug } from './generalTools';
  * @param startTime - when to start play media, defined in smil file
  * @param endTime - when to end playback, defined in smil file
  */
-export function parseSmilSchedule(startTime: string, endTime: string = SMILScheduleEnum.endDateAndTimeFuture): SmilScheduleObject {
+export function parseSmilSchedule(
+	startTime: string,
+	endTime: string = SMILScheduleEnum.endDateAndTimeFuture,
+): SmilScheduleObject {
 	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
 
 	// remove extra characters, wallclock, ( and )
@@ -27,7 +30,7 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 
 	// helper constants
 	const nowMillis: number = moment().valueOf();
-	const nowTime: string = moment().format("HH:mm:ss");
+	const nowTime: string = moment().format('HH:mm:ss');
 	const nowDay: string = moment().format('YYYY-MM-DD');
 	const today: number = moment().isoWeekday();
 
@@ -50,18 +53,19 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 	let [dateEnd, timeEnd] = splitStringEnd[1].split('T');
 
 	// in case wallclock string does not have exact time specified (2021-11-01), add default time
-	timeStart = timeStart ?  timeStart : SMILScheduleEnum.defaultTime;
-	timeEnd = timeEnd ?  timeEnd : SMILScheduleEnum.defaultTime;
+	timeStart = timeStart ? timeStart : SMILScheduleEnum.defaultTime;
+	timeEnd = timeEnd ? timeEnd : SMILScheduleEnum.defaultTime;
 
 	let datePart: string = nowDay;
 
 	// scheduled time to start is in the past
 	if (timeToStart < 0) {
 		// startTime is in the past, endTime in the future and scheduled week day is same as todays week day ( or no weekday specified )
-		if ((((timeStart <= nowTime && dateStart <= nowDay)
-			&& ((nowTime <= timeEnd) && (dateStart <= dateEnd)))
-			|| ((timeStart <= nowTime || dateStart <= nowDay) && splitStringStart[2] !== 'P1D'))
-			&& (dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)) {
+		if (
+			((timeStart <= nowTime && dateStart <= nowDay && nowTime <= timeEnd && dateStart <= dateEnd) ||
+				((timeStart <= nowTime || dateStart <= nowDay) && splitStringStart[2] !== 'P1D')) &&
+			(dayInfoStart === '' || parseInt(dayInfoStart[2]) === today)
+		) {
 			timeToStart = 0;
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 			// when endTime is in future and content should be played without stop overnight for several days
@@ -93,7 +97,10 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 
 			// either end date is in past ( date format YYYY-MM-DD ) or the date is same as today, but time format is already in past ( HH:mm:ss )
 			// and time is specified without repeating attributes, so it should be played only once when begin tag <= now <= end tag
-			if ((dateEnd < nowDay || (dateEnd === nowDay && moment(splitStringEnd[1]).valueOf() < Date.now())) && splitStringEnd[2] !== 'P1D') {
+			if (
+				(dateEnd < nowDay || (dateEnd === nowDay && moment(splitStringEnd[1]).valueOf() < Date.now())) &&
+				splitStringEnd[2] !== 'P1D'
+			) {
 				timeToStart = 0;
 				timeToEnd = SMILScheduleEnum.neverPlay;
 				debug('wallclock completely in the past, will not be played');
@@ -141,7 +148,6 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 			timeToStart,
 			timeToEnd,
 		};
-
 	}
 
 	// startTime and endTime both in the future, pick correct weekday if specified
@@ -165,12 +171,17 @@ export function parseSmilSchedule(startTime: string, endTime: string = SMILSched
 }
 
 export function computeScheduledDate(
-	startDate: moment.Moment, nowTime: string, scheduledTime: string, scheduledDate: string, dayInfo: string) {
+	startDate: moment.Moment,
+	nowTime: string,
+	scheduledTime: string,
+	scheduledDate: string,
+	dayInfo: string,
+) {
 	// day of the week when will playing stop
 	const terminalDay = startDate.isoWeekday();
 	const scheduledDay = parseInt(dayInfo[2]);
 	if (dayInfo.startsWith('+')) {
-		if ((terminalDay < scheduledDay) || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
+		if (terminalDay < scheduledDay || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
 			return startDate.isoWeekday(scheduledDay).format('YYYY-MM-DD');
 		} else {
 			return startDate.add(1, 'weeks').isoWeekday(scheduledDay).format('YYYY-MM-DD');
@@ -178,7 +189,7 @@ export function computeScheduledDate(
 	}
 
 	if (dayInfo.startsWith('-')) {
-		if ((terminalDay < scheduledDay) || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
+		if (terminalDay < scheduledDay || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
 			const returnDate = moment().isoWeekday(scheduledDay).format('YYYY-MM-DD');
 			// return default date in the past if scheduledDate from SMIL is already in the past
 			return returnDate < scheduledDate ? returnDate : SMILScheduleEnum.endDatePast;
@@ -197,8 +208,8 @@ export function computeScheduledDate(
 }
 
 export function extractDayInfo(timeRecord: string): {
-	timeRecord: string,
-	dayInfo: string,
+	timeRecord: string;
+	dayInfo: string;
 } {
 	let dayInfo: string = '';
 

@@ -1,90 +1,91 @@
 import { PriorityObject } from './priorityModels';
 import { SMILMedia, SMILVideo, SosHtmlElement } from './mediaModels';
-import { Synchronization } from "./syncModels";
+import { Synchronization } from './syncModels';
 
 export type PrefetchObject = {
 	prefetch: {
-		src: string,
-	},
+		src: string;
+	};
 };
 
 export type PlaylistOptions = {
-	cancelFunction: boolean[],
-	currentlyPlaying: CurrentlyPlaying,
-	promiseAwaiting: PromiseAwaiting,
-	currentlyPlayingPriority: CurrentlyPlayingPriority,
-	synchronization: Synchronization,
+	cancelFunction: boolean[];
+	currentlyPlaying: CurrentlyPlaying;
+	promiseAwaiting: PromiseAwaiting;
+	currentlyPlayingPriority: CurrentlyPlayingPriority;
+	synchronization: Synchronization;
 };
 
 export type BackupElement = {
-	repeatCount: string,
+	repeatCount: string;
 	img: {
-		src: string,
-		dur: string,
+		src: string;
+		dur: string;
 		localFilePath: string;
-	},
+	};
 };
 
 export type BackupPlaylist = {
-	seq: BackupElement,
+	seq: BackupElement;
 };
 
 export type PlaylistElement = {
-	expr?: string,
-	begin?: string,
-	end?: string,
-	repeatCount?: number | string,
-	seq?: PlaylistElement,
-	par?: PlaylistElement,
-	excl?: PlaylistElement,
-	priorityClass?: PlaylistElement,
+	expr?: string;
+	begin?: string;
+	end?: string;
+	repeatCount?: number | string;
+	seq?: PlaylistElement;
+	par?: PlaylistElement;
+	excl?: PlaylistElement;
+	priorityClass?: PlaylistElement;
 };
 
 export type CurrentlyPlaying = {
-	[regionName: string]: PlayingInfo,
+	[regionName: string]: PlayingInfo;
 };
 
 export type PlayingInfo = {
-	player?: string,
-	promiseFunction?: Function[],
+	player?: string;
+	promiseFunction?: Function[];
 	nextElement: (SosHtmlElement | SMILVideo) & {
-		type?: string,
-	},
-} & SosHtmlElement & SMILVideo;
+		type?: string;
+	};
+} & SosHtmlElement &
+	SMILVideo;
 
 export type CurrentlyPlayingPriority = {
-	[regionName: string]: CurrentlyPlayingRegion[],
+	[regionName: string]: CurrentlyPlayingRegion[];
 };
 
 export type CurrentlyPlayingRegion = {
-	media: SMILMedia,
-	priority: PriorityObject,
+	media: SMILMedia;
+	priority: PriorityObject;
 	player: {
-		contentPause: number,
-		stop: boolean,
-		endTime: number,
-		playing: boolean,
-		timesPlayed: number,
-	},
-	parent: string,
-	behaviour: string,
-	version: number,
-	controlledPlaylist: number | null,
+		contentPause: number;
+		stop: boolean;
+		endTime: number;
+		playing: boolean;
+		timesPlayed: number;
+	};
+	parent: string;
+	behaviour: string;
+	version: number;
+	controlledPlaylist: number | null;
 	isFirstInPlaylist: SMILMedia;
 };
 
 export type PromiseAwaiting = {
 	[regionName: string]: (SMILVideo | SosHtmlElement) & {
-		promiseFunction?: Promise<void>[],
-	},
+		promiseFunction?: Promise<void>[];
+	};
 };
 
 export type VideoPreparing = {
-	[regionName: string]: SMILVideo,
+	[regionName: string]: SMILVideo;
 };
 
 export type SMILPlaylist = {
-	playlist: { [key: string]: PlaylistElement | PlaylistElement[] },
+	playlist: { [key: string]: PlaylistElement | PlaylistElement[] };
 };
 
 export type InfiniteLoopObject = {

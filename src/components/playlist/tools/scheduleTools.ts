@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment from 'moment';
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 
@@ -6,7 +6,7 @@ import { PlaylistElement } from '../../../models/playlistModels';
 import { isConditionalExpExpired } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { parseSmilSchedule } from './wallclockTools';
-import { removeDigits } from "./generalTools";
+import { removeDigits } from './generalTools';
 
 /**
  * function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
@@ -14,7 +14,7 @@ import { removeDigits } from "./generalTools";
  */
 export function setDefaultAwaitWallclock(playlistElement: PlaylistElement): number {
 	const nowMillis: number = moment().valueOf();
-	const {timeToStart, timeToEnd} = parseSmilSchedule(playlistElement.begin!, playlistElement.end);
+	const { timeToStart, timeToEnd } = parseSmilSchedule(playlistElement.begin!, playlistElement.end);
 	// found element which can be player right now
 	if (timeToStart <= 0 && timeToEnd > nowMillis) {
 		return SMILScheduleEnum.playImmediately;
@@ -28,7 +28,11 @@ export function setDefaultAwaitWallclock(playlistElement: PlaylistElement): numb
  * @param playerName
  * @param playerId
  */
-export function setDefaultAwaitConditional(playlistElement: PlaylistElement, playerName: string, playerId: string): number {
+export function setDefaultAwaitConditional(
+	playlistElement: PlaylistElement,
+	playerName: string,
+	playerId: string,
+): number {
 	// found element which can be player right now
 	if (!isConditionalExpExpired(playlistElement, playerName, playerId)) {
 		return SMILScheduleEnum.playImmediately;
@@ -42,7 +46,11 @@ export function setDefaultAwaitConditional(playlistElement: PlaylistElement, pla
  * @param playerName
  * @param playerId
  */
-export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: string = '', playerId: string = ''): number {
+export function setDefaultAwait(
+	elementsArray: PlaylistElement[],
+	playerName: string = '',
+	playerId: string = '',
+): number {
 	for (const loopElem of elementsArray) {
 		// no wallclock or expr specified
 		if (!loopElem.hasOwnProperty('begin') && !loopElem.hasOwnProperty('expr')) {
@@ -52,7 +60,9 @@ export function setDefaultAwait(elementsArray: PlaylistElement[], playerName: st
 		if (loopElem.hasOwnProperty('begin')) {
 			if (setDefaultAwaitWallclock(loopElem) === SMILScheduleEnum.playImmediately) {
 				if (loopElem.hasOwnProperty('expr')) {
-					if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
+					if (
+						setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately
+					) {
 						return SMILScheduleEnum.playImmediately;
 					} else {
 						continue;
@@ -87,9 +97,9 @@ export function setElementDuration(dur: string | undefined): number {
 	}
 
 	// replace wrong decimal delimiter
-	dur = dur.replace(/,/g, ".");
+	dur = dur.replace(/,/g, '.');
 	// leave only digits in duration string ( can contain s character )
-	dur = dur.replace(/[^0-9.]/g, "");
+	dur = dur.replace(/[^0-9.]/g, '');
 	// empty string or NaN
 	if (isNaN(Number(dur)) || dur.length === 0) {
 		return SMILScheduleEnum.defaultDuration;
@@ -101,9 +111,14 @@ export function setElementDuration(dur: string | undefined): number {
 export function findDuration(elem: PlaylistElement): string | undefined {
 	for (let [key, value] of Object.entries(elem)) {
 		if (key === 'dur') {
-			return <string> value;
+			return <string>value;
 		}
-		if (isObject(value) && removeDigits(key) !== 'img' && removeDigits(key) !== 'ref' && removeDigits(key) !== 'video') {
+		if (
+			isObject(value) &&
+			removeDigits(key) !== 'img' &&
+			removeDigits(key) !== 'ref' &&
+			removeDigits(key) !== 'video'
+		) {
 			return findDuration(value);
 		}
 	}

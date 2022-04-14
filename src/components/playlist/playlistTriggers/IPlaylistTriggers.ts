@@ -1,7 +1,7 @@
-import { TriggerEndless } from "../../../models/triggerModels";
-import { SMILFileObject } from "../../../models/filesModels";
-import { SMILMedia } from "../../../models/mediaModels";
-import { RegionAttributes } from "../../../models/xmlJsonModels";
+import { TriggerEndless } from '../../../models/triggerModels';
+import { SMILFileObject } from '../../../models/filesModels';
+import { SMILMedia } from '../../../models/mediaModels';
+import { RegionAttributes } from '../../../models/xmlJsonModels';
 
 export interface IPlaylistTriggers {
 	triggersEndless: TriggerEndless;

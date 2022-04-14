@@ -19,7 +19,12 @@ class SmilEventEmitter extends EventEmitter {
 	}
 }
 
-export async function waitForSuccessOrFailEvents(eventEmitter: EventEmitter, stream: SMILVideo, successEvent: string, failEvent: string) {
+export async function waitForSuccessOrFailEvents(
+	eventEmitter: EventEmitter,
+	stream: SMILVideo,
+	successEvent: string,
+	failEvent: string,
+) {
 	return new Promise<void>((resolve: () => void, reject: (error: Error) => void) => {
 		let successListener: () => void;
 		let failListener: () => void;

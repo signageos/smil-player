@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import {
-	createDownloadPath, generateSmilUrlVersion,
+	createDownloadPath,
+	generateSmilUrlVersion,
 	getFileName,
 	getPath,
 	getProtocol,
@@ -10,7 +11,6 @@ import {
 const expect = chai.expect;
 
 describe('Files tools component', () => {
-
 	describe('Files tools component getFileName tests', () => {
 		it('Should return correct file name for vairous strings', () => {
 			const filesPaths = [
@@ -117,7 +117,6 @@ describe('Files tools component', () => {
 				expect(response).equal(protocol[i]);
 			}
 		});
-
 	});
 
 	describe('isRelativePath', () => {

@@ -1,25 +1,25 @@
-import { IStorageUnit } from "@signageos/front-applet/es6/FrontApplet/FileSystem/types";
-import FrontApplet from "@signageos/front-applet/es6/FrontApplet/FrontApplet";
-import Debug from "debug";
-import { defaults as config } from "../../config/parameters";
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import Debug from 'debug';
+import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
-import { SMILFile, SMILFileObject } from "../models/filesModels";
-import { isNil } from "lodash";
-import { FileStructure } from "../enums/fileEnums";
-import { createLocalFilePath, getFileName } from "./files/tools";
-import { resetBodyContent, setTransitionsDefinition } from "./playlist/tools/htmlTools";
+import { SMILFile, SMILFileObject } from '../models/filesModels';
+import { isNil } from 'lodash';
+import { FileStructure } from '../enums/fileEnums';
+import { createLocalFilePath, getFileName } from './files/tools';
+import { resetBodyContent, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
-import backupImage from "../../public/backupImage/backupImage.jpg";
-import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from "./playlist/tools/generalTools";
-import { SMILScheduleEnum } from "../enums/scheduleEnums";
-import { SMILEnums } from "../enums/generalEnums";
-import { FilesManager } from "./files/filesManager";
-import { XmlParser } from "./xmlParser/xmlParser";
-import { SmilPlayerPlaylist } from "./playlist/playlist";
-import { PlaylistProcessor } from "./playlist/playlistProcessor/playlistProcessor";
-import { PlaylistDataPrepare } from "./playlist/playlistDataPrepare/playlistDataPrepare";
-import { applyFetchPolyfill } from "../polyfills/fetch";
-import { ISmilPlayer } from "./ISmilPlayer";
+import backupImage from '../../public/backupImage/backupImage.jpg';
+import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
+import { SMILScheduleEnum } from '../enums/scheduleEnums';
+import { SMILEnums } from '../enums/generalEnums';
+import { FilesManager } from './files/filesManager';
+import { XmlParser } from './xmlParser/xmlParser';
+import { SmilPlayerPlaylist } from './playlist/playlist';
+import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcessor';
+import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
+import { applyFetchPolyfill } from '../polyfills/fetch';
+import { ISmilPlayer } from './ISmilPlayer';
 
 export const debug = Debug('@signageos/smil-player:main');
 
@@ -39,7 +39,7 @@ export class SmilPlayer implements ISmilPlayer {
 		this.xmlParser = new XmlParser();
 		this.playlist = new SmilPlayerPlaylist(sos, this.files);
 		this.processor = this.playlist.processor;
-		this.dataPrepare = this. playlist.dataPrepare;
+		this.dataPrepare = this.playlist.dataPrepare;
 	}
 
 	public startSmilPlayer = async () => {
@@ -54,7 +54,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const storageUnits = await sos.fileSystem.listStorageUnits();
 
 		// reference to persistent storage unit, where player stores all content
-		const internalStorageUnit = <IStorageUnit> storageUnits.find((storageUnit) => !storageUnit.removable);
+		const internalStorageUnit = <IStorageUnit>storageUnits.find((storageUnit) => !storageUnit.removable);
 
 		this.processor.setStorageUnit(internalStorageUnit);
 
@@ -63,22 +63,34 @@ export class SmilPlayer implements ISmilPlayer {
 		debug('File structure created');
 
 		if (
-			await this.files.fileExists(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName))
+			await this.files.fileExists(
+				internalStorageUnit,
+				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+			)
 		) {
 			try {
-				const fileContent = JSON.parse(await this.files.readFile(
-					internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName)));
+				const fileContent = JSON.parse(
+					await this.files.readFile(
+						internalStorageUnit,
+						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+					),
+				);
 
 				// delete mediaInfo file only in case that currently played smil is different from previous
 				if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
 					// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
 					await this.files.deleteFile(
-						internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
+						internalStorageUnit,
+						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+					);
 				}
 			} catch (err) {
 				debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
 				// file is malformed, delete from internal storage
-				await this.files.deleteFile(internalStorageUnit, createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName));
+				await this.files.deleteFile(
+					internalStorageUnit,
+					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				);
 			}
 		}
 
@@ -99,13 +111,18 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
-	}
+	};
 
-	private main = async (internalStorageUnit: IStorageUnit, smilUrl: string, thisSos: FrontApplet, playIntro: boolean = true) => {
+	private main = async (
+		internalStorageUnit: IStorageUnit,
+		smilUrl: string,
+		thisSos: FrontApplet,
+		playIntro: boolean = true,
+	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
-		config.videoOptions.background = (sos.config.videoBackground || sos.config.videoBackground === 'true') || false;
+		config.videoOptions.background = sos.config.videoBackground || sos.config.videoBackground === 'true' || false;
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};
@@ -116,13 +133,20 @@ export class SmilPlayer implements ISmilPlayer {
 		this.files.setSmilUrl(smilUrl);
 
 		try {
-			if (!isNil(sos.config.backupImageUrl) && !isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))) {
+			if (
+				!isNil(sos.config.backupImageUrl) &&
+				!isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))
+			) {
 				forceDownload = true;
 				const backupImageObject = {
 					src: sos.config.backupImageUrl,
 				};
 				downloadPromises = await this.files.parallelDownloadAllFiles(
-					internalStorageUnit, [backupImageObject], FileStructure.images, forceDownload);
+					internalStorageUnit,
+					[backupImageObject],
+					FileStructure.images,
+					forceDownload,
+				);
 				await Promise.all(downloadPromises);
 			}
 		} catch (err) {
@@ -139,7 +163,12 @@ export class SmilPlayer implements ISmilPlayer {
 				// download SMIL file if device has internet connection and smil file exists on remote server
 				if (!isNil(await this.files.fetchLastModified(smilFile.src))) {
 					forceDownload = true;
-					downloadPromises = await this.files.parallelDownloadAllFiles(internalStorageUnit, [smilFile], FileStructure.rootFolder, forceDownload);
+					downloadPromises = await this.files.parallelDownloadAllFiles(
+						internalStorageUnit,
+						[smilFile],
+						FileStructure.rootFolder,
+						forceDownload,
+					);
 					await Promise.all(downloadPromises);
 				}
 
@@ -154,7 +183,10 @@ export class SmilPlayer implements ISmilPlayer {
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
 				debug('SMIL file parsed: %O', smilObject);
 
-				await this.files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src);
+				await this.files.sendSmiFileReport(
+					`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
+					smilFile.src,
+				);
 
 				// set variable to enable/disable events logs
 				this.files.setSmiLogging(smilObject.log);
@@ -171,14 +203,16 @@ export class SmilPlayer implements ISmilPlayer {
 
 					introPromises.concat(await this.processor.playIntro(smilObject));
 
-					introPromises.push((async () => {
-						await Promise.all(downloadPromises).then(async () => {
-							// prepares everything needed for processing playlist
-							await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
-							// all files are downloaded, stop intro
-							debug('SMIL media files download finished, stopping intro');
-						});
-					})());
+					introPromises.push(
+						(async () => {
+							await Promise.all(downloadPromises).then(async () => {
+								// prepares everything needed for processing playlist
+								await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+								// all files are downloaded, stop intro
+								debug('SMIL media files download finished, stopping intro');
+							});
+						})(),
+					);
 
 					await Promise.race(introPromises);
 				} else {
@@ -196,20 +230,22 @@ export class SmilPlayer implements ISmilPlayer {
 				debug('Starting to process parsed smil file');
 				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false);
 				await this.processor.processingLoop(smilObject, smilFile, playIntro, restart);
-
 			} catch (err) {
-
 				if (smilFileContent === '') {
 					debug('Unexpected error occurred during smil file download : %O', err);
 				} else {
 					debug('Unexpected error during xml parse: %O', err);
-					await this.files.sendSmiFileReport(`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`, smilFile.src, err.message);
+					await this.files.sendSmiFileReport(
+						`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
+						smilFile.src,
+						err.message,
+					);
 				}
 
 				debug('Starting to play backup image');
 				const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
 				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-				const regionInfo = <SMILFileObject> getDefaultRegion();
+				const regionInfo = <SMILFileObject>getDefaultRegion();
 
 				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
 				if (isNil(sos.config.backupImageUrl)) {
@@ -219,5 +255,5 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
-	}
+	};
 }

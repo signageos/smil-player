@@ -1,126 +1,126 @@
 image: $CI_REGISTRY/signageos/docker-node:14.17.3-alpine-build
 services:
-  - docker:dind
+    - docker:dind
 
 stages:
-  - prepare
-  - test
-  - build
-  - publish
-  - release
+    - prepare
+    - test
+    - build
+    - publish
+    - release
 
 cache:
-  untracked: true
-  key: "$CI_PROJECT_ID"
-  paths:
-    - node_modules/
+    untracked: true
+    key: '$CI_PROJECT_ID'
+    paths:
+        - node_modules/
 
 before_script:
-  - export VERSION=`cat ./VERSION`
-  - export TAG=`cat ./PRERELEASE`
-  - npx --userconfig ./.npmrc @signageos/lib version-upgrade $VERSION
-  - mkdir -p dist
-  - npm install
+    - export VERSION=`cat ./VERSION`
+    - export TAG=`cat ./PRERELEASE`
+    - npx --userconfig ./.npmrc @signageos/lib version-upgrade $VERSION
+    - mkdir -p dist
+    - npm install
 
 prepare:
-  image: $CI_REGISTRY/signageos/docker:master
-  stage: prepare
-  before_script: []
-  script:
-    - ci-prepare
-  artifacts:
-    when: on_success
-    paths:
-      - ./VERSION
-      - ./PRERELEASE
+    image: $CI_REGISTRY/signageos/docker:master
+    stage: prepare
+    before_script: []
+    script:
+        - ci-prepare
+    artifacts:
+        when: on_success
+        paths:
+            - ./VERSION
+            - ./PRERELEASE
 
 test:general:
-  stage: test
-  except:
-    - tags
-  script:
-    - npm test
+    stage: test
+    except:
+        - tags
+    script:
+        - npm test
 
 test:lint:
-  stage: test
-  except:
-    - tags
-  script:
-    - npm run lint
+    stage: test
+    except:
+        - tags
+    script:
+        - npm run lint
 
 test:changelog:
-  image: $CI_REGISTRY/signageos/docker:master
-  stage: test
-  except:
-    - tags
-  allow_failure: true
-  script:
-    - ci-test-changelog
+    image: $CI_REGISTRY/signageos/docker:master
+    stage: test
+    except:
+        - tags
+    allow_failure: true
+    script:
+        - ci-test-changelog
 
 test:check:
-  stage: test
-  except:
-    - tags
-  allow_failure: true
-  script:
-    - npm run check
+    stage: test
+    except:
+        - tags
+    allow_failure: true
+    script:
+        - npm run check
 
 build:
-  stage: build
-  dependencies:
-    - prepare
-  script:
-    - npm run prepare --production
-    - npm run escheck
-  artifacts:
-    when: on_success
-    paths:
-      - dist/
+    stage: build
+    dependencies:
+        - prepare
+    script:
+        - npm run prepare --production
+        - npm run escheck
+    artifacts:
+        when: on_success
+        paths:
+            - dist/
 
 publish:npm:
-  stage: publish
-  dependencies:
-    - prepare
-    - build
-  script:
-    - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
-    - echo 'always-auth=true' >> .npmrc
-    - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
-    - npm publish --ignore-scripts
+    stage: publish
+    dependencies:
+        - prepare
+        - build
+    script:
+        - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
+        - echo 'always-auth=true' >> .npmrc
+        - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
+        - npm publish --ignore-scripts
 
 publish:npm-public:
-  stage: publish
-  only:
-    - tags
-    - master
-  dependencies:
-    - prepare
-    - build
-  script:
-    - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
-    - echo 'always-auth=true' >> .npmrc
-    - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
-    - export NPM_REGISTRY_URL=https://registry.npmjs.org/
-    - export NPM_REGISTRY_HOST=registry.npmjs.org
-    - export NPM_AUTH_TOKEN=$PUBLIC_NPM_AUTH_TOKEN
-    - tools/prepare-npm-public.js
-    - npm publish --ignore-scripts
+    stage: publish
+    only:
+        - tags
+        - master
+    dependencies:
+        - prepare
+        - build
+    script:
+        - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
+        - echo 'always-auth=true' >> .npmrc
+        - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
+        - export NPM_REGISTRY_URL=https://registry.npmjs.org/
+        - export NPM_REGISTRY_HOST=registry.npmjs.org
+        - export NPM_AUTH_TOKEN=$PUBLIC_NPM_AUTH_TOKEN
+        - tools/prepare-npm-public.js
+        - npm publish --ignore-scripts
 
 release:tag:
-  image: $CI_REGISTRY/signageos/docker:master
-  stage: release
-  only:
-    - master
-  when: manual
-  allow_failure: false
-  before_script: []
-  script:
-    - ci-release-tag
+    image: $CI_REGISTRY/signageos/docker:master
+    stage: release
+    only:
+        - master
+    when: manual
+    allow_failure: false
+    before_script: []
+    script:
+        - ci-release-tag
 
 release:notes:
-  image: $CI_REGISTRY/signageos/docker:master
-  stage: release
-  only:
-    - tags
-  script:
-    - ci-release-notes
+    image: $CI_REGISTRY/signageos/docker:master
+    stage: release
+    only:
+        - tags
+    script:
+        - ci-release-notes

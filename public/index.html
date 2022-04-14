@@ -1,55 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <meta name="theme-color" content="#000000"/>
-    <title>test</title>
-    <style>
-        body {
-            position: absolute;
-            left: 0%;
-            right: 0%;
-            top: 0%;
-            bottom: 0%;
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+		<meta name="theme-color" content="#000000" />
+		<title>test</title>
+		<style>
+			body {
+				position: absolute;
+				left: 0%;
+				right: 0%;
+				top: 0%;
+				bottom: 0%;
 
-            background: #18182C;
-        }
+				background: #18182c;
+			}
 
-        @media (orientation: landscape) {
-            body {
-                background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080.jpg') no-repeat center center fixed;
-            }
-        }
-        @media (orientation: portrait) {
-            body {
-                background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080-1.jpg') no-repeat center center fixed;
-            }
-        }
-
-    </style>
-
-</head>
-<body>
-<div id="headline">
-    SMIL Player
-</div>
-<div id="comment">
-    Add your SMIL file URL in the field below and press ENTER
-</div>
-<div id="smilForm">
-    <div id="SMILFormText">
-        SMIL file URL
-    </div>
-    <form id="SMILUrlWrapper">
-        <input type="text" autofocus id="SMILUrl" value="https://">
-    </form>
-</div>
-<div id="error">
-    <div id="errorText">
-        SMIL file URL is not correct.
-    </div>
-</div>
-
-</body>
+			@media (orientation: landscape) {
+				body {
+					background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080.jpg')
+						no-repeat center center fixed;
+				}
+			}
+			@media (orientation: portrait) {
+				body {
+					background: url('https://signageos-demo.s3.eu-central-1.amazonaws.com/mainScreen/1920x1080-1.jpg')
+						no-repeat center center fixed;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div id="headline">SMIL Player</div>
+		<div id="comment">Add your SMIL file URL in the field below and press ENTER</div>
+		<div id="smilForm">
+			<div id="SMILFormText">SMIL file URL</div>
+			<form id="SMILUrlWrapper">
+				<input type="text" autofocus id="SMILUrl" value="https://" />
+			</form>
+		</div>
+		<div id="error">
+			<div id="errorText">SMIL file URL is not correct.</div>
+		</div>
+	</body>
 </html>

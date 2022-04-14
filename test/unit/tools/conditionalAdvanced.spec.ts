@@ -8,7 +8,7 @@ const expect = chai.expect;
 describe('Playlist tools checkConditionalExprSafe', () => {
 	describe('Playlist tools component checkConditionalExprSafe advanced conditions', () => {
 		it('Should return correct response', () => {
-			let dayOfWeek = (moment().isoWeekday() % 7);
+			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
@@ -22,7 +22,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 	describe('Playlist tools component checkConditionalExprSafe more advanced conditions', () => {
 		it('Should return correct response', () => {
-			let dayOfWeek = (moment().isoWeekday() % 7);
+			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `[[[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]]
 			and [ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&lt;${dayOfWeek}]] and adapi-weekday()&gt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
@@ -57,13 +57,16 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 	describe('Playlist tools component checkConditionalExprSafe more advanced conditions', () => {
 		it('Should return correct response', () => {
-			let testExpression = '[adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;0 OR adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&lt;0]';
+			let testExpression =
+				"[adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 OR adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = '[adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;0 AND adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&lt;0]';
+			testExpression =
+				"[adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 AND adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;0 AND [adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;0 OR adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&lt;0]';
+			testExpression =
+				"adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 AND [adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 OR adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 		});
 	});

@@ -1,5 +1,5 @@
-import { ItemType, MediaItemType, Report } from "../../models/reportingModels";
-import { IStorageUnit } from "@signageos/front-applet/es6/FrontApplet/FileSystem/types";
+import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	SMILAudio,
 	SMILImage,
@@ -7,15 +7,15 @@ import {
 	SMILVideo,
 	SMILWidget,
 	SosHtmlElement,
-} from "../../models/mediaModels";
+} from '../../models/mediaModels';
 import {
 	CheckETagFunctions,
 	MediaInfoObject,
 	MergedDownloadList,
 	SMILFile,
 	SMILFileObject,
-} from "../../models/filesModels";
-import { IFile } from "@signageos/front-display/es6/NativeDevice/fileSystem";
+} from '../../models/filesModels';
+import { IFile } from '@signageos/front-display/es6/NativeDevice/fileSystem';
 
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
@@ -23,31 +23,56 @@ export interface IFilesManager {
 	sendReport: (message: Report) => Promise<void>;
 	sendGeneralErrorReport: (message: string) => Promise<void>;
 	sendDownloadReport: (
-		fileType: ItemType, localFilePath: string, internalStorageUnit: IStorageUnit, fileSrc: string,
-		taskStartDate: Date, errMessage: string | null) => Promise<void>;
+		fileType: ItemType,
+		localFilePath: string,
+		internalStorageUnit: IStorageUnit,
+		fileSrc: string,
+		taskStartDate: Date,
+		errMessage: string | null,
+	) => Promise<void>;
 	sendMediaReport: (
-		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement, taskStartDate: Date,
-		itemType: MediaItemType, errMessage: string | null) => Promise<void>;
-	sendSmiFileReport: (
-		localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
+		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement,
+		taskStartDate: Date,
+		itemType: MediaItemType,
+		errMessage: string | null,
+	) => Promise<void>;
+	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
 	currentFilesSetup: (
-		widgets: SMILWidget[], internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilUrl: string) => Promise<void>;
+		widgets: SMILWidget[],
+		internalStorageUnit: IStorageUnit,
+		smilObject: SMILFileObject,
+		smilUrl: string,
+	) => Promise<void>;
 	getFileDetails: (
-		media: SMILVideo | SMILImage | SMILWidget | SMILAudio, internalStorageUnit: IStorageUnit, fileStructure: string) => Promise<IFile | null>;
+		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
+		internalStorageUnit: IStorageUnit,
+		fileStructure: string,
+	) => Promise<IFile | null>;
 	shouldUpdateLocalFile: (
-		internalStorageUnit: IStorageUnit, localFilePath: string, media: MergedDownloadList,
-		mediaInfoObject: MediaInfoObject) => Promise<boolean>;
+		internalStorageUnit: IStorageUnit,
+		localFilePath: string,
+		media: MergedDownloadList,
+		mediaInfoObject: MediaInfoObject,
+	) => Promise<boolean>;
 	writeMediaInfoFile: (internalStorageUnit: IStorageUnit, mediaInfoObject: object) => Promise<void>;
 	deleteFile: (internalStorageUnit: IStorageUnit, filePath: string) => Promise<void>;
 	readFile: (internalStorageUnit: IStorageUnit, filePath: string) => Promise<string>;
 	fileExists: (internalStorageUnit: IStorageUnit, filePath: string) => Promise<boolean>;
 	parallelDownloadAllFiles: (
-		internalStorageUnit: IStorageUnit, filesList: MergedDownloadList[],
-		localFilePath: string, forceDownload: boolean) => Promise<Promise<void>[]>;
+		internalStorageUnit: IStorageUnit,
+		filesList: MergedDownloadList[],
+		localFilePath: string,
+		forceDownload: boolean,
+	) => Promise<Promise<void>[]>;
 	createFileStructure: (internalStorageUnit: IStorageUnit) => Promise<void>;
 	prepareDownloadMediaSetup: (
-		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject) => Promise<Promise<void>[]>;
+		internalStorageUnit: IStorageUnit,
+		smilObject: SMILFileObject,
+	) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (
-		internalStorageUnit: IStorageUnit, smilObject: SMILFileObject, smilFile: SMILFile) => Promise<CheckETagFunctions>;
+		internalStorageUnit: IStorageUnit,
+		smilObject: SMILFileObject,
+		smilFile: SMILFile,
+	) => Promise<CheckETagFunctions>;
 	fetchLastModified: (fileSrc: string) => Promise<null | string | number>;
 }

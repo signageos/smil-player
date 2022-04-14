@@ -1,7 +1,7 @@
 export type PriorityObject = {
-	priorityLevel: number,
-	lower: string,
-	peer: string,
-	higher: string,
-	pauseDisplay: string,
+	priorityLevel: number;
+	lower: string;
+	peer: string;
+	higher: string;
+	pauseDisplay: string;
 };
