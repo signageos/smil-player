@@ -1,8 +1,8 @@
 import * as chai from 'chai';
-import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
-import { mockSMILFileTriggers } from '../../../src/components/playlist/mock/mockTriggers';
-import { mockSMILFileTriggersNoTopLeft } from '../../../src/components/playlist/mock/mockTriggersNoTopLeft';
-import { mockParsedNestedRegion, mockParsed234Layout, mockParsed234Region, mockParsedNestedRegionNoTopLeft } from '../../../src/components/playlist/mock/mockRegions';
+import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
+import { mockSMILFileTriggers } from '../../mocks/playlistMock/mockTriggers';
+import { mockSMILFileTriggersNoTopLeft } from '../../mocks/playlistMock/mockTriggersNoTopLeft';
+import { mockParsedNestedRegion, mockParsed234Layout, mockParsed234Region, mockParsedNestedRegionNoTopLeft } from '../../mocks/playlistMock/mockRegions';
 // import { Playlist } from '../../../src/components/playlist/playlist';
 // import { Files } from '../../../src/components/files/files';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
@@ -10,10 +10,11 @@ import {
 	extractAdditionalInfo,
 	generateParentId,
 	getIndexOfPlayingMedia,
-	getLastArrayItem, getRegionInfo, getStringToIntDefault, isNotPrefetchLoop, sleep,
+	getLastArrayItem, getRegionInfo, getStringToIntDefault, sleep,
 } from '../../../src/components/playlist/tools/generalTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
 import { setDefaultAwait, setElementDuration, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
+import { PlaylistElement } from "../../../src/models/playlistModels";
 
 const expect = chai.expect;
 
@@ -151,7 +152,7 @@ describe('Playlist tools component', () => {
 				'Something-2dc079c76f9e9d96e381878e30045dfd',
 			];
 			for (let i = 0; i < testTagNames.length; i += 1) {
-				let response = generateParentId(testTagNames[i], testObjects[i]);
+				let response = generateParentId(testTagNames[i], testObjects[i] as PlaylistElement);
 				expect(response).to.be.equal(parentIds[i]);
 			}
 		});
@@ -337,7 +338,7 @@ describe('Playlist tools component', () => {
 			];
 			const duration = [
 				999000,
-				999999,
+				Number.MAX_SAFE_INTEGER,
 				5000,
 				5000,
 				200000,
@@ -374,81 +375,6 @@ describe('Playlist tools component', () => {
 			testImage = extractAdditionalInfo(testImage);
 
 			expect(testImage.regionInfo.hasOwnProperty('fit')).to.be.equal(true);
-		});
-	});
-
-	describe('Playlist tools component isNotPrefetchLoop', () => {
-		it('Should detect infinite loops correctly', async () => {
-			let testObject: any = {
-				seq: [{
-					dur: '60s',
-				}, {
-					prefetch: [{
-						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
-					}],
-				}],
-			};
-
-			let response = isNotPrefetchLoop(testObject);
-			expect(response).to.be.equal(false);
-
-			testObject = {
-				par: [{
-					dur: '60s',
-				}, {
-					prefetch: [{
-						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png',
-					}, {
-						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
-					}],
-				}],
-			};
-
-			response = isNotPrefetchLoop(testObject);
-			expect(response).to.be.equal(false);
-
-			testObject = {
-				seq: {
-					begin: '0',
-					dur: 'indefinite',
-					ref: {
-						dur: 'indefinite',
-						src: 'adapi:blankScreen',
-					},
-				},
-			};
-
-			response = isNotPrefetchLoop(testObject);
-			expect(response).to.be.equal(false);
-
-			testObject = {
-				seq: {
-					repeatCount: 'indefinite',
-					img: {
-						src: 'http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png',
-						region: 'widget14',
-						dur: '60s',
-						param: {
-							name: 'cacheControl',
-							value: 'onlyIfCached',
-						},
-					},
-				},
-			};
-
-			response = isNotPrefetchLoop(testObject);
-			expect(response).to.be.equal(true);
-
 		});
 	});
 
