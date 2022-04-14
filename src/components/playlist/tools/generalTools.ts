@@ -10,9 +10,7 @@ const hasher = require('node-object-hash');
 import {
 	BackupPlaylist,
 	CurrentlyPlayingRegion,
-	InfiniteLoopObject,
 	PlaylistElement,
-	PrefetchObject,
 } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
@@ -21,9 +19,9 @@ import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { SMILEnums, parentGenerationRemove } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
-import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../../models/mediaModels';
+import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 
-export const debug = Debug('@signageos/smil-player:playlistModule');
+export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
@@ -38,13 +36,6 @@ export function removeWhitespace(str: string) {
 	return str.replace(/\s/g, '');
 }
 
-export function errorVisibility(visible: boolean) {
-	const display = visible ? 'block' : 'none';
-
-	(<HTMLElement> document.getElementById('error')).style.display = display;
-	(<HTMLElement> document.getElementById('errorText')).style.display = display;
-}
-
 export function checkSlowDevice(deviceType: string): boolean {
 	for (const type of DeviceModels.slowerDevices) {
 		if (deviceType.startsWith(type)) {
@@ -56,63 +47,6 @@ export function checkSlowDevice(deviceType: string): boolean {
 
 export function getLastArrayItem(array: any[]): any {
 	return array[array.length - 1];
-}
-
-function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
-	return get(obj, path, 'notFound') === 'notFound';
-}
-
-/**
- * used for detection infinite loops in SMIL file
- * these are seq or par section which does not contain any media files:
- * 	example:
- * 		seq: [{
- * 			dur: "60s"
- * 			}, {
- * 			prefetch: [{
- * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"
- * 					}]
- * 				}]
- * @param obj
- */
-export function isNotPrefetchLoop(obj: InfiniteLoopObject | PlaylistElement): boolean {
-	let result = true;
-	if (Array.isArray(get(obj, 'seq', 'notFound'))) {
-		(<PrefetchObject[]> get(obj, 'seq', 'notFound')).forEach((elem: PrefetchObject) => {
-			result = checkPrefetchObject(elem, 'prefetch');
-		});
-	}
-
-	if (Array.isArray(get(obj, 'par', 'notFound'))) {
-		(<PrefetchObject[]> get(obj, 'par', 'notFound')).forEach((elem: PrefetchObject) => {
-			result = checkPrefetchObject(elem, 'prefetch');
-		});
-	}
-	if (get(obj, 'seq.prefetch', 'notFound') !== 'notFound') {
-		result = false;
-	}
-
-	if (get(obj, 'par.prefetch', 'notFound') !== 'notFound') {
-		result = false;
-	}
-
-	// black screen check, will be removed in future versions
-	if (get(obj, 'seq.ref.src', 'notFound') === 'adapi:blankScreen') {
-		result = false;
-	}
-
-	// black screen check, will be removed in future versions
-	if (get(obj, 'par.ref.src', 'notFound') === 'adapi:blankScreen') {
-		result = false;
-	}
-
-	return result;
 }
 
 /**
@@ -214,7 +148,7 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 }
 
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
-export function generateParentId(tagName: string, value: any): string {
+export function generateParentId(tagName: string, value: PlaylistElement): string {
 	try {
 		let clone = cloneDeep(value);
 		removeNestedProperties(clone, parentGenerationRemove);
@@ -225,7 +159,7 @@ export function generateParentId(tagName: string, value: any): string {
 	}
 }
 
-export function removeNestedProperties(object: any, propertiesArray: string[]): void {
+export function removeNestedProperties(object: PlaylistElement, propertiesArray: string[]): void {
 	for (let [objKey, objValue] of Object.entries(object)) {
 		if (propertiesArray.includes(objKey)) {
 			unset(object, objKey);
@@ -261,13 +195,17 @@ export function getDefaultRegion() {
 	};
 }
 
+export function getDefaultVideoParams(): VideoParams {
+	return ['', 0, 0, 0, 0, 'RTP'];
+}
+
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
 	// no element was played before ( trigger case )
 	if (isNil(currentlyPlaying)) {
 		return 0;
 	}
 	return currentlyPlaying.findIndex((element) => {
-		return (get(element, 'player.playing', false) === true);
+		return element.player?.playing === true;
 	});
 }
 

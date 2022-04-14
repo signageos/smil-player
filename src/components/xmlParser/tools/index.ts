@@ -2,7 +2,6 @@ import Debug from 'debug';
 // @ts-ignore no ts declaration
 import { JefNode } from 'json-easy-filter';
 import isNil from 'lodash/isNil';
-import cloneDeep = require('lodash/cloneDeep');
 import get from 'lodash/get';
 import merge from 'lodash/merge';
 import isUrl from "is-url-superb";
@@ -13,7 +12,9 @@ import {
 	RegionAttributes,
 	RegionsObject,
 	RootLayout,
-	SMILMetaObject, TransitionAttributes, TransitionsObject,
+	SMILMetaObject,
+	TransitionAttributes,
+	TransitionsObject,
 	XmlHeadObject,
 } from '../../../models/xmlJsonModels';
 import { SMILMediaSingle } from '../../../models/mediaModels';
@@ -31,10 +32,11 @@ import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
 import { isRelativePath } from '../../files/tools';
+import cloneDeep = require('lodash/cloneDeep');
 
-export const debug = Debug('@signageos/smil-player:xmlParseModule');
+export const debug = Debug('@signageos/smil-player:xmlParser');
 
-export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean  {
+export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean {
 	return arr.filter(function (elem: SMILMediaSingle) {
 		return elem.src === fileSrc;
 	}).length > 0;
@@ -46,42 +48,42 @@ export function parseNestedRegions(paramValue: RegionAttributes): RegionAttribut
 	}
 	const value = cloneDeep(paramValue);
 	for (let [, innerValue] of Object.entries(value.region)) {
-		for (let [innerRegionKey, ] of Object.entries(<RegionAttributes> innerValue)) {
+		for (let [innerRegionKey, ] of Object.entries(innerValue)) {
 			// if top and left do not exist on nested region, set default value 0
 			innerValue.top = innerValue.top || 0;
 			innerValue.left = innerValue.left || 0;
 			if (XmlTags.cssElementsPosition.includes(innerRegionKey)) {
 				switch (innerRegionKey) {
 					case HtmlEnum.width:
-						if (innerValue.width.indexOf('%') > -1 ) {
+						if (innerValue.width.indexOf('%') > -1) {
 							innerValue.width = Math.floor(value.width * parseInt(innerValue.width) / 100);
 							break;
 						}
 						innerValue.width = parseInt(innerValue.width);
 						break;
 					case HtmlEnum.height:
-						if (innerValue.height.indexOf('%') > -1 ) {
+						if (innerValue.height.indexOf('%') > -1) {
 							innerValue.height = Math.floor(value.height * parseInt(innerValue.height) / 100);
 							break;
 						}
 						innerValue.height = parseInt(innerValue.height);
 						break;
 					case HtmlEnum.left:
-						if (innerValue.left.indexOf('%') > -1 ) {
+						if (innerValue.left.indexOf('%') > -1) {
 							innerValue.left = Math.floor(value.width * parseInt(innerValue.left) / 100) + parseInt(String(value.left));
 							break;
 						}
 						innerValue.left = parseInt(String(value.left)) + parseInt(innerValue.left) || 0;
 						break;
 					case HtmlEnum.top:
-						if (innerValue.top.indexOf('%') > -1 ) {
+						if (innerValue.top.indexOf('%') > -1) {
 							innerValue.top = Math.floor(value.height * parseInt(innerValue.top) / 100) + parseInt(String(value.top));
 							break;
 						}
 						innerValue.top = parseInt(String(value.top)) + parseInt(innerValue.top) || 0;
 						break;
 					case HtmlEnum.bottom:
-						if (innerValue.bottom.indexOf('%') > -1 ) {
+						if (innerValue.bottom.indexOf('%') > -1) {
 							if (innerValue.height.indexOf('%') > -1) {
 								innerValue.height = String(value.height * parseInt(innerValue.height) / 100);
 							}
@@ -95,7 +97,7 @@ export function parseNestedRegions(paramValue: RegionAttributes): RegionAttribut
 						delete innerValue.bottom;
 						break;
 					case HtmlEnum.right:
-						if (innerValue.right.indexOf('%') > -1 ) {
+						if (innerValue.right.indexOf('%') > -1) {
 							if (innerValue.width.indexOf('%') > -1) {
 								innerValue.width = String(value.width * parseInt(innerValue.width) / 100);
 							}
@@ -142,7 +144,7 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 
 			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
 			if ((!isUrl(get(node.value, 'src', 'default')) && !isRelativePath(get(node.value, 'src', 'default')))
-			|| get(node.value, 'src', 'default') === '') {
+				|| get(node.value, 'src', 'default') === '') {
 				return node;
 			}
 		});
@@ -249,10 +251,13 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
-			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate.toLowerCase().trim() === 'true';
+			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
-			regions.log = metaRecord.log === 'true';
+			regions.log = metaRecord.log === true;
+		}
+		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
+			regions.syncServerUrl = metaRecord.syncServerUrl;
 		}
 	}
 }
@@ -263,7 +268,7 @@ function parseSensorsInfo(sensors: SMILSensors): ParsedSensor[] {
 		sensors.sensor = [sensors.sensor];
 	}
 	for (const sensor of sensors.sensor) {
-		const picked: ParsedSensor = (({type, id, driver}) => ({type, id, driver}))(sensor);
+		const picked: ParsedSensor = (({ type, id, driver }) => ({ type, id, driver }))(sensor);
 		// value saved in _ prefix
 		if (!Array.isArray(sensor.option)) {
 			sensor.option = [sensor.option];

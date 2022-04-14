@@ -2,7 +2,6 @@ import moment from 'moment';
 import he from 'he';
 import split, { Options } from 'split-string';
 import ical from 'ical';
-
 import { SMILMediaSingle } from '../../../models/mediaModels';
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';

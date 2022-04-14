@@ -196,7 +196,10 @@ export function computeScheduledDate(
 	return startDate.add(1, 'day').format('YYYY-MM-DD');
 }
 
-export function extractDayInfo(timeRecord: string): any {
+export function extractDayInfo(timeRecord: string): {
+	timeRecord: string,
+	dayInfo: string,
+} {
 	let dayInfo: string = '';
 
 	if (timeRecord.indexOf('+') > 0) {
