@@ -8,9 +8,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - fixed wallclock and repeatCount=indefinite edge case bug
+- fixed background video single loop freeze
+- fixed repeatCount issues when combined with priorityClasses and wallclock notations
+- fixed relative src path for triggers
+- fixed rare bug with multiple triggers using same region not working correctly
+- fixed bug with keyboard triggers with specified duration
+- fixed transitions with underlying content
+- fixed issue when trying to prepare video which no longer exists in localstorage
+
+### Changed
+- multiple components code refactor
 
 ### Added
 - improved seamless update performance
+- improved general playback performance
+- improved multiple widgets in playlist performance
+- added option to turn off preloading of widgets ( widget is loaded at exact time when it should start playing, not before)
+- added transitions support for widgets
+- added support for applet-synchronizer
+- added option to synchronize playback among multiple devices in same sync group
+- added support for synchronization failover content ( when one device withing sync group goes offline, other one takes care of its playback )
+- added new home screen
+- added new default backup image
+- added option to specify z-index on img or ref tags in smil xml file
+
+### Removed
+- removed input form from home screen
 
 ## [1.9.1] - 2022-02-15
 
