@@ -1,22 +1,23 @@
 import { promises as fsPromise } from 'fs';
-import { processSmil } from '../../../src/components/xmlParser/xmlParse';
+import { XmlParser } from '../../../src/components/xmlParser/xmlParser';
 import { parseNestedRegions } from '../../../src/components/xmlParser/tools';
-import { mockSMILFileParsed234 } from '../../../src/components/playlist/mock/mock234';
-import { mockSMILFileParsed99 } from '../../../src/components/playlist/mock/mock99';
-import { mockSMILFileParsedRegionAlias } from '../../../src/components/playlist/mock/mockRegionAlias';
-import { mockSMILFileTriggers } from '../../../src/components/playlist/mock/mockTriggers';
-import { mockBrokenSmil } from '../../../src/components/playlist/mock/mockBrokenSmil';
-import { triggerRfid } from '../../../src/components/playlist/mock/mockTriggerRfId';
+import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
+import { mockSMILFileParsed99 } from '../../mocks/playlistMock/mock99';
+import { mockSMILFileParsedRegionAlias } from '../../mocks/playlistMock/mockRegionAlias';
+import { mockSMILFileTriggers } from '../../mocks/playlistMock/mockTriggers';
+import { mockBrokenSmil } from '../../mocks/playlistMock/mockBrokenSmil';
+import { triggerRfid } from '../../mocks/playlistMock/mockTriggerRfId';
 
 import * as chai from 'chai';
 
 const expect = chai.expect;
+const xmlParser = new XmlParser();
 describe('XmlParse tools component', () => {
 
 	describe('XmlParse tools component tests', () => {
 		it('Should parse whole xml file correctly file broken smil', async () => {
-			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/broken.smil', 'utf8');
-			const smilObject = await processSmil(xmlFile);
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/broken.smil', 'utf8');
+			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(2);
 			expect(smilObject.audio.length).to.be.eql(0);
@@ -32,8 +33,8 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file triggers', async () => {
-			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/triggers.smil', 'utf8');
-			const smilObject = await processSmil(xmlFile);
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/triggers.smil', 'utf8');
+			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(4);
 			expect(smilObject.audio.length).to.be.eql(0);
@@ -51,8 +52,8 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file 234', async () => {
-			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/234.smil', 'utf8');
-			const smilObject = await processSmil(xmlFile);
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/234.smil', 'utf8');
+			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(1);
 			expect(smilObject.audio.length).to.be.eql(1);
@@ -68,8 +69,8 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file regionAlias', async () => {
-			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/regionAlias.smil', 'utf8');
-			const smilObject = await processSmil(xmlFile);
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/regionAlias.smil', 'utf8');
+			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(1);
 			expect(smilObject.audio.length).to.be.eql(1);
@@ -85,8 +86,8 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file 99', async () => {
-			const xmlFile: string = await fsPromise.readFile('src/components/xmlParser/mock/99.smil', 'utf8');
-			const smilObject = await processSmil(xmlFile);
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/99.smil', 'utf8');
+			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(4);
 			expect(smilObject.audio.length).to.be.eql(0);

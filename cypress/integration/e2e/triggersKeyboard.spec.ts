@@ -14,9 +14,7 @@ describe("triggersKeyboard.smil test", () => {
 
 		cy.wait(CypressTimeouts.transitionTimeout);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 4});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 5});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 6});
 
 		cy.get('video[src*="videos/video-test_54188510.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
@@ -40,17 +38,13 @@ describe("triggersKeyboard.smil test", () => {
 		cy.wait(CypressTimeouts.transitionTimeout);
 
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 4});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 5});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 6});
 
 		cy.wait(CypressTimeouts.transitionTimeout);
 
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 7});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 8});
-		cy.wait(100);
 		cy.get('body').trigger('keydown', { eventConstructor: 'KeyboardEvent', key: 9});
 
 		cy.get('video[src*="videos/video-test_54188510.mp4"]', { timeout: CypressTimeouts.elementAwaitTimeout }).should('be.visible');
