@@ -1,12 +1,14 @@
+import { Moment } from "moment";
+
 const moment = require('moment');
 
 import { SMILUrls } from '../enums/enums';
 
-export function formatDate(date: any): string {
+export function formatDate(date: Moment): string {
 	return date.format('YYYY-MM-DDTHH:mm:ss');
 }
 
-export function formatTime(date: any): string {
+export function formatTime(date: Moment): string {
 	return date.format('HH:mm:ss');
 }
 
