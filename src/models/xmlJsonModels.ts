@@ -11,6 +11,7 @@ export type RegionsObject = {
 	},
 	onlySmilFileUpdate: boolean,
 	log: boolean,
+	syncServerUrl?: string,
 	[key: string]: any,
 };
 
@@ -35,8 +36,8 @@ export type XmlSmilObject = {
 		head: {
 			meta: [{
 				content: string,
-				log: string,
-				onlySmilUpdate: string,
+				log: boolean | string,
+				onlySmilUpdate: boolean | string,
 			}],
 			layout: RegionsObject,
 		},
@@ -53,9 +54,10 @@ export type XmlHeadObject = {
 
 export type SMILMetaObject = {
 	content: string,
-	log: string,
-	onlySmilUpdate: string,
+	log: boolean | string,
+	onlySmilUpdate: boolean | string,
 	expr?: string,
+	syncServerUrl?: string,
 };
 
 export type RegionAttributes = {
@@ -68,6 +70,7 @@ export type RegionAttributes = {
 	right?: number,
 	"z-index"?: number,
 	fit?: string,
+	sync?: string,
 	region: RegionAttributes | RegionAttributes[],
 	[key: string]: any,
 };

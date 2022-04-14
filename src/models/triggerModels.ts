@@ -1,10 +1,23 @@
 import { SMILAudio, SMILImage, SMILIntro, SMILVideo, SMILWidget } from './mediaModels';
+import { RegionAttributes } from "./xmlJsonModels";
 
 export type TriggerObject = {
-	begin: string,
-	repeatCount: string,
-	dur: string,
-	[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[] | string,
+	seq: {
+		begin: string,
+		repeatCount: string,
+		dur: string,
+		[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[] | string,
+	},
+};
+
+export type TriggerEndless = {
+	[triggerName: string]: {
+		play: boolean,
+		syncCanceled: boolean,
+		latestEventFired: number,
+		regionInfo: RegionAttributes,
+		triggerRandom: number,
+	},
 };
 
 export type TriggerList = {

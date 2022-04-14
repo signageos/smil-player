@@ -7,27 +7,29 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { debug, generateElementId, removeDigits } from './generalTools';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum, ObjectFitEnum } from '../../../enums/htmlEnums';
-import { SMILImage, SMILWidget } from '../../../models/mediaModels';
+import { SMILImage, SMILMediaNoVideo, SMILWidget } from '../../../models/mediaModels';
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
-import { ParsedTriggerCondition } from '../../../models/triggerModels';
+import { ParsedTriggerCondition, TriggerEndless } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
+import { copyQueryParameters, createVersionedUrl } from "../../files/tools";
+import { CssElementsPosition } from "../../../models/htmlModels";
 
 export function createHtmlElement(
-	htmlElement: string, filepath: string, regionInfo: RegionAttributes, key: string, isTrigger: boolean = false,
+	htmlElement: string, filepath: string, regionInfo: RegionAttributes, key: string, elementSrc: string, isTrigger: boolean = false,
 ): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
 	element.id = generateElementId(filepath, regionInfo.regionName, key);
-	Object.keys(regionInfo).forEach((attr: any) => {
+	Object.keys(regionInfo).forEach((attr: string) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
-			element.style[attr] = `${regionInfo[attr]}px`;
+			element.style[attr as keyof CssElementsPosition] = `${regionInfo[attr]}px`;
 		}
 		if (XmlTags.cssElements.includes(attr)) {
-			element.style[attr] = <string> regionInfo[attr];
+			element.style[attr as keyof CssElementsPosition] = regionInfo[attr];
 		}
 		if (XmlTags.additionalCssExtract.includes(attr)) {
-			element.style[<any> ObjectFitEnum.objectFit] = get(ObjectFitEnum, `${regionInfo[attr]}`, 'fill');
+			element.style.objectFit = get(ObjectFitEnum, `${regionInfo[attr]}`, 'fill');
 		}
 	});
 	element.style.position = 'absolute';
@@ -37,10 +39,53 @@ export function createHtmlElement(
 	element.style.visibility = 'hidden';
 	// set filePAth for trigger images immediately
 	if (isTrigger) {
-		element.setAttribute('src', filepath);
+		let src = generateElementSrc(elementSrc, filepath);
+		element.setAttribute('src', src);
+	}
+
+	if (htmlElement === HtmlEnum.ref) {
+		element.setAttribute('allow', HtmlEnum.widgetAllow);
 	}
 
 	return element;
+}
+
+export function generateElementSrc(
+	elementSrc: string, localFilePath: string, playlistVersion: number = 0, smilUrlVersion: string | null = null,
+): string {
+	// BrightSign does not support query parameters in filesystem
+	let src = createVersionedUrl(localFilePath, playlistVersion, smilUrlVersion);
+	// TODO this would not work & break BS. Solve it other way in future before merge
+	src = copyQueryParameters(elementSrc, src);
+	return src;
+}
+
+export function changeZIndex(
+	value: SMILMediaNoVideo, element: HTMLElement, transitionConstant: number, useValueZIndex: boolean = true,
+): void {
+	const valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
+	const currentElementZIndex = parseInt(element.style.getPropertyValue(HtmlEnum.zIndex));
+	let resultZIndex = useValueZIndex ? valueZIndex : 0;
+	if ('transitionInfo' in value) {
+		resultZIndex = transitionConstant + valueZIndex;
+
+		// return zIndex to its start value
+		if (transitionConstant < 0) {
+			resultZIndex = transitionConstant - valueZIndex;
+		}
+	} else {
+		// return zIndex to its start value
+		if (transitionConstant < 0) {
+			resultZIndex = - valueZIndex;
+		}
+	}
+
+	// zIndex value is already set on element ( one element in loop case )
+	if (resultZIndex < currentElementZIndex && !('transitionInfo' in value)) {
+		resultZIndex = 0;
+	}
+
+	element.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 }
 
 /**
@@ -58,7 +103,7 @@ export function createDomElement(value: SMILImage | SMILWidget, htmlElement: str
 		return elementId;
 	}
 	const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
-	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, isTrigger);
+	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, value.src, isTrigger);
 	document.body.appendChild(element);
 	return element.id;
 }
@@ -79,6 +124,8 @@ export function resetBodyContent() {
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
 	document.body.style.margin = '0px';
+	// remove background image
+	document.body.style.background = 'none';
 }
 
 export function setTransitionsDefinition(smilObject: SMILFileObject) {
@@ -127,7 +174,7 @@ export function setTransitionsDefinition(smilObject: SMILFileObject) {
 				opacity:0;
 			}`;
 
-		const style = <any> document.createElement('style');
+		const style = document.createElement('style') as any;
 		style.id = HtmlEnum.transitionStyleId;
 		if (style.styleSheet) {
 			style.styleSheet.cssText = css;
@@ -163,7 +210,7 @@ export function removeTransitionCss(element: HTMLElement) {
 }
 
 export function addEventOnTriggerWidget(
-	elem: PlaylistElement, triggerEndless: any,
+	elem: PlaylistElement, triggerEndless: TriggerEndless,
 	triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
 	): void {
 	for (let [key, value] of Object.entries(elem)) {
@@ -171,13 +218,14 @@ export function addEventOnTriggerWidget(
 			setupIframeEventListeners(get(value, 'id'), triggerEndless, triggerInfo);
 		}
 		if (isObject(value)) {
-			return addEventOnTriggerWidget(<any> value, triggerEndless, triggerInfo);
+			return addEventOnTriggerWidget(value, triggerEndless, triggerInfo);
 		}
 	}
 }
 
 function setupIframeEventListeners(
-	iframeId: string, triggerEndless: any, triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
+	iframeId: string, triggerEndless: TriggerEndless,
+	triggerInfo: { condition: ParsedTriggerCondition[], stringCondition: string, trigger: string },
 	) {
 	const iframe: any = document.getElementById(iframeId);
 	let iDoc = iframe.contentWindow || iframe.contentDocument;

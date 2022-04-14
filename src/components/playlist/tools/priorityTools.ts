@@ -1,13 +1,12 @@
-import get = require('lodash/get');
-
 import { PriorityObject } from '../../../models/priorityModels';
+import { PriorityDefault } from "../../../enums/priorityEnums";
 
-export function createPriorityObject(priorityClass: object, priorityLevel: number): PriorityObject {
+export function createPriorityObject(priorityClass: PriorityObject, priorityLevel: number): PriorityObject {
 	return {
 		priorityLevel,
-		lower: get(priorityClass, 'lower', 'defer'),
-		peer: get(priorityClass, 'peer', 'stop'),
-		higher: get(priorityClass, 'higher', 'pause'),
-		pauseDisplay: get(priorityClass, 'pauseDisplay', 'show'),
+		lower: priorityClass.lower ?? PriorityDefault.lower,
+		peer: priorityClass.peer ?? PriorityDefault.peer,
+		higher: priorityClass.higher ?? PriorityDefault.higher,
+		pauseDisplay: priorityClass.pauseDisplay ?? PriorityDefault.pauseDisplay,
 	};
 }

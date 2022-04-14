@@ -2,16 +2,15 @@ import Debug from 'debug';
 import * as path from 'path';
 import * as querystring from 'querystring';
 import * as URLVar from 'url';
-import get = require('lodash/get');
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { ItemType } from "../../../models/reportingModels";
 import { checksumString } from './checksum';
-import { WidgetExtensions } from '../../../enums/fileEnums';
-import { FileStructure } from "../../../enums/fileEnums";
+import { FileStructure, WidgetExtensions } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
+import get = require('lodash/get');
 
-export const debug = Debug('@signageos/smil-player:filesModule');
+export const debug = Debug('@signageos/smil-player:filesManager');
 
 export function getRandomInt(max: number) {
 	return Math.floor(Math.random() * Math.floor(max));
@@ -50,12 +49,25 @@ export function createDownloadPath(sourceUrl: string): string {
 	return `${corsAnywhere}${createVersionedUrl(sourceUrl)}`;
 }
 
-export function createVersionedUrl(sourceUrl: string, smilUrlVersion: string | null = null): string {
+// assets/loading.mp4 => http://example-smil-url.com/assets/loading.mp4
+export function convertRelativePathToAbsolute(src: string, smilFileUrl: string): string {
+	return isRelativePath(src) ? `${getPath(smilFileUrl)}/${src}` : src;
+}
+
+export function createVersionedUrl(sourceUrl: string, playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
 	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
-	parsedUrl.query.__smil_version = !isNil(smilUrlVersion) ? smilUrlVersion : getRandomInt(1000000).toString();
+	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
+}
+
+export function generateSmilUrlVersion(playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
+	if (!isNil(smilUrlVersion) && playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1))) {
+		return smilUrlVersion;
+	}
+
+	return `${getRandomInt(1000000).toString()}_${playlistVersion}`;
 }
 
 export function getSmilVersionUrl(sourceUrl: string | null): string | null {
@@ -90,12 +102,12 @@ export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): Me
 	return fileLastModifiedObject;
 }
 
-export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: any) {
+export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: string | number) {
 	jsonObject[attr] = value;
 }
 
 export function mapFileType(filePath: string): ItemType {
-	const mapObject = <const> {
+	const mapObject = {
 		smil: 'smil',
 		images: 'image',
 		videos: 'video',
