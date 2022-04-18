@@ -1,116 +1,124 @@
-# SMIL player
+# SignageOs SMIL player
 
--   This solution is beta version of
-    [signageOS SMIL Player](https://docs.signageos.io/hc/en-us/articles/4405239673874-Introduction-to-signageOS-SMIL-Player)
-    applet.
-
-## SMIL mandatory structure
-
-```xml
-<smil>
-    <head>
-        <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF" />
-            <region regionName="video" left="0" top="0" width="1080" height="1920" z-index="1" backgroundColor="#FFFFFF" mediaAlign="center" />
-        </layout>
-    </head>
-    <body>
-        <par>
-            Whole playlist goes here
-        </par>
-    </body>
-</smil>
+## How To Install
+```
+npm install @signageos/smil-player
 ```
 
-## Supported SMIL playlist tags
+## Basic usage
+Smil player is configurable either via options object passed in constructor or from signageOs box using timings.
 
--   par and seq are fully supported
--   smil timings ( wallclock, repeatCount ) are fully supported
--   priorityClass and excl are fully supported
--   conditional expressions are fully supported https://www.a-smil.org/index.php/Conditional_play
+### Basic usage - no signageOs timings used
+When not using signageOs timings you have to specify smil file url.
+```ts
+import { SmilPlayer } from '@signageos/smil-player';
 
-## Necessary attributes in SMIL file
+const smilPlayer = new SmilPlayer({
+    smilUrl: 'http://example.com/smilFile.smil'
+});
 
--   region name has to be specified in one of these two ways
-
-```
-<region regionName="widget12"..../>
-<region xml:id="widget12" .... />
-```
-
--   accepts only url to SMIL file ( form input at main page )
--   url to SMIL file can be also passed as smilUrl variable via SoS timings
--   all files ( audio, video.. ) must be stored on remote server
--   it is possible to specify path to files in two ways, if file url is specified by relative path, absolute path is
-    build by combining smil url and relative path
-
-```
-absolute
-    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
-relative
-    <video src="assets/landscape1.mp4" />
-
-    if smil path is https://static.signageos.io/testing.smil then absolute path for video will be https://static.signageos.io/assets/landscape1.mp4
+// runs indefinitely
+await smilPlayer.startSmilPlayer();
 ```
 
-## Supported features
+### Basic usage - with signageOs timings used
+When using signageOs timings you can specify number of options which are directly passed to Smil player itself. List of options is defined in package.json.
+[Timings example](https://docs.signageos.io/hc/en-us/articles/4405231920914-How-to-build-your-own-SMIL-Player-from-source-code#7-smil-player-configuration)
+```ts
+import { SmilPlayer } from '@signageos/smil-player';
 
--   sequential and parallel play of audio, video, image and widget
--   priority playlist
--   supports simple layering ( z-index ) with videos always played on background ( lowest level )
--   pairs all media with proper regions from layout part of SMIL, if no region specified, uses values from root-layout
-    tag
--   plays media in endless loops if necessary ( one element as well as multiple )
--   supports prefetch event ( plays intro while downloading rest of the files )
--   downloads all necessary files from remote server, stores files in local storage
--   downloads and extracts of widgets into local storage
--   checks for changes in provided SMIL file as well as checks for all files linked in SMIL
--   ability to restart on SMIL file change
--   supports media scheduling using wallclock definition
--   supports playing media loops using repeatCount attribute, possible to combine with wallclock
--   supports sensors-based triggers
--   supports keyboard-based triggers
--   supports conditional expressions
--   supports keyboard-based triggers
+const smilPlayer = new SmilPlayer();
 
-### Used technology
-
--   webpack, typescript, mocha, xml2js, json-easy-filter
-
-### Code documentation
-
--   See documentation [here](docs/documentation.md)
-
-### SMIL documentation
-
--   See documentation for
-    [SMIL file creation](https://docs.signageos.io/hc/en-us/articles/4405240988178-Hello-World-SMIL-Playlist)
-
-## Development
-
-For development internally in signageOS team, there are a few specifics. We are using internal private NPM registry, so
-please copy the template .npmrc.template to .npmrc and adjust your local PC ~/.bashrc file as below (for unix systems,
-for Win add environment variables in windows This PC options).
-
-```sh
-echo 'export NPM_REGISTRY_URL="https://npm.signageos.io"' >> ~/.bashrc
-echo 'export NPM_REGISTRY_HOST="npm.signageos.io"' >> ~/.bashrc
-echo 'export NPM_AUTH_TOKEN="__PASTE_YOUR_SECRET_TOKEN__"' >> ~/.bashrc
-cp .npmrc.template .npmrc
+// runs indefinitely
+await smilPlayer.startSmilPlayer();
 ```
 
-## Quick deployment
+### More advanced example
+Smil player accepts various options which allows you to customize player behaviour.
+This is an example how you can inject your custom functionality and modify smil player.
+```ts
+import { SmilPlayer } from '@signageos/smil-player';
 
-```sh
-npm install
-npm run build --production
+const smilPlayer = new SmilPlayer({
+    smilUrl: 'http://example.com/smilFile.smil',
+    backupImageUrl: 'https://my.server.com/failover-image.png',
+    serialPortDevice: '/device/ttyUSB0',
+    syncServerUrl: 'https://applet-synchronizer.com',
+    syncGroupName: 'mySyncGroup',
+    syncGroupIds: 'Display1,Display2,Display3',
+    syncDeviceId: 'Display1',
+    videoBackground: 'true',
+    onlySmilUpdate: 'true',
+    defaultContentDuration: 100,
+    validator: (smilFileContent: string): boolean => {
+		return MyValidator.validate(smilFileContent);
+    },
+    smilFileDownloader: async () => {
+		const response = await fetch(downloadUrl, {
+			method: 'GET',
+			headers: {
+				'Authorization': MyCustomAuthorizationHeader,
+				Accept: 'application/json',
+			},
+			mode: 'cors',
+		});
+		return response.json();
+    },
+	fetchLastModified: async (fileSrc: string): Promise<null | string | number> => {
+		try {
+			const downloadUrl = createDownloadPath(fileSrc);
+			const authHeaders = window.getAuthHeaders?.(downloadUrl);
+			const promiseRaceArray = [];
+			promiseRaceArray.push(
+				fetch(downloadUrl, {
+					method: 'HEAD',
+					headers: {
+						...authHeaders,
+						Accept: 'application/json',
+					},
+					mode: 'cors',
+				}),
+			);
+			promiseRaceArray.push(sleep(SMILScheduleEnum.fileCheckTimeout));
 
-// delete "sos" item in package.json
+			const response = (await Promise.race(promiseRaceArray)) as Response;
 
-// login to signageOS
-sos login
-// upload the SMIL Player applet to signageOS
-sos applet upload
+			const newLastModified = await response.headers.get('last-modified');
+			return newLastModified ? newLastModified : 0;
+		} catch (err) {
+			debug('Unexpected error occured during lastModified fetch: %O', err);
+			return null;
+		}
+	},
+    reporter: async (message: string) => {
+		fetch('https://my-api-url.com/my-endpoint', {
+			method: 'POST', // or 'PUT'
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(message),
+		});
+	},
+});
 
-// once the SMIL Player is uploaded, deploy to any supported device
+// runs indefinitely
+await smilPlayer.startSmilPlayer();
 ```
+
+## Table of options
+| Option   | Description                                                                                                                                         | 
+|-----|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+|  smilUrl   | Url where actual smil file is hosted.                                                                                                               |
+|  backupImageUrl  | Url for backup image which is displayed in case player cant download smil file,<br/> or when something goes wrong during xml parsing.               |
+|  serialPortDevice   | Serial port used for Nexmosphere sensors.                                                                                                           |
+|  syncServerUrl   | Url where synchronization server is running. Used during synchronization of <br/>multiple devices.                                                  |
+|  syncGroupName   | Name of the synchronization group which determines which devices will be synchroniized with each other.                                             |
+|  syncGroupIds   | Ids of all devices within synchronization group.                                                                                                    |
+|  syncDeviceId   | Id of current device. Must be present in sync group.                                                                                                |
+|  videoBackground   | Determines if videos will be playing in background. With this option on, you can use image overlay over videos.                                     |
+|  onlySmilUpdate   | Determines if smil player will check for updates all media files in smil file, or only smil file itself.                                            |
+|  defaultContentDuration   | Default duration of media when no duration is specified in smil file.                                                                               |
+|  validator   | Module used for input xml validation.                                                                                                               |
+|  smilFileDownloader   | Module used for downloading smil file from given url.                                                                                               |
+|  fetchLastModified   | Module responsible for checking media files for updates.                                                                                            |
+|  reporter   | Module responsible for reporting about events inside player. Example: content downloaded, content playback started, content playback finished etc.. |
