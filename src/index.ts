@@ -1,3 +1,3 @@
 import { SmilPlayer } from './components/smilPlayer';
 
-new SmilPlayer().startSmilPlayer();
+new SmilPlayer().start();

@@ -1,3 +1,3 @@
 export interface ISmilPlayer {
-	startSmilPlayer: () => void;
+	start: () => void;
 }
