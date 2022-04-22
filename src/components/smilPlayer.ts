@@ -1,6 +1,5 @@
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
-import Debug from 'debug';
 import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
@@ -11,6 +10,7 @@ import { resetBodyContent, setTransitionsDefinition } from './playlist/tools/htm
 // @ts-ignore
 import backupImage from '../../public/backupImage/backupImage.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
+import { debug } from './smilPlayerTools';
 import { SMILScheduleEnum } from '../enums/scheduleEnums';
 import { SMILEnums } from '../enums/generalEnums';
 import { FilesManager } from './files/filesManager';
@@ -20,8 +20,6 @@ import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcesso
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
-
-export const debug = Debug('@signageos/smil-player:main');
 
 applyFetchPolyfill();
 
@@ -42,7 +40,7 @@ export class SmilPlayer implements ISmilPlayer {
 		this.dataPrepare = this.playlist.dataPrepare;
 	}
 
-	public startSmilPlayer = async () => {
+	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
 
