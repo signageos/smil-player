@@ -1,5 +1,5 @@
 import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	SMILAudio,
 	SMILImage,
@@ -15,7 +15,6 @@ import {
 	SMILFile,
 	SMILFileObject,
 } from '../../models/filesModels';
-import { IFile } from '@signageos/front-display/es6/NativeDevice/fileSystem';
 
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
