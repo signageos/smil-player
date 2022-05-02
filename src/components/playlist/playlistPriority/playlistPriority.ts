@@ -51,12 +51,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			previousPlayingIndex,
 			priorityRegionName,
 		);
-		console.log(
-			'Got currentIndex and previousPlayingIndex: %s, %s for priorityRegionName: %s',
-			currentIndex,
-			previousPlayingIndex,
-			priorityRegionName,
-		);
 
 		if (
 			this.currentlyPlayingPriority[priorityRegionName].length > 1 &&

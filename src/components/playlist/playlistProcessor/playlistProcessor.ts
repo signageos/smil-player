@@ -306,7 +306,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			const priorityObject = createPriorityObject(elem as PriorityObject, arrayIndex);
-			console.log(priorityObject);
+
 			promises.push(
 				(async () => {
 					await this.processPlaylist(elem, version, parent, endTime, priorityObject, conditionalExpr);

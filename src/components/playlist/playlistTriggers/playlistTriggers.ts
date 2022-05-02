@@ -149,10 +149,10 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 							await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 						}
 					} else {
-						console.log('Trigger is already playing');
+						debug('Trigger is already playing');
 					}
 				} else {
-					console.log('no active trigger found, cancel current trigger if playing');
+					debug('no active trigger found, cancel current trigger if playing');
 					for (const trigger in this.triggersEndless) {
 						this.triggersEndless[trigger].play = false;
 						this.triggersEndless[trigger].syncCanceled = true;
@@ -166,6 +166,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	private watchRfidAntena = async (smilObject: SMILFileObject) => {
 		let serialPort;
 		try {
+
+			if (smilObject.sensors.length === 0) {
+				throw new Error('No sensors specified for nexmosphere triggers: ' + JSON.stringify(smilObject.sensors));
+			}
+
 			serialPort = await this.sos.hardware.openSerialPort({
 				device: this.sos.config.serialPortDevice ?? SMILTriggersEnum.nexmoDevice,
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
