@@ -159,7 +159,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			video.playing = false;
 			debug(`previous ${videoElement} stopped`);
 		} catch (err) {
-			console.log('error during video cancellation');
+			debug('error during video cancellation: %O', err);
 		}
 	};
 }
