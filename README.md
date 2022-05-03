@@ -1,15 +1,15 @@
-# SignageOs SMIL player
+# SMIL player
 
 ## How To Install
 ```
-npm install @signageos/smil-player
+npm install @signageos/smil-player --save-dev
 ```
 
 ## Basic usage
-Smil player is configurable either via options object passed in constructor or from signageOs box using timings.
+Smil player is configurable either via options object passed in constructor or from signageOS box using timings.
 
-### Basic usage - no signageOs timings used
-When not using signageOs timings you have to specify smil file url.
+### Basic usage - no signageOS Applet used
+When not using signageOS timings you have to specify smil file url.
 ```ts
 import { SmilPlayer } from '@signageos/smil-player';
 
@@ -18,11 +18,11 @@ const smilPlayer = new SmilPlayer({
 });
 
 // runs indefinitely
-await smilPlayer.startSmilPlayer();
+await smilPlayer.start();
 ```
 
-### Basic usage - with signageOs timings used
-When using signageOs timings you can specify number of options which are directly passed to Smil player itself. List of options is defined in package.json.
+### Basic usage - with signageOS Applet used
+When using signageOS timings you can specify number of options which are directly passed to Smil player itself. List of options is defined in package.json.
 [Timings example](https://docs.signageos.io/hc/en-us/articles/4405231920914-How-to-build-your-own-SMIL-Player-from-source-code#7-smil-player-configuration)
 ```ts
 import { SmilPlayer } from '@signageos/smil-player';
@@ -30,7 +30,7 @@ import { SmilPlayer } from '@signageos/smil-player';
 const smilPlayer = new SmilPlayer();
 
 // runs indefinitely
-await smilPlayer.startSmilPlayer();
+await smilPlayer.start();
 ```
 
 ### More advanced example
@@ -43,13 +43,15 @@ const smilPlayer = new SmilPlayer({
     smilUrl: 'http://example.com/smilFile.smil',
     backupImageUrl: 'https://my.server.com/failover-image.png',
     serialPortDevice: '/device/ttyUSB0',
-    syncServerUrl: 'https://applet-synchronizer.com',
-    syncGroupName: 'mySyncGroup',
-    syncGroupIds: 'Display1,Display2,Display3',
-    syncDeviceId: 'Display1',
-    videoBackground: 'true',
-    onlySmilUpdate: 'true',
-    defaultContentDuration: 100,
+    sync: {
+		serverUrl: 'https://applet-synchronizer.com',
+		groupName: 'mySyncGroup',
+		groupIds: ['Display1','Display2','Display3'],
+		deviceId: 'Display1',
+    },
+    videoBackground: true,
+    onlySmilUpdate: true,
+    defaultContentDurationSec: 100,
     validator: (smilFileContent: string): boolean => {
 		return MyValidator.validate(smilFileContent);
     },
@@ -64,7 +66,7 @@ const smilPlayer = new SmilPlayer({
 		});
 		return response.json();
     },
-	fetchLastModified: async (fileSrc: string): Promise<null | string | number> => {
+	lastModifiedChecker: async (fileSrc: string): Promise<null | string | number> => {
 		try {
 			const downloadUrl = createDownloadPath(fileSrc);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
@@ -91,7 +93,7 @@ const smilPlayer = new SmilPlayer({
 		}
 	},
     reporter: async (message: string) => {
-		fetch('https://my-api-url.com/my-endpoint', {
+		await fetch('https://my-api-url.com/my-endpoint', {
 			method: 'POST', // or 'PUT'
 			headers: {
 				'Content-Type': 'application/json',
@@ -102,7 +104,7 @@ const smilPlayer = new SmilPlayer({
 });
 
 // runs indefinitely
-await smilPlayer.startSmilPlayer();
+await smilPlayer.start();
 ```
 
 ## Table of options
