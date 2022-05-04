@@ -9,14 +9,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
--   fixed wallclock and repeatCount=indefinite edge case bug
--   fixed background video single loop freeze
--   fixed repeatCount issues when combined with priorityClasses and wallclock notations
--   fixed relative src path for triggers
--   fixed rare bug with multiple triggers using same region not working correctly
--   fixed bug with keyboard triggers with specified duration
--   fixed transitions with underlying content
--   fixed issue when trying to prepare video which no longer exists in localstorage
+- fixed wallclock and repeatCount=indefinite edge case bug
+- fixed background video single loop freeze
+- fixed repeatCount issues when combined with priorityClasses and wallclock notations
+- fixed relative src path for triggers
+- fixed rare bug with multiple triggers using same region not working correctly
+- fixed bug with keyboard triggers with specified duration
+- fixed transitions with underlying content
+- fixed issue when trying to prepare video which no longer exists in localstorage
+- fixed rare bug with one widget in playlist not visible after smil update
 
 ### Changed
 
