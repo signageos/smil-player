@@ -1056,6 +1056,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		await this.checkRegionsForCancellation(element, regionInfo, parentRegion, version);
 
+		// rare case during seamless update with only one widget in playlist.
+		if (elementHtml.style.visibility !== 'visible') {
+			elementHtml.style.visibility = 'visible';
+			elementHtml.setAttribute('src', element.src);
+		}
+
 		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
 
 		// create currentlyPlayingPriority for trigger nested region
@@ -1183,6 +1189,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 			await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 		}
+
 		if (
 			media.hasOwnProperty(SMILTriggersEnum.triggerValue) &&
 			!this.triggers.triggersEndless[media.triggerValue as string]?.play
