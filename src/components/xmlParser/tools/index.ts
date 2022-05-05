@@ -171,7 +171,7 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 
 			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
 			if (
-				(!isUrl(get(node.value, 'src', 'default')) && !isRelativePath(get(node.value, 'src', 'default'))) ||
+				(!isUrl(get(node.value, 'src', 'default')) && !isRelativePath(get(node.value, 'src', 'default')) && get(node.value, 'isStream') === '') ||
 				get(node.value, 'src', 'default') === ''
 			) {
 				return node;
