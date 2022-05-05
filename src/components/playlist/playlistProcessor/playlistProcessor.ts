@@ -1752,7 +1752,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!(await this.files.fileExists(
 					this.internalStorageUnit,
 					createLocalFilePath(FileStructure.videos, value.src),
-				))
+				)) && !value.isStream
 			) {
 				debug(`Video does not exists in local storage: %O with params: %O`, value, params);
 				return undefined;
