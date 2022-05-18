@@ -108,19 +108,19 @@ await smilPlayer.start();
 ```
 
 ## Table of options
-| Option   | Description                                                                                                                                         | 
-|-----|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-|  smilUrl   | Url where actual smil file is hosted.                                                                                                               |
-|  backupImageUrl  | Url for backup image which is displayed in case player cant download smil file,<br/> or when something goes wrong during xml parsing.               |
-|  serialPortDevice   | Serial port used for Nexmosphere sensors.                                                                                                           |
-|  syncServerUrl   | Url where synchronization server is running. Used during synchronization of <br/>multiple devices.                                                  |
-|  syncGroupName   | Name of the synchronization group which determines which devices will be synchroniized with each other.                                             |
-|  syncGroupIds   | Ids of all devices within synchronization group.                                                                                                    |
-|  syncDeviceId   | Id of current device. Must be present in sync group.                                                                                                |
-|  videoBackground   | Determines if videos will be playing in background. With this option on, you can use image overlay over videos.                                     |
-|  onlySmilUpdate   | Determines if smil player will check for updates all media files in smil file, or only smil file itself.                                            |
-|  defaultContentDuration   | Default duration of media when no duration is specified in smil file.                                                                               |
-|  validator   | Module used for input xml validation.                                                                                                               |
-|  smilFileDownloader   | Module used for downloading smil file from given url.                                                                                               |
-|  fetchLastModified   | Module responsible for checking media files for updates.                                                                                            |
-|  reporter   | Module responsible for reporting about events inside player. Example: content downloaded, content playback started, content playback finished etc.. |
+| Option                 | Description                                                                                                                                         | 
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| smilUrl                | Url where actual smil file is hosted.                                                                                                               |
+| backupImageUrl         | Url for backup image which is displayed in case player cant download smil file,<br/> or when something goes wrong during xml parsing.               |
+| serialPortDevice       | Serial port used for Nexmosphere sensors.                                                                                                           |
+| sync.serverUrl         | Url where synchronization server is running. Used during synchronization of <br/>multiple devices.                                                  |
+| sync.groupName         | Name of the synchronization group which determines which devices will be synchroniized with each other.                                             |
+| sync.groupIds          | Ids of all devices within synchronization group.                                                                                                    |
+| sync.deviceId          | Id of current device. Must be present in sync group.                                                                                                |
+| videoBackground        | Determines if videos will be playing in background. With this option on, you can use image overlay over videos.                                     |
+| onlySmilUpdate         | Determines if smil player will check for updates all media files in smil file, or only smil file itself.                                            |
+| defaultContentDuration | Default duration of media when no duration is specified in smil file.                                                                               |
+| validator              | Module used for input xml validation.                                                                                                               |
+| smilFileDownloader     | Module used for downloading smil file from given url.                                                                                               |
+| fetchLastModified      | Module responsible for checking media files for updates.                                                                                            |
+| reporter               | Module responsible for reporting about events inside player. Example: content downloaded, content playback started, content playback finished etc.. |
