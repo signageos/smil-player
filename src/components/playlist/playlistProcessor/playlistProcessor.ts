@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import cloneDeep = require('lodash/cloneDeep');
@@ -253,7 +254,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Unexpected error during playlist processing: %O', err);
 						await sleep(SMILScheduleEnum.defaultAwait);
 					}
-				}, version);
+				},                        version);
 			})(),
 		);
 
@@ -1732,7 +1733,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		| {
 				sosVideoObject: Video | Stream;
 				params: VideoParams;
-		  }
+		}
 		| undefined
 	> => {
 		const sosVideoObject: Video | Stream = isNil(value.isStream) ? this.sos.video : this.sos.stream;

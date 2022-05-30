@@ -1,3 +1,4 @@
+/* tslint:disable:missing whitespace */
 import * as chai from 'chai';
 import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
 import { mockSMILFileTriggers } from '../../mocks/playlistMock/mockTriggers';

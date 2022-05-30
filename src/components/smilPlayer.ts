@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { defaults as config } from '../../config/parameters';

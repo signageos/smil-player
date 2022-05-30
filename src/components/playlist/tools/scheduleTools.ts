@@ -1,3 +1,4 @@
+/* tslint:disable: missing whitespace */
 import moment from 'moment';
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');

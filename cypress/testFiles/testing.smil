@@ -1,49 +1,43 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="999"/>
-        <meta log="true"/>
+        <meta log="true" />
+        <meta http-equiv="Refresh" content="20" />
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
-            <region regionName="region_" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
-            <region regionName="content_153986_logo_0" left="1536" top="0" width="384" height="216" z-index="4" backgroundColor="#18182c"/>
-            <region regionName="content_153987_normal_0" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
-            <region regionName="content_153987_logo_0" left="1536" top="0" width="384" height="216" z-index="4" backgroundColor="#18182c"/>
-            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
+            <root-layout width="1080" height="1920" background="#000000" />
+            <region width="1080" height="1920" backgroundColor="#000000" sync="false" regionName="main" left="0" top="0" z-index="1" mediaAlign="center" />
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
+                    <video src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,c_pad/v1653507723/loader_anim.mp4" />
                 </seq>
             </seq>
+            <seq>
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/hwoynxjhodzafeydizba.mp4" />
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/dkcxmo9ziu2xmjz62urn.mp4" />
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742272/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/odgnxzb39q0tmejallqe.mp4" />
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742266/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/yjyjndoa3zyynpgcv2j1.mp4" />
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742265/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/qmcdbq99samvappnhyke.mp4" />
+                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742264/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/jqheui909mgwyekdue5b.mp4" />
+                <seq id="__prefetchEnd" dur="1s" />
+            </seq>
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <excl begin="0" repeatCount="indefinite">
-                    <priorityClass higher="stop" lower="defer" peer="never">
-                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
-                            <par repeatCount="1">
-                                <seq repeatCount="1">
-                                    <video src="https://v3.netipbox.com/media/2724/resources/327281/327281_1650471756_cdn_arcade.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>
-                                </seq>
-                                <seq repeatCount="1">
-                                    <video src="internal://hdmi1" isStream="true" dur="10" region="content_153987_normal_0"/>
-                                    <!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327091/327091_1650451901_cdn_dolphins.gif" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
-                                </seq>
-                            </par>
-<!--                            <par repeatCount="1">-->
-<!--                                <seq repeatCount="1">-->
-<!--                                    <video src="https://v3.netipbox.com/media/2724/resources/327286/327286_1650471757_cdn_vinyl.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>-->
-<!--                                    <video src="https://v3.netipbox.com/media/2724/resources/327282/327282_1650471756_cdn_dj.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>-->
-<!--                                </seq>-->
-<!--                                <seq repeatCount="1">-->
-<!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327087/327087_1650451900_cdn_if_stress_was_a_drug_id_be_high_as_f.jpg" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
-<!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327089/327089_1650451901_cdn_whatever_happens_happens.jpg" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
-<!--                                </seq>-->
-<!--                            </par>-->
+                <seq>
+                    <seq>
+                        <!--Playlist: DOB-->
+                        <seq>
+                            <!--Sequence: All day-->
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/hwoynxjhodzafeydizba.mp4" soundLevel="0%" />
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/dkcxmo9ziu2xmjz62urn.mp4" soundLevel="0%" />
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742272/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/odgnxzb39q0tmejallqe.mp4" soundLevel="0%" />
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742266/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/yjyjndoa3zyynpgcv2j1.mp4" soundLevel="0%" />
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742265/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/qmcdbq99samvappnhyke.mp4" soundLevel="0%" />
+                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742264/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/jqheui909mgwyekdue5b.mp4" soundLevel="0%" />
                         </seq>
-                    </priorityClass>
-                </excl>
+                    </seq>
+                </seq>
             </par>
         </par>
     </body>

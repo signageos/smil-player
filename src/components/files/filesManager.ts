@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 

@@ -121,7 +121,7 @@ function compareIcsExpr(icsData: string): boolean {
 		const durationMs =
 			typeof event.duration === 'string'
 				? // if duration is in event, parse and use it
-				  parseRFC5545Duration(event.duration)
+				parseRFC5545Duration(event.duration)
 				: // if no duration in event, get it from difference of start & end date
 				event.start && event.end
 				? event.end.valueOf() - event.start.valueOf()
