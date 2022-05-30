@@ -8,5 +8,12 @@ export enum FileStructure {
 	widgets = 'smil/widgets',
 	extracted = 'smil/widgets/extracted',
 }
+export enum mapObject {
+	smil = 'smil',
+	images = 'image',
+	videos = 'video',
+	widgets = 'ref',
+	audios = 'audio',
+}
 
 export const WidgetExtensions = ['.ipk', '.apk', '.wgt', '.zip'];

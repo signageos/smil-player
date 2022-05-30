@@ -6,7 +6,7 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
-import { FileStructure, WidgetExtensions } from '../../../enums/fileEnums';
+import { FileStructure, mapObject, WidgetExtensions } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
 
@@ -117,13 +117,6 @@ export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, valu
 }
 
 export function mapFileType(filePath: string): ItemType {
-	const mapObject = {
-		smil: 'smil',
-		images: 'image',
-		videos: 'video',
-		widgets: 'ref',
-		audios: 'audio',
-	};
 	const fileType = filePath.substring(filePath.lastIndexOf('/'));
 	return get(mapObject, fileType, 'unknown');
 }
