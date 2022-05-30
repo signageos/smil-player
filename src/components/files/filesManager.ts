@@ -496,7 +496,10 @@ export class FilesManager implements IFilesManager {
 					!storedFileName.includes(FileStructure.smilMediaInfoFileName)
 				) {
 					// delete only path with files, not just folders
-					if (storedFile.filePath.indexOf('.') > -1) {
+					if (!await this.sos.fileSystem.isDirectory({
+						storageUnit: internalStorageUnit,
+						filePath: storedFile.filePath,
+					})) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
 						await this.sos.fileSystem.deleteFile(
 							{

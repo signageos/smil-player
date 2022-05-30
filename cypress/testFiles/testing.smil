@@ -1,29 +1,48 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="5" onlySmilUpdate="true"/>
+        <meta http-equiv="refresh" content="999"/>
+        <meta log="true"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="ckmusyw120204p1mhosi6hyja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <region regionName="region_" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
+            <region regionName="content_153986_logo_0" left="1536" top="0" width="384" height="216" z-index="4" backgroundColor="#18182c"/>
+            <region regionName="content_153987_normal_0" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
+            <region regionName="content_153987_logo_0" left="1536" top="0" width="384" height="216" z-index="4" backgroundColor="#18182c"/>
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/ckjsfjnpr205320lqtc08vv3z/2021/01/ckju2zzo400050ymp0msze3m0.jpeg" dur="5s" fit="fill"/>
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <excl>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- START [WebsiteModule] test automatizace (cl1ey462s7653781xo3imxfq34g) -->
-                            <seq>
-                                <ref src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/modules/website/b60c6f30dfb01c3a10e6dde58ff936a1.wgt?appUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fgraphql&amp;campaignId=cl1ey462s7653781xo3imxfq34g&amp;deviceId=ckwuq2mbz12626011xkhzq1l35c9&amp;devicePlatformUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fdevice-platform&amp;hash=b60c6f30dfb01c3a10e6dde58ff936a1&amp;s3Url=https%3A%2F%2Fsignagelab-alfa-space.fra1.cdn.digitaloceanspaces.com%2F" type="application/widget" dur="5s" region="ckmusyw120204p1mhosi6hyja"/>
-                            </seq>
-                            <!-- END [WebsiteModule] test automatizace (cl1ey462s7653781xo3imxfq34g) -->
+                <excl begin="0" repeatCount="indefinite">
+                    <priorityClass higher="stop" lower="defer" peer="never">
+                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                            <par repeatCount="1">
+                                <seq repeatCount="1">
+                                    <video src="https://v3.netipbox.com/media/2724/resources/327281/327281_1650471756_cdn_arcade.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>
+                                </seq>
+                                <seq repeatCount="1">
+                                    <video src="internal://hdmi1" isStream="true" dur="10" region="content_153987_normal_0"/>
+                                    <!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327091/327091_1650451901_cdn_dolphins.gif" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
+                                </seq>
+                            </par>
+<!--                            <par repeatCount="1">-->
+<!--                                <seq repeatCount="1">-->
+<!--                                    <video src="https://v3.netipbox.com/media/2724/resources/327286/327286_1650471757_cdn_vinyl.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>-->
+<!--                                    <video src="https://v3.netipbox.com/media/2724/resources/327282/327282_1650471756_cdn_dj.mp4" region="content_153987_normal_0" dur="5s" fit="meet"/>-->
+<!--                                </seq>-->
+<!--                                <seq repeatCount="1">-->
+<!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327087/327087_1650451900_cdn_if_stress_was_a_drug_id_be_high_as_f.jpg" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
+<!--                                    <img src="https://v3.netipbox.com/media/2724/resources/327089/327089_1650451901_cdn_whatever_happens_happens.jpg" region="content_153986_logo_0" dur="5s" fit="meet"/>-->
+<!--                                </seq>-->
+<!--                            </par>-->
                         </seq>
-                    </par>
+                    </priorityClass>
                 </excl>
             </par>
         </par>

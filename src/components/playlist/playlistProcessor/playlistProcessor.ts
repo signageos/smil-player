@@ -376,7 +376,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			let promises: Promise<void>[] = [];
 
 			if (value.hasOwnProperty(ExprTag)) {
-				conditionalExpr = <string>value[ExprTag];
+				conditionalExpr = value[ExprTag]!;
 			}
 
 			if (key === 'excl') {
@@ -390,17 +390,28 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (key === 'par') {
 				let newParent = generateParentId(key, value);
 				if (Array.isArray(value)) {
-					value.forEach((elem) => {
-						const controlTag = key === 'seq' ? key : 'par';
-						const wrapper = {
-							[controlTag]: elem,
-						};
+					if (parent.startsWith('seq')) {
+						for (const elem of value) {
+							await this.createDefaultPromise(
+								elem,
+								version,
+								priorityObject,
+								newParent,
+								endTime,
+								-1,
+								conditionalExpr,
+							);
+						}
+						continue;
+					}
+
+					for (const elem of value) {
 						if (elem.hasOwnProperty(ExprTag)) {
-							conditionalExpr = <string>elem[ExprTag];
+							conditionalExpr = elem[ExprTag];
 						}
 						promises.push(
 							this.createDefaultPromise(
-								wrapper,
+								elem,
 								version,
 								priorityObject,
 								newParent,
@@ -409,7 +420,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								conditionalExpr,
 							),
 						);
-					});
+					}
 					await Promise.all(promises);
 					continue;
 				}
@@ -492,7 +503,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 
 				if (value.hasOwnProperty(ExprTag)) {
-					conditionalExpr = <string>value[ExprTag];
+					conditionalExpr = value[ExprTag]!;
 				}
 
 				if (value.repeatCount === 'indefinite') {

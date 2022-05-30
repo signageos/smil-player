@@ -50,7 +50,7 @@ export class XmlParser implements IXmlParser {
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
 		parseHeadInfo(xmlObject.smil.head, regions, triggerList);
-		playableMedia.playlist = <SMILPlaylist>xmlObject.smil.body;
+		playableMedia.playlist = xmlObject.smil.body as SMILPlaylist;
 
 		// traverse json as tree of nodes
 		extractDataFromPlaylist(playableMedia, downloads, triggerList);
