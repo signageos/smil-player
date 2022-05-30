@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import { SMILMedia } from '../../../models/mediaModels';
 import { sleep } from '../tools/generalTools';
 import { FunctionKeys, SMILTriggersEnum } from '../../../enums/triggerEnums';

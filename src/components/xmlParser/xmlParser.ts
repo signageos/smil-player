@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon */
 import * as xml2js from 'xml2js';
 import {
 	debug,

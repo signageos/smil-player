@@ -1,3 +1,4 @@
+/* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import set = require('lodash/set');
 import isNil = require('lodash/isNil');

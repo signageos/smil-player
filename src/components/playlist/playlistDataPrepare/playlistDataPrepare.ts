@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { TriggerList } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';

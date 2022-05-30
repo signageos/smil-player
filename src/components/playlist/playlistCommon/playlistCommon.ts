@@ -1,3 +1,4 @@
+/* tslint:disable:Unnecessary semicolon missing whitespace */
 import { CurrentlyPlaying, CurrentlyPlayingPriority, PromiseAwaiting } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
