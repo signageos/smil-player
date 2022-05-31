@@ -102,23 +102,23 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
 		/*
 			condition which determines if this was last iteration of playlist
-			rule 1: if endTime in millis is lower as current time and at the same time is higher than 1000
+			endTimeExpired: if endTime in millis is lower as current time and at the same time is higher than 1000
 				- endTime is specified in date in millis
-			rule 2: if timesPlayed is bigger than endTime
+			repeatCountExpired: if timesPlayed is bigger than endTime
 				- endTime is specified as repeatCount ( <= 1000 )
-			rule 3: is last part of current playlist chain
-			rule 4: smil file was updated force end of playlist
-			rule 5: smil file was updated force end of playlist based on version
+			isLastElement: is last part of current playlist chain
+			smilFileUpdated: smil file was updated force end of playlist
+			expiredVersion: smil file was updated force end of playlist based on version
 		 */
 
-		const rule1: boolean =
+		const endTimeExpired: boolean =
 			currentIndexPriority.player.endTime <= Date.now() && currentIndexPriority.player.endTime > 1000;
-		const rule2: boolean = currentIndexPriority.player.timesPlayed >= endTime - 1;
-		const rule3: boolean = isLast;
-		const rule4: boolean = this.getCancelFunction();
-		const rule5: boolean = version < currentVersion;
+		const repeatCountExpired: boolean = currentIndexPriority.player.timesPlayed >= endTime - 1;
+		const isLastElement: boolean = isLast;
+		const smilFileUpdated: boolean = this.getCancelFunction();
+		const expiredVersion: boolean = version < currentVersion;
 
-		if (((rule1 || rule2) && rule3) || rule4 || rule5) {
+		if (((endTimeExpired || repeatCountExpired) && isLastElement) || smilFileUpdated || expiredVersion) {
 			debug('Finished playing playlist: %O for region: %s', currentIndexPriority, priorityRegionName);
 			// some playlist was paused by this one, unpause it
 			const pausedIndex = currentIndexPriority.controlledPlaylist;

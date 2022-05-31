@@ -1,43 +1,52 @@
 <smil>
     <head>
-        <meta log="true" />
-        <meta http-equiv="Refresh" content="20" />
+        <meta http-equiv="refresh" content="10"/>
         <layout>
-            <root-layout width="1080" height="1920" background="#000000" />
-            <region width="1080" height="1920" backgroundColor="#000000" sync="false" regionName="main" left="0" top="0" z-index="1" mediaAlign="center" />
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182cccc"/>
+
+            <!-- define the screen layout, in this case single fullscreen zone -->
+            <region regionName="video" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#18182c"/>
+            <region regionName="image" left="0" top="0" width="960" height="1080" z-index="1"
+                    backgroundColor="#18182c"/>
         </layout>
     </head>
     <body>
         <par>
+
+            <!-- Play this intro video as long as the resources being prefetched -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <video src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,c_pad/v1653507723/loader_anim.mp4" />
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
+
+            <!-- Downloading resources into the internal storage -->
             <seq>
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/hwoynxjhodzafeydizba.mp4" />
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/dkcxmo9ziu2xmjz62urn.mp4" />
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742272/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/odgnxzb39q0tmejallqe.mp4" />
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742266/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/yjyjndoa3zyynpgcv2j1.mp4" />
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742265/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/qmcdbq99samvappnhyke.mp4" />
-                <prefetch src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742264/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/jqheui909mgwyekdue5b.mp4" />
-                <seq id="__prefetchEnd" dur="1s" />
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
+                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
+                <prefetch
+                        src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg"/>
+                <prefetch
+                        src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg"/>
+
+                <seq id="__prefetchEnd" dur="1s"/>
             </seq>
+
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <seq>
-                    <seq>
-                        <!--Playlist: DOB-->
-                        <seq>
-                            <!--Sequence: All day-->
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/hwoynxjhodzafeydizba.mp4" soundLevel="0%" />
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651750747/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/dkcxmo9ziu2xmjz62urn.mp4" soundLevel="0%" />
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742272/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/odgnxzb39q0tmejallqe.mp4" soundLevel="0%" />
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742266/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/yjyjndoa3zyynpgcv2j1.mp4" soundLevel="0%" />
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742265/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/qmcdbq99samvappnhyke.mp4" soundLevel="0%" />
-                            <video region="main" src="https://res.cloudinary.com/designage/video/upload/w_1080,h_1920,/v1651742264/PROFILE/73bf9e7e-aca0-4c84-85e0-f826adefb396/jqheui909mgwyekdue5b.mp4" soundLevel="0%" />
-                        </seq>
-                    </seq>
-                </seq>
+
+                <!-- indefinite loop of media files in the selected order -->
+                <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
+                <par repeatCount="indefinite">
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                           region="video" soundLevel="0%"></video>
+                    <img dur="3s"
+                         src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg"
+                         region="image" fit="fill"></img>
+                </par>
             </par>
         </par>
     </body>
