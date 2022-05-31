@@ -13,7 +13,7 @@ export function formatWeekDate(dateString: string, weekDay: string): string {
 export function computeWaitInterval(weekToday: number, weekScheduled: number): number {
 	if (weekToday <= weekScheduled) {
 		// 24 hours in ms
-		return ((weekScheduled - weekToday) * 86400000);
+		return (weekScheduled - weekToday) * 86400000;
 	}
 
 	return (7 - (weekToday - weekScheduled)) * 86400000;

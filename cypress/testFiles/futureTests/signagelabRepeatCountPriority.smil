@@ -1,0 +1,42 @@
+<smil>
+	<head>
+		<meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+		<layout>
+			<root-layout width="1920" height="1080" backgroundColor="#000000"/>
+			<region regionName="ckr673zdm2283671zixrtqn59ja" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+		</layout>
+	</head>
+	<body>
+		<par>
+			<seq end="__prefetchEnd.endEvent">
+				<seq repeatCount="indefinite">
+					<img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg" dur="5s" fit="fill"/>
+				</seq>
+			</seq>
+			<par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+				<par>
+					<seq repeatCount="indefinite">
+						<excl>
+							<priorityClass>
+								<!-- START [GalleryModule] test galerie 2 (cl1ezem7p352821xrowxq42u4c) -->
+								<seq repeatCount="indefinite" begin="wallclock(2022-04-06T11:49)" end="wallclock(2022-04-06T11:50)">
+									<img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckrbsn9fn0000ghmhcwb4at1o.png" dur="10s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+								</seq>
+								<!-- END [GalleryModule] test galerie 2 (cl1ezem7p352821xrowxq42u4c) -->
+							</priorityClass>
+
+							<priorityClass higher="pause" pauseDisplay="hide">
+								<!-- START [GalleryModule] test galerie (cl1ezdarp331971xrozc43a63b) -->
+								<seq repeatCount="indefinite">
+									<img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckr1yn6on00020xkbebahernd.jpeg" dur="10s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+									<img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2021/07/ckretbwek00010xmd24vw8r8s.png" dur="10s" fit="fill" region="ckr673zdm2283671zixrtqn59ja"/>
+								</seq>
+								<!-- END [GalleryModule] test galerie (cl1ezdarp331971xrozc43a63b) -->
+							</priorityClass>
+						</excl>
+					</seq>
+				</par>
+			</par>
+		</par>
+	</body>
+</smil>

@@ -5,10 +5,37 @@ export enum SMILTriggersEnum {
 	sensorNexmo = 'nexmosphere',
 	nexmoDevice = '/dev/ttyUSB0',
 	nexmoBaudRate = 115200,
-	keyStrokeDelay = 1000,
+	keyStrokeDelay = 200,
 	keyboardPrefix = 'keyboard',
+	syncPrefix = 'sync',
 	keyboardEventType = 'keydown',
 	mousePrefix = 'mouse',
 	mouseEventType = 'click',
 	touchEventType = 'touchend',
 }
+
+export const FunctionKeys: {
+	[key: string]: string;
+} = {
+	Shift: 'Shift',
+	Control: 'Control',
+	CapsLock: 'CapsLock',
+	AltGraph: 'AltGraph',
+	Tab: 'Tab',
+	Enter: 'Enter',
+	Esc: 'Esc',
+	F1: 'F1',
+	F2: 'F2',
+	F3: 'F3',
+	F4: 'F4',
+	F5: 'F5',
+	F6: 'F6',
+	F7: 'F7',
+	F8: 'F8',
+	F9: 'F9',
+	F10: 'F10',
+	F11: 'F11',
+	F12: 'F12',
+	Del: 'Del',
+	BrowserHome: 'BrowserHome',
+};

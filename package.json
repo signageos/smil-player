@@ -1,119 +1,149 @@
 {
-  "name": "@signageos/smil-player",
-  "version": "1.9.1",
-  "description": "SMIL player",
-  "main": "dist/index.html",
-  "files": [
-    "dist",
-    "README.md",
-    "CHANGELOG.md",
-    "package.json"
-  ],
-  "engines": {
-    "node": ">=14.0.0",
-    "npm": ">=6.10.2"
-  },
-  "scripts": {
-    "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
-    "e2e": "npm run start-e2e-server && cypress run --headless && npm run stop-e2e-server",
-    "e2e-open": "npm run start-e2e-server && cypress open && npm run stop-e2e-server",
-    "start-e2e-server": "tsc cypress/tools/localServer.ts && node cypress/tools/localServer.js &",
-    "stop-e2e-server": "kill $(lsof -t -i:3000)",
-    "lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
-    "lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
-    "upload-applet": "sos applet upload",
-    "clean": "del-cli --force cache dist/*",
-    "prepare": "npm run clean && npm run build",
-    "build": "npm run clean && webpack --display-modules",
-    "build-prod": "npm run clean && cross-env NODE_ENV=production webpack --display-modules",
-    "build-test": "tsc",
-    "start": "webpack-dev-server --mode development --open-emulator",
-    "start-cypress": "webpack-dev-server --mode none --open-emulator",
-    "escheck": "es-check --module es5 dist/index.js",
-    "check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc,@babel/preset-env,babel-loader,cache-loader,es-check,webpack-dev-server'"
-  },
-  "author": "signageOS <dev@signageos.io>",
-  "repository": {
-    "url": "git@gitlab.com:signageos/smil-player",
-    "type": "git"
-  },
-  "license": "MIT",
-  "devDependencies": {
-    "@babel/preset-env": "7.9.0",
-    "@signageos/codestyle": "0.0.15",
-    "@signageos/front-applet": "5.0.0-beta.9",
-    "@signageos/front-display": "8.7.0",
-    "@signageos/webpack-plugin": "^0.1.1",
-    "@types/chai": "4.1.7",
-    "@types/debug": "^4.1.7",
-    "@types/express": "^4.17.13",
-    "@types/he": "1.1.1",
-    "@types/ical": "0.6.2",
-    "@types/lodash": "^4.14.173",
-    "@types/mocha": "^7.0.2",
-    "@types/node": "^14.17.18",
-    "@types/xml2js": "^0.4.9",
-    "@types/xmldom": "^0.1.31",
-    "awesome-typescript-loader": "^5.2.1",
-    "babel-loader": "8.1.0",
-    "cache-loader": "4.1.0",
-    "cors-anywhere": "0.4.1",
-    "cypress": "^6.9.1",
-    "cypress-iframe": "^1.0.1",
-    "depcheck": "0.8.3",
-    "es-check": "5.2.0",
-    "file-loader": "^6.2.0",
-    "html-webpack-plugin": "^3.2.0",
-    "mockdate": "3.0.5",
-    "tslint": "6.1.1",
-    "typescript": "3.8.3",
-    "webpack": "^4.46.0",
-    "webpack-cli": "^3.3.11",
-    "webpack-dev-server": "3.11.0"
-  },
-  "dependencies": {
-    "@signageos/front-applet-extension-nexmosphere": "^0.1.3",
-    "chai": "^4.3.4",
-    "cross-env": "^7.0.3",
-    "debug": "^4.3.2",
-    "del-cli": "^4.0.1",
-    "express": "^4.17.1",
-    "he": "1.2.0",
-    "ical": "git+https://github.com/signageos/ical.js.git#afa98010e0c593b1c49131bb3d884a497fee317a",
-    "is-url-superb": "^3.0.0",
-    "json-easy-filter": "^0.3.1",
-    "lodash": "^4.17.21",
-    "mocha": "^7.2.0",
-    "moment": "^2.26.0",
-    "node-object-hash": "^2.3.1",
-    "nyc": "^15.0.0",
-    "split-string": "git+https://github.com/signageos/split-string.git#51e009105752430c785381c891f366a7e696362e",
-    "ts-node": "^8.8.1",
-    "url": "^0.11.0",
-    "whatwg-fetch": "^3.6.2",
-    "xml2js": "^0.4.23"
-  },
-  "sos": {
-    "appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2",
-    "config": [
-      {
-        "name": "smilUrl",
-        "valueType": "URL",
-        "mandatory": true,
-        "description": "URL where is the SMIL playlist is located."
-      },
-      {
-        "name": "backupImageUrl",
-        "valueType": "URL",
-        "description": "URL where you backup image is located, will be shown in case of content issues as a failover.",
-        "placeholder": "https://my.server.com/failover-image.png"
-      },
-      {
-        "name": "serialPortDevice",
-        "valueType": "string",
-        "description": "Which port to use to connect with sensors. Usually /device/ttyUSB0 or COM3",
-        "placeholder": "/device/ttyUSB0"
-      }
-    ]
-  }
+	"name": "@signageos/smil-player",
+	"version": "2.0.0",
+	"description": "SMIL player",
+	"main": "dist/index.html",
+	"files": [
+		"dist",
+		"README.md",
+		"CHANGELOG.md",
+		"package.json"
+	],
+	"engines": {
+		"node": ">=14.0.0",
+		"npm": ">=6.10.2"
+	},
+	"scripts": {
+		"test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
+		"e2e": "npm run start-e2e-server && cypress run --headless && npm run stop-e2e-server",
+		"e2e-open": "npm run start-e2e-server && cypress open && npm run stop-e2e-server",
+		"start-e2e-server": "tsc cypress/tools/localServer.ts && node cypress/tools/localServer.js &",
+		"stop-e2e-server": "kill $(lsof -t -i:3000)",
+		"lint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
+		"lint-fix": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\" --fix",
+		"upload-applet": "sos applet upload",
+		"clean": "del-cli --force cache dist/*",
+		"prepare": "npm run clean && npm run build",
+		"build": "npm run clean && webpack --display-modules",
+		"build-prod": "npm run clean && cross-env NODE_ENV=production webpack --display-modules",
+		"build-test": "tsc",
+		"start": "webpack-dev-server --mode development --open-emulator",
+		"start-cypress": "webpack-dev-server --mode none --open-emulator",
+		"escheck": "es-check --module es5 dist/index.js",
+		"check": "depcheck --specials=tslint,webpack,mocha --parsers='*.ts:typescript,*.js:es6' --detectors='requireCallExpression,importDeclaration' --ignore-dirs='dist,packages' --ignores='@types/*,@signageos/codestyle,depcheck,webpack-cli,mocha,nyc,@babel/preset-env,babel-loader,cache-loader,es-check,webpack-dev-server'"
+	},
+	"author": "signageOS <dev@signageos.io>",
+	"repository": {
+		"url": "git@gitlab.com:signageos/smil-player",
+		"type": "git"
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"@babel/preset-env": "7.9.0",
+		"@signageos/codestyle": "0.0.21",
+		"@signageos/front-applet": "5.2.0",
+		"@signageos/front-display": "9.16.0",
+		"@signageos/webpack-plugin": "^0.1.1",
+		"@types/chai": "4.1.7",
+		"@types/debug": "^4.1.7",
+		"@types/express": "^4.17.13",
+		"@types/he": "1.1.1",
+		"@types/ical": "0.6.2",
+		"@types/lodash": "^4.14.173",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^14.17.18",
+		"@types/xml2js": "^0.4.9",
+		"@types/xmldom": "^0.1.31",
+		"awesome-typescript-loader": "^5.2.1",
+		"babel-loader": "8.1.0",
+		"cache-loader": "4.1.0",
+		"cors-anywhere": "0.4.1",
+		"cypress": "^6.9.1",
+		"cypress-iframe": "^1.0.1",
+		"depcheck": "0.8.3",
+		"es-check": "5.2.0",
+		"file-loader": "^6.2.0",
+		"html-webpack-plugin": "^3.2.0",
+		"mockdate": "3.0.5",
+		"tslint": "6.1.1",
+		"typescript": "3.8.3",
+		"webpack": "^4.46.0",
+		"webpack-cli": "^3.3.11",
+		"webpack-dev-server": "3.11.0"
+	},
+	"dependencies": {
+		"@signageos/front-applet-extension-nexmosphere": "^0.1.3",
+		"chai": "^4.3.4",
+		"cross-env": "^7.0.3",
+		"debug": "^4.3.4",
+		"del-cli": "^4.0.1",
+		"express": "^4.17.1",
+		"he": "1.2.0",
+		"ical": "git+https://github.com/signageos/ical.js.git#afa98010e0c593b1c49131bb3d884a497fee317a",
+		"is-url-superb": "^3.0.0",
+		"json-easy-filter": "^0.3.1",
+		"lodash": "^4.17.21",
+		"mocha": "^7.2.0",
+		"moment": "^2.26.0",
+		"node-object-hash": "^2.3.1",
+		"nyc": "^15.0.0",
+		"split-string": "git+https://github.com/signageos/split-string.git#51e009105752430c785381c891f366a7e696362e",
+		"ts-node": "^8.8.1",
+		"url": "^0.11.0",
+		"whatwg-fetch": "^3.6.2",
+		"xml2js": "^0.4.23"
+	},
+	"sos": {
+		"appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2",
+		"config": [
+			{
+				"name": "smilUrl",
+				"valueType": "URL",
+				"mandatory": true,
+				"description": "URL where is the SMIL playlist is located."
+			},
+			{
+				"name": "backupImageUrl",
+				"valueType": "URL",
+				"description": "URL where you backup image is located, will be shown in case of content issues as a failover.",
+				"placeholder": "https://my.server.com/failover-image.png"
+			},
+			{
+				"name": "serialPortDevice",
+				"valueType": "string",
+				"description": "Which port to use to connect with sensors. Usually /device/ttyUSB0 or COM3",
+				"placeholder": "/device/ttyUSB0"
+			},
+			{
+				"name": "syncServerUrl",
+				"valueType": "string",
+				"description": "Url of sos applet synchronizer, of not specified signageOs will use default server",
+				"placeholder": "https://applet-synchronizer.com"
+			},
+			{
+				"name": "syncGroupName",
+				"valueType": "string",
+				"description": "Name of the group of devices used to play synchro playback",
+				"placeholder": "syncGroupName"
+			},
+			{
+				"name": "syncGroupIds",
+				"valueType": "string",
+				"description": "List of all device ids which should be synced within the sync group specified in syncGroupName, separated by comma",
+				"placeholder": "Display1,Display2,Display3"
+			},
+			{
+				"name": "syncDeviceId",
+				"valueType": "string",
+				"description": "Device id used for sync playback, must be present within syncGroupIds",
+				"placeholder": "Display1"
+			},
+			{
+				"name": "videoBackground",
+				"valueType": "string",
+				"description": "If videos should be played on background or not",
+				"placeholder": "true"
+			}
+		]
+	}
 }

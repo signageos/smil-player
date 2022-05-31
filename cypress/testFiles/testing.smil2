@@ -1,19 +1,27 @@
 <smil>
     <head>
         <meta http-equiv="refresh" content="20"/>
+        <triggers>
+
+            <trigger id="trigger2" condition="or">
+                <condition
+                        origin="mouse" action="click"/>
+            </trigger>
+        </triggers>
         <layout>
             <!-- define the screen resolution -->
             <root-layout width="100%" height="100%" backgroundColor="#18182c" />
 
             <!-- define the screen layout zones in relative % -->
+            <region regionName="left01" left="0" top="0" width="45%" height="100%" z-index="2" backgroundColor="#ffffff"/>
             <region regionName="background" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
-            <region regionName="overlay" left="0" top="0" width="100%" height="100%" z-index="3" backgroundColor="transparent"/>
-            <region regionName="left01" left="0%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="left02" left="0%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="left03" left="0%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right01" left="50%" top="16%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right02" left="50%" top="44%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right03" left="50%" top="72%" width="50%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right01" left="45%" top="16%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right02" left="45%" top="44%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="right03" left="45%" top="72%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
+            <region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff">
+                <region regionName="trigger1" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
+            </region>
+
         </layout>
     </head>
     <body>
@@ -23,50 +31,47 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/loading.mp4" />
                 </seq>
             </seq>
 
             <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <seq repeatCount="1">
-                    <par>
+                <par>
+                    <!-- indefinite loop of media files in the selected order -->
+                    <par repeatCount="indefinite">
+                        <img dur="180s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/background.png" region="background"></img>
+                    </par>
+                </par>
+                <!-- TWO <par> playlists are here, they will play together side by side, both in their respective region -->
+                <par>
+                    <seq repeatCount="indefinite">
                         <!-- indefinite loop of media files in the selected order -->
-                        <par repeatCount="indefinite">
-                            <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/background.png" region="background"></img>
-                        </par>
-                    </par>
-                    <!-- TWO <par> playlists are here, they will play together side by side, both in their respective region -->
-                    <par>
-                        <!-- indefinite loop of media files in the selected order
-                        -->
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Chicken+Sandwich&amp;text=Delicious&amp;number=1&amp;image=original_01.png" region="left01" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Deluxe&amp;text=Delicious&amp;number=2&amp;image=original_02.png" region="left02" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Chick-fil-A%C2%AE+Nuggets&amp;text=Delicious&amp;number=3&amp;image=original_03.png" region="left03" type="application/widget" dur="15s" />
-                        </par>
-                    </par>
-                    <par>
-                        <!-- indefinite loop of media files in the selected order -->
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken+Sandwich&amp;text=Delicious&amp;number=4&amp;image=spicy_01.png" region="right01" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Deluxe&amp;text=Delicious&amp;number=5&amp;image=spicy_02.png" region="right02" type="application/widget" dur="15s" />
-                        </par>
-                        <par repeatCount="indefinite">
-                            <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?title=Spicy+Chicken-n-Strips&amp;text=Delicious&amp;number=6&amp;image=spicy_03.png" region="right03" type="application/widget" dur="15s" />
-                        </par>
-                    </par>
-                    <seq repeatCount="1">
-                        <img dur="5s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" region="background" z-index="4"></img>
+                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/side.mp4" region="left01" soundLevel="0%"></video>
                     </seq>
-                </seq>
+                </par>
+                <par>
+                    <!-- indefinite loop of media files in the selected order
+                     -->
+                    <par repeatCount="indefinite">
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=1" region="right01" type="application/widget" dur="indefinite" />
+                    </par>
+                    <par repeatCount="indefinite">
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=2" region="right02" type="application/widget" dur="indefinite" />
+                    </par>
+                    <par repeatCount="indefinite">
+                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=3" region="right03" type="application/widget" dur="indefinite" />
+                    </par>
+                </par>
             </par>
+        </par>
+        <par>
+            <seq begin="trigger2" dur="8">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="3s" fit="hidden" region="trigger">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/side.mp4" region="trigger" soundLevel="0%"></video>
+            </seq>
         </par>
     </body>
 </smil>

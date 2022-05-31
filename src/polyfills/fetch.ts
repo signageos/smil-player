@@ -1,7 +1,7 @@
 export function applyFetchPolyfill() {
 	const nativeFetch: ((input: RequestInfo, init?: RequestInit) => Promise<Response>) | undefined = window.fetch;
 	delete window.fetch;
-	require("whatwg-fetch");
+	require('whatwg-fetch');
 	const whatwgFetch = window.fetch;
 	window.fetch = function (input: RequestInfo, init?: RequestInit) {
 		const url = typeof input === 'string' ? input : input.url;

@@ -1,12 +1,23 @@
 <smil>
 	<head>
 		<meta http-equiv="refresh" content="20"/>
+		<triggers>
+			<trigger id="triggerDisplay2" condition="or">
+				<condition origin="sync" data="Display2"/>
+			</trigger>
+			<trigger id="triggerDisplay1Display2" condition="or">
+				<condition origin="sync" data="Display1Display2"/>
+			</trigger>
+		</triggers>
 		<layout>
 			<!-- define the screen resolution -->
 			<root-layout width="1920" height="1080" backgroundColor="#18182c" />
 
 			<!-- define the screen layout zones in relative % -->
 			<region regionName="main" left="25%" top="25%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+			<region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff">
+				<region regionName="fullScreenTrigger" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
+			</region>
 		</layout>
 	</head>
 	<body>
@@ -37,6 +48,11 @@
 					<video src="assets/landscape1.mp4" region="main" soundLevel="0%" fit="fill"></video>
 				</seq>
 			</par>
+		</par>
+		<par>
+			<seq begin="triggerDisplay1Display2" repeatCount="1">
+				<video src="assets/landscape1.mp4" region="trigger" type="application/widget"/>
+			</seq>
 		</par>
 	</body>
 </smil>

@@ -1,4 +1,4 @@
 export type SmilScheduleObject = {
-	timeToStart: number,
-	timeToEnd: number,
+	timeToStart: number;
+	timeToEnd: number;
 };

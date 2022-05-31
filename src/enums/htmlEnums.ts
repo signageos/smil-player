@@ -11,6 +11,7 @@ export enum HtmlEnum {
 	video = 'video',
 	transitionStyleId = 'transitions',
 	zIndex = 'z-index',
+	widgetAllow = 'geolocation *; microphone *; camera *; midi *; encrypted-media *; autoplay *;',
 }
 
 export enum ObjectFitEnum {
