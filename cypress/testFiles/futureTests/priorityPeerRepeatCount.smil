@@ -1,0 +1,37 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="99999" />
+        <meta log="true" />
+        <layout>
+            <root-layout width="1920" height="1080" />
+            <region regionName="video" top="0" left="480" width="1440" height="1080" z-index="1" />
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://storage.googleapis.com/prod-vsg-statics/default_branch_landscape_1920.jpeg" />
+                </seq>
+            </seq>
+            <par repeatCount="indefinite" begin="__prefetchEnd.endEvent">
+                <excl begin="0">
+                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="never">
+                        <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)" repeatCount="indefinite">
+                            <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)" repeatCount="2">
+                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto" />
+                                </video>
+                            </seq>
+                            <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)" repeatCount="1">
+                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" id="annons0" fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto" />
+                                </video>
+                            </seq>
+                        </seq>
+                    </priorityClass>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

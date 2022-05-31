@@ -6,7 +6,6 @@ import { checkConditionalExprSafe } from '../../../src/components/playlist/tools
 const expect = chai.expect;
 
 describe('Playlist tools checkConditionalExprSafe', () => {
-
 	beforeEach(() => {
 		MockDate.set(new Date('2021-04-22T12:00:00'));
 	});
@@ -17,48 +16,48 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 	describe('Playlist tools component checkConditionalExprSafe playerId tests', () => {
 		it('Should return correct response', () => {
-			let testExpression = 'adapi-compare(\'f1835d9f-be8f-4054-9e6c-123456789012\', smil-playerId())';
+			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerId())";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(\'testing\', smil-playerId())';
+			testExpression = "adapi-compare('testing', smil-playerId())";
 			expect(checkConditionalExprSafe(testExpression, '', 'testing')).to.be.equal(true);
 
-			testExpression = 'adapi-compare(smil-playerId(), \'testing\')';
+			testExpression = "adapi-compare(smil-playerId(), 'testing')";
 			expect(checkConditionalExprSafe(testExpression, '', 'testing')).to.be.equal(true);
 
-			testExpression = 'adapi-compare(smil-playerId(), \'sdsdsds\')';
+			testExpression = "adapi-compare(smil-playerId(), 'sdsdsds')";
 			expect(checkConditionalExprSafe(testExpression, '', 'ewrwerw')).to.be.equal(false);
 		});
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe playerName tests', () => {
 		it('Should return correct response', () => {
-			let testExpression = 'adapi-compare(\'f1835d9f-be8f-4054-9e6c-123456789012\', smil-playerName())';
+			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerName())";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(\'testing\', smil-playerName())';
+			testExpression = "adapi-compare('testing', smil-playerName())";
 			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(true);
 
-			testExpression = 'adapi-compare(smil-playerName(), \'testing\')';
+			testExpression = "adapi-compare(smil-playerName(), 'testing')";
 			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(true);
 
-			testExpression = 'adapi-compare(smil-playerName(), \'sdsdsds\')';
+			testExpression = "adapi-compare(smil-playerName(), 'sdsdsds')";
 			expect(checkConditionalExprSafe(testExpression, 'ewrwerw', '')).to.be.equal(false);
 		});
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe adapi-date tests', () => {
 		it('Should return correct response', () => {
-			let testExpression = 'adapi-compare(adapi-date(),\'2010-01-01T00:00:00\')&lt;0';
+			let testExpression = "adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(adapi-date(),\'2030-01-01T00:00:00\')&lt;0';
+			testExpression = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')&lt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(\'2010-01-01T00:00:00\', adapi-date())&lt;0';
+			testExpression = "adapi-compare('2010-01-01T00:00:00', adapi-date())&lt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(\'2030-01-01T00:00:00\', adapi-date())&lt;0';
+			testExpression = "adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
 			const today = moment().format('YYYY-MM-DD');
@@ -71,30 +70,29 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = `adapi-compare(adapi-date(),\'${today}\')&gt;=0`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(\'2010-01-01T00:00:00\', adapi-date())&gt;0';
+			testExpression = "adapi-compare('2010-01-01T00:00:00', adapi-date())&gt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(\'2030-01-01T00:00:00\', adapi-date())&gt;0';
+			testExpression = "adapi-compare('2030-01-01T00:00:00', adapi-date())&gt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;0';
+			testExpression = "adapi-compare(adapi-date(), '2010-01-01T00:00:00')&gt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;0';
+			testExpression = "adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;=0';
+			testExpression = "adapi-compare(adapi-date(), '2010-01-01T00:00:00')&gt;=0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			testExpression = 'adapi-compare(adapi-date(), \'2030-01-01T00:00:00\')&gt;=0';
+			testExpression = "adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;=0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 		});
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe adapi-weekday tests', () => {
-
 		it('Should return correct response', () => {
-			let dayOfWeek = (moment().isoWeekday() % 7);
+			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `adapi-weekday()=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
@@ -102,19 +100,19 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = `adapi-weekday()=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-weekday()&gt;${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-weekday()&lt;${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-weekday()&gt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-weekday()&lt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
@@ -125,7 +123,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = `adapi-compare('2013-05-01T00:00:00', adapi-date()) &lt;= 0`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			dayOfWeek = (moment().subtract(1, 'day').isoWeekday()) % 7;
+			dayOfWeek = moment().subtract(1, 'day').isoWeekday() % 7;
 			testExpression = `adapi-weekday()&lt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
@@ -156,9 +154,8 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe adapi-gmweekday tests', () => {
-
 		it('Should return correct response', () => {
-			let dayOfWeek = (moment().isoWeekday() % 7);
+			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `adapi-gmweekday()=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
@@ -166,19 +163,19 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = `adapi-gmweekday()=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-gmweekday()&gt;${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-gmweekday()&lt;${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-gmweekday()&gt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			dayOfWeek = (moment().isoWeekday() % 7);
+			dayOfWeek = moment().isoWeekday() % 7;
 			testExpression = `adapi-gmweekday()&lt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
@@ -189,7 +186,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = `adapi-compare('2013-05-01T00:00:00', adapi-date()) &lt;= 0`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
-			dayOfWeek = (moment().subtract(1, 'day').isoWeekday()) % 7;
+			dayOfWeek = moment().subtract(1, 'day').isoWeekday() % 7;
 			testExpression = `adapi-gmweekday()&lt;=${dayOfWeek}`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
@@ -336,8 +333,8 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe ICS tests', () => {
-
-		const icsExample1 = 'BEGIN:VCALENDAR\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Adobe//AEM Screens//EN\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:20210421T120000\r\nRRULE:FREQ=DAILY;UNTIL=20210422T144100\r\nDTSTAMP:20210420T144143\r\nCREATED:20210420T144143\r\nUID:a0effdca-ab09-46e6-b4d7-4fbd1937ca47\r\nDESCRIPTION:\r\nSUMMARY:Daily Event\r\nDURATION:PT6H\r\nEND:VEVENT\r\nEND:VCALENDAR';
+		const icsExample1 =
+			'BEGIN:VCALENDAR\r\nCALSCALE:GREGORIAN\r\nPRODID:-//Adobe//AEM Screens//EN\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nDTSTART:20210421T120000\r\nRRULE:FREQ=DAILY;UNTIL=20210422T144100\r\nDTSTAMP:20210420T144143\r\nCREATED:20210420T144143\r\nUID:a0effdca-ab09-46e6-b4d7-4fbd1937ca47\r\nDESCRIPTION:\r\nSUMMARY:Daily Event\r\nDURATION:PT6H\r\nEND:VEVENT\r\nEND:VCALENDAR';
 
 		it('Should return correct response', () => {
 			let testExpression = `adapi-compare(adapi-ics(), '${icsExample1}')`;
@@ -385,7 +382,6 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 			MockDate.set('2021-04-23T18:00:01');
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
-
 		});
 	});
 
@@ -474,16 +470,16 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 	describe('Playlist tools component checkConditionalExprSafe not supported expression', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
-			let testExpression = 'adapi-compare(\'f1835d9f-be8f-4054-9e6c-123456789012\', smil-playerIdd())';
+			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerIdd())";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(\'testing\', smil-playerrrNameeee())';
+			testExpression = "adapi-compare('testing', smil-playerrrNameeee())";
 			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(false);
 
-			testExpression = 'adapi-compare(smil-playerIdd(), \'f1835d9f-be8f-4054-9e6c-123456789012\')';
+			testExpression = "adapi-compare(smil-playerIdd(), 'f1835d9f-be8f-4054-9e6c-123456789012')";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			testExpression = 'adapi-compare(smil-playerNameeee(), \'testing\')';
+			testExpression = "adapi-compare(smil-playerNameeee(), 'testing')";
 			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(false);
 
 			testExpression = `adapi-commmmpare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2050-01-01T00:00:00\', adapi-date())>0`;

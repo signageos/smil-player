@@ -28,7 +28,6 @@
                             </seq>
                         </par>
                     </priorityClass>
-
                     <priorityClass higher="stop" lower="defer" peer="stop">
                         <par>
                             <seq repeatCount="indefinite">

@@ -12,12 +12,7 @@ export enum SMILEnums {
 	metaContent = 'content',
 	metaLog = 'log',
 	onlySmilUpdate = 'onlySmilUpdate',
+	syncServer = 'syncServerUrl',
 }
 
-export const parentGenerationRemove = [
-	'promiseFunction',
-	'media',
-	'playing',
-	'player',
-	'lastModified',
-];
+export const parentGenerationRemove = ['promiseFunction', 'media', 'playing', 'player', 'lastModified'];

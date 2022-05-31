@@ -21,6 +21,9 @@
                 <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1" dur="5s" fit="hidden" region="video" transIn="bwt">
                     <param name="cacheControl" value="auto" />
                 </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </video>
                 <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="video" transIn="bwt"
                      expr="adapi-weekday()&gt;=9">
                     <param name="cacheControl" value="auto" />
@@ -28,6 +31,9 @@
                 <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden" region="video" transIn="bwt">
                     <param name="cacheControl" value="auto" />
                 </img>
+                <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt" type="application/widget" region="video" dur="5s" transIn="bwt">
+                    <param name="cacheControl" value="onlyIfCached" />
+                </ref>
                 <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg" id="annons1" dur="5s" fit="hidden" region="video" transIn="bwt">
                     <param name="cacheControl" value="auto" />
                 </img>

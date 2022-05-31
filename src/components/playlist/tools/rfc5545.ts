@@ -1,4 +1,3 @@
-
 /**
  * Parse specific format of duration of RFC 5545 into milliseconds.
  * Example: P15DT5H0M20S -> 15 days, 5 hours, and 20 seconds
@@ -13,17 +12,5 @@ export function parseRFC5545Duration(duration: string): number {
 	const hours = timeMatches?.[2] ? parseInt(timeMatches[2]) : 0;
 	const minutes = timeMatches?.[4] ? parseInt(timeMatches[4]) : 0;
 	const seconds = timeMatches?.[6] ? parseInt(timeMatches[6]) : 0;
-	return 1e3 * (
-		seconds
-		+ 60 * (
-			minutes
-			+ 60 * (
-				hours
-				+ 24 * (
-					days
-					+ 7 * weeks
-				)
-			)
-		)
-	);
+	return 1e3 * (seconds + 60 * (minutes + 60 * (hours + 24 * (days + 7 * weeks))));
 }

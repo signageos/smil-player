@@ -1,7 +1,7 @@
 import Chainable = Cypress.Chainable;
 
 export function testVisible(element: Chainable) {
-	element.then($header => {
+	element.then(($header) => {
 		if ($header.is(':visible')) {
 			assert.isOk('visibility', `element is VISIBLE at this moment ${$header.src}`);
 			return;
@@ -11,7 +11,7 @@ export function testVisible(element: Chainable) {
 }
 
 export function testInvisible(element: Chainable) {
-	element.then($header => {
+	element.then(($header) => {
 		if ($header.is(':visible')) {
 			assert.isNotOk('visibility', `element is VISIBLE at this moment ${$header.src}`);
 			return;
@@ -21,7 +21,7 @@ export function testInvisible(element: Chainable) {
 }
 
 export function doesNotExist(parentElement: Chainable, elementIdentifier: string) {
-	parentElement.then($element => {
+	parentElement.then(($element) => {
 		if ($element.find(elementIdentifier).length > 0) {
 			assert.isNotOk('doesNotExist', 'element should not exists at this moment');
 			return;
@@ -31,7 +31,7 @@ export function doesNotExist(parentElement: Chainable, elementIdentifier: string
 }
 
 export function numberOfElementsExists(parentElement: Chainable, elementIdentifier: string, limit: number) {
-	parentElement.then($element => {
+	parentElement.then(($element) => {
 		if ($element.find(elementIdentifier).length !== limit) {
 			assert.isNotOk('Correct amount', 'incorrect number of elements exists on the page');
 			return;
@@ -41,7 +41,7 @@ export function numberOfElementsExists(parentElement: Chainable, elementIdentifi
 }
 
 export function testCoordinates(element: Chainable, top: number, left: number, width: number, height: number) {
-	element.then($target => {
+	element.then(($target) => {
 		const coords = $target[0].getBoundingClientRect();
 		expectCoordinates(coords, top, left, width, height);
 	});

@@ -1,3 +1,4 @@
+/* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import unset = require('lodash/unset');
@@ -7,13 +8,7 @@ import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
 const hasher = require('node-object-hash');
 
-import {
-	BackupPlaylist,
-	CurrentlyPlayingRegion,
-	InfiniteLoopObject,
-	PlaylistElement,
-	PrefetchObject,
-} from '../../../models/playlistModels';
+import { BackupPlaylist, CurrentlyPlayingRegion, PlaylistElement } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
@@ -21,9 +16,9 @@ import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { SMILEnums, parentGenerationRemove } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
-import { SMILAudio, SMILImage, SMILVideo, SMILWidget } from '../../../models/mediaModels';
+import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 
-export const debug = Debug('@signageos/smil-player:playlistModule');
+export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
@@ -36,13 +31,6 @@ export function getStringToIntDefault(value: string): number {
 
 export function removeWhitespace(str: string) {
 	return str.replace(/\s/g, '');
-}
-
-export function errorVisibility(visible: boolean) {
-	const display = visible ? 'block' : 'none';
-
-	(<HTMLElement> document.getElementById('error')).style.display = display;
-	(<HTMLElement> document.getElementById('errorText')).style.display = display;
 }
 
 export function checkSlowDevice(deviceType: string): boolean {
@@ -58,63 +46,6 @@ export function getLastArrayItem(array: any[]): any {
 	return array[array.length - 1];
 }
 
-function checkPrefetchObject(obj: PrefetchObject, path: string): boolean {
-	return get(obj, path, 'notFound') === 'notFound';
-}
-
-/**
- * used for detection infinite loops in SMIL file
- * these are seq or par section which does not contain any media files:
- * 	example:
- * 		seq: [{
- * 			dur: "60s"
- * 			}, {
- * 			prefetch: [{
- * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/top/top.wgt"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/render/widgets/ebbapettersson/vasttrafik/vasttrafik_news.wgt"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbalunch.png"
- * 					}, {
- * 				src: "http://butikstv.centrumkanalen.com/play/media/rendered/bilder/ebbaical.png"
- * 					}]
- * 				}]
- * @param obj
- */
-export function isNotPrefetchLoop(obj: InfiniteLoopObject | PlaylistElement): boolean {
-	let result = true;
-	if (Array.isArray(get(obj, 'seq', 'notFound'))) {
-		(<PrefetchObject[]> get(obj, 'seq', 'notFound')).forEach((elem: PrefetchObject) => {
-			result = checkPrefetchObject(elem, 'prefetch');
-		});
-	}
-
-	if (Array.isArray(get(obj, 'par', 'notFound'))) {
-		(<PrefetchObject[]> get(obj, 'par', 'notFound')).forEach((elem: PrefetchObject) => {
-			result = checkPrefetchObject(elem, 'prefetch');
-		});
-	}
-	if (get(obj, 'seq.prefetch', 'notFound') !== 'notFound') {
-		result = false;
-	}
-
-	if (get(obj, 'par.prefetch', 'notFound') !== 'notFound') {
-		result = false;
-	}
-
-	// black screen check, will be removed in future versions
-	if (get(obj, 'seq.ref.src', 'notFound') === 'adapi:blankScreen') {
-		result = false;
-	}
-
-	// black screen check, will be removed in future versions
-	if (get(obj, 'par.ref.src', 'notFound') === 'adapi:blankScreen') {
-		result = false;
-	}
-
-	return result;
-}
-
 /**
  * set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
  * recalculates bottom position to top to work properly with signageOs videos
@@ -128,25 +59,39 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 			if (resultObject[attr].indexOf('%') > 0) {
 				switch (attr) {
 					case 'width':
-						resultObject.width = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.width) / 100);
+						resultObject.width = Math.floor(
+							(document.documentElement.clientWidth * parseInt(resultObject.width)) / 100,
+						);
 						break;
 					case 'height':
-						resultObject.height = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.height) / 100);
+						resultObject.height = Math.floor(
+							(document.documentElement.clientHeight * parseInt(resultObject.height)) / 100,
+						);
 						break;
 					case 'left':
-						resultObject.left = Math.floor(document.documentElement.clientWidth * parseInt(resultObject.left) / 100);
+						resultObject.left = Math.floor(
+							(document.documentElement.clientWidth * parseInt(resultObject.left)) / 100,
+						);
 						break;
 					case 'top':
-						resultObject.top = Math.floor(document.documentElement.clientHeight * parseInt(resultObject.top) / 100);
+						resultObject.top = Math.floor(
+							(document.documentElement.clientHeight * parseInt(resultObject.top)) / 100,
+						);
 						break;
 					case 'bottom':
-						resultObject.top = Math.floor(document.documentElement.clientHeight -
-							(document.documentElement.clientHeight * parseInt(resultObject.bottom) / 100 + parseInt(resultObject.height)));
+						resultObject.top = Math.floor(
+							document.documentElement.clientHeight -
+								((document.documentElement.clientHeight * parseInt(resultObject.bottom)) / 100 +
+									parseInt(resultObject.height)),
+						);
 						delete resultObject.bottom;
 						break;
 					case 'right':
-						resultObject.left = Math.floor(document.documentElement.clientWidth -
-							(document.documentElement.clientWidth * parseInt(resultObject.right) / 100 + parseInt(resultObject.width)));
+						resultObject.left = Math.floor(
+							document.documentElement.clientWidth -
+								((document.documentElement.clientWidth * parseInt(resultObject.right)) / 100 +
+									parseInt(resultObject.width)),
+						);
 						delete resultObject.right;
 						break;
 					default:
@@ -157,11 +102,15 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 
 			switch (attr) {
 				case 'bottom':
-					resultObject.top = document.documentElement.clientHeight - (parseInt(resultObject.bottom) + parseInt(resultObject.height));
+					resultObject.top =
+						document.documentElement.clientHeight -
+						(parseInt(resultObject.bottom) + parseInt(resultObject.height));
 					delete resultObject.bottom;
 					break;
 				case 'right':
-					resultObject.left = document.documentElement.clientWidth - (parseInt(resultObject.right) + parseInt(resultObject.width));
+					resultObject.left =
+						document.documentElement.clientWidth -
+						(parseInt(resultObject.right) + parseInt(resultObject.width));
 					delete resultObject.right;
 					break;
 				default:
@@ -174,10 +123,10 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 }
 
 export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	let regionInfo = <RegionAttributes> get(regionObject.region, regionName, regionObject.rootLayout);
+	let regionInfo = <RegionAttributes>get(regionObject.region, regionName, regionObject.rootLayout);
 	// unify regionName for further uses in code ( xml:id -> regionName )
 	if (regionInfo.hasOwnProperty(XmlTags.regionNameAlias)) {
-		regionInfo.regionName = <string> regionInfo[XmlTags.regionNameAlias];
+		regionInfo.regionName = <string>regionInfo[XmlTags.regionNameAlias];
 		delete regionInfo[XmlTags.regionNameAlias];
 	}
 
@@ -189,8 +138,8 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
 	debug('Getting region info: %O for region name: %s', regionInfo, regionName);
 	regionInfo = {
 		...regionInfo,
-		...(!isNil(regionInfo.top) && {top: parseInt(String(regionInfo.top))}),
-		...(!isNil(regionInfo.left) && {left: parseInt(String(regionInfo.left))}),
+		...(!isNil(regionInfo.top) && { top: parseInt(String(regionInfo.top)) }),
+		...(!isNil(regionInfo.left) && { left: parseInt(String(regionInfo.left)) }),
 		width: parseInt(String(regionInfo.width)),
 		height: parseInt(String(regionInfo.height)),
 	};
@@ -201,8 +150,9 @@ export function getRegionInfo(regionObject: RegionsObject, regionName: string): 
  * extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
  * @param value - represents SMIL media file object
  */
-export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget | SMILImage):
-	SMILVideo | SMILAudio | SMILWidget | SMILImage {
+export function extractAdditionalInfo(
+	value: SMILVideo | SMILAudio | SMILWidget | SMILImage,
+): SMILVideo | SMILAudio | SMILWidget | SMILImage {
 	// extract additional css info which are not specified in region tag.
 	Object.keys(value).forEach((attr: string) => {
 		if (XmlTags.additionalCssExtract.includes(attr)) {
@@ -214,7 +164,7 @@ export function extractAdditionalInfo(value: SMILVideo | SMILAudio | SMILWidget 
 }
 
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
-export function generateParentId(tagName: string, value: any): string {
+export function generateParentId(tagName: string, value: PlaylistElement): string {
 	try {
 		let clone = cloneDeep(value);
 		removeNestedProperties(clone, parentGenerationRemove);
@@ -225,7 +175,7 @@ export function generateParentId(tagName: string, value: any): string {
 	}
 }
 
-export function removeNestedProperties(object: any, propertiesArray: string[]): void {
+export function removeNestedProperties(object: PlaylistElement, propertiesArray: string[]): void {
 	for (let [objKey, objValue] of Object.entries(object)) {
 		if (propertiesArray.includes(objKey)) {
 			unset(object, objKey);
@@ -261,13 +211,17 @@ export function getDefaultRegion() {
 	};
 }
 
+export function getDefaultVideoParams(): VideoParams {
+	return ['', 0, 0, 0, 0, 'RTP'];
+}
+
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
 	// no element was played before ( trigger case )
 	if (isNil(currentlyPlaying)) {
 		return 0;
 	}
 	return currentlyPlaying.findIndex((element) => {
-		return (get(element, 'player.playing', false) === true);
+		return element.player?.playing === true;
 	});
 }
 

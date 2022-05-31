@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import {
 	createDownloadPath,
+	generateSmilUrlVersion,
 	getFileName,
 	getPath,
 	getProtocol,
@@ -10,7 +11,6 @@ import {
 const expect = chai.expect;
 
 describe('Files tools component', () => {
-
 	describe('Files tools component getFileName tests', () => {
 		it('Should return correct file name for vairous strings', () => {
 			const filesPaths = [
@@ -117,7 +117,6 @@ describe('Files tools component', () => {
 				expect(response).equal(protocol[i]);
 			}
 		});
-
 	});
 
 	describe('isRelativePath', () => {
@@ -133,6 +132,32 @@ describe('Files tools component', () => {
 		data.forEach(([filePath, expected]) => {
 			it(`should return ${expected} only on ${filePath} paths`, () => {
 				expect(isRelativePath(filePath)).equal(expected);
+			});
+		});
+	});
+
+	describe('generateSmilUrlVersion', () => {
+		const data = [
+			['11111_1', 1, '11111_1'],
+			['11111_15', 15, '11111_15'],
+		] as const;
+
+		data.forEach(([smilUrlVersion, playlistVersion, result]) => {
+			it(`should return ${result} for smilUrlVersion: ${smilUrlVersion} and playlistVersion:${playlistVersion}`, () => {
+				expect(generateSmilUrlVersion(playlistVersion, smilUrlVersion)).equal(result);
+			});
+		});
+
+		const anotherData = [
+			['11111_0', 1, '1'],
+			['11111_10', 15, '15'],
+			['', 9, '9'],
+		] as const;
+
+		anotherData.forEach(([smilUrlVersion, playlistVersion, endChars]) => {
+			it(`should end with ${endChars} for smilUrlVersion: ${smilUrlVersion} and playlistVersion:${playlistVersion}`, () => {
+				const result = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
+				expect(result.endsWith(endChars)).equal(true);
 			});
 		});
 	});

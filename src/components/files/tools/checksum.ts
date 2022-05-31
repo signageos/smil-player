@@ -1,4 +1,3 @@
-
 import { createHash } from 'crypto';
 
 export function checksumString(message: string, length: number = 50) {

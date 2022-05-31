@@ -1,0 +1,33 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="60" />
+        <meta log="true" />
+        <layout>
+            <root-layout width="1920" height="1080" />
+            <region regionName="video" top="0" left="480" width="1440" height="1080" z-index="1" />
+            <region regionName="web" top="0" left="0" width="480" height="1080" z-index="1" />
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://storage.googleapis.com/prod-vsg-statics/default_branch_landscape_1920.jpeg" />
+                </seq>
+            </seq>
+            <par dur="indefinite" begin="__prefetchEnd.endEvent">
+                <par>
+                    <seq repeatCount="indefinite" begin="wallclock(R/2020-01-01T08:00:00/P1D)" end="wallclock(R/2020-01-01T20:00:00/P1D)">
+                        <video region="video" expr="compare(date(),'2016-01-01T00:00:00')&gt;=0 and compare(date(),'2026-01-01T00:00:00')&lt;=0 and compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0" src="https://api.alpha2.videomood.eu/devices/056bf681225f5dd10a9583a7a4bd556d/media/bec41c3e-dd88-4d12-938f-b56deb33dd20/format/url_hd" soundLevel="100%" />
+                        <video region="video" expr="compare(date(),'2016-01-01T00:00:00')&gt;=0 and compare(date(),'2026-01-01T00:00:00')&lt;=0 and compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0" src="https://api.alpha2.videomood.eu/devices/056bf681225f5dd10a9583a7a4bd556d/media/cfc8ff6c-d91c-4880-9ccd-10acba36ad9b/format/url_hd" soundLevel="100%" />
+                    </seq>
+                </par>
+                <par>
+                    <seq repeatCount="indefinite" begin="wallclock(R/2020-01-01T08:00:00/P1D)" end="wallclock(R/2020-01-01T20:00:00/P1D)">
+                        <ref src="https://www.monicapmslivorno.eu/SERVIZIWEB/portoferraio/tabellone/partenze" dur="indefinite" type="text/html" region="web" />
+                    </seq>
+                </par>
+            </par>
+        </par>
+    </body>
+</smil>

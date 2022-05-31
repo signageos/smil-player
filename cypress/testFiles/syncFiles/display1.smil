@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="999999"/>
+        <meta syncServerUrl="http://localhost:8095"/>
+        <triggers>
+            <trigger id="triggerDisplay3" condition="or">
+                <condition origin="sync" data="Display3"/>
+            </trigger>
+            <trigger id="triggerDisplay2Display3" condition="or">
+                <condition origin="sync" data="Display2Display3"/>
+            </trigger>
+        </triggers>
+        <layout>
+            <root-layout backgroundColor="#000000" height="1080" width="1920"/>
+            <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
+                    backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft">
+                <region regionName="video1" left="0" top="0" width="1280" height="720" z-index="1"
+                        backgroundColor="transparent"/>
+            </region>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+            </seq>
+        </par>
+
+        <par>
+            <seq begin="triggerDisplay3" dur="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+            </seq>
+        </par>
+
+        <par>
+            <seq begin="triggerDisplay2Display3" dur="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto" />
+                </img>
+            </seq>
+        </par>
+    </body>
+</smil>
