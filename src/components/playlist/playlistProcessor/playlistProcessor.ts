@@ -1,4 +1,4 @@
-/* tslint:disable:Unnecessary semicolon missing whitespace */
+/* tslint:disable:Unnecessary semicolon missing whitespace indent  tab indentation expected align   arguments are not aligned*/
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import cloneDeep = require('lodash/cloneDeep');
@@ -254,7 +254,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Unexpected error during playlist processing: %O', err);
 						await sleep(SMILScheduleEnum.defaultAwait);
 					}
-				},                        version);
+				}, version);
 			})(),
 		);
 
@@ -398,7 +398,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								version,
 								priorityObject,
 								newParent,
-								endTime,
+								elem.repeatCount ? parseInt(elem.repeatCount as string) : 0,
 								-1,
 								conditionalExpr,
 							);
@@ -817,7 +817,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				if (
 					arrayIndex === length - 1 &&
 					setDefaultAwait(<PlaylistElement[]>value, this.playerName, this.playerId) ===
-						SMILScheduleEnum.defaultAwait
+					SMILScheduleEnum.defaultAwait
 				) {
 					debug(
 						'No active sequence find in conditional expression schedule, setting default await: %s',
@@ -1087,10 +1087,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			duration > 0 &&
 			!get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.stop &&
 			this.currentlyPlaying[regionInfo.regionName]?.player !== 'stop'
-		) {
+			) {
 			while (
 				get(this.currentlyPlayingPriority, `${regionInfo.regionName}`)[arrayIndex].player.contentPause !== 0
-			) {
+				) {
 				await sleep(100);
 				// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 				if (this.getCancelFunction()) {
@@ -1332,7 +1332,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						while (
 							!isNil(this.currentlyPlayingPriority[regionInfo.regionName]) &&
 							this.currentlyPlayingPriority[regionInfo.regionName][index].player.contentPause !== 0
-						) {
+							) {
 							video.playing = false;
 							await sleep(100);
 							// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
@@ -1729,13 +1729,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private handleVideoPrepare = async (
 		value: SMILVideo,
 		regionInfo: RegionAttributes,
-	): Promise<
-		| {
-				sosVideoObject: Video | Stream;
-				params: VideoParams;
-		}
-		| undefined
-	> => {
+	): Promise<| {
+					 sosVideoObject: Video | Stream;
+					 params: VideoParams;
+				 }
+			   | undefined> => {
 		const sosVideoObject: Video | Stream = isNil(value.isStream) ? this.sos.video : this.sos.stream;
 		const options = isNil(value.isStream) ? config.videoOptions : value.protocol;
 		const videoPath = isNil(value.isStream) ? value.localFilePath : value.src;
