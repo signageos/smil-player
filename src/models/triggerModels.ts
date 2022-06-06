@@ -4,6 +4,7 @@ import { RegionAttributes } from './xmlJsonModels';
 export type TriggerObject = {
 	seq: {
 		begin: string;
+		end: string,
 		repeatCount: string;
 		dur: string;
 		[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[] | string;

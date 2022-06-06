@@ -26,12 +26,12 @@
             <!-- you can add as many triggers as you need -->
             <trigger id="trigger2" condition="or">
                 <condition
-                        origin="keyboard" data="1" action="keydown"/>
+                        origin="mouse" action="click"/>
 
             </trigger>
             <trigger id="trigger1" condition="or">
                 <condition
-                        origin="keyboard" data="2" action="keydown"/>
+                        origin="keyboard" data="789" action="keydown"/>
             </trigger>
         </triggers>
         <layout>
@@ -61,7 +61,7 @@
         </par>
 
         <par>
-            <seq begin="trigger2" repeatCount="2">
+            <seq begin="trigger2" end="trigger2" dur="7">
                 <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                        id="annons1" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
@@ -74,7 +74,7 @@
         </par>
 
         <par>
-            <seq begin="trigger1" dur="5">
+            <seq begin="trigger1" repeatCount="1">
                 <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                        id="annons1" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>

@@ -244,11 +244,16 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
-		if (this.triggersEndless[triggerInfo.trigger].play) {
+		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+
+		if (this.triggersEndless[triggerInfo.trigger]?.play) {
+			if (triggerMedia.seq?.end === triggerInfo.trigger) {
+				const currentTrigger = this.triggersEndless[triggerInfo.trigger];
+				currentTrigger.play = false;
+				await this.cancelPreviousMedia(currentTrigger.regionInfo);
+			}
 			return;
 		}
-
-		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
 
 		if (!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`]) && !isNil(triggerMedia)) {
 			debug('Starting trigger: %O', triggerInfo.trigger);
@@ -306,23 +311,33 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`];
 
-		if (
-			!isNil(smilObject.triggerSensorInfo[`${SMILTriggersEnum.keyboardPrefix}-${bufferString}`]) &&
-			!this.triggersEndless[triggerInfo.trigger]?.play
-		) {
+		// smil file does not support mouse/touch events
+		if (isNil(triggerInfo)) {
+			state = { buffer: buffer, lastKeyTime: currentTime };
+			return state;
+		}
+
+		// regenerate time when was trigger last called
+		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+		const triggerMedia = smilObject.triggers[triggerInfo.trigger];
+
+		if (!this.triggersEndless[triggerInfo.trigger]?.play) {
 			buffer = [];
 			debug('Starting trigger: %O', triggerInfo.trigger);
 
-			set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
-			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
 			const stringDuration = findDuration(triggerMedia);
 			if (!isNil(stringDuration)) {
-				// no await to speed up buffer clearing process
 				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
 			} else {
-				// no await to speed up buffer clearing process
 				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			}
+		}
+
+		// trigger has end condition defined and was cancelled during playback
+		if (this.triggersEndless[triggerInfo.trigger]?.play && triggerMedia.seq?.end === triggerInfo.trigger) {
+			const currentTrigger = this.triggersEndless[triggerInfo.trigger];
+			currentTrigger.play = false;
+			await this.cancelPreviousMedia(currentTrigger.regionInfo);
 		}
 
 		if (!FunctionKeys[key]) {
