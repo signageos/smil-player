@@ -1,0 +1,38 @@
+{
+  "specials": [
+    "mocha",
+    "tslint"
+  ],
+  "parsers": {
+    "**/*.ts": "typescript",
+    "**/*.js": "es6"
+  },
+  "detectors": [
+    "importDeclaration",
+    "requireCallExpression"
+  ],
+  "ignore-dirs": [
+    "dist",
+    "packages"
+  ],
+  "ignores": [
+    "@types/*",
+    "ts-node",
+    "mocha",
+    "depcheck",
+    "nyc",
+    "@istanbuljs/nyc-config-typescript",
+    "@signageos/codestyle",
+    "mockdate",
+    "@signageos/front-applet",
+    "cypress",
+    "file-loader",
+    "webpack-cli",
+    "@babel/preset-env",
+    "babel-loader",
+    "cache-loader",
+    "es-check",
+    "webpack-dev-server"
+  ]
+}
+
