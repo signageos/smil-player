@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Added
 
 - added option to stop trigger using same triggerId as to invoke it
+- change failover mechanism so all devices take care of broken device
 
 ## [2.0.0] - 2022-05-31
 
