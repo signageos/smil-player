@@ -107,31 +107,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				const missingIds = this.synchronization.syncGroupIds
 					.filter((elem) => !onStatus.connectedPeers.includes(elem))
 					.sort();
-				const shouldTakeOver: { [key: string]: string[] } = {};
 
-				for (const deviceId of missingIds) {
-					const missingIdIndex = this.synchronization.syncGroupIds.indexOf(deviceId);
-					const missingIdsArray: string[] = [];
-
-					let counter = missingIdIndex;
-					// find first active device which should take over inactive devices
-					while (!onStatus.connectedPeers.includes(this.synchronization.syncGroupIds[counter])) {
-						missingIdsArray.push(this.synchronization.syncGroupIds[counter]);
-						counter = (counter + 1) % this.synchronization.syncGroupIds.length;
-					}
-
-					const responsibleDisplay = this.synchronization.syncGroupIds[counter];
-
-					shouldTakeOver[responsibleDisplay] = shouldTakeOver[responsibleDisplay] ?? [];
-					shouldTakeOver[responsibleDisplay] = shouldTakeOver[responsibleDisplay].concat(missingIdsArray);
-
-					shouldTakeOver[responsibleDisplay] = shouldTakeOver[responsibleDisplay].filter(
-						(value: string, index: number) => shouldTakeOver[responsibleDisplay].indexOf(value) === index,
-					);
-				}
-
-				if (!isNil(shouldTakeOver[this.synchronization.syncDeviceId])) {
-					let syncTriggerId = shouldTakeOver[this.synchronization.syncDeviceId].sort().join('');
+				if (missingIds.length > 0) {
+					let syncTriggerId = missingIds.sort().join('');
 
 					const triggerInfo = smilObject.triggerSensorInfo[`${SMILTriggersEnum.syncPrefix}-${syncTriggerId}`];
 
