@@ -102,13 +102,13 @@ const smilPlayer = new SmilPlayer({
 			return null;
 		}
 	},
-	reporter: async (message: string) => {
+	reporter: async (payload: Payload) => {
 		await fetch('https://my-api-url.com/my-endpoint', {
 			method: 'POST', // or 'PUT'
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify(message),
+			body: JSON.stringify(payload),
 		});
 	},
 	playbackController: async (payload: Payload) => {
