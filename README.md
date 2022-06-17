@@ -1,3 +1,5 @@
+# Draft
+
 # SMIL player
 
 ## How To Install
@@ -65,7 +67,7 @@ const smilPlayer = new SmilPlayer({
 	validator: (smilFileContent: string): boolean => {
 		return MyValidator.validate(smilFileContent);
 	},
-	smilFileDownloader: async () => {
+	smilFileDownloader: async (downloadUrl?: string) => {
 		const response = await fetch(downloadUrl, {
 			method: 'GET',
 			headers: {
