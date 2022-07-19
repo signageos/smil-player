@@ -2,12 +2,14 @@
 import { CurrentlyPlaying, CurrentlyPlayingPriority, PromiseAwaiting } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
+import { SMILTicker } from '../../../models/mediaModels';
 import { debug } from '../tools/generalTools';
 import { isNil } from 'lodash';
 import { SMILVideo } from '../../../models/mediaModels';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
+import { stopTickerAnimation } from '../tools/tickerTools';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
@@ -89,6 +91,8 @@ export class PlaylistCommon implements IPlaylistCommon {
 			case 'html':
 				await this.cancelPreviousHtmlElement(regionInfo);
 				break;
+			case 'ticker':
+				await this.cancelPreviousTicker(regionInfo);
 			default:
 				debug('Element not supported for cancellation');
 				break;
@@ -118,6 +122,16 @@ export class PlaylistCommon implements IPlaylistCommon {
 			this.currentlyPlaying[regionInfo.regionName].playing = false;
 		} catch (err) {
 			await this.cancelPreviousVideo(regionInfo);
+		}
+	};
+
+	private cancelPreviousTicker = async (regionInfo: RegionAttributes) => {
+		try {
+			stopTickerAnimation(this.currentlyPlaying[regionInfo.regionName] as SMILTicker);
+			this.currentlyPlaying[regionInfo.regionName].player = 'stop';
+			this.currentlyPlaying[regionInfo.regionName].playing = false;
+		} catch (err) {
+			debug('error during ticker cancellation: %O', err);
 		}
 	};
 

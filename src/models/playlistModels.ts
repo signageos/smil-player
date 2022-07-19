@@ -47,11 +47,11 @@ export type CurrentlyPlaying = {
 export type PlayingInfo = {
 	player?: string;
 	promiseFunction?: Function[];
-	nextElement: (SosHtmlElement | SMILVideo) & {
+	nextElement: (SosHtmlElement | SMILMedia) & {
 		type?: string;
 	};
 } & SosHtmlElement &
-	SMILVideo;
+	SMILMedia;
 
 export type CurrentlyPlayingPriority = {
 	[regionName: string]: CurrentlyPlayingRegion[];
@@ -75,7 +75,7 @@ export type CurrentlyPlayingRegion = {
 };
 
 export type PromiseAwaiting = {
-	[regionName: string]: (SMILVideo | SosHtmlElement) & {
+	[regionName: string]: (SMILMedia | SosHtmlElement) & {
 		promiseFunction?: Promise<void>[];
 	};
 };

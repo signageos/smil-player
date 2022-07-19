@@ -3,10 +3,14 @@
         <meta http-equiv="refresh" content="60"/>
         <meta log="true"/>
         <layout>
-            <root-layout width="640" height="479" backgroundColor="#18182c"/>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
             <region regionName="region_0_0_1920_1080" left="0" top="0" width="1920" height="1080" z-index="1"
                     backgroundColor="#18182c"/>
-            <region regionName="region_1241_0_678_434" left="1241" top="0" width="678" height="434" z-index="4"
+            <region regionName="region_1536_0_384_216" left="1536" top="0" width="384" height="216" z-index="4"
+                    backgroundColor="#18182c"/>
+            <region regionName="region_0_0_1920_950" left="0" top="0" width="1920" height="920" z-index="1"
+                    backgroundColor="#18182c"/>
+            <region regionName="region_0_920_1920_129" left="0" top="920" width="1920" height="40" z-index="4"
                     backgroundColor="#18182c"/>
             <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
         </layout>
@@ -21,25 +25,89 @@
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
                 <excl begin="0" repeatCount="indefinite">
                     <priorityClass higher="stop" lower="defer" peer="never">
-                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')>0 and compare(time(), '21:00:00')<0]">
+                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '15:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
                             <par repeatCount="indefinite">
-                                <seq repeatCount="indefinite">
-                                    <img src="https://v3.netipbox.com/media/2724/resources/320291/320291_1648480068_cdn_8nsjrpriedq.jpg"
-                                         region="region_0_0_1920_1080" dur="5s" fit="meet"/>
-                                    <img src="https://v3.netipbox.com/media/2724/resources/320290/320290_1648480067_cdn_7pcw3mainsc.jpg"
-                                         region="region_0_0_1920_1080" dur="5s" fit="meet"/>
-                                    <img src="https://v3.netipbox.com/media/2724/resources/320219/320219_1648466875_cdn_signageos_full_blue.png"
-                                         region="region_0_0_1920_1080" dur="5s" fit="meet"/>
-                                    <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"
-                                           region="region_0_0_1920_1080" dur="3s" fit="meet"/>
-                                </seq>
-                                <seq repeatCount="indefinite">
-                                    <ref src="smil/widgets/extracted/320480" type="application/widget"
-                                         region="region_1241_0_678_434" dur="7200s"/>
-                                    <ref src="smil/widgets/extracted/320480" type="application/widget"
-                                         region="region_1241_0_678_434" dur="7200s"/>
+                                <!--                                <seq repeatCount="1">-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327285/327285_1650471757_cdn_turntable_10857.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="5s" fit="meet"/>-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327284/327284_1650471756_cdn_turntable_10856.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="5s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327285/327285_1650471757_cdn_turntable_10857.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="7s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                </seq>-->
+                                <!--                                <seq repeatCount="1">-->
+                                <!--                                    <video src="https://v3.netipbox.com/media/2724/resources/327196/327196_1650462943_cdn_pretty_lights_vs_radiohead_vs_nirvana_vs_nin.mp3"-->
+                                <!--                                           region="region_1536_0_384_216" dur="10s" fit="meet"/>-->
+                                <!--                                </seq>-->
+                                <seq repeatCount="1">
+                                    <ticker region="region_0_920_1920_129" dur="10s" fontName="Arial" fontSize="30"
+                                            fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
+                                            indentation="50" velocity="50">
+                                        <text>This is testing content for new Ticker component.</text>
+                                        <text>This is testing content for new Ticker component.</text>
+                                    </ticker>
+                                    <ticker region="region_0_920_1920_129" dur="10s" fontName="Arial" fontSize="30"
+                                            fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
+                                            indentation="50" velocity="50">
+                                        <text>AAAAAA.</text>
+                                        <text>BBBBBB.</text>
+                                    </ticker>
                                 </seq>
                             </par>
+                        </seq>
+                    </priorityClass>
+                    <priorityClass higher="stop" lower="defer" peer="never">
+                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '15:00:00')&lt;0]">
+                            <par repeatCount="1">
+                                <!--                                <seq repeatCount="1">-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327285/327285_1650471757_cdn_turntable_10857.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="5s" fit="meet"/>-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327284/327284_1650471756_cdn_turntable_10856.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="5s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/327285/327285_1650471757_cdn_turntable_10857.mp4"-->
+                                <!--                                               region="region_0_0_1920_950" dur="7s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                </seq>-->
+                                <!--                                <seq repeatCount="1">-->
+                                <!--                                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"-->
+                                <!--                                           region="region_1536_0_384_216" dur="10s" fit="meet"/>-->
+                                <!--                                </seq>-->
+                                <seq repeatCount="1">
+                                    <ticker region="region_0_920_1920_129" dur="10s" fontName="Arial" fontSize="30"
+                                            fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
+                                            indentation="50" velocity="50">
+                                        <text>This is testing content for new Ticker component.</text>
+                                        <text>This is testing content for new Ticker component.</text>
+                                    </ticker>
+                                    <ticker region="region_0_920_1920_129" dur="10s" fontName="Arial" fontSize="30"
+                                            fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
+                                            indentation="50" velocity="50">
+                                        <text>AAAAAA.</text>
+                                        <text>BBBBBB.</text>
+                                    </ticker>
+                                </seq>
+                            </par>
+                            <!--                            <par repeatCount="1">-->
+                            <!--                                <seq repeatCount="1">-->
+                            <!--                                    <ref src="https://centrum.cz" type="application/widget"-->
+                            <!--                                         region="region_0_0_1920_1080" dur="5"/>-->
+                            <!--                                    <ref src="https://seznam.cz" type="application/widget" region="region_0_0_1920_1080"-->
+                            <!--                                         dur="5"/>-->
+                            <!--                                </seq>-->
+                            <!--                                <seq repeatCount="1">-->
+                            <!--                                    <seq repeatCount="1">-->
+                            <!--                                        <img src="https://v3.netipbox.com/media/2724/resources/327090/327090_1650451901_cdn_cigarette_kiss_smoking.gif"-->
+                            <!--                                             region="region_1536_0_384_216" dur="5" fit="meet"/>-->
+                            <!--                                    </seq>-->
+                            <!--                                </seq>-->
+                            <!--                            </par>-->
                         </seq>
                     </priorityClass>
                 </excl>

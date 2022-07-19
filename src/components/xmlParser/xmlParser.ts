@@ -70,7 +70,7 @@ export class XmlParser implements IXmlParser {
 	 * @param tagName name of tag ( seq, par, video etc..)
 	 */
 	private tagNameSuffix = (tagName: string): string => {
-		if (XmlTags.extractedElements.includes(tagName)) {
+		if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(tagName)) {
 			return `${tagName}${this.tagNameCounter++}`;
 		}
 		return tagName;
