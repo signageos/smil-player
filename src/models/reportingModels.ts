@@ -40,5 +40,5 @@ export type SmilError = {
 };
 
 export type Report = MediaPlayed | FileDownload | PlaybackStarted | SmilError;
-export type ItemType = 'image' | 'video' | 'ref' | 'smil';
-export type MediaItemType = 'image' | 'video' | 'ref';
+export type ItemType = 'image' | 'video' | 'ref' | 'smil' | 'ticker';
+export type MediaItemType = 'image' | 'video' | 'ref' | 'ticker';

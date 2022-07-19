@@ -15,11 +15,12 @@ import { SMILFile, SMILFileObject } from '../../../models/filesModels';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { FileStructure } from '../../../enums/fileEnums';
 import {
-	SMILImage,
 	SMILIntro,
 	SMILMedia,
-	SMILMediaNoVideo,
 	SMILVideo,
+	SMILImage,
+	SMILWidget,
+	SMILTicker,
 	SosHtmlElement,
 	VideoParams,
 } from '../../../models/mediaModels';
@@ -60,6 +61,7 @@ import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
 import { createLocalFilePath, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
+import { startTickerAnimation } from '../tools/tickerTools';
 import { isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -346,7 +348,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			let value: PlaylistElement | PlaylistElement[] | SMILMedia = loopValue;
 			debug('Processing playlist element with key: %O, value: %O, parent: %s', key, value, parent);
 			// dont play intro in the actual playlist
-			if (XmlTags.extractedElements.includes(removeDigits(key))) {
+			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				if (isNil((value as SMILMedia).regionInfo)) {
 					debug('Invalid element with no regionInfo: %O', value);
 					continue;
@@ -952,7 +954,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param parentRegion
 	 */
 	private playHtmlContent = async (
-		value: SMILMediaNoVideo,
+		value: SMILImage | SMILWidget | SMILTicker,
 		version: number,
 		arrayIndex: number,
 		currentIndex: number,
@@ -993,6 +995,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						transitionDuration = setElementDuration(value.transitionInfo!.dur);
 					}
 					changeZIndex(value, element, +1, false);
+
+					if (this.currentlyPlaying[regionInfo.regionName]?.media !== 'ticker' ||
+						this.currentlyPlaying[regionInfo.regionName]?.id !== element.id) {
+						startTickerAnimation(element, value as SMILTicker);
+					}
+
 					element.style.visibility = 'visible';
 
 					await this.waitMediaOnScreen(
@@ -1073,8 +1081,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			elementHtml.style.visibility = 'visible';
 			elementHtml.setAttribute('src', element.src);
 		}
+		const tag = element.id.indexOf('ticker') > -1 ? 'ticker' : 'html';
 
-		this.setCurrentlyPlaying(element, 'html', regionInfo.regionName);
+		this.setCurrentlyPlaying(element, tag, regionInfo.regionName);
 
 		// create currentlyPlayingPriority for trigger nested region
 		if (regionInfo.regionName !== parentRegion.regionName) {
@@ -1117,7 +1126,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		await this.files.sendMediaReport(
 			element,
 			taskStartDate,
-			element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+			tag === 'ticker' ? 'ticker' : element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
 		);
 	};
 
@@ -1411,7 +1420,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (
 			this.currentlyPlaying[regionInfo.regionName]?.src !== video.src &&
 			this.currentlyPlaying[regionInfo.regionName]?.playing &&
-			this.currentlyPlaying[regionInfo.regionName]?.isStream
+			(this.currentlyPlaying[regionInfo.regionName] as any)?.isStream
 		) {
 			debug(
 				'cancelling stream: %s from element: %s',
@@ -1583,7 +1592,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	/**
 	 * call actual playing functions for given elements
-	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo
+	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo | SMILTicker
 	 * @param version - smil internal version of current playlist
 	 * @param key - defines which media will be played ( video, audio, image or widget )
 	 * @param parent - superordinate element of value
@@ -1603,12 +1612,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		isLast: boolean,
 	) => {
 		// html page case
-		if (removeDigits(key) === 'ref' && !isWidgetUrl(value.src)) {
+		if ('localFilePath' in value && removeDigits(key) === 'ref' && !isWidgetUrl(value.src)) {
 			value.localFilePath = value.src;
 		}
 
 		// TODO: implement check to sos library
-		if (value.localFilePath === '' && isNil((value as SMILVideo).isStream)) {
+		if ('localFilePath' in value && value.localFilePath === '' && isNil((value as SMILVideo).isStream)
+			&& removeDigits(key) !== HtmlEnum.ticker) {
 			debug('Element: %O has empty localFilepath: %O', value);
 			await sleep(100);
 			return;
@@ -1630,15 +1640,24 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		switch (removeDigits(key)) {
 			case 'video':
-				const result = await this.handleVideoPrepare(value, regionInfo);
+				const result = await this.handleVideoPrepare(value as SMILVideo, regionInfo);
 				// video does not exist in local storage ( seamless update case )
 				if (isNil(result)) {
 					return;
 				}
 				({ sosVideoObject, params } = result);
 				break;
+			case 'img':
+				this.handleHtmlElementPrepare(value as SMILImage, element, version);
+				break;
+			case 'ref':
+				this.handleHtmlElementPrepare(value as SMILWidget, element, version);
+				break;
+			case 'ticker':
+				break;
 			default:
-				this.handleHtmlElementPrepare(value as SMILMediaNoVideo, element, version);
+				debug('Tag not supported: %s', removeDigits(key));
+			// Do nothing
 		}
 
 		if (
@@ -1682,7 +1701,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		switch (removeDigits(key)) {
 			case 'video':
 				await this.playVideo(
-					value,
+					value as SMILVideo,
 					version,
 					currentIndex,
 					endTime,
@@ -1694,9 +1713,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					params,
 				);
 				break;
+			case SMILEnums.img:
 			case 'ref':
 				await this.playHtmlContent(
-					value as SMILMediaNoVideo,
+					value as SMILImage | SMILWidget,
 					version,
 					index,
 					currentIndex,
@@ -1706,9 +1726,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					parentRegion,
 				);
 				break;
-			case SMILEnums.img:
+			case 'ticker':
 				await this.playHtmlContent(
-					value as SMILMediaNoVideo,
+					value as SMILTicker,
 					version,
 					index,
 					currentIndex,
@@ -1778,7 +1798,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		};
 	};
 
-	private handleHtmlElementPrepare = (value: SMILMediaNoVideo, element: HTMLElement, version: number) => {
+	private handleHtmlElementPrepare = (value: SMILImage | SMILWidget, element: HTMLElement, version: number) => {
 		changeZIndex(value, element, +1);
 
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
