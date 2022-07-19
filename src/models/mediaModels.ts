@@ -72,6 +72,33 @@ export type SMILWidget = {
 	'z-index': string;
 };
 
+export type SMILTicker = {
+	id?: string;
+	expr?: string;
+	src: string;
+	text: string[] | string;
+	fontName?: string;
+	fontSize?: string;
+	fontColor?: string;
+	preload?: boolean;
+	backgroundColor?: string;
+	linearGradientAngle?: string;
+	linearGradient?: string;
+	velocity?: string;
+	indentation?: string;
+	region: string;
+	dur: string;
+	syncIndex: number;
+	lastModified?: number;
+	localFilePath: string;
+	regionInfo: RegionAttributes;
+	transitionInfo?: TransitionAttributes;
+	playing?: boolean;
+	triggerValue?: string;
+	'z-index': string;
+	timeoutReference?: ReturnType<typeof setTimeout>;
+};
+
 export type SosHtmlElement = {
 	expr?: string;
 	src: string;
@@ -95,7 +122,7 @@ export type SMILIntro = {
 
 export type VideoParams = [string, number, number, number, number, keyof typeof StreamProtocol];
 
-export type SMILMedia = SMILImage | SMILWidget | SMILVideo;
+export type SMILMedia = SMILImage | SMILWidget | SMILVideo | SMILTicker;
 
-export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILIntro;
-export type SMILMediaNoVideo = SMILImage | SMILWidget;
+export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILTicker | SMILIntro;
+export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILTicker;

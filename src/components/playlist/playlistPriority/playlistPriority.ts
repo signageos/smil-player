@@ -20,7 +20,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 
 	/**
 	 * Handles lifecycle of playlist in priority behaviour
-	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo
+	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo | SMILTicker
 	 * @param version - smil internal version of current playlist
 	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )

@@ -40,7 +40,7 @@ export const debug = Debug('@signageos/smil-player:xmlParser');
 export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean {
 	return (
 		arr.filter(function (elem: SMILMediaSingle) {
-			return elem.src === fileSrc;
+			return "src" in elem && elem.src === fileSrc;
 		}).length > 0
 	);
 }
@@ -204,13 +204,27 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 			}
 		},
 	);
+
+	new JefNode(playableMedia.playlist).remove(
+		(node: { key: string; value: any; }) => {
+			if (node.key === 'ticker') {
+				if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
+					console.warn('Ticker component must have "text" array with one string at least');
+					return node;
+				}
+			}
+		},
+	);
 }
 
 function removeNodes(node: { key: string; value: any; parent: { key: string; value: any } }): boolean {
 	let foundMedia = false;
 	new JefNode(node.parent.value).filter(
 		(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
-			if (!isNil(introNode.key) && XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
+			if (
+				!isNil(introNode.key) &&
+				XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(introNode.key))
+			) {
 				foundMedia = true;
 			}
 		},
@@ -249,7 +263,7 @@ export function extractDataFromPlaylist(
 					node.value = [node.value];
 				}
 				node.value.forEach((element: SMILMediaSingle) => {
-					if (!containsElement(downloads[removeDigits(node.key)], <string>element.src)) {
+					if ("src" in element && !containsElement(downloads[removeDigits(node.key)], <string>element.src)) {
 						// @ts-ignore
 						downloads[removeDigits(node.key)].push(element);
 					}

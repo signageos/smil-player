@@ -10,6 +10,7 @@ import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { convertRelativePathToAbsolute, getFileName, getProtocol } from '../../files/tools';
+import { createTickerElement } from '../tools/tickerTools';
 import { createDomElement } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
@@ -55,7 +56,8 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 			}
 
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
-			if (XmlTags.extractedElements.includes(removeDigits(key))) {
+
+			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				debug('found %s element, getting all info', key);
 				if (!Array.isArray(value)) {
 					value = [value];
@@ -76,6 +78,9 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						break;
 					case 'audio':
 						fileStructure = FileStructure.audios;
+						break;
+					case 'ticker':
+						htmlElement = HtmlEnum.ticker;
 						break;
 					default:
 						debug(`Sorry, we are out of ${key}.`);
@@ -142,6 +147,10 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
 						elem.id = createDomElement(elem, htmlElement, key, isTrigger);
+					}
+
+					if (key.startsWith(HtmlEnum.ticker)) {
+						elem.id = createTickerElement(elem, elem.regionInfo, key);
 					}
 				}
 				// reset widget expression for next elements
