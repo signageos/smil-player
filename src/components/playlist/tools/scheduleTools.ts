@@ -84,7 +84,7 @@ export function setDefaultAwait(
 }
 
 /**
- * how long should image, audio, widget stay on the screen
+ * how long should image, audio, widget, ticker stay on the screen
  * @param dur - duration of element specified in smil file
  */
 export function setElementDuration(dur: string | undefined): number {

@@ -1,6 +1,10 @@
 export enum HtmlEnum {
+	style = 'style',
+	div = 'div',
+	span = 'span',
 	img = 'img',
 	ref = 'iframe',
+	ticker = 'ticker',
 	top = 'top',
 	bottom = 'bottom',
 	right = 'right',

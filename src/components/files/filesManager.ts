@@ -31,6 +31,7 @@ import {
 import {
 	SMILAudio,
 	SMILImage,
+	SMILTicker,
 	SMILMediaNoVideo,
 	SMILVideo,
 	SMILWidget,
@@ -98,7 +99,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public sendMediaReport = async (
-		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement,
+		value: SMILVideo | SMILMediaNoVideo | SMILTicker | SosHtmlElement,
 		taskStartDate: Date,
 		itemType: MediaItemType,
 		errMessage: string | null = null,
@@ -106,7 +107,7 @@ export class FilesManager implements IFilesManager {
 		await this.sendReport({
 			type: 'SMIL.MediaPlayed',
 			itemType: itemType,
-			source: createSourceReportObject(value.localFilePath, value.src),
+			source: "src" in value ? createSourceReportObject(value.localFilePath, value.src) : {} as any,
 			startedAt: taskStartDate,
 			endedAt: isNil(errMessage) ? moment().toDate() : null,
 			failedAt: isNil(errMessage) ? null : moment().toDate(),
