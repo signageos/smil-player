@@ -52,7 +52,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 		while (
 			!this.cancelFunction[version] &&
 			(conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr }))
-		) {
+			) {
 			try {
 				await fn();
 			} catch (err) {
@@ -69,7 +69,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				region.regionInfo.regionName !== SMILEnums.defaultRegion &&
 				region.regionInfo.regionName !== 'fullScreenTrigger'
 			) {
-				await this.cancelPreviousMedia(region.regionInfo);
+				await this.cancelPreviousMedia(region.regionInfo, true);
 			}
 		}
 	};
@@ -77,8 +77,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
+	 * @param isPlaylistUpdate
 	 */
-	protected cancelPreviousMedia = async (regionInfo: RegionAttributes) => {
+	protected cancelPreviousMedia = async (regionInfo: RegionAttributes, isPlaylistUpdate: boolean = false) => {
 		debug(
 			'Cancelling media in region: %s with tag: %s',
 			regionInfo.regionName,
@@ -89,7 +90,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				await this.cancelPreviousVideo(regionInfo);
 				break;
 			case 'html':
-				await this.cancelPreviousHtmlElement(regionInfo);
+				await this.cancelPreviousHtmlElement(regionInfo, isPlaylistUpdate);
 				break;
 			case 'ticker':
 				await this.cancelPreviousTicker(regionInfo);
@@ -102,8 +103,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 	/**
 	 * sets element which played in current region before currently playing element invisible ( image, widget, video )
 	 * @param regionInfo - information about region when current video belongs to
+	 * @param isPlaylistUpdate
 	 */
-	private cancelPreviousHtmlElement = async (regionInfo: RegionAttributes) => {
+	private cancelPreviousHtmlElement = async (regionInfo: RegionAttributes, isPlaylistUpdate?: boolean) => {
 		try {
 			debug('previous html element playing: %O', this.currentlyPlaying[regionInfo.regionName]);
 			if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
@@ -113,8 +115,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 			const element = <HTMLImageElement>document.getElementById(this.currentlyPlaying[regionInfo.regionName].id);
 			element.style.visibility = 'hidden';
 
-			// previous widget was cancelled, remove src to improve playback performance
-			if (element.id.indexOf('ref') > -1) {
+			/* previous widget was cancelled, remove src to improve playback performance,
+			but only during regular cancel and not when newer playlist is cancelling other one ( one widget in region bug ) */
+			if (element.id.indexOf('ref') > -1 && !isPlaylistUpdate) {
 				element.src = '';
 			}
 
