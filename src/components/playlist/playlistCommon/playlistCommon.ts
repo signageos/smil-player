@@ -77,7 +77,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	/**
 	 * determines which function to use to cancel previous content
 	 * @param regionInfo - information about region when current video belongs to
-	 * @param isPlaylistUpdate
+	 * @param isPlaylistUpdate - if element is cancelled during smil playlist update or not, default value is false
 	 */
 	protected cancelPreviousMedia = async (regionInfo: RegionAttributes, isPlaylistUpdate: boolean = false) => {
 		debug(
@@ -103,7 +103,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	/**
 	 * sets element which played in current region before currently playing element invisible ( image, widget, video )
 	 * @param regionInfo - information about region when current video belongs to
-	 * @param isPlaylistUpdate
+	 * @param isPlaylistUpdate - if element is cancelled during smil playlist update or not, default value is false
 	 */
 	private cancelPreviousHtmlElement = async (regionInfo: RegionAttributes, isPlaylistUpdate?: boolean) => {
 		try {
