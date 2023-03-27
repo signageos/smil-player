@@ -1,0 +1,8 @@
+{
+	"label": "Scheduling",
+	"position": 5,
+	"link": {
+		"type": "generated-index",
+		"description": "Learn how to schedule content based on dates, day, time, week days, and other conditions."
+	}
+}
