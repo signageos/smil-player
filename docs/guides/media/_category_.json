@@ -1,0 +1,8 @@
+{
+	"label": "Media formats",
+	"position": 3,
+	"link": {
+		"type": "generated-index",
+		"description": "Supported media formats and types."
+	}
+}
