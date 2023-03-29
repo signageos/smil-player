@@ -87,7 +87,3 @@ export type VideoPreparing = {
 export type SMILPlaylist = {
 	playlist: { [key: string]: PlaylistElement | PlaylistElement[] };
 };
-
-export type InfiniteLoopObject = {
-	[key in 'seq' | 'par']: PrefetchObject[];
-};

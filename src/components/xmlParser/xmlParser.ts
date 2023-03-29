@@ -9,7 +9,7 @@ import {
 	removeDataFromPlaylist,
 } from './tools';
 import { XmlTags } from '../../enums/xmlEnums';
-import { TriggerList } from '../../models/triggerModels';
+import { DynamicPlaylistList, TriggerList } from '../../models/triggerModels';
 import { DownloadsList, SMILFileObject } from '../../models/filesModels';
 import { XmlSmilObject } from '../../models/xmlJsonModels';
 import { SMILPlaylist } from '../../models/playlistModels';
@@ -37,6 +37,11 @@ export class XmlParser implements IXmlParser {
 			triggerSensorInfo: {},
 			triggers: {},
 		};
+
+		const dynamicList: DynamicPlaylistList = {
+			dynamic: {},
+		};
+
 		debug('Parsing xml string to json : %O', xmlFile);
 		const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 			mergeAttrs: true,
@@ -47,6 +52,8 @@ export class XmlParser implements IXmlParser {
 
 		debug('Xml file parsed to json object: %O', xmlObject);
 
+		console.log('xmlObject', xmlObject);
+
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
@@ -54,7 +61,7 @@ export class XmlParser implements IXmlParser {
 		playableMedia.playlist = xmlObject.smil.body as SMILPlaylist;
 
 		// traverse json as tree of nodes
-		extractDataFromPlaylist(playableMedia, downloads, triggerList);
+		extractDataFromPlaylist(playableMedia, downloads, triggerList, dynamicList);
 
 		removeDataFromPlaylist(playableMedia);
 
@@ -62,7 +69,7 @@ export class XmlParser implements IXmlParser {
 		debug('Extracted playableMedia object: %O', playableMedia);
 		debug('Extracted downloads object: %O', downloads);
 
-		return Object.assign({}, regions, playableMedia, downloads, triggerList, transitions);
+		return Object.assign({}, regions, playableMedia, downloads, triggerList, transitions, dynamicList);
 	};
 
 	/**
@@ -70,7 +77,14 @@ export class XmlParser implements IXmlParser {
 	 * @param tagName name of tag ( seq, par, video etc..)
 	 */
 	private tagNameSuffix = (tagName: string): string => {
-		if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(tagName)) {
+		if (
+			[
+				...XmlTags.extractedElements,
+				...XmlTags.textElements,
+				...XmlTags.dynamicPlaylist,
+				...XmlTags.indexedStructureTags,
+			].includes(tagName)
+		) {
 			return `${tagName}${this.tagNameCounter++}`;
 		}
 		return tagName;

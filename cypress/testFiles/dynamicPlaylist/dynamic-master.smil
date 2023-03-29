@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <meta log="true"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#7C67E5"/>
+            <region regionName="region_0_0_1920_1080" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#18182c">
+                <region regionName="region_0_0_1920_1080_1" left="0" top="0" width="1920" height="1080" z-index="1"
+                        backgroundColor="#18182c" sync="true"/>
+            </region>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loading_min.jpeg"
+                         fit="fill"/>
+                </seq>
+            </seq>
+            <excl begin="0" repeatCount="indefinite">
+                <priorityClass higher="stop" lower="defer" peer="never">
+                    <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                               region="region_0_0_1920_1080" fit="meet"/>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                             id="annons1" dur="4s" fit="hidden" region="region_0_0_1920_1080">
+                            <param name="cacheControl" value="auto"/>
+                        </img>
+                    </seq>
+                    <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                        <EXPERIMENTAL_emitDynamic data="dynamic1" syncId="123"/>
+                    </seq>
+                    <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                        <EXPERIMENTAL_emitDynamic data="dynamic1" syncId="123"/>
+                    </seq>
+                    <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg"
+                             id="annons1" dur="3s" fit="hidden" region="region_0_0_1920_1080">
+                            <param name="cacheControl" value="auto"/>
+                        </img>
+                    </seq>
+                </priorityClass>
+            </excl>
+        </par>
+        <par>
+            <seq begin="dynamic1" end="dynamic2">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg"
+                     id="annons1" dur="3s" fit="hidden" region="region_0_0_1920_1080">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                       region="region_0_0_1920_1080" fit="meet"/>
+            </seq>
+        </par>
+    </body>
+</smil>
+

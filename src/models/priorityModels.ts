@@ -3,5 +3,5 @@ export type PriorityObject = {
 	lower: string;
 	peer: string;
 	higher: string;
-	pauseDisplay: string;
+	pauseDisplay?: string;
 };

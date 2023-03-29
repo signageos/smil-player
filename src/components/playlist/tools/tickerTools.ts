@@ -10,6 +10,7 @@ const DEFAULT_SPEED_PX_PER_SEC = 100;
 const DEFAULT_WRAPPER_HEIGHT_TO_FONT_SIZE_RATIO = 0.6;
 
 const getFontFamilyLinkHref = (fontFamily: string) => `https://fonts.googleapis.com/css?family=${fontFamily}`;
+
 function linkFontFamily(fontFamily: string) {
 	const isFontLinked = document.querySelectorAll(`style[id='font_${fontFamily}']`).length > 0;
 	if (!isFontLinked) {
@@ -23,11 +24,7 @@ function linkFontFamily(fontFamily: string) {
 	}
 }
 
-export function createTickerElement(
-	ticker: SMILTicker,
-	regionInfo: RegionAttributes,
-	key: string,
-): string {
+export function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttributes, key: string): string {
 	const elementId = `ticker-${ticker.regionInfo.regionName}-${key}`;
 	debug('creating element: %s' + elementId);
 	if (document.getElementById(elementId)) {
@@ -85,7 +82,7 @@ export function createTickerElement(
 	return element.id;
 }
 
-type TextChild = { element: HTMLSpanElement, left: number, width: number };
+type TextChild = { element: HTMLSpanElement; left: number; width: number };
 
 export function startTickerAnimation(wrapperElement: HTMLElement, ticker: SMILTicker) {
 	const texts = Array.isArray(ticker.text) ? ticker.text : [ticker.text];
