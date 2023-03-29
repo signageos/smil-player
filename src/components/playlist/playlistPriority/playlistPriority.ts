@@ -90,14 +90,14 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 * @param version - smil internal version of current playlist
 	 * @param currentVersion - global version of the newest playlist of smil
 	 */
-	public handlePriorityWhenDone = (
+	public handlePriorityWhenDone = async (
 		priorityRegionName: string,
 		currentIndex: number,
 		endTime: number,
 		isLast: boolean,
 		version: number,
 		currentVersion: number,
-	): void => {
+	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
 		/*
@@ -135,6 +135,12 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				pausedIndexPriority.behaviour = '';
 			}
 			currentIndexPriority.player.playing = false;
+		}
+
+		if (currentIndexPriority.media.dynamicValue && isLast) {
+			if (currentIndexPriority.priority.priorityLevel === 1000) {
+				await sleep(150);
+			}
 		}
 	};
 

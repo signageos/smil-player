@@ -6,6 +6,7 @@ import isObject = require('lodash/isObject');
 import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
+
 const hasher = require('node-object-hash');
 
 import { BackupPlaylist, CurrentlyPlayingRegion, PlaylistElement } from '../../../models/playlistModels';
@@ -236,8 +237,11 @@ export function removeDigits(expr: string): string {
 	return expr.replace(/[0-9]/g, '');
 }
 
-export async function sleep(ms: number): Promise<object> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
+export async function sleep(ms: number): Promise<void> {
+	let timeoutId;
+	await new Promise((resolve) => {
+		timeoutId = setTimeout(resolve, ms);
 	});
+
+	clearTimeout(timeoutId);
 }

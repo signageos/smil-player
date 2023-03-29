@@ -22,7 +22,7 @@ export function createHtmlElement(
 	regionInfo: RegionAttributes,
 	key: string,
 	elementSrc: string,
-	isTrigger: boolean = false,
+	isSpecial: boolean = false,
 ): HTMLElement {
 	const element: HTMLElement = document.createElement(htmlElement);
 
@@ -44,7 +44,7 @@ export function createHtmlElement(
 
 	element.style.visibility = 'hidden';
 	// set filePAth for trigger images immediately
-	if (isTrigger) {
+	if (isSpecial) {
 		let src = generateElementSrc(elementSrc, filepath);
 		element.setAttribute('src', src);
 	}
@@ -63,6 +63,8 @@ export function generateElementSrc(
 	smilUrlVersion: string | null = null,
 	isWidget: boolean = false,
 ): string {
+	// TODO: REMOVE!!
+	return elementSrc;
 	// BrightSign does not support query parameters in filesystem
 	let src = createVersionedUrl(localFilePath, playlistVersion, smilUrlVersion, isWidget);
 	// TODO this would not work & break BS. Solve it other way in future before merge
@@ -106,13 +108,14 @@ export function changeZIndex(
  * @param value - Smil image or Smil widget
  * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
  * @param key - tag of media in xml ( img, video etc...)
- * @param isTrigger - determines if element is trigger element or ordinary one ( trigger is played on demand )
+ * @param isSpecial - determines if element is trigger element, dynamic playlist or ordinary one
+ * ( trigger and dynamic playlist is played on demand )
  */
 export function createDomElement(
 	value: SMILImage | SMILWidget,
 	htmlElement: string,
 	key: string,
-	isTrigger: boolean = false,
+	isSpecial: boolean = false,
 ): string {
 	const elementId = generateElementId(value.localFilePath, value.regionInfo.regionName, key);
 	debug('creating element: %s' + elementId);
@@ -121,7 +124,7 @@ export function createDomElement(
 		return elementId;
 	}
 	const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
-	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, value.src, isTrigger);
+	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, value.src, isSpecial);
 	document.body.appendChild(element);
 	return element.id;
 }
