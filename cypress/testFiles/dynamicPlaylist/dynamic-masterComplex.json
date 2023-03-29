@@ -1,0 +1,254 @@
+{
+  "schedule": {
+    "id": "31715",
+    "name": "multiple synchros"
+  },
+  "events": [
+    {
+      "id": "610467",
+      "name": "2 zones- video image",
+      "schedule": "31715",
+      "week_days": "1,2,3,4,5,6,0",
+      "range_hour_start": "00:00:00",
+      "range_hour_end": "23:59:59",
+      "colour": "#7C67E5",
+      "priority": 5,
+      "type": "bucle",
+      "allow_interrupt": true,
+      "playlists": [
+        "content_176160",
+        "content_158887",
+        "content_176162",
+        "content_176160",
+        "content_176161",
+        "content_158887"
+      ]
+    }
+  ],
+  "playlists": {
+    "content_158887": {
+      "id": "158887",
+      "name": "nsign synchro shape 1",
+      "duration": 20,
+      "customDuration": "0",
+      "width": 1920,
+      "height": 1080,
+      "zones": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "shuffle": false,
+          "type": "1",
+          "name": "normal",
+          "resources": [
+            {
+              "id": "351503",
+              "name": "NsignShapes 1",
+              "timeout": 20,
+              "updatedOn": "2022-06-29 11:13:32",
+              "type": "video",
+              "filename": "351503_1656501206_cdn_nsignshapes_1.mp4",
+              "properties": {
+                "width": "1920",
+                "height": "1080"
+              }
+            }
+          ]
+        }
+      ],
+      "sync": [
+        {
+          "syncId": "5679",
+          "syncName": "Nsign shapes syncro",
+          "id": "34644",
+          "name": "content_158888"
+        },
+        {
+          "syncId": "5679",
+          "syncName": "Nsign shapes syncro",
+          "id": "36165",
+          "name": "content_158890"
+        }
+      ],
+      "syncId": "5679"
+    },
+    "content_176160": {
+      "id": "176160",
+      "name": "2 zones- video image",
+      "duration": 30,
+      "customDuration": "0",
+      "width": 1920,
+      "height": 1080,
+      "zones": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 690,
+          "height": 1080,
+          "shuffle": false,
+          "type": "1",
+          "name": "normal",
+          "resources": [
+            {
+              "id": "327577",
+              "name": "Eggs - Clone",
+              "timeout": 15,
+              "updatedOn": "2022-04-21 09:21:56",
+              "type": "image",
+              "filename": "327577_1643627324_cdn_eggs.jpg",
+              "properties": {
+                "width": "4096",
+                "height": "2725"
+              }
+            },
+            {
+              "id": "320288",
+              "name": "5Qqkjn4PFPA.jpg",
+              "timeout": 15,
+              "updatedOn": "2022-03-28 15:07:47",
+              "type": "image",
+              "filename": "320288_1648480064_cdn_5qqkjn4pfpa.jpg",
+              "properties": {
+                "width": "1080",
+                "height": "1920"
+              }
+            }
+          ]
+        },
+        {
+          "x": 690,
+          "y": 0,
+          "width": 1230,
+          "height": 1080,
+          "shuffle": false,
+          "type": "2",
+          "name": "lateral",
+          "resources": [
+            {
+              "id": "320220",
+              "name": "layers_3s_1920x1080.mp4",
+              "timeout": 3,
+              "updatedOn": "2022-03-28 11:29:38",
+              "type": "video",
+              "filename": "320220_1648466971_cdn_layers_3s_1920x1080.mp4",
+              "properties": {
+                "width": "1920",
+                "height": "1080"
+              }
+            },
+            {
+              "id": "329716",
+              "name": "314607 Le Graine Poulet",
+              "timeout": 15,
+              "updatedOn": "2022-04-27 16:42:13",
+              "type": "image",
+              "filename": "329716_1651077730_cdn_314607_le_graine_poulet.jpg",
+              "properties": {
+                "width": "960",
+                "height": "1080"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "content_176161": {
+      "id": "176161",
+      "name": "video circles",
+      "duration": 15,
+      "customDuration": "0",
+      "width": 1920,
+      "height": 1080,
+      "zones": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "shuffle": false,
+          "type": "1",
+          "name": "normal",
+          "resources": [
+            {
+              "id": "320221",
+              "name": "circles3_15s_1920x1080.mp4",
+              "timeout": 15,
+              "updatedOn": "2022-03-28 11:30:33",
+              "type": "video",
+              "filename": "320221_1648467017_cdn_circles3_15s_1920x1080.mp4",
+              "properties": {
+                "width": "1920",
+                "height": "1080"
+              }
+            }
+          ]
+        }
+      ],
+      "sync": [
+        {
+          "syncId": "7275",
+          "syncName": "Nsign synchro 2 screens B",
+          "id": "34645",
+          "name": "content_176161"
+        }
+      ],
+      "syncId": "7275"
+    },
+    "content_176162": {
+      "id": "176162",
+      "name": "video and image",
+      "duration": 18,
+      "customDuration": "0",
+      "width": 1920,
+      "height": 1080,
+      "zones": [
+        {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080,
+          "shuffle": false,
+          "type": "1",
+          "name": "normal",
+          "resources": [
+            {
+              "id": "320220",
+              "name": "layers_3s_1920x1080.mp4",
+              "timeout": 3,
+              "updatedOn": "2022-03-28 11:29:38",
+              "type": "video",
+              "filename": "320220_1648466971_cdn_layers_3s_1920x1080.mp4",
+              "properties": {
+                "width": "1920",
+                "height": "1080"
+              }
+            },
+            {
+              "id": "329711",
+              "name": "314602 Ecran Choix Cafe",
+              "timeout": 15,
+              "updatedOn": "2022-04-27 16:42:12",
+              "type": "image",
+              "filename": "329711_1651077730_cdn_314602_ecran_choix_cafe.jpg",
+              "properties": {
+                "width": "960",
+                "height": "1080"
+              }
+            }
+          ]
+        }
+      ],
+      "sync": [
+        {
+          "syncId": "7274",
+          "syncName": "Nsign synchro 2 screens A",
+          "id": "34644",
+          "name": "content_176162"
+        }
+      ],
+      "syncId": "7274"
+    }
+  }
+}
