@@ -7,7 +7,7 @@ import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
-import { resetBodyContent, setTransitionsDefinition } from './playlist/tools/htmlTools';
+import { setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
 import backupImage from '../../public/backupImage/backupImage.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
@@ -21,6 +21,7 @@ import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcesso
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
+import Debug from 'debug';
 
 applyFetchPolyfill();
 
@@ -44,6 +45,7 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
+		Debug.enable('@signageos/smil-player:*');
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
 
@@ -98,7 +100,7 @@ export class SmilPlayer implements ISmilPlayer {
 			}
 		}
 
-		resetBodyContent();
+		// resetBodyContent();
 
 		while (true) {
 			try {
@@ -121,7 +123,7 @@ export class SmilPlayer implements ISmilPlayer {
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 		thisSos: FrontApplet,
-		playIntro: boolean = true,
+		playIntro: boolean = false,
 	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
@@ -136,26 +138,26 @@ export class SmilPlayer implements ISmilPlayer {
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
 
-		try {
-			if (
-				!isNil(sos.config.backupImageUrl) &&
-				!isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))
-			) {
-				forceDownload = true;
-				const backupImageObject = {
-					src: sos.config.backupImageUrl,
-				};
-				downloadPromises = await this.files.parallelDownloadAllFiles(
-					internalStorageUnit,
-					[backupImageObject],
-					FileStructure.images,
-					forceDownload,
-				);
-				await Promise.all(downloadPromises);
-			}
-		} catch (err) {
-			debug('Unexpected error occurred during backup image download : %O', err);
-		}
+		// try {
+		// 	if (
+		// 		!isNil(sos.config.backupImageUrl) &&
+		// 		!isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))
+		// 	) {
+		// 		forceDownload = true;
+		// 		const backupImageObject = {
+		// 			src: sos.config.backupImageUrl,
+		// 		};
+		// 		downloadPromises = await this.files.parallelDownloadAllFiles(
+		// 			internalStorageUnit,
+		// 			[backupImageObject],
+		// 			FileStructure.images,
+		// 			forceDownload,
+		// 		);
+		// 		await Promise.all(downloadPromises);
+		// 	}
+		// } catch (err) {
+		// 	debug('Unexpected error occurred during backup image download : %O', err);
+		// }
 
 		let smilFileContent: string = '';
 		let xmlOkParsed: boolean = false;
@@ -233,7 +235,8 @@ export class SmilPlayer implements ISmilPlayer {
 
 				debug('Starting to process parsed smil file');
 				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false);
-				await this.processor.processingLoop(smilObject, smilFile, playIntro, restart);
+				// TODO: firstIteration to always true due to applet.refresh in smil update
+				await this.processor.processingLoop(smilObject, smilFile, true, restart);
 			} catch (err) {
 				if (smilFileContent === '') {
 					debug('Unexpected error occurred during smil file download : %O', err);

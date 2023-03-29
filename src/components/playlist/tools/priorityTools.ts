@@ -6,7 +6,8 @@ export function createPriorityObject(priorityClass: PriorityObject, priorityLeve
 		priorityLevel,
 		lower: priorityClass.lower ?? PriorityDefault.lower,
 		peer: priorityClass.peer ?? PriorityDefault.peer,
-		higher: priorityClass.higher ?? PriorityDefault.higher,
+		// TODO: default stop for higher priority for BP
+		higher: 'stop',
 		pauseDisplay: priorityClass.pauseDisplay ?? PriorityDefault.pauseDisplay,
 	};
 }

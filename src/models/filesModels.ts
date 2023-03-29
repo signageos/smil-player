@@ -1,4 +1,4 @@
-import { TriggerList } from './triggerModels';
+import { DynamicPlaylistList, TriggerList } from './triggerModels';
 import { RegionsObject, TransitionsObject } from './xmlJsonModels';
 import { SMILPlaylist } from './playlistModels';
 import { SMILAudio, SMILImage, SMILIntro, SMILVideo, SMILWidget } from './mediaModels';
@@ -30,5 +30,10 @@ export type MediaInfoObject = {
 	[fileName: string]: string | null | number;
 };
 
-export type SMILFileObject = SMILPlaylist & RegionsObject & DownloadsList & TriggerList & TransitionsObject;
+export type SMILFileObject = SMILPlaylist &
+	RegionsObject &
+	DownloadsList &
+	TriggerList &
+	TransitionsObject &
+	DynamicPlaylistList;
 export type MergedDownloadList = SMILWidget | SMILImage | SMILAudio | SMILVideo | SMILFile;

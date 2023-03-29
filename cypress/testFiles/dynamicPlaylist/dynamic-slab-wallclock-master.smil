@@ -1,0 +1,113 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta log="false"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="clgmkrvsh4827581xmz267xq5a7" left="0" top="0" width="1920" height="1080" z-index="2"
+                    backgroundColor="#000000">
+                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="2"
+                        backgroundColor="#000000" sync="true"/>
+            </region>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <!-- [SynchronizationEmitterModule] Leader Magnum (clh62yadk4419501xi490ln0zbh) -->
+                            <seq begin="wallclock(R/2023-05-02+w1T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w1T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w2T10:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w2T18:00/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w3T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w3T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w4T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w4T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w5T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w5T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w6T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w6T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w7T00:00/P1D)"
+                                 end="wallclock(R/2023-05-03+w7T23:59/P1D)">
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                            </seq>
+                            <!-- [GalleryModule] Sweet Treats (clh69tuz36222611xk4ubhmiweh) -->
+                            <seq begin="wallclock(R/2023-05-02+w1T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w1T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w2T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w2T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w3T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w3T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w4T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w4T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w5T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w5T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w6T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w6T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <seq begin="wallclock(R/2023-05-02+w7T00:00/P1D)"
+                                 end="wallclock(R/2023-05-04+w7T23:59/P1D)" repeatCount="1">
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                        </seq>
+                    </par>
+                </excl>
+                <!-- Synchronization campaign playlist -->
+                <par>
+                    <!-- [GalleryModule] Magnum Part1 (clh635k0v4443091xi4bgd8g0wv) -->
+                    <seq begin="dynamic_clh62unkn4410831xi4u2mny1lu" end="dynamic2" repeatCount="1">
+                        <video src="https://publish-p65652-e608912.adobeaemcloud.com/content/dam/sde/uk/2023/04/759740b6-e1d6-401a-a3a7-8f79062e3b48.mp4"
+                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                    </seq>
+                </par>
+            </par>
+        </par>
+    </body>
+</smil>

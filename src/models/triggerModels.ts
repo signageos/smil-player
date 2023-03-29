@@ -4,12 +4,14 @@ import { RegionAttributes } from './xmlJsonModels';
 export type TriggerObject = {
 	seq: {
 		begin: string;
-		end: string,
+		end: string;
 		repeatCount: string;
 		dur: string;
 		[key: string]: SMILVideo[] | SMILImage[] | SMILWidget[] | SMILAudio[] | SMILIntro[] | string;
 	};
 };
+
+export type DynamicPlaylistObject = TriggerObject;
 
 export type TriggerEndless = {
 	[triggerName: string]: {
@@ -25,6 +27,10 @@ export type TriggerList = {
 	sensors: ParsedSensor[];
 	triggerSensorInfo: ParsedTriggerInfo;
 	triggers: { [key: string]: TriggerObject };
+};
+
+export type DynamicPlaylistList = {
+	dynamic: { [key: string]: DynamicPlaylistObject };
 };
 
 export type SMILTriggers = {

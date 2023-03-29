@@ -1,77 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <smil>
     <head>
-        <meta http-equiv="refresh" content="20"/>
+        <meta content="60" http-equiv="Refresh"/>
+        <sensors>
+            <sensor type="rfid" id="rfid1" driver="nexmosphere">
+                <option name="address">003</option>
+            </sensor>
+            <sensor type="rfid" id="rfid2" driver="nexmosphere">
+                <option name="address">005</option>
+            </sensor>
+            <sensor type="rfid" id="rfid3" driver="nexmosphere">
+                <option name="address">007</option>
+                <option name="test5">111</option>
+            </sensor>
+        </sensors>
         <triggers>
+            <trigger id="trigger1" condition="or">
+                <condition origin="rfid1" data="1" action="picked"/>
+                <condition origin="rfid2" data="2" action="picked"/>
+            </trigger>
+            <trigger id="trigger2" condition="or">
+                <condition origin="rfid3" data="3" action="picked"/>
+            </trigger>
 
+            <!-- you can add as many triggers as you need -->
             <trigger id="trigger2" condition="or">
                 <condition
-                        origin="mouse" action="click"/>
+                        origin="keyboard" data="456" action="keydown"/>
+
+            </trigger>
+            <trigger id="trigger1" condition="or">
+                <condition
+                        origin="keyboard" data="789" action="keydown"/>
             </trigger>
         </triggers>
         <layout>
-            <!-- define the screen resolution -->
-            <root-layout width="100%" height="100%" backgroundColor="#18182c" />
-
-            <!-- define the screen layout zones in relative % -->
-            <region regionName="left01" left="0" top="0" width="45%" height="100%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="background" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
-            <region regionName="right01" left="45%" top="16%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right02" left="45%" top="44%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="right03" left="45%" top="72%" width="55%" height="28%" z-index="2" backgroundColor="#ffffff"/>
-            <region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff">
-                <region regionName="trigger1" left="0" top="0" width="100%" height="100%" z-index="0" backgroundColor="#ffffff"/>
+            <root-layout backgroundColor="#000000" height="1080" width="1920"/>
+            <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
+                    backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft">
+                <region regionName="video1" left="0" top="0" width="640" height="720" z-index="1"
+                        backgroundColor="transparent" sync="true"/>
+                <region regionName="video2" left="640" top="0" width="640" height="720" z-index="1"
+                        backgroundColor="transparent" sync="true"/>
             </region>
-
         </layout>
     </head>
     <body>
-        <par>
-
-            <!-- Play this intro video as long as the resources being prefetched -->
-            <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/loading.mp4" />
-                </seq>
-            </seq>
-
-            <!-- Wait for the prefetch of media files, once done, start the playback -->
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <par>
-                    <!-- indefinite loop of media files in the selected order -->
-                    <par repeatCount="indefinite">
-                        <img dur="180s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/background.png" region="background"></img>
-                    </par>
-                </par>
-                <!-- TWO <par> playlists are here, they will play together side by side, both in their respective region -->
-                <par>
+        <excl begin="0" repeatCount="indefinite">
+            <priorityClass higher="stop" lower="defer" peer="never">
+                <par begin="wallclock(R/2011-01-01T16:32:00/P1D)" end="wallclock(R/2011-01-01T18:33:00/P1D)">
                     <seq repeatCount="indefinite">
-                        <!-- indefinite loop of media files in the selected order -->
-                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/side.mp4" region="left01" soundLevel="0%"></video>
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg"
+                             id="annons1"
+                             dur="5s" fit="hidden" region="video">
+                            <param name="cacheControl" value="auto"/>
+                        </img>
+                        <EXPERIMENTAL_emitDynamic data="dynamic2,dynamic4"/>
                     </seq>
                 </par>
-                <par>
-                    <!-- indefinite loop of media files in the selected order
-                     -->
-                    <par repeatCount="indefinite">
-                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=1" region="right01" type="application/widget" dur="indefinite" />
-                    </par>
-                    <par repeatCount="indefinite">
-                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=2" region="right02" type="application/widget" dur="indefinite" />
-                    </par>
-                    <par repeatCount="indefinite">
-                        <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/widget.zip?number=3" region="right03" type="application/widget" dur="indefinite" />
-                    </par>
+            </priorityClass>
+            <priorityClass higher="stop" lower="defer" peer="never">
+                <par begin="wallclock(R/2011-01-01T22:02:00/P1D)" end="wallclock(R/2011-01-01T22:05:00/P1D)">
+                    <seq>
+                        <EXPERIMENTAL_emitDynamic data="dynamic1,dynamic3"/>
+                    </seq>
                 </par>
-            </par>
-        </par>
+            </priorityClass>
+            <priorityClass higher="stop" peer="stop" lower="defer">
+                <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                    <seq repeatCount="indefinite">
+                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                             id="annons1" dur="3s" fit="hidden" region="video">
+                            <param name="cacheControl" value="auto"/>
+                        </img>
+                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                               id="annons0" fit="hidden" region="video">
+                            <param name="cacheControl" value="auto"/>
+                        </video>
+                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                               id="annons0" fit="hidden" region="video">
+                            <param name="cacheControl" value="auto"/>
+                        </video>
+                    </seq>
+                </par>
+            </priorityClass>
+        </excl>
+
         <par>
-            <seq begin="trigger2" dur="8">
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="3s" fit="hidden" region="trigger">
-                    <param name="cacheControl" value="auto" />
+            <seq begin="trigger1" repeatCount="1">
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                       id="annons1" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </video>
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
                 </img>
-                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/cfa/menu_01/side.mp4" region="trigger" soundLevel="0%"></video>
             </seq>
         </par>
+
+        <par>
+            <seq begin="dynamic1" end="dynamic3" repeatCount="indefinite">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                       id="annons1" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </video>
+            </seq>
+        </par>
+        <par>
+            <seq begin="dynamic2" end="dynamic3">
+                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </img>
+                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                       id="annons1" fit="hidden" region="video">
+                    <param name="cacheControl" value="auto"/>
+                </video>
+            </seq>
+        </par>
+
     </body>
 </smil>

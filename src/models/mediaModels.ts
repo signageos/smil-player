@@ -18,6 +18,7 @@ export type SMILVideo = {
 	regionInfo: RegionAttributes;
 	media?: string;
 	triggerValue?: string;
+	dynamicValue?: string;
 };
 
 export type SMILAudio = {
@@ -33,6 +34,7 @@ export type SMILAudio = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -51,6 +53,7 @@ export type SMILImage = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -69,6 +72,7 @@ export type SMILWidget = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -95,6 +99,7 @@ export type SMILTicker = {
 	transitionInfo?: TransitionAttributes;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
 };
@@ -108,6 +113,7 @@ export type SosHtmlElement = {
 	playing?: boolean;
 	isTrigger?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	regionInfo: RegionAttributes;
 	localFilePath: string;
 };

@@ -18,6 +18,7 @@ import { FilesManager } from '../../files/filesManager';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
+import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
@@ -32,24 +33,28 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * @param smilObject
 	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilUrl
-	 * @param isTrigger - boolean value determining if function is processing trigger playlist or ordinary playlist
-	 * @param triggerName - name of the trigger element
+	 * @param isSpecial - boolean value determining if function is processing trigger playlist, dynamic playlist or ordinary playlist
+	 * @param specialName - name of the trigger or dynamic element
 	 */
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[] | TriggerList,
 		smilObject: SMILFileObject,
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
-		isTrigger: boolean = false,
-		triggerName: string = '',
+		isSpecial: boolean = false,
+		specialName: string = '',
 	): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
 		const regionSyncIndex: { [key: string]: number } = {};
 		for (let [key, loopValue] of Object.entries(playlist)) {
-			triggerName =
-				key === 'begin' && loopValue.startsWith(SMILTriggersEnum.triggerFormat) ? loopValue : triggerName;
+			specialName =
+				key === 'begin' &&
+				(loopValue.startsWith(SMILTriggersEnum.triggerFormat) ||
+					loopValue.startsWith(SMILDynamicEnum.dynamicFormat))
+					? loopValue
+					: specialName;
 			// skip processing string values like "repeatCount": "indefinite"
 			if (!isObject(loopValue)) {
 				continue;
@@ -88,7 +93,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 				for (const elem of value) {
 					// relative path for triggers has to be fixed here, because trigger media objects are not included in parallel download
-					if (isTrigger) {
+					if (isSpecial) {
 						elem.src = convertRelativePathToAbsolute(elem.src, smilUrl);
 					}
 
@@ -140,13 +145,17 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					}
 
 					// element will be played only on trigger emit in nested region
-					if (isTrigger && triggerName !== '') {
-						elem.triggerValue = triggerName;
+					if (isSpecial && specialName.startsWith(SMILTriggersEnum.triggerFormat)) {
+						elem.triggerValue = specialName;
+					}
+
+					if (isSpecial && specialName.startsWith(SMILDynamicEnum.dynamicFormat)) {
+						elem.dynamicValue = specialName;
 					}
 
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-						elem.id = createDomElement(elem, htmlElement, key, isTrigger);
+						elem.id = createDomElement(elem, htmlElement, key, isSpecial);
 					}
 
 					if (key.startsWith(HtmlEnum.ticker)) {
@@ -156,7 +165,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				// reset widget expression for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isTrigger, triggerName);
+				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName);
 			}
 		}
 	};
@@ -177,6 +186,9 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, internalStorageUnit, smilUrl, true);
 		debug('All triggers info extracted');
+
+		await this.getAllInfo(smilObject.dynamic, smilObject, internalStorageUnit, smilUrl, true);
+		debug('All dynamic playlist info extracted');
 
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
