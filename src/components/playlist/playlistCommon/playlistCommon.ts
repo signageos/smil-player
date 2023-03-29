@@ -1,5 +1,10 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { CurrentlyPlaying, CurrentlyPlayingPriority, PromiseAwaiting } from '../../../models/playlistModels';
+import {
+	CurrentlyPlaying,
+	CurrentlyPlayingPriority,
+	PlaylistOptions,
+	PromiseAwaiting,
+} from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { SMILTicker } from '../../../models/mediaModels';
@@ -13,6 +18,7 @@ import { stopTickerAnimation } from '../tools/tickerTools';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
+import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: FrontApplet;
@@ -23,7 +29,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	protected synchronization: Synchronization;
 
-	constructor(sos: FrontApplet, files: FilesManager, options: any) {
+	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		this.sos = sos;
 		this.files = files;
 		this.cancelFunction = options.cancelFunction;
@@ -47,12 +53,23 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 * @param fn - Function
 	 * @param version - smil internal version of current playlist
 	 * @param conditionalExpr
+	 * @param dynamicPlaylist
+	 * @param dynamicPlaylistId
 	 */
-	protected runEndlessLoop = async (fn: Function, version: number = 0, conditionalExpr: string = '') => {
+	protected runEndlessLoop = async (
+		fn: Function,
+		version: number = 0,
+		conditionalExpr: string = '',
+		dynamicPlaylist: DynamicPlaylistEndless = {},
+		dynamicPlaylistId: string | undefined = undefined,
+	) => {
 		while (
 			!this.cancelFunction[version] &&
-			(conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr }))
-			) {
+			(conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr })) &&
+			(!dynamicPlaylistId ||
+				!dynamicPlaylist[dynamicPlaylistId] ||
+				dynamicPlaylist[dynamicPlaylistId]?.play === true)
+		) {
 			try {
 				await fn();
 			} catch (err) {
@@ -62,14 +79,30 @@ export class PlaylistCommon implements IPlaylistCommon {
 		}
 	};
 
-	protected stopAllContent = async () => {
+	protected stopAllContent = async (cancelFullscreen: boolean = true) => {
 		for (let [, region] of Object.entries(this.currentlyPlaying)) {
-			if (
-				'regionInfo' in region &&
-				region.regionInfo.regionName !== SMILEnums.defaultRegion &&
-				region.regionInfo.regionName !== 'fullScreenTrigger'
-			) {
-				await this.cancelPreviousMedia(region.regionInfo, true);
+			if (cancelFullscreen) {
+				// option to cancel fullscreen region during smil update when using dynamic playlist functionality
+				if ('regionInfo' in region && region.regionInfo.regionName !== SMILEnums.defaultRegion) {
+					await this.cancelPreviousMedia(region.regionInfo, true);
+					// has nested regions - cancel content which is playing in nested regions
+					if (region.regionInfo.region) {
+						if (!Array.isArray(region.regionInfo.region)) {
+							region.regionInfo.region = [region.regionInfo.region];
+						}
+					}
+					for (const nestedRegion of region.regionInfo.region) {
+						await this.cancelPreviousMedia(nestedRegion, true);
+					}
+				}
+			} else {
+				if (
+					'regionInfo' in region &&
+					region.regionInfo.regionName !== SMILEnums.defaultRegion &&
+					region.regionInfo.regionName !== 'fullScreenTrigger'
+				) {
+					await this.cancelPreviousMedia(region.regionInfo, true);
+				}
 			}
 		}
 	};
@@ -166,7 +199,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 					}
 				});
 			}
-
+			debug('Calling## video stop function - single video: %O', video);
 			await sosVideoObject.stop(
 				elementUrl,
 				localRegionInfo.left,
@@ -175,7 +208,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				localRegionInfo.height,
 			);
 			video.playing = false;
-			debug(`previous ${videoElement} stopped`);
+			debug(`previous ${videoElement} stopped: %O`, video);
 		} catch (err) {
 			debug('error during video cancellation: %O', err);
 		}
