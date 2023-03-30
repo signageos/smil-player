@@ -15,5 +15,6 @@ export type DynamicPlaylistEndless = {
 		parentRegion: string;
 		syncId: string;
 		isMaster: boolean;
+		dynamicConfig: any;
 	};
 };

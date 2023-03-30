@@ -98,8 +98,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			if (media.hasOwnProperty(SMILDynamicEnum.dynamicValue)) {
 				const index = this.findFirstFreeRegion(regionInfo.region as RegionAttributes[]);
-				regionInfo = !isNil(this.dynamicPlaylist[media.dynamicValue]?.regionInfo)
-					? this.dynamicPlaylist[media.dynamicValue].regionInfo
+				regionInfo = !isNil(this.dynamicPlaylist[media.dynamicValue!]?.regionInfo)
+					? this.dynamicPlaylist[media.dynamicValue!].regionInfo
 					: (regionInfo.region as RegionAttributes[])[index];
 
 				set(this.dynamicPlaylist, `${media.dynamicValue}.regionInfo`, regionInfo);
@@ -133,15 +133,16 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	) => {
 		set(this.dynamicPlaylist, `${dynamicPlaylistId}.latestEventFired`, Date.now());
 		set(this.dynamicPlaylist, `${dynamicPlaylistId}.syncId`, dynamicPlaylistConfig.syncId);
+		set(this.dynamicPlaylist, `${dynamicPlaylistId}.dynamicConfig`, dynamicPlaylistConfig);
 
 		const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
 		const dynamicRandom = getRandomInt(100000);
 
-		if (dynamicPlaylistConfig.action === 'end') {
+		if (dynamicPlaylistConfig.action === 'end' && !currentDynamicPlaylist.isMaster) {
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
 				elem.player.playing = false;
 			}
-			await this.cancelPreviousMedia(currentDynamicPlaylist.regionInfo);
+
 			currentDynamicPlaylist.play = false;
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
 				if (elem.media.dynamicValue) {
@@ -153,9 +154,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				'LEAVING GROUP 1: ',
 				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 			);
-			await this.sos.sync.leaveGroup(
-				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-			);
+			// await this.sos.sync.leaveGroup(
+			// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+			// );
 			return;
 		}
 
@@ -177,51 +178,51 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		// await Promise.all(this.promiseAwaiting[currentDynamicPlaylist.regionInfo.regionName].promiseFunction!);
 
 		// dynamic playlist has to be able to cancel itself when finished
-		if (currentDynamicPlaylist.dynamicRandom === dynamicRandom && currentDynamicPlaylist.play) {
-			set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
-
-			console.log(
-				'LEAVING GROUP 2: ',
-				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-			);
-			// leave dynamic syncGroup
-			await this.sos.sync.leaveGroup(
-				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-			);
-
-			console.log(
-				'group left',
-				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-			);
-
-			let syncEndCounter = 0;
-			let intervalID = setInterval(async () => {
-				syncEndCounter++;
-				if (syncEndCounter > 5) {
-					clearInterval(intervalID);
-				}
-				await this.sos.sync.broadcastValue({
-					groupName: 'testingSmilGroup-fullScreenTrigger',
-					key: 'myKey',
-					value: {
-						action: 'end',
-						...dynamicPlaylistConfig,
-					},
-				});
-			}, 50);
-
-			// TODO: fix to end priority playlist with proper timesPlayed mechanism
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
-				elem.player.playing = false;
-			}
-			await this.cancelPreviousMedia(currentDynamicPlaylist.regionInfo);
-			currentDynamicPlaylist.play = false;
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
-				if (elem.media.dynamicValue) {
-					elem.player.playing = false;
-				}
-			}
-		}
+		// if (currentDynamicPlaylist.dynamicRandom === dynamicRandom && currentDynamicPlaylist.play) {
+		// 	set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
+		//
+		// 	console.log(
+		// 		'LEAVING GROUP 2: ',
+		// 		`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+		// 	);
+		// 	// leave dynamic syncGroup
+		// 	// await this.sos.sync.leaveGroup(
+		// 	// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+		// 	// );
+		//
+		// 	console.log(
+		// 		'group left',
+		// 		`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+		// 	);
+		//
+		// 	let syncEndCounter = 0;
+		// 	let intervalID = setInterval(async () => {
+		// 		syncEndCounter++;
+		// 		if (syncEndCounter > 5) {
+		// 			clearInterval(intervalID);
+		// 		}
+		// 		await this.sos.sync.broadcastValue({
+		// 			groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+		// 			key: 'myKey',
+		// 			value: {
+		// 				action: 'end',
+		// 				...dynamicPlaylistConfig,
+		// 			},
+		// 		});
+		// 	}, 50);
+		//
+		// 	// TODO: fix to end priority playlist with proper timesPlayed mechanism
+		// 	for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
+		// 		elem.player.playing = false;
+		// 	}
+		// 	await this.cancelPreviousMedia(currentDynamicPlaylist.regionInfo);
+		// 	currentDynamicPlaylist.play = false;
+		// 	for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+		// 		if (elem.media.dynamicValue) {
+		// 			elem.player.playing = false;
+		// 		}
+		// 	}
+		// }
 	};
 
 	private watchUdpRequest = async () => {
