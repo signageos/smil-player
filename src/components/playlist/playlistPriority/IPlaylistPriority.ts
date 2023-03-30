@@ -1,5 +1,6 @@
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
+import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 
 export interface IPlaylistPriority {
 	priorityBehaviour: (
@@ -13,11 +14,13 @@ export interface IPlaylistPriority {
 		previousPlayingIndex: number;
 	}>;
 	handlePriorityWhenDone: (
+		value: SMILMedia,
 		priorityRegionName: string,
 		currentIndex: number,
 		endTime: number,
 		isLast: boolean,
 		version: number,
 		currentVersion: number,
+		triggers: PlaylistTriggers,
 	) => void;
 }

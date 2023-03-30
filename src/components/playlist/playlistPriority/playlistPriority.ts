@@ -2,7 +2,7 @@
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { getIndexOfPlayingMedia, sleep } from '../tools/generalTools';
-import { isEqual, isNil } from 'lodash';
+import { isEqual, isNil, set } from 'lodash';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
@@ -10,6 +10,7 @@ import { FilesManager } from '../../files/filesManager';
 import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
 import { PriorityRule } from '../../../enums/priorityEnums';
 import { IPlaylistPriority } from './IPlaylistPriority';
+import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
@@ -83,20 +84,24 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 
 	/**
 	 * Function set current playlist as finished based on endTime or repeatCount and releases all playlists which were dependent on it
+	 * @param value
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param currentIndex - at which index is playlist stored in currentlyPlayingPriority object
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 * @param isLast - if current playlist is last in playlist chain ( could me multiple image, video, widgets playlists )
 	 * @param version - smil internal version of current playlist
 	 * @param currentVersion - global version of the newest playlist of smil
+	 * @param triggers
 	 */
 	public handlePriorityWhenDone = async (
+		value: SMILMedia,
 		priorityRegionName: string,
 		currentIndex: number,
 		endTime: number,
 		isLast: boolean,
 		version: number,
 		currentVersion: number,
+		triggers: PlaylistTriggers,
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
@@ -135,6 +140,55 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				pausedIndexPriority.behaviour = '';
 			}
 			currentIndexPriority.player.playing = false;
+
+			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
+				const currentDynamicPlaylist = triggers?.dynamicPlaylist[value.dynamicValue!]!;
+				console.log('dynamic playlist done', currentDynamicPlaylist);
+				set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
+
+				console.log(
+					'LEAVING GROUP 2: ',
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
+				);
+				// leave dynamic syncGroup
+				// await this.sos.sync.leaveGroup(
+				// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
+				// );
+
+				console.log(
+					'group left',
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
+				);
+
+				let syncEndCounter = 0;
+				let intervalID = setInterval(async () => {
+					console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
+					syncEndCounter++;
+					if (syncEndCounter > 3) {
+						clearInterval(intervalID);
+					}
+					await this.sos.sync.broadcastValue({
+						groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+						key: 'myKey',
+						value: {
+							action: 'end',
+							...currentDynamicPlaylist.dynamicConfig,
+						},
+					});
+				}, 10);
+
+				// TODO: fix to end priority playlist with proper timesPlayed mechanism
+				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
+					elem.player.playing = false;
+				}
+
+				currentDynamicPlaylist.play = false;
+				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+					if (elem.media.dynamicValue) {
+						elem.player.playing = false;
+					}
+				}
+			}
 		}
 
 		if (currentIndexPriority.media.dynamicValue && isLast) {

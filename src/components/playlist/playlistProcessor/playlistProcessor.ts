@@ -14,6 +14,7 @@ import { FilesManager } from '../../files/filesManager';
 import { SMILFile, SMILFileObject } from '../../../models/filesModels';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { FileStructure } from '../../../enums/fileEnums';
+import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
 import {
 	SMILIntro,
 	SMILMedia,
@@ -219,84 +220,92 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		promises.push(
 			(async () => {
-				// if (!isNil(this.sos.config.syncServerUrl) && isUrl(this.sos.config.syncServerUrl)) {
-				let initCalled = false;
-				// await this.sos.sync.connect('ws://localhost:8085');
-				await this.sos.sync.connect();
-				// delay between connect and init to prevent deviceId not present in sync server
-				await sleep(1000);
-				this.synchronization.syncGroupName = this.sos.config.syncGroupName ?? 'testingSmilGroup';
-				this.synchronization.syncGroupIds = this.sos.config.syncGroupIds?.split(',') ?? [];
-				this.synchronization.syncDeviceId = this.sos.config.syncDeviceId;
-				this.synchronization.syncGroupIds.sort();
-				for (let [key, value] of Object.entries(smilObject.region)) {
-					if (!isNil(value.region)) {
-						if (!isArray(value.region)) {
-							value.region = [value.region];
-						}
-						for (let [, nestedValue] of Object.entries(value.region)) {
-							if (nestedValue.sync) {
-								// has to be initialized by value because it iterates over array
-								debug(
-									'Initializing sync server group: %s with deviceSyncId: %s',
-									`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
-									this.synchronization.syncDeviceId,
-								);
-								console.log(
-									'join nested group ' +
+				try {
+					// if (!isNil(this.sos.config.syncServerUrl) && isUrl(this.sos.config.syncServerUrl)) {
+					let initCalled = false;
+					// await this.sos.sync.connect('ws://localhost:8085');
+					await this.sos.sync.connect({ engine: SyncEngine.Udp });
+					// delay between connect and init to prevent deviceId not present in sync server
+					await sleep(1000);
+					this.synchronization.syncGroupName = this.sos.config.syncGroupName ?? 'testingSmilGroup';
+					this.synchronization.syncGroupIds = this.sos.config.syncGroupIds?.split(',') ?? [];
+					this.synchronization.syncDeviceId = this.sos.config.syncDeviceId;
+					this.synchronization.syncGroupIds.sort();
+					for (let [key, value] of Object.entries(smilObject.region)) {
+						if (!isNil(value.region)) {
+							if (!isArray(value.region)) {
+								value.region = [value.region];
+							}
+							for (let [, nestedValue] of Object.entries(value.region)) {
+								if (nestedValue.sync) {
+									// has to be initialized by value because it iterates over array
+									debug(
+										'Initializing sync server group: %s with deviceSyncId: %s',
 										`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
-								);
-								await this.sos.sync.joinGroup({
-									groupName: `${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
-									...(this.synchronization.syncDeviceId
-										? { deviceIdentification: this.synchronization.syncDeviceId }
-										: {}),
-								});
-								initCalled = true;
+										this.synchronization.syncDeviceId,
+									);
+									console.log(
+										'join nested group ' +
+											`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
+									);
+									await this.sos.sync.joinGroup({
+										groupName: `${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
+										...(this.synchronization.syncDeviceId
+											? { deviceIdentification: this.synchronization.syncDeviceId }
+											: {}),
+									});
+									initCalled = true;
+								}
 							}
 						}
+						if (value.sync) {
+							debug(
+								'Initializing sync server group: %s with deviceSyncId: %s',
+								`${this.synchronization.syncGroupName}-${key}`,
+								this.synchronization.syncDeviceId,
+							);
+							await this.sos.sync.joinGroup({
+								groupName: `${this.synchronization.syncGroupName}-${key}`,
+								...(this.synchronization.syncDeviceId
+									? { deviceIdentification: this.synchronization.syncDeviceId }
+									: {}),
+							});
+							initCalled = true;
+						}
 					}
-					if (value.sync) {
+					if (!initCalled) {
 						debug(
 							'Initializing sync server group: %s with deviceSyncId: %s',
-							`${this.synchronization.syncGroupName}-${key}`,
+							`${this.synchronization.syncGroupName}`,
 							this.synchronization.syncDeviceId,
 						);
 						await this.sos.sync.joinGroup({
-							groupName: `${this.synchronization.syncGroupName}-${key}`,
+							groupName: `${this.synchronization.syncGroupName}`,
 							...(this.synchronization.syncDeviceId
 								? { deviceIdentification: this.synchronization.syncDeviceId }
 								: {}),
 						});
-						initCalled = true;
 					}
+					this.synchronization.shouldSync = true;
+					// }
+				} catch (error) {
+					debug('Error during playlist processing: %O', error);
+					console.error(error);
 				}
-				if (!initCalled) {
-					debug(
-						'Initializing sync server group: %s with deviceSyncId: %s',
-						`${this.synchronization.syncGroupName}`,
-						this.synchronization.syncDeviceId,
-					);
-					await this.sos.sync.joinGroup({
-						groupName: `${this.synchronization.syncGroupName}`,
-						...(this.synchronization.syncDeviceId
-							? { deviceIdentification: this.synchronization.syncDeviceId }
-							: {}),
-					});
-				}
-				this.synchronization.shouldSync = true;
-				// }
 
 				// check if its first playlist
 				const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 				// endless processing of smil playlist
 				await this.runEndlessLoop(async () => {
 					try {
+						const dateTimeBegin = Date.now();
 						await this.processPlaylist(smilObject.playlist, version);
 						debug('One smil playlist iteration finished ' + version);
 						debug('One smil playlist iteration finished ' + JSON.stringify(this.cancelFunction));
-						// TODO: nsign empty playlist fix
-						await sleep(200);
+						const dateTimeEnd = Date.now();
+						if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+							await sleep(200);
+						}
 					} catch (err) {
 						debug('Unexpected error during playlist processing: %O', err);
 						await sleep(SMILScheduleEnum.defaultAwait);
@@ -374,72 +383,80 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		priorityObject: PriorityObject = {} as PriorityObject,
 		conditionalExpr: string = '',
 	) => {
-		debug('Dynamic playlist detected: %O', dynamicPlaylistConfig);
+		try {
+			debug('Dynamic playlist detected: %O', dynamicPlaylistConfig);
 
-		const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(
-			dynamicPlaylistConfig,
-			this.triggers.smilObject,
-		);
+			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(
+				dynamicPlaylistConfig,
+				this.triggers.smilObject,
+			);
 
-		if (!dynamicPlaylistId || !dynamicMedia) {
-			debug('Dynamic playlist for %s was not found', `${dynamicPlaylistConfig.data}`);
-			return;
-		}
+			if (!dynamicPlaylistId || !dynamicMedia) {
+				debug('Dynamic playlist for %s was not found', `${dynamicPlaylistConfig.data}`);
+				return;
+			}
 
-		let intervalID: Timeout;
-		// let currentDynamicRegionName = this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo?.regionName
-		// 	? this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo.regionName
-		// 	: undefined;
+			let intervalID: Timeout;
+			// let currentDynamicRegionName = this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo?.regionName
+			// 	? this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo.regionName
+			// 	: undefined;
 
-		set(this.triggers.dynamicPlaylist, `${dynamicPlaylistId}.isMaster`, true);
+			set(this.triggers.dynamicPlaylist, `${dynamicPlaylistId}.isMaster`, true);
 
-		await this.sos.sync.broadcastValue({
-			groupName: 'testingSmilGroup-fullScreenTrigger',
-			key: 'myKey',
-			value: {
-				action: 'start',
-				...dynamicPlaylistConfig,
-			},
-		});
-
-		intervalID = setInterval(async () => {
-			console.log('sending udp request' + dynamicPlaylistConfig.data);
 			await this.sos.sync.broadcastValue({
-				groupName: 'testingSmilGroup-fullScreenTrigger',
+				groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
 				key: 'myKey',
 				value: {
 					action: 'start',
 					...dynamicPlaylistConfig,
 				},
 			});
-		}, 500);
 
-		const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-		await this.sos.sync.joinGroup({
-			groupName: syncGroupName,
-			...(this.synchronization.syncDeviceId ? { deviceIdentification: this.synchronization.syncDeviceId } : {}),
-		});
-		console.log('joined group 1', syncGroupName, Date.now());
+			let syncStartCounter = 0;
+			intervalID = setInterval(async () => {
+				syncStartCounter++;
+				if (syncStartCounter > 10) {
+					clearInterval(intervalID);
+				}
+				console.log('sending udp request start ' + dynamicPlaylistConfig.data);
+				await this.sos.sync.broadcastValue({
+					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					key: 'myKey',
+					value: {
+						action: 'start',
+						...dynamicPlaylistConfig,
+					},
+				});
+			}, 100);
 
-		try {
-			await this.triggers.handleDynamicPlaylist(
-				dynamicPlaylistId,
-				dynamicPlaylistConfig,
-				dynamicMedia,
-				version,
-				parent,
-				endTime,
-				priorityObject,
-				conditionalExpr,
-			);
+			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
+			await this.sos.sync.joinGroup({
+				groupName: syncGroupName,
+				...(this.synchronization.syncDeviceId
+					? { deviceIdentification: this.synchronization.syncDeviceId }
+					: {}),
+			});
+			console.log('joined group 1', syncGroupName, Date.now());
+
+			try {
+				await this.triggers.handleDynamicPlaylist(
+					dynamicPlaylistId,
+					dynamicPlaylistConfig,
+					dynamicMedia,
+					version,
+					parent,
+					endTime,
+					priorityObject,
+					conditionalExpr,
+				);
+			} catch (err) {
+				console.log(err);
+				// await this.sos.sync.leaveGroup(syncGroupName);
+				throw err;
+			}
 		} catch (err) {
 			console.log(err);
-			await this.sos.sync.leaveGroup(syncGroupName);
-			throw err;
 		}
-
-		console.log('after handle playlist');
-		clearInterval(intervalID);
 	};
 
 	/**
@@ -1067,6 +1084,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await this.cancelPreviousMedia(regionInfo);
 			return;
 		}
+
+		// TODO: weird behaviour, one item dynamic playlist has dynamicValue directly in fullScreenTrigger object, multi-item has it in nextElement
+		const precedingDynamicValue = this.currentlyPlaying.fullScreenTrigger?.dynamicValue
+			? this.currentlyPlaying.fullScreenTrigger?.dynamicValue!
+			: this.currentlyPlaying.fullScreenTrigger?.nextElement.dynamicValue!;
+
+		// normal playlist is cancelling preceding dynamic content
+		if (this.currentlyPlaying?.fullScreenTrigger?.playing === false && !element.dynamicValue) {
+			await this.cancelPreviousMedia(this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo);
+			return;
+		}
 	};
 
 	/**
@@ -1082,6 +1110,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.currentlyPlaying[regionName].media = tag;
 		this.currentlyPlaying[regionName].playing = true;
 		this.currentlyPlaying[regionName].nextElement = nextElement;
+		// dynamic playlist
+		if (element.dynamicValue) {
+			console.log('setting dynamic value: %s', element.dynamicValue);
+			this.currentlyPlaying[regionName].dynamicValue = element.dynamicValue;
+		}
 	};
 
 	/**
@@ -1162,12 +1195,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 					);
 					await this.priority.handlePriorityWhenDone(
+						value as SMILMedia,
 						currentRegionInfo.regionName,
 						currentIndex,
 						endTime,
 						isLast,
 						version,
 						this.playlistVersion,
+						this.triggers,
 					);
 					debug(
 						'Finished checking iteration of playlist: %O',
@@ -1183,7 +1218,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					debug('finished playing element: %O', value);
 				})(),
 			];
-			await Promise.all(this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction!);
+			// await Promise.all(this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction!);
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
 			await this.files.sendMediaReport(
@@ -1337,17 +1372,28 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo>{};
 		}
 
+		// wait for all
+		if (this.triggers.dynamicPlaylist[media.dynamicValue!]?.isMaster) {
+			console.log('waiting for all');
+			let promises: Promise<void>[] = [];
+			for (const [, promise] of Object.entries(this.promiseAwaiting)) {
+				promises = promises.concat(promise.promiseFunction!);
+			}
+			await Promise.all(promises);
+			console.log('waiting for all resolved');
+		}
+
 		if (
-			(this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
-				this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 &&
-				(!media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
-					media.triggerValue === this.promiseAwaiting[regionInfo.regionName].triggerValue)) ||
-			(this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
-				regionInfo.regionName !== parentRegionName &&
-				parentRegionName !== SMILEnums.defaultRegion &&
-				media.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
-				(this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 ||
-					this.promiseAwaiting[parentRegionName]?.promiseFunction?.length))
+			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
+			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 &&
+			(!media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
+				media.triggerValue === this.promiseAwaiting[regionInfo.regionName].triggerValue)
+			// (this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
+			// 	regionInfo.regionName !== parentRegionName &&
+			// 	parentRegionName !== SMILEnums.defaultRegion &&
+			// 	media.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
+			// 	(this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 ||
+			// 		this.promiseAwaiting[parentRegionName]?.promiseFunction?.length))
 		) {
 			this.currentlyPlaying[regionInfo.regionName].nextElement = cloneDeep(media);
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
@@ -1355,10 +1401,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (version > this.playlistVersion && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
 				this.foundNewPlaylist = true;
 			}
-			if (this.promiseAwaiting[parentRegionName] && media.hasOwnProperty(SMILDynamicEnum.dynamicValue)) {
-				debug('waiting for previous promise in parent region: %s, %O', parentRegionName, media);
-				await Promise.all(this.promiseAwaiting[parentRegionName].promiseFunction!);
-			}
+			// if (this.promiseAwaiting[parentRegionName] && media.hasOwnProperty(SMILDynamicEnum.dynamicValue)) {
+			// 	debug('waiting for previous promise in parent region: %s, %O', parentRegionName, media);
+			// 	await Promise.all(this.promiseAwaiting[parentRegionName].promiseFunction!);
+			// }
 
 			if (this.promiseAwaiting[regionInfo.regionName]) {
 				debug('waiting for previous promise in current region:: %s, %O', regionInfo.regionName, media);
@@ -1376,7 +1422,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (
 			media.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
-			!this.triggers.dynamicPlaylist[media.dynamicValue]?.play
+			!this.triggers.dynamicPlaylist[media.dynamicValue!]?.play
 		) {
 			for (const elem of this.currentlyPlayingPriority[parentRegionName]) {
 				if (elem.media.dynamicValue) {
@@ -1411,12 +1457,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
 		) {
 			await this.priority.handlePriorityWhenDone(
+				media as SMILMedia,
 				regionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
 				this.playlistVersion,
+				this.triggers,
 			);
 			debug('Playtime for playlist: %O was exceeded, exiting', currentIndexPriority);
 			return false;
@@ -1457,19 +1505,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// trigger combined with video background
 			if (config.videoOptions.background) {
 				await sosVideoObject.prepare(...params);
-			}
-
-			if (
-				video.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
-				!this.triggers.dynamicPlaylist[(video as SMILMedia).dynamicValue]?.play
-			) {
-				for (const elem of this.currentlyPlayingPriority[parentRegionInfo.regionName]) {
-					if (elem.media.dynamicValue) {
-						elem.player.playing = false;
-					}
-				}
-				set(this.currentlyPlaying, `${currentRegionInfo.regionName}.playing`, false);
-				return;
 			}
 
 			this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction! = [
@@ -1522,12 +1557,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 									this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 								);
 								await this.priority.handlePriorityWhenDone(
+									video as SMILMedia,
 									currentRegionInfo.regionName,
 									currentIndex,
 									endTime,
 									isLast,
 									version,
 									this.playlistVersion,
+									this.triggers,
 								);
 								break;
 							}
@@ -1542,12 +1579,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 							);
 							await this.priority.handlePriorityWhenDone(
+								video as SMILMedia,
 								currentRegionInfo.regionName,
 								currentIndex,
 								endTime,
 								isLast,
 								version,
 								this.playlistVersion,
+								this.triggers,
 							);
 							return;
 						}
@@ -1557,12 +1596,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 						await this.priority.handlePriorityWhenDone(
+							video as SMILMedia,
 							currentRegionInfo.regionName,
 							currentIndex,
 							endTime,
 							isLast,
 							version,
 							this.playlistVersion,
+							this.triggers,
 						);
 					} catch (err) {
 						debug('Unexpected error: %O occurred during single video playback: O%', err, video);
@@ -1572,7 +1613,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				})(),
 			];
 
-			await Promise.all(this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction!);
+			// await Promise.all(this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction!);
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
 			await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
@@ -1888,12 +1929,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
 			debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
 			await this.priority.handlePriorityWhenDone(
+				value as SMILMedia,
 				currentRegionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
 				this.playlistVersion,
+				this.triggers,
 			);
 			return;
 		}

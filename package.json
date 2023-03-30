@@ -1,6 +1,6 @@
 {
   "name": "@signageos/smil-player",
-  "version": "0.0.5",
+  "version": "0.0.0",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
@@ -42,7 +42,7 @@
   "devDependencies": {
     "@babel/preset-env": "7.9.0",
     "@signageos/codestyle": "0.0.21",
-    "@signageos/front-applet": "5.7.0-kytart-improveSync.1334",
+    "@signageos/front-applet": "5.9.0-kytart-improveSync.1343",
     "@signageos/front-display": "12.0.0-kytart-extendSynchronizer.7081",
     "@signageos/webpack-plugin": "^0.1.1",
     "@types/chai": "4.1.7",
