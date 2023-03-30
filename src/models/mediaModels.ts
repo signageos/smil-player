@@ -18,6 +18,7 @@ export type SMILVideo = {
 	regionInfo: RegionAttributes;
 	media?: string;
 	triggerValue?: string;
+	dynamicValue?: string;
 };
 
 export type SMILAudio = {
@@ -33,6 +34,7 @@ export type SMILAudio = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -51,6 +53,7 @@ export type SMILImage = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -69,6 +72,7 @@ export type SMILWidget = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 };
 
@@ -95,6 +99,7 @@ export type SMILTicker = {
 	transitionInfo?: TransitionAttributes;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
 };
@@ -123,9 +128,7 @@ export type SMILIntro = {
 
 export type VideoParams = [string, number, number, number, number, keyof typeof StreamProtocol];
 
-export type SMILMedia = (SMILImage | SMILWidget | SMILVideo | SMILTicker) & {
-	dynamicValue: string;
-};
+export type SMILMedia = SMILImage | SMILWidget | SMILVideo | SMILTicker;
 
 export type SMILMediaSingle = SMILImage | SMILWidget | SMILAudio | SMILVideo | SMILTicker | SMILIntro;
 export type SMILMediaNoVideo = SMILImage | SMILWidget | SMILTicker;
