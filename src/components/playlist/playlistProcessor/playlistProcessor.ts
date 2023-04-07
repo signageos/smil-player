@@ -1755,6 +1755,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		arrayIndex: number,
 	) => {
 		let promiseRaceArray = [];
+		let videoEnded = false;
 		params.pop();
 		if (
 			this.currentlyPlaying[currentRegionInfo.regionName]?.src !== video.src &&
@@ -1804,7 +1805,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		promiseRaceArray.push(
 			(async () => {
 				while (
-					!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop
+					!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop &&
+					!videoEnded
 				) {
 					await sleep(100);
 				}
@@ -1828,8 +1830,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		try {
 			await Promise.race(promiseRaceArray);
+			videoEnded = true;
 		} catch (err) {
 			debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
+			videoEnded = true;
 		}
 	};
 
