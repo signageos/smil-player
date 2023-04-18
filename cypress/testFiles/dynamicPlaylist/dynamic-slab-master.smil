@@ -6,13 +6,8 @@
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
             <region regionName="cl6ktkoz91105311xor899r82yv" left="0" top="0" width="1920" height="1080" z-index="1"
                     backgroundColor="#000000">
-                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="1"
-                        backgroundColor="#000000" sync="true"/>
-            </region>
-            <region regionName="clge097uu1202421xnnf9y8nzye" left="0" top="0" width="1920" height="1080" z-index="1"
-                    backgroundColor="#000000">
-                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="1"
-                        backgroundColor="#000000" sync="true"/>
+                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080"
+                        z-index="1" backgroundColor="#000000" sync="true"/>
             </region>
         </layout>
     </head>
@@ -39,41 +34,25 @@
                                 <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakk4t700000xn19z2db7uc.mp4"
                                        soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
                             </seq>
+                            <!-- [GalleryModule] tgtg gallery (clgakl90p299041xn122vbsi26) -->
+                            <seq>
+                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakldw800010xn10kqz795e.mp4"
+                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                            </seq>
                             <!-- [SynchronizationEmitterModule] sync event easter (clgakm7os315121xn1l4ip4g3m) -->
                             <seq>
                                 <EXPERIMENTAL_emitDynamic data="dynamic_clgakho8d281501xn1wn4grby8"
                                                           syncId="clgakho8d281501xn1wn4grby8"/>
                             </seq>
-                            <!-- [GalleryModule] video gallery filler (clgdzshj21049471xnnl0tlrij4) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakoizp00030xn14iqjcffj.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakk4t700000xn19z2db7uc.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                            </seq>
-                            <!-- [SynchronizationEmitterModule] sync event grabs (clgdzu5n91068321xnnhv89eoed) -->
-                            <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clgdzfwpc930641xnnh361pf1z"
-                                                          syncId="clgdzfwpc930641xnnh361pf1z"/>
-                            </seq>
                         </seq>
-                    </par>
-                    <par>
-                        <seq repeatCount="indefinite"/>
                     </par>
                 </excl>
                 <!-- Synchronization campaign playlist -->
-                <par/>
                 <par>
-                    <!-- [GalleryModule] sync grabs 1 (clgdzhl3q946251xnn67txtbk0) -->
-                    <seq begin="dynamic_clgdzfwpc930641xnnh361pf1z" end="dynamic2">
-                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgdzhw9000010xnn161f2d7n.mp4"
-                               soundLevel="0%" region="clge097uu1202421xnnf9y8nzye"/>
-                    </seq>
                     <!-- [GalleryModule] sync video easter 1 (clgaknaqp330311xn178rpk8w5) -->
                     <seq begin="dynamic_clgakho8d281501xn1wn4grby8" end="dynamic2">
                         <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgaknf4i00020xn18pbv7coj.mp4"
-                               soundLevel="0%" region="clge097uu1202421xnnf9y8nzye"/>
+                               soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
                     </seq>
                 </par>
             </par>

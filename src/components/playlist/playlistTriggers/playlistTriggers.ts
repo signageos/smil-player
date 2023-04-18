@@ -139,17 +139,23 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		const dynamicRandom = getRandomInt(100000);
 
 		if (dynamicPlaylistConfig.action === 'end' && !currentDynamicPlaylist.isMaster) {
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
-				elem.player.playing = false;
+			if (this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo?.regionName]) {
+				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo?.regionName]) {
+					if (elem) {
+						elem.player.playing = false;
+					}
+				}
 			}
 
 			currentDynamicPlaylist.play = false;
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
-				if (elem.media.dynamicValue) {
-					elem.player.playing = false;
+			if (this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+					if (elem && elem.media.dynamicValue) {
+						elem.player.playing = false;
+					}
 				}
 			}
-			set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
+			set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo?.regionName}.playing`, false);
 			console.log(
 				'LEAVING GROUP 1: ',
 				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,

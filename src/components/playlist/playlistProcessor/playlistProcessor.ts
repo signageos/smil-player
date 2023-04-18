@@ -396,12 +396,22 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				return;
 			}
 
-			let intervalID: Timeout;
 			// let currentDynamicRegionName = this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo?.regionName
 			// 	? this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo.regionName
 			// 	: undefined;
 
 			set(this.triggers.dynamicPlaylist, `${dynamicPlaylistId}.isMaster`, true);
+
+			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
+			await this.sos.sync.joinGroup({
+				groupName: syncGroupName,
+				...(this.synchronization.syncDeviceId
+					? { deviceIdentification: this.synchronization.syncDeviceId }
+					: {}),
+			});
+			console.log('joined group 1', syncGroupName, Date.now());
+			// TODO: test, remove?
+			await sleep(100);
 
 			await this.sos.sync.broadcastValue({
 				groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
@@ -412,6 +422,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				},
 			});
 
+			let intervalID: Timeout;
 			let syncStartCounter = 0;
 			intervalID = setInterval(async () => {
 				syncStartCounter++;
@@ -428,15 +439,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					},
 				});
 			}, 100);
-
-			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-			await this.sos.sync.joinGroup({
-				groupName: syncGroupName,
-				...(this.synchronization.syncDeviceId
-					? { deviceIdentification: this.synchronization.syncDeviceId }
-					: {}),
-			});
-			console.log('joined group 1', syncGroupName, Date.now());
 
 			try {
 				await this.triggers.handleDynamicPlaylist(
@@ -1085,7 +1087,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// TODO: weird behaviour, one item dynamic playlist has dynamicValue directly in fullScreenTrigger object, multi-item has it in nextElement
+		// TODO: weird behaviour, one item dynamic playlist has dynamicValue directly
+		//  in fullScreenTrigger object, multi-item has it in nextElement
 		const precedingDynamicValue = this.currentlyPlaying.fullScreenTrigger?.dynamicValue
 			? this.currentlyPlaying.fullScreenTrigger?.dynamicValue!
 			: this.currentlyPlaying.fullScreenTrigger?.nextElement.dynamicValue!;
@@ -2107,7 +2110,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}`;
 
 				console.log('BEFORE WAIT', groupName, value.syncIndex);
-				currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+				try {
+					currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+				} catch (err) {
+					console.log('ERROR occurred during sync.wait', err);
+				}
 				console.log('AFTER WAIT', groupName, value.syncIndex);
 				debug('synchronization done in region %s with syncIndex %d', regionInfo.regionName, value.syncIndex);
 

@@ -1,0 +1,58 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta log="false"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="cl6ktkoz91105311xor899r82yv" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#000000">
+                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080"
+                        z-index="1" backgroundColor="#000000" sync="true"/>
+            </region>
+            <!--            <region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0"-->
+            <!--                    backgroundColor="#18182c">-->
+            <!--                <region regionName="fullScreenTrigger" left="0" top="0" width="100%" height="100%" z-index="0"-->
+            <!--                        backgroundColor="#18182c" sync="true"/>-->
+            <!--            </region>-->
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <!-- [GalleryModule] video trade 4 (clgal3pni452731xn1w1ex1n88) -->
+                            <seq>
+                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgal3xrh00040xn1frc6egu1.mp4"
+                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                            </seq>
+                            <!-- [GalleryModule] video 5ppl (clgal4u8w469391xn1bj40o9gz) -->
+                            <seq>
+                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgal4zbk00050xn175t82e0r.mp4"
+                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                            </seq>
+                        </seq>
+                    </par>
+                </excl>
+                <!-- Synchronization campaign playlist -->
+                <par>
+                    <seq repeatCount="indefinite">
+                        <!-- [GalleryModule] sync video easter 2 (clgal5pnd485431xn1f3hh6cwu) -->
+                        <seq begin="dynamic_clgakho8d281501xn1wn4grby8" end="dynamic2">
+                            <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgal5y7100060xn12xe34hag.mp4"
+                                   soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                        </seq>
+                    </seq>
+                </par>
+            </par>
+        </par>
+    </body>
+</smil>
