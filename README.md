@@ -42,7 +42,7 @@ const smilPlayer = new SmilPlayer();
 await smilPlayer.start();
 ```
 
-### More advanced example
+### More advanced usage with extra configuration is being developed. Here is a sneak peek
 
 Smil player accepts various options which allows you to customize player behaviour.
 This is an example how you can inject your custom functionality and modify smil player.
