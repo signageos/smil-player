@@ -1,82 +1,111 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
-        <meta log="false"/>
+        <meta http-equiv="Refresh" content="444"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="cl6ktkoz91105311xor899r82yv" left="0" top="0" width="1920" height="1080" z-index="1"
-                    backgroundColor="#000000">
-                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="1"
-                        backgroundColor="#000000" sync="true"/>
-            </region>
-            <region regionName="clge097uu1202421xnnf9y8nzye" left="0" top="0" width="1920" height="1080" z-index="1"
-                    backgroundColor="#000000">
-                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="1"
-                        backgroundColor="#000000" sync="true"/>
-            </region>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft"/>
         </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/play/report/?player=99
+                        </action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
     </head>
-    <body>
+
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <!-- Paralel playback sequence, all below is happening at the same time -->
         <par>
+            <!-- Preloader to show something before the full content is loaded and ready -->
+            <!-- This <seq> will happend first followed by the next seq -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg"
-                         dur="5s" fit="fill"/>
+                    <!-- Play waiting prompt -->
+                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
+
+            <!-- Once all ready, the playback of the full content will start -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <!-- Campaign playlist -->
-                <excl>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] coca cola gallery (clgakoeki346511xn1gyzx66o7) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakoizp00030xn14iqjcffj.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                <excl repeatCount="indefinite">
+                    <priorityClass lower="never" peer="stop" higher="stop">
+                        <!-- Scheduled playback loop -->
+                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                            <seq repeatCount="indefinite">
+                                <excl begin="0" repeatCount="indefinite">
+                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
+                                        <par begin="wallclock(R/2011-01-01T16:01:00/P1D)"
+                                             end="wallclock(R/2011-01-01T16:02:59/P1D)">
+                                            <seq repeatCount="indefinite">
+                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                                       id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </video>
+                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+                                                     id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </img>
+                                            </seq>
+                                        </par>
+                                    </priorityClass>
+                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
+                                        <par begin="wallclock(R/2011-01-01T16:00:00/P1D)"
+                                             end="wallclock(R/2011-01-01T16:05:59/P1D)">
+                                            <seq repeatCount="indefinite">
+                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                                                     id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </img>
+                                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                                                       id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </video>
+                                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                                                       id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </video>
+                                            </seq>
+                                        </par>
+                                    </priorityClass>
+                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
+                                        <par begin="wallclock(R/2011-01-01T00:00:00/P1D)"
+                                             end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                                            <seq repeatCount="indefinite">
+                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+                                                     id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </img>
+                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg"
+                                                     id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </img>
+                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                                       id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
+                                                </video>
+                                            </seq>
+                                        </par>
+                                    </priorityClass>
+                                </excl>
                             </seq>
-                            <!-- [GalleryModule] luckydip gallery (clgakjzud282581xn1h3odddwg) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakk4t700000xn19z2db7uc.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                            </seq>
-                            <!-- [SynchronizationEmitterModule] sync event easter (clgakm7os315121xn1l4ip4g3m) -->
-                            <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clgakho8d281501xn1wn4grby8"
-                                                          syncId="clgakho8d281501xn1wn4grby8"/>
-                            </seq>
-                            <!-- [GalleryModule] video gallery filler (clgdzshj21049471xnnl0tlrij4) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakoizp00030xn14iqjcffj.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakk4t700000xn19z2db7uc.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                            </seq>
-                            <!-- [SynchronizationEmitterModule] sync event grabs (clgdzu5n91068321xnnhv89eoed) -->
-                            <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clgdzfwpc930641xnnh361pf1z"
-                                                          syncId="clgdzfwpc930641xnnh361pf1z"/>
-                            </seq>
-                        </seq>
-                    </par>
-                    <par>
-                        <seq repeatCount="indefinite"/>
-                    </par>
-                </excl>
-                <!-- Synchronization campaign playlist -->
-                <par/>
-                <par>
-                    <!-- [GalleryModule] sync grabs 1 (clgdzhl3q946251xnn67txtbk0) -->
-                    <seq begin="dynamic_clgdzfwpc930641xnnh361pf1z" end="dynamic2">
-                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgdzhw9000010xnn161f2d7n.mp4"
-                               soundLevel="0%" region="clge097uu1202421xnnf9y8nzye"/>
-                    </seq>
-                    <!-- [GalleryModule] sync video easter 1 (clgaknaqp330311xn178rpk8w5) -->
-                    <seq begin="dynamic_clgakho8d281501xn1wn4grby8" end="dynamic2">
-                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgaknf4i00020xn18pbv7coj.mp4"
-                               soundLevel="0%" region="clge097uu1202421xnnf9y8nzye"/>
-                    </seq>
-                </par>
+                        </par>
+                    </priorityClass>
+                </excl> <!-- 1 -->
             </par>
-        </par>
+        </par> <!-- /1 -->
     </body>
 </smil>

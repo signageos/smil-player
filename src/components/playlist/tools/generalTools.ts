@@ -217,7 +217,8 @@ export function getDefaultVideoParams(): VideoParams {
 }
 
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
-	// no element was played before ( trigger case )
+	debug('getting index of currently playing priority: %O ', currentlyPlaying);
+	// no element was played before ( trigger/dynamic playlist case )
 	if (isNil(currentlyPlaying)) {
 		return 0;
 	}

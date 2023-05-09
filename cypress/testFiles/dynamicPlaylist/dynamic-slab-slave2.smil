@@ -26,28 +26,28 @@
             </seq>
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
                 <!-- Campaign playlist -->
-                <excl>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] video cocacola (clgbz19p0995751xn14lywgfz9) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgbz1gf500070xn1g2gl919q.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                            </seq>
-                            <!-- [GalleryModule] video 5ppl (clgbz25gx1013551xn1bvn1ecgn) -->
-                            <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgbz29em00080xn11tkw4jcj.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
-                            </seq>
-                        </seq>
-                    </par>
-                </excl>
+                <!--                <excl>-->
+                <!--                    <par>-->
+                <!--                        <seq repeatCount="indefinite">-->
+                <!--                            &lt;!&ndash; [GalleryModule] video cocacola (clgbz19p0995751xn14lywgfz9) &ndash;&gt;-->
+                <!--                            <seq>-->
+                <!--                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgbz1gf500070xn1g2gl919q.mp4"-->
+                <!--                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>-->
+                <!--                            </seq>-->
+                <!--                            &lt;!&ndash; [GalleryModule] video 5ppl (clgbz25gx1013551xn1bvn1ecgn) &ndash;&gt;-->
+                <!--                            <seq>-->
+                <!--                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgbz29em00080xn11tkw4jcj.mp4"-->
+                <!--                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>-->
+                <!--                            </seq>-->
+                <!--                        </seq>-->
+                <!--                    </par>-->
+                <!--                </excl>-->
                 <!-- Synchronization campaign playlist -->
                 <par>
                     <seq repeatCount="indefinite">
                         <!-- [GalleryModule] sync easter 3 (clgbz2yj91029521xn1i8tq7ddl) -->
                         <seq begin="dynamic_clgakho8d281501xn1wn4grby8" end="dynamic2">
-                            <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgbz33pa00090xn1eixygj4k.mp4"
+                            <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                    soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
                         </seq>
                     </seq>
