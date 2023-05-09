@@ -4,10 +4,10 @@
         <meta log="false"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="cl6ktkoz91105311xor899r82yv" left="0" top="0" width="1920" height="1080" z-index="1"
+            <region regionName="cl2q7jqlu15755811xklizc1al4d" left="0" top="0" width="1920" height="1080" z-index="1"
                     backgroundColor="#000000">
-                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080"
-                        z-index="1" backgroundColor="#000000" sync="true"/>
+                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="1"
+                        backgroundColor="#000000" sync="true"/>
             </region>
         </layout>
     </head>
@@ -24,35 +24,55 @@
                 <excl>
                     <par>
                         <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] coca cola gallery (clgakoeki346511xn1gyzx66o7) -->
+                            <!-- [SynchronizationEmitterModule] sync 1 (clh0lpnoz72251xm32dbuyhwx) -->
                             <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakoizp00030xn14iqjcffj.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lowq665961xm36si3kdui"
+                                                          syncId="clh0lowq665961xm36si3kdui"/>
                             </seq>
-                            <!-- [GalleryModule] luckydip gallery (clgakjzud282581xn1h3odddwg) -->
                             <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakk4t700000xn19z2db7uc.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                                <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
+                                       soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
                             </seq>
-                            <!-- [GalleryModule] tgtg gallery (clgakl90p299041xn122vbsi26) -->
+
+                            <!-- [SynchronizationEmitterModule] sync 2 (clh0ls2qp133711xm3xdl9pn7i) -->
                             <seq>
-                                <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgakldw800010xn10kqz795e.mp4"
-                                       soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lp18u67001xm310yg8pbi"
+                                                          syncId="clh0lp18u67001xm310yg8pbi"/>
                             </seq>
-                            <!-- [SynchronizationEmitterModule] sync event easter (clgakm7os315121xn1l4ip4g3m) -->
-                            <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clgakho8d281501xn1wn4grby8"
-                                                          syncId="clgakho8d281501xn1wn4grby8"/>
-                            </seq>
+                            <!-- [SynchronizationEmitterModule] sync 3 (clh0m3kpe1815991xjxbmijpjbg) -->
+                            <!--                            <seq>-->
+                            <!--                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lp4tg68521xm3624lqn2n"-->
+                            <!--                                                          syncId="clh0lp4tg68521xm3624lqn2n"/>-->
+                            <!--                            </seq>-->
+                            <!--                            &lt;!&ndash; [SynchronizationEmitterModule] sync 4 (clh0m3z0e1818881xjxqaymyk5t) &ndash;&gt;-->
+                            <!--                            <seq>-->
+                            <!--                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0m39po302511xm38a23n87i"-->
+                            <!--                                                          syncId="clh0m39po302511xm38a23n87i"/>-->
+                            <!--                            </seq>-->
                         </seq>
                     </par>
                 </excl>
                 <!-- Synchronization campaign playlist -->
                 <par>
-                    <!-- [GalleryModule] sync video easter 1 (clgaknaqp330311xn178rpk8w5) -->
-                    <seq begin="dynamic_clgakho8d281501xn1wn4grby8" end="dynamic2">
-                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/04/clgaknf4i00020xn18pbv7coj.mp4"
-                               soundLevel="0%" region="cl6ktkoz91105311xor899r82yv"/>
+                    <!-- [GalleryModule] sync gallery 1-1 (clh0luza21695381xjxbcp34cj3) -->
+                    <seq repeatCount="1" begin="dynamic_clh0lowq665961xm36si3kdui" end="dynamic2">
+                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/cl2q7ifzd15744951xklau418vnj/2023/04/clh0lzmjp004s12ogcfuvh4kz.mp4"
+                               soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
+                    </seq>
+                    <!-- [GalleryModule] sync gallery 2-1 (clh0lyczu255151xm3njbi8quj) -->
+                    <seq repeatCount="1" begin="dynamic_clh0lp18u67001xm310yg8pbi" end="dynamic2">
+                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/cl2q7ifzd15744951xklau418vnj/2023/04/clh0lyatr004p12og4z0ra4oo.mp4"
+                               soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
+                    </seq>
+                    <!-- [GalleryModule] sync gallery 3-1 (clh0m4pb01827361xjxwz7b92dn) -->
+                    <seq repeatCount="1" begin="dynamic_clh0lp4tg68521xm3624lqn2n" end="dynamic2">
+                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/cl2q7ifzd15744951xklau418vnj/2023/05/clhad1z61008v12nz96037vos.mp4"
+                               soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
+                    </seq>
+                    <!-- [GalleryModule] sync gallery 4-1 (clh0m72911867941xjx3tfh3od1) -->
+                    <seq repeatCount="1" begin="dynamic_clh0m39po302511xm38a23n87i" end="dynamic2">
+                        <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/cl2q7ifzd15744951xklau418vnj/2023/04/clh0lzmjp004s12ogcfuvh4kz.mp4"
+                               soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
                     </seq>
                 </par>
             </par>

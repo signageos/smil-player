@@ -1,6 +1,7 @@
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
+import { VideoPreparing } from '../../../models/playlistModels';
 
 export interface IPlaylistPriority {
 	priorityBehaviour: (
@@ -9,6 +10,7 @@ export interface IPlaylistPriority {
 		parent: string,
 		endTime: number,
 		priorityObject: PriorityObject,
+		videoPreparing: VideoPreparing,
 	) => Promise<{
 		currentIndex: number;
 		previousPlayingIndex: number;
