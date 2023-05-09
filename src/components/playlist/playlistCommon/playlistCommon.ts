@@ -79,14 +79,30 @@ export class PlaylistCommon implements IPlaylistCommon {
 		}
 	};
 
-	protected stopAllContent = async () => {
+	protected stopAllContent = async (cancelFullscreen: boolean = true) => {
 		for (let [, region] of Object.entries(this.currentlyPlaying)) {
-			if (
-				'regionInfo' in region &&
-				region.regionInfo.regionName !== SMILEnums.defaultRegion &&
-				region.regionInfo.regionName !== 'fullScreenTrigger'
-			) {
-				await this.cancelPreviousMedia(region.regionInfo, true);
+			if (cancelFullscreen) {
+				// option to cancel fullscreen region during smil update when using dynamic playlist functionality
+				if ('regionInfo' in region && region.regionInfo.regionName !== SMILEnums.defaultRegion) {
+					await this.cancelPreviousMedia(region.regionInfo, true);
+					// has nested regions - cancel content which is playing in nested regions
+					if (region.regionInfo.region) {
+						if (!Array.isArray(region.regionInfo.region)) {
+							region.regionInfo.region = [region.regionInfo.region];
+						}
+					}
+					for (const nestedRegion of region.regionInfo.region) {
+						await this.cancelPreviousMedia(nestedRegion, true);
+					}
+				}
+			} else {
+				if (
+					'regionInfo' in region &&
+					region.regionInfo.regionName !== SMILEnums.defaultRegion &&
+					region.regionInfo.regionName !== 'fullScreenTrigger'
+				) {
+					await this.cancelPreviousMedia(region.regionInfo, true);
+				}
 			}
 		}
 	};
@@ -183,7 +199,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 					}
 				});
 			}
-
+			debug('Calling## video stop function - single video: %O', video);
 			await sosVideoObject.stop(
 				elementUrl,
 				localRegionInfo.left,
