@@ -5,6 +5,10 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 
 export interface IPlaylistTriggers {
 	triggersEndless: TriggerEndless;
-	watchTriggers: (smilObject: SMILFileObject) => Promise<void>;
+	watchTriggers: (
+		smilObject: SMILFileObject,
+		playlistVersion: () => number,
+		filesLoop: () => boolean,
+	) => Promise<void>;
 	handleTriggers: (media: SMILMedia, element: HTMLElement | undefined) => Promise<RegionAttributes>;
 }
