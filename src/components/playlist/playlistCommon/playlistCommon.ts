@@ -82,12 +82,10 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected stopAllContent = async (cancelFullscreen: boolean = true) => {
 		for (let [, region] of Object.entries(this.currentlyPlaying)) {
 			if (cancelFullscreen) {
-				console.log(this.currentlyPlaying);
-				console.log('----------------------------------');
-				// TODO: option to cancel fullscreen region during smil update when using dynamic playlist functionality
+				// option to cancel fullscreen region during smil update when using dynamic playlist functionality
 				if ('regionInfo' in region && region.regionInfo.regionName !== SMILEnums.defaultRegion) {
 					await this.cancelPreviousMedia(region.regionInfo, true);
-					// has nested regions
+					// has nested regions - cancel content which is playing in nested regions
 					if (region.regionInfo.region) {
 						if (!Array.isArray(region.regionInfo.region)) {
 							region.regionInfo.region = [region.regionInfo.region];
@@ -201,7 +199,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 					}
 				});
 			}
-
+			debug('Calling## video stop function - single video: %O', video);
 			await sosVideoObject.stop(
 				elementUrl,
 				localRegionInfo.left,

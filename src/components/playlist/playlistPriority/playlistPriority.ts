@@ -154,15 +154,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					'LEAVING GROUP MASTER: ',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
 				);
-				// leave dynamic syncGroup
-				// await this.sos.sync.leaveGroup(
-				// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
-				// );
-
-				console.log(
-					'group left',
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
-				);
 
 				let syncEndCounter = 0;
 				let intervalID = setInterval(async () => {
@@ -194,13 +185,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				}
 			}
 		}
-
-		// TODO: former slave timeout
-		// if (currentIndexPriority.media.dynamicValue && isLast) {
-		// 	if (currentIndexPriority.priority.priorityLevel === 1000) {
-		// 		await sleep(150);
-		// 	}
-		// }
 	};
 
 	/**
@@ -568,7 +552,8 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			(currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime &&
 				currentIndexPriority.player.endTime !== 0)
 		) {
-			console.log(currentIndexPriority.player.endTime, Date.now(), currentIndexPriority.player.timesPlayed);
+			// TODO: experimental, reset timesPlayed
+			currentIndexPriority.player.timesPlayed = 0;
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return false;
 		}
@@ -643,6 +628,9 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					// same playlist is played again, increase count to track how many times it was already played
 					// not for triggers or infinite playlists
 					if (isNil(value.triggerValue) && endTime !== 0) {
+						console.log(priorityRegionName);
+						console.log(arrayIndex);
+						console.log('increasing times played for playlist1: %O', infoObject);
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;
@@ -664,6 +652,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 						isNil(value.triggerValue) &&
 						endTime !== 0
 					) {
+						console.log('increasing times played for playlist2: %O', infoObject);
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					// remember first in playlist

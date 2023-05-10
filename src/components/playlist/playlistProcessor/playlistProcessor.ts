@@ -65,7 +65,7 @@ import { createLocalFilePath, getSmilVersionUrl, isWidgetUrl } from '../../files
 import { isArray, isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
-import { DynamicPlaylist } from '../../../models/dynamicModels';
+import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 
@@ -179,7 +179,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		smilObject: SMILFileObject,
 		smilFile: SMILFile,
 		firstIteration: boolean,
-		restart: () => void,
+		_restart: () => void,
 	): Promise<void> => {
 		const promises = [];
 
@@ -196,24 +196,30 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							fileEtagPromisesMedia: fileEtagPromisesMedia,
 							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
 						} = await this.files.prepareLastModifiedSetup(this.internalStorageUnit, smilObject, smilFile);
-
 						debug('Last modified check for smil media files prepared');
-						await sleep(smilObject.refresh.refreshInterval * 1000);
 						debug('Checking files for changes');
-						let responseFiles = await Promise.all(fileEtagPromisesSMIL);
-						responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
-						if (responseFiles.length > 0) {
+						if (fileEtagPromisesMedia.length > 0 || fileEtagPromisesSMIL.length > 0) {
 							debug('One of the files changed, restarting loop');
+							await this.sos.refresh();
 							this.setCheckFilesLoop(false);
 							break;
 						}
+						await sleep(smilObject.refresh.refreshInterval * 1000);
+						// let responseFiles = await Promise.all(fileEtagPromisesSMIL);
+						// responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
+						// if (responseFiles.length > 0) {
+						// 	debug('One of the files changed, restarting loop');
+						// 	await this.sos.refresh();
+						// 	this.setCheckFilesLoop(false);
+						// 	break;
+						// }
 					} else {
 						debug('Conditional expression for files update is false: %s', smilObject.refresh.expr);
 						await sleep(smilObject.refresh.refreshInterval * 1000);
 					}
 				}
 				// no await
-				restart();
+				// restart();
 			})(),
 		);
 
@@ -228,7 +234,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						await this.sos.sync.connect({ engine: SyncEngine.Udp });
 					}
 					// delay between connect and init to prevent deviceId not present in sync server
-					await sleep(1000);
+					// await sleep(1000);
 					this.synchronization.syncGroupName = this.sos.config.syncGroupName ?? 'testingSmilGroup';
 					this.synchronization.syncGroupIds = this.sos.config.syncGroupIds?.split(',') ?? [];
 					this.synchronization.syncDeviceId = this.sos.config.syncDeviceId;
@@ -434,20 +440,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				return;
 			}
 
-			// let currentDynamicRegionName = this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo?.regionName
-			// 	? this.triggers.dynamicPlaylist[dynamicPlaylistId]?.regionInfo.regionName
-			// 	: undefined;
+			if (!this.triggers.dynamicPlaylist[dynamicPlaylistId]) {
+				this.triggers.dynamicPlaylist[dynamicPlaylistId] = {} as DynamicPlaylistElement;
+			}
 
-			set(this.triggers.dynamicPlaylist, `${dynamicPlaylistId}.isMaster`, true);
+			if (this.triggers.dynamicPlaylist[dynamicPlaylistId]?.play) {
+				console.log('Dynamic playlist is already playing: ', dynamicPlaylistId, version);
+				await sleep(300);
+				return;
+			}
 
-			// if (
-			// 	this.triggers.dynamicPlaylist[dynamicPlaylistId]?.play &&
-			// 	this.triggers.dynamicPlaylist[dynamicPlaylistId]?.version >= version
-			// ) {
-			// 	console.log('Dynamic playlist is already playing: ', dynamicPlaylistId, version);
-			// 	await sleep(1000);
-			// 	return;
-			// }
+			this.triggers.dynamicPlaylist[dynamicPlaylistId].isMaster = true;
 
 			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
 			await this.sos.sync.joinGroup({
@@ -466,11 +469,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				},
 			});
 
+			// let counter = 0;
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
 					console.log(
 						'sending udp request start ' + dynamicPlaylistConfig.data + ' ' + Date.now() + ' ' + version,
 						this.getPlaylistVersion(),
+						Date.now(),
 					);
 					await this.sos.sync.broadcastValue({
 						groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
@@ -485,6 +490,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			}, 1000);
 
+			// clear old interval, used in priority cancellations
+			if (this.triggers.dynamicPlaylist[dynamicPlaylistId].intervalId) {
+				clearInterval(this.triggers.dynamicPlaylist[dynamicPlaylistId].intervalId);
+			}
 			this.triggers.dynamicPlaylist[dynamicPlaylistId].intervalId = intervalId;
 
 			try {
@@ -498,7 +507,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					priorityObject,
 					conditionalExpr,
 				);
-				clearInterval(intervalId);
 			} catch (err) {
 				console.log(err);
 				clearInterval(intervalId);
@@ -580,7 +588,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (key === 'priorityClass') {
 				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
 			}
-			if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic') {
+			if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic' && this.synchronization.shouldSync) {
 				await this.processDynamicPlaylist(
 					value as DynamicPlaylist,
 					version,
@@ -589,6 +597,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					priorityObject,
 					conditionalExpr,
 				);
+				// in case synchronizer dies, smil would go into infinite loop with only dynamic content and kill device
+				await sleep(100);
 			}
 
 			if (removeDigits(key) === 'par') {
@@ -1150,7 +1160,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		//  in fullScreenTrigger object, multi-item has it in nextElement
 		const precedingDynamicValue = this.currentlyPlaying.fullScreenTrigger?.dynamicValue
 			? this.currentlyPlaying.fullScreenTrigger?.dynamicValue!
-			: this.currentlyPlaying.fullScreenTrigger?.nextElement.dynamicValue!;
+			: this.currentlyPlaying.fullScreenTrigger?.nextElement?.dynamicValue!;
 
 		// normal playlist is cancelling preceding dynamic content
 		if (this.currentlyPlaying?.fullScreenTrigger && !element.dynamicValue) {
@@ -1445,13 +1455,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
 			version >= this.getPlaylistVersion()
 		) {
-			console.log('waiting for all');
+			console.log('waiting for all ' + Date.now());
 			let promises: Promise<void>[] = [];
 			for (const [, promise] of Object.entries(this.promiseAwaiting)) {
 				promises = promises.concat(promise.promiseFunction!);
 			}
 			await Promise.all(promises);
-			console.log('waiting for all resolved');
+			console.log('waiting for all resolved ' + Date.now());
 		}
 
 		if (
@@ -1485,6 +1495,53 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
+		if (media.dynamicValue && !this.synchronization.shouldSync) {
+			debug(
+				'dynamic playlist will not play because synchronization has been stopped: %s, %s',
+				media.dynamicValue,
+				this.synchronization.shouldSync,
+			);
+			const currentDynamicPlaylist = this.triggers?.dynamicPlaylist[media.dynamicValue!]!;
+			clearInterval(currentDynamicPlaylist.intervalId);
+			console.log('dynamic playlist done', currentDynamicPlaylist);
+			set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
+
+			console.log(
+				'LEAVING GROUP MASTER: ',
+				`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
+			);
+
+			let syncEndCounter = 0;
+			let intervalID = setInterval(async () => {
+				console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
+				syncEndCounter++;
+				if (syncEndCounter > 1) {
+					clearInterval(intervalID);
+				}
+				await this.sos.sync.broadcastValue({
+					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					key: 'myKey',
+					value: {
+						action: 'end',
+						...currentDynamicPlaylist.dynamicConfig,
+					},
+				});
+			}, 10);
+
+			// TODO: fix to end priority playlist with proper timesPlayed mechanism
+			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
+				elem.player.playing = false;
+			}
+
+			currentDynamicPlaylist.play = false;
+			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+				if (elem.media.dynamicValue) {
+					elem.player.playing = false;
+				}
+			}
+			return false;
+		}
+
 		if (
 			media.hasOwnProperty(SMILTriggersEnum.triggerValue) &&
 			!this.triggers.triggersEndless[media.triggerValue as string]?.play
@@ -1493,9 +1550,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return false;
 		}
 
+		console.log(media.src);
+		console.log(this.currentlyPlaying[regionInfo.regionName].src);
+		console.log('------------------------------------------------');
 		if (
-			media.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
-			!this.triggers.dynamicPlaylist[media.dynamicValue!]?.play
+			media.dynamicValue &&
+			!this.triggers.dynamicPlaylist[media.dynamicValue!]?.play &&
+			media.src !== this.currentlyPlaying[regionInfo.regionName].src
 		) {
 			for (const elem of this.currentlyPlayingPriority[parentRegionName]) {
 				if (elem.media.dynamicValue) {
@@ -1525,10 +1586,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+		console.log(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000);
+		console.log(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0);
+		console.log('/////////////////////////////');
 		if (
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
 		) {
+			// // TODO: dynamic playlist in oneloop hotfix, find better solution in the future
+			// if (
+			// 	media.src === this.currentlyPlaying[regionInfo.regionName].src &&
+			// 	currentIndexPriority?.player.timesPlayed <= endTime + 1 &&
+			// 	endTime !== 0
+			// ) {
+			// 	return true;
+			// }
+			console.log(currentIndexPriority?.player.timesPlayed);
+			console.log(endTime);
+			console.log(regionInfo.regionName);
+			console.log(currentIndex);
+			debug('Playtime for playlist: %O was exceeded wait, exiting', currentIndexPriority);
 			await this.priority.handlePriorityWhenDone(
 				media as SMILMedia,
 				regionInfo.regionName,
@@ -1539,7 +1616,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				this.triggers,
 			);
-			debug('Playtime for playlist: %O was exceeded wait, exiting', currentIndexPriority);
+
+			await sleep(1000);
+
 			return false;
 		}
 		return true;
@@ -1718,14 +1797,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await this.cancelPreviousMedia(currentRegionInfo);
 			return;
 		}
-
-		await sosVideoObject.play(...params);
+		try {
+			debug('Calling## video play function - single video: %O', video);
+			await sosVideoObject.play(...params);
+		} catch (err) {
+			await this.files.sendMediaReport(video, moment().toDate(), 'video', err.message);
+			await sosVideoObject.stop(
+				params[0],
+				currentRegionInfo.left,
+				currentRegionInfo.top,
+				currentRegionInfo.width,
+				currentRegionInfo.height,
+			);
+			await sosVideoObject.play(...params);
+		}
 
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName);
 
-		debug('Starting playing video onceEnded function - single video: %O', video);
+		debug('Starting## playing video onceEnded function - single video: %O', video);
 		promiseRaceArray.push(
 			this.sos.video.onceEnded(
 				params[0],
@@ -1950,9 +2041,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let currentRegionInfo = await this.triggers.handleTriggers(value, element);
 
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-			this.currentlyPlayingPriority[currentRegionInfo.regionName] = cloneDeep(
-				this.currentlyPlayingPriority[parentRegionInfo.regionName],
-			);
+			// this.currentlyPlayingPriority[currentRegionInfo.regionName] = cloneDeep(
+			// 	this.currentlyPlayingPriority[parentRegionInfo.regionName],
+			// );
+			this.currentlyPlayingPriority[currentRegionInfo.regionName] =
+				this.currentlyPlayingPriority[parentRegionInfo.regionName];
 		}
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
@@ -2090,7 +2183,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		];
 
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
-			await sleep(100);
+			await sleep(50);
 		}
 
 		// prepare if video is not same as previous one played or if video should be played in background
@@ -2112,7 +2205,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				return undefined;
 			}
 
-			debug(`Preparing video: %O with params: %O in region: %O`, value, params, regionInfo);
+			debug(`Preparing## video: %O with params: %O in region: %O`, value, params, regionInfo);
 			await sosVideoObject.prepare(...params);
 			this.videoPreparing[regionInfo.regionName] = cloneDeep(value);
 			debug(`Video prepared: %O with params: %O`, value, params);
