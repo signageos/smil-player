@@ -56,8 +56,17 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.watchKeyboardInput();
 		this.watchOnTouchOnClick();
 		await this.watchRfidAntena();
+		// handles if some devices dies in sync
 		await this.watchSyncTriggers();
+		// handles slaves dynamic playback
 		await this.watchUdpRequest(playlistVersion, filesLoop);
+		this.sos.sync.onClosed(async (error?: Error) => {
+			if (error) {
+				await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
+				await sleep(1000);
+				await this.sos.management.power.appRestart();
+			}
+		});
 	};
 
 	/**
@@ -444,7 +453,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			});
 		} catch (err) {
 			debug('Error occurred during Nexmosphere trigger initialization: %O', err);
-			await this.files.sendGeneralErrorReport(err.message);
+			// TODO: return back after debuging
+			// await this.files.sendGeneralErrorReport(err.message);
 			return;
 		}
 
