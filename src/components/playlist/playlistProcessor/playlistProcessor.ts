@@ -68,6 +68,7 @@ import { IPlaylistProcessor } from './IPlaylistProcessor';
 import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
+import { getDynamicTagsFromPlaylist, joinSyncGroup } from '../tools/dynamicTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -204,7 +205,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.setCheckFilesLoop(false);
 							break;
 						}
-						await sleep(smilObject.refresh.refreshInterval * 1000);
+						// await sleep(smilObject.refresh.refreshInterval * 1000);
+						// TODO: remove this after testing
+						await sleep(5000);
 						// let responseFiles = await Promise.all(fileEtagPromisesSMIL);
 						// responseFiles = responseFiles.concat(await Promise.all(fileEtagPromisesMedia));
 						// if (responseFiles.length > 0) {
@@ -256,12 +259,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 										'join nested group ' +
 											`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
 									);
-									await this.sos.sync.joinGroup({
-										groupName: `${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
-										...(this.synchronization.syncDeviceId
-											? { deviceIdentification: this.synchronization.syncDeviceId }
-											: {}),
-									});
+									await joinSyncGroup(
+										this.sos,
+										this.synchronization,
+										`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
+									);
+
+									// await this.sos.sync.joinGroup({
+									// 	groupName: `${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
+									// 	...(this.synchronization.syncDeviceId
+									// 		? { deviceIdentification: this.synchronization.syncDeviceId }
+									// 		: {}),
+									// });
 									initCalled = true;
 								}
 							}
@@ -272,12 +281,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								`${this.synchronization.syncGroupName}-${key}`,
 								this.synchronization.syncDeviceId,
 							);
-							await this.sos.sync.joinGroup({
-								groupName: `${this.synchronization.syncGroupName}-${key}`,
-								...(this.synchronization.syncDeviceId
-									? { deviceIdentification: this.synchronization.syncDeviceId }
-									: {}),
-							});
+							await joinSyncGroup(
+								this.sos,
+								this.synchronization,
+								`${this.synchronization.syncGroupName}-${key}`,
+							);
+							// await this.sos.sync.joinGroup({
+							// 	groupName: `${this.synchronization.syncGroupName}-${key}`,
+							// 	...(this.synchronization.syncDeviceId
+							// 		? { deviceIdentification: this.synchronization.syncDeviceId }
+							// 		: {}),
+							// });
 							initCalled = true;
 						}
 					}
@@ -287,31 +301,35 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							`${this.synchronization.syncGroupName}`,
 							this.synchronization.syncDeviceId,
 						);
-						await this.sos.sync.joinGroup({
-							groupName: `${this.synchronization.syncGroupName}`,
-							...(this.synchronization.syncDeviceId
-								? { deviceIdentification: this.synchronization.syncDeviceId }
-								: {}),
-						});
+						await joinSyncGroup(this.sos, this.synchronization, `${this.synchronization.syncGroupName}`);
+						// await this.sos.sync.joinGroup({
+						// 	groupName: `${this.synchronization.syncGroupName}`,
+						// 	...(this.synchronization.syncDeviceId
+						// 		? { deviceIdentification: this.synchronization.syncDeviceId }
+						// 		: {}),
+						// });
 					}
 					this.synchronization.shouldSync = true;
 
 					if (firstIteration) {
+						const dynamicInPlaylist = getDynamicTagsFromPlaylist(smilObject.playlist);
+						debug('Dynamic tags in playlist: %O', dynamicInPlaylist);
 						for (let dynamicId in smilObject.dynamic) {
-							console.log(dynamicId);
-							await this.sos.sync.broadcastValue({
-								groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-								key: 'myKey',
-								value: {
-									action: 'end',
-									...{
-										data: dynamicId,
+							if (dynamicInPlaylist.includes(dynamicId)) {
+								debug('Dynamic tag %s is in playlist, sending end event', dynamicId);
+								await this.sos.sync.broadcastValue({
+									groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+									key: 'myKey',
+									value: {
+										action: 'end',
+										...{
+											data: dynamicId,
+										},
 									},
-								},
-							});
+								});
+							}
 						}
 					}
-					// }
 				} catch (error) {
 					debug('Error during playlist processing: %O', error);
 					console.error(error);
@@ -414,21 +432,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				await sleep(SMILScheduleEnum.defaultAwait);
 				return;
 			}
-			// if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
-			// 	debug(
-			// 		'cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s',
-			// 		version,
-			// 		this.getPlaylistVersion(),
-			// 	);
-			// 	this.setPlaylistVersion(version);
-			// 	if (this.getPlaylistVersion() > 0) {
-			// 		debug('setting up cancel function for index %s', this.getPlaylistVersion() - 1);
-			// 		this.setCancelFunction(true, this.getPlaylistVersion() - 1);
-			// 	}
-			// 	this.setCheckFilesLoop(true);
-			// 	this.foundNewPlaylist = false;
-			// 	await this.stopAllContent();
-			// }
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(
 				dynamicPlaylistConfig,
@@ -453,12 +456,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.triggers.dynamicPlaylist[dynamicPlaylistId].isMaster = true;
 
 			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-			await this.sos.sync.joinGroup({
-				groupName: syncGroupName,
-				...(this.synchronization.syncDeviceId
-					? { deviceIdentification: this.synchronization.syncDeviceId }
-					: {}),
-			});
+			await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
+			// await this.sos.sync.joinGroup({
+			// 	groupName: syncGroupName,
+			// 	...(this.synchronization.syncDeviceId
+			// 		? { deviceIdentification: this.synchronization.syncDeviceId }
+			// 		: {}),
+			// });
 			console.log('joined group 1', syncGroupName, Date.now());
 			await this.sos.sync.broadcastValue({
 				groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
@@ -588,6 +592,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (key === 'priorityClass') {
 				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
 			}
+
 			if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic' && this.synchronization.shouldSync) {
 				await this.processDynamicPlaylist(
 					value as DynamicPlaylist,
@@ -597,8 +602,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					priorityObject,
 					conditionalExpr,
 				);
-				// in case synchronizer dies, smil would go into infinite loop with only dynamic content and kill device
-				await sleep(100);
+				continue;
+			}
+
+			// in case smil has only dynamic content and sync is off, wait for defaultAwait to avoid infinite loop
+			if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic' && !this.synchronization.shouldSync) {
+				await sleep(1000);
+				continue;
 			}
 
 			if (removeDigits(key) === 'par') {
@@ -1128,7 +1138,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		) {
 			debug(
 				'cancelling media: %s from element: %s',
-				this.currentlyPlaying[regionInfo.regionName].src,
+				this.currentlyPlaying[regionInfo.regionName]?.src,
 				element.src,
 			);
 
@@ -1166,10 +1176,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (this.currentlyPlaying?.fullScreenTrigger && !element.dynamicValue) {
 			debug(
 				'cancelling dynamic media: %s from element: %s',
-				this.currentlyPlaying[this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo.regionName].src,
+				this.currentlyPlaying[this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo?.regionName].src,
 				element.src,
 			);
-			await this.cancelPreviousMedia(this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo);
+			if (this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo) {
+				await this.cancelPreviousMedia(this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo);
+			}
 			return;
 		}
 	};
@@ -2286,6 +2298,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 				console.log('AFTER WAIT', groupName, value.syncIndex, Date.now());
 				debug('synchronization done in region %s with syncIndex %d', regionInfo.regionName, value.syncIndex);
+
+				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
+					debug('dynamic playlist was stopped during sync.wait: %O', value);
+					return false;
+				}
 
 				if (value.syncIndex !== currentSyncIndex) {
 					this.synchronization.syncValue = currentSyncIndex;
