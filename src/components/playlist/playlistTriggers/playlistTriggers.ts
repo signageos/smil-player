@@ -32,6 +32,7 @@ import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from 
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 // @ts-ignore
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
+import { joinSyncGroup } from '../tools/dynamicTools';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
 
@@ -56,7 +57,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.watchOnTouchOnClick();
 		await this.watchRfidAntena();
 		// TODO: remove timeout?
-		await sleep(2000);
+		// await sleep(2000);
 		await this.watchSyncTriggers();
 		await this.watchUdpRequest(playlistVersion, filesLoop);
 	};
@@ -165,17 +166,17 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
+			if (!dynamicPlaylistId || !dynamicMedia) {
+				debug('Dynamic playlist for %s was not found', `${dynamicPlaylistConfig.data}`);
+				return;
+			}
+
 			if (!this.synchronization.shouldSync) {
 				debug(
 					'Synchronization is turned off for playlist: %s with sync set to: %s',
 					dynamicPlaylistId,
 					this.synchronization.shouldSync,
 				);
-			}
-
-			if (!dynamicPlaylistId || !dynamicMedia) {
-				debug('Dynamic playlist for %s was not found', `${dynamicPlaylistConfig.data}`);
-				return;
 			}
 
 			if (!this.dynamicPlaylist[dynamicPlaylistId]) {
@@ -192,6 +193,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
+			currentDynamicPlaylist.play = true;
+
 			if (dynamicPlaylistConfig.action === 'end') {
 				// masters sends end to all at the start even when it was not played yet
 				if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
@@ -199,6 +202,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					return;
 				}
 				currentDynamicPlaylist.play = false;
+
+				// cancel wait for dynamic playlist sync to avoid deadlocks
+				await this.sos.sync.cancelWait(
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				);
 
 				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
@@ -232,27 +240,32 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				peer: 'defer',
 			};
 
-			if (dynamicPlaylistConfig.action === 'start') {
-				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
-				await this.sos.sync.joinGroup({
-					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-					...(this.synchronization.syncDeviceId
-						? { deviceIdentification: this.synchronization.syncDeviceId }
-						: {}),
-				});
-				console.log(
-					'joined group 2',
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-					Date.now(),
-				);
-			}
-
 			// if another dynamic playlist is playing, wait for timeout to avoid race condition with default content
 			for (const [, elem] of Object.entries(this.dynamicPlaylist)) {
 				if (elem?.play) {
 					debug('found active dynamic playlist: %O, waiting for timeout', elem);
 					await sleep(300);
 				}
+			}
+
+			if (dynamicPlaylistConfig.action === 'start') {
+				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
+				await joinSyncGroup(
+					this.sos,
+					this.synchronization,
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				);
+				// await this.sos.sync.joinGroup({
+				// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				// 	...(this.synchronization.syncDeviceId
+				// 		? { deviceIdentification: this.synchronization.syncDeviceId }
+				// 		: {}),
+				// });
+				console.log(
+					'joined group 2',
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+					Date.now(),
+				);
 			}
 
 			const version = filesLoop() ? playlistVersion() : playlistVersion() + 1;
@@ -272,77 +285,87 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	private watchSyncTriggers = async () => {
 		this.sos.sync.onStatus(async (onStatus) => {
 			// TODO: fix in sync server, connectedPeers is undefined
-			console.log('received onStatus: ', onStatus);
-			if (!onStatus.connectedPeers) {
-				// debug('received undefined connectedPeers: %O', onStatus);
-				return;
-			}
-			onStatus.connectedPeers = onStatus.connectedPeers
-				.filter((el: string) => el !== null && el !== 'null')
-				.sort();
-
-			if (onStatus.connectedPeers.length === 0) {
-				return;
-			}
-
+			debug('received onStatus: %O', onStatus);
+			// if (onStatus.groupName !== 'samsung-fullScreenTrigger') {
+			// 	return;
+			// }
+			// if (!onStatus.connectedPeers) {
+			// 	// debug('received undefined connectedPeers: %O', onStatus);
+			// 	return;
+			// }
+			// onStatus.connectedPeers = onStatus.connectedPeers
+			// 	.filter((el: string) => el !== null && el !== 'null')
+			// 	.sort();
+			//
+			// if (onStatus.connectedPeers.length === 0) {
+			// 	return;
+			// }
+			//
+			// // // bp - behaviour
+			// if (onStatus.connectedPeers.length === this.synchronization.syncGroupIds.length) {
+			// 	debug(
+			// 		'All devices are connected, starting sync',
+			// 		onStatus.connectedPeers,
+			// 		this.synchronization.syncGroupIds,
+			// 	);
+			// 	this.synchronization.shouldSync = true;
+			// 	return;
+			// }
+			//
 			// // bp - behaviour
-			if (onStatus.connectedPeers.length === this.synchronization.syncGroupIds.length) {
-				debug(
-					'All devices are connected, starting sync',
-					onStatus.connectedPeers,
-					this.synchronization.syncGroupIds,
-				);
-				this.synchronization.shouldSync = true;
-				return;
-			}
+			// if (
+			// 	onStatus.connectedPeers.length < this.synchronization.syncGroupIds.length &&
+			// 	this.synchronization.shouldSync
+			// ) {
+			// 	debug(
+			// 		'Some devices disconnected, stopping sync',
+			// 		onStatus.connectedPeers,
+			// 		this.synchronization.syncGroupIds,
+			// 	);
+			// 	this.synchronization.shouldSync = false;
+			// 	for (const [, currentDynamicPlaylist] of Object.entries(this.dynamicPlaylist)) {
+			// 		if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
+			// 			debug('Dynamic playlist was already cancelled');
+			// 			return;
+			// 		}
+			// 		clearInterval(currentDynamicPlaylist.intervalId);
+			// 		currentDynamicPlaylist.play = false;
+			//
+			// 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+			// 			for (const elem of this.currentlyPlayingPriority[
+			// 				currentDynamicPlaylist?.regionInfo?.regionName
+			// 			]) {
+			// 				if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
+			// 					debug(
+			// 						'Cancelling dynamic playlist with dynamic value %s',
+			// 						currentDynamicPlaylist.dynamicConfig.data,
+			// 					);
+			// 					elem.player.playing = false;
+			// 				}
+			// 			}
+			// 		}
+			//
+			// 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+			// 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+			// 				if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
+			// 					debug(
+			// 						'Cancelling dynamic playlist with dynamic value %s',
+			// 						currentDynamicPlaylist.dynamicConfig.data,
+			// 					);
+			// 					elem.player.playing = false;
+			// 				}
+			// 			}
+			// 		}
+			// 		set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
+			// 		if (!currentDynamicPlaylist.isMaster) {
+			// 			debug('Cancelling dynamic playlist on slave device: %O', currentDynamicPlaylist);
+			// 			await this.cancelPreviousMedia({
+			// 				regionName: 'fullScreenTrigger',
+			// 			} as RegionAttributes);
+			// 		}
+			// 	}
+			// }
 
-			// bp - behaviour
-			if (
-				onStatus.connectedPeers.length < this.synchronization.syncGroupIds.length &&
-				this.synchronization.shouldSync
-			) {
-				debug(
-					'Some devices disconnected, stopping sync',
-					onStatus.connectedPeers,
-					this.synchronization.syncGroupIds,
-				);
-				this.synchronization.shouldSync = false;
-				for (const [, currentDynamicPlaylist] of Object.entries(this.dynamicPlaylist)) {
-					if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
-						debug('Dynamic playlist was already cancelled');
-						return;
-					}
-					currentDynamicPlaylist.play = false;
-
-					if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-						for (const elem of this.currentlyPlayingPriority[
-							currentDynamicPlaylist?.regionInfo?.regionName
-						]) {
-							if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
-								debug(
-									'Cancelling dynamic playlist with dynamic value %s',
-									currentDynamicPlaylist.dynamicConfig.data,
-								);
-								elem.player.playing = false;
-							}
-						}
-					}
-
-					if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-						for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-							if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
-								debug(
-									'Cancelling dynamic playlist with dynamic value %s',
-									currentDynamicPlaylist.dynamicConfig.data,
-								);
-								elem.player.playing = false;
-							}
-						}
-					}
-					set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
-				}
-				return;
-			}
 			// no chickfile behaviour
 			return;
 
