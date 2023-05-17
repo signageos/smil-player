@@ -264,13 +264,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 										this.synchronization,
 										`${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
 									);
-
-									// await this.sos.sync.joinGroup({
-									// 	groupName: `${this.synchronization.syncGroupName}-${nestedValue.regionName}`,
-									// 	...(this.synchronization.syncDeviceId
-									// 		? { deviceIdentification: this.synchronization.syncDeviceId }
-									// 		: {}),
-									// });
 									initCalled = true;
 								}
 							}
@@ -286,12 +279,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								this.synchronization,
 								`${this.synchronization.syncGroupName}-${key}`,
 							);
-							// await this.sos.sync.joinGroup({
-							// 	groupName: `${this.synchronization.syncGroupName}-${key}`,
-							// 	...(this.synchronization.syncDeviceId
-							// 		? { deviceIdentification: this.synchronization.syncDeviceId }
-							// 		: {}),
-							// });
 							initCalled = true;
 						}
 					}
@@ -302,12 +289,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.synchronization.syncDeviceId,
 						);
 						await joinSyncGroup(this.sos, this.synchronization, `${this.synchronization.syncGroupName}`);
-						// await this.sos.sync.joinGroup({
-						// 	groupName: `${this.synchronization.syncGroupName}`,
-						// 	...(this.synchronization.syncDeviceId
-						// 		? { deviceIdentification: this.synchronization.syncDeviceId }
-						// 		: {}),
-						// });
 					}
 					this.synchronization.shouldSync = true;
 
@@ -325,16 +306,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 									`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 									'end',
 								);
-								// await this.sos.sync.broadcastValue({
-								// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-								// 	key: 'myKey',
-								// 	value: {
-								// 		action: 'end',
-								// 		...{
-								// 			data: dynamicId,
-								// 		},
-								// 	},
-								// });
 							}
 						}
 					}
@@ -465,12 +436,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
 			await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
-			// await this.sos.sync.joinGroup({
-			// 	groupName: syncGroupName,
-			// 	...(this.synchronization.syncDeviceId
-			// 		? { deviceIdentification: this.synchronization.syncDeviceId }
-			// 		: {}),
-			// });
 			console.log('joined group 1', syncGroupName, Date.now());
 			await broadcastSyncValue(
 				this.sos,
@@ -478,16 +443,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 				'start',
 			);
-			// await this.sos.sync.broadcastValue({
-			// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-			// 	key: 'myKey',
-			// 	value: {
-			// 		action: 'start',
-			// 		...dynamicPlaylistConfig,
-			// 	},
-			// });
 
-			// let counter = 0;
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
 					console.log(
@@ -501,14 +457,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 						'start',
 					);
-					// await this.sos.sync.broadcastValue({
-					// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-					// 	key: 'myKey',
-					// 	value: {
-					// 		action: 'start',
-					// 		...dynamicPlaylistConfig,
-					// 	},
-					// });
 				} else {
 					clearInterval(intervalId);
 				}
@@ -1501,12 +1449,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 &&
 			(!media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
 				media.triggerValue === this.promiseAwaiting[regionInfo.regionName].triggerValue)
-			// (this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
-			// 	regionInfo.regionName !== parentRegionName &&
-			// 	parentRegionName !== SMILEnums.defaultRegion &&
-			// 	media.hasOwnProperty(SMILDynamicEnum.dynamicValue) &&
-			// 	(this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 ||
-			// 		this.promiseAwaiting[parentRegionName]?.promiseFunction?.length))
 		) {
 			this.currentlyPlaying[regionInfo.regionName].nextElement = cloneDeep(media);
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
@@ -1515,10 +1457,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (version > this.playlistVersion && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
 				this.foundNewPlaylist = true;
 			}
-			// if (this.promiseAwaiting[parentRegionName] && media.hasOwnProperty(SMILDynamicEnum.dynamicValue)) {
-			// 	debug('waiting for previous promise in parent region: %s, %O', parentRegionName, media);
-			// 	await Promise.all(this.promiseAwaiting[parentRegionName].promiseFunction!);
-			// }
 
 			if (this.promiseAwaiting[regionInfo.regionName]) {
 				debug('waiting for previous promise in current region:: %s, %O', regionInfo.regionName, media);
@@ -1556,14 +1494,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 					'end',
 				);
-				// await this.sos.sync.broadcastValue({
-				// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-				// 	key: 'myKey',
-				// 	value: {
-				// 		action: 'end',
-				// 		...currentDynamicPlaylist.dynamicConfig,
-				// 	},
-				// });
 			}, 10);
 
 			// TODO: fix to end priority playlist with proper timesPlayed mechanism
@@ -1631,14 +1561,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
 		) {
-			// // TODO: dynamic playlist in oneloop hotfix, find better solution in the future
-			// if (
-			// 	media.src === this.currentlyPlaying[regionInfo.regionName].src &&
-			// 	currentIndexPriority?.player.timesPlayed <= endTime + 1 &&
-			// 	endTime !== 0
-			// ) {
-			// 	return true;
-			// }
 			console.log(currentIndexPriority?.player.timesPlayed);
 			console.log(endTime);
 			console.log(regionInfo.regionName);

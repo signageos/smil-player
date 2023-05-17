@@ -169,14 +169,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 						'end',
 					);
-					// await this.sos.sync.broadcastValue({
-					// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-					// 	key: 'myKey',
-					// 	value: {
-					// 		action: 'end',
-					// 		...currentDynamicPlaylist.dynamicConfig,
-					// 	},
-					// });
 				}, 10);
 
 				// TODO: fix to end priority playlist with proper timesPlayed mechanism
