@@ -56,8 +56,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.watchKeyboardInput();
 		this.watchOnTouchOnClick();
 		await this.watchRfidAntena();
-		// TODO: remove timeout?
-		// await sleep(2000);
 		await this.watchSyncTriggers();
 		await this.watchUdpRequest(playlistVersion, filesLoop);
 	};
@@ -79,7 +77,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			// 	media,
 			// 	regionInfo,
 			// );
-			// TODO: reworked was 150
 			await sleep(25);
 		}
 
@@ -157,7 +154,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		console.log('PLAYING DYNAMIC PLAYLIST: ', dynamicPlaylistId);
 		await this.processPlaylist(dynamicMedia, version, parent, endTime, priorityObject, conditionalExpr);
 		console.log('PLAYING DYNAMIC PLAYLIST FINISHED: ', dynamicPlaylistId);
-		// await Promise.all(this.promiseAwaiting[currentDynamicPlaylist.regionInfo.regionName].promiseFunction!);
 	};
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
@@ -255,12 +251,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					this.synchronization,
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
-				// await this.sos.sync.joinGroup({
-				// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-				// 	...(this.synchronization.syncDeviceId
-				// 		? { deviceIdentification: this.synchronization.syncDeviceId }
-				// 		: {}),
-				// });
 				console.log(
 					'joined group 2',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
