@@ -3,6 +3,7 @@ import { removeDigits } from './generalTools';
 import { isObject } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
+import { DynamicPlaylist } from '../../../models/dynamicModels';
 
 export function getDynamicTagsFromPlaylist(playlist: PlaylistElement | PlaylistElement[], _dynamicTags: string[] = []) {
 	const dynamicTags = _dynamicTags;
@@ -27,5 +28,21 @@ export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchroni
 	await sos.sync.joinGroup({
 		groupName,
 		...(synchronization.syncDeviceId ? { deviceIdentification: synchronization.syncDeviceId } : {}),
+	});
+}
+
+export async function broadcastSyncValue(
+	sos: FrontApplet,
+	dynamicPlaylistConfig: DynamicPlaylist,
+	groupName: string,
+	action: string,
+) {
+	await sos.sync.broadcastValue({
+		groupName,
+		key: 'myKey',
+		value: {
+			action,
+			...dynamicPlaylistConfig,
+		},
 	});
 }
