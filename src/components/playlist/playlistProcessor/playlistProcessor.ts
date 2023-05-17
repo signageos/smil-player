@@ -1457,7 +1457,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (version > this.playlistVersion && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
 				this.foundNewPlaylist = true;
 			}
-
+			// TODO: current element wait for previous one to finish in same region
 			if (this.promiseAwaiting[regionInfo.regionName]) {
 				debug('waiting for previous promise in current region:: %s, %O', regionInfo.regionName, media);
 				debug(this.promiseAwaiting[regionInfo.regionName]);
