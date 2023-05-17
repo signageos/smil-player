@@ -68,7 +68,7 @@ import { IPlaylistProcessor } from './IPlaylistProcessor';
 import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-import { getDynamicTagsFromPlaylist, joinSyncGroup } from '../tools/dynamicTools';
+import { broadcastSyncValue, getDynamicTagsFromPlaylist, joinSyncGroup } from '../tools/dynamicTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -317,16 +317,24 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						for (let dynamicId in smilObject.dynamic) {
 							if (dynamicInPlaylist.includes(dynamicId)) {
 								debug('Dynamic tag %s is in playlist, sending end event', dynamicId);
-								await this.sos.sync.broadcastValue({
-									groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-									key: 'myKey',
-									value: {
-										action: 'end',
-										...{
-											data: dynamicId,
-										},
-									},
-								});
+								await broadcastSyncValue(
+									this.sos,
+									{
+										data: dynamicId,
+									} as DynamicPlaylist,
+									`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+									'end',
+								);
+								// await this.sos.sync.broadcastValue({
+								// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+								// 	key: 'myKey',
+								// 	value: {
+								// 		action: 'end',
+								// 		...{
+								// 			data: dynamicId,
+								// 		},
+								// 	},
+								// });
 							}
 						}
 					}
@@ -464,14 +472,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// 		: {}),
 			// });
 			console.log('joined group 1', syncGroupName, Date.now());
-			await this.sos.sync.broadcastValue({
-				groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-				key: 'myKey',
-				value: {
-					action: 'start',
-					...dynamicPlaylistConfig,
-				},
-			});
+			await broadcastSyncValue(
+				this.sos,
+				dynamicPlaylistConfig,
+				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+				'start',
+			);
+			// await this.sos.sync.broadcastValue({
+			// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+			// 	key: 'myKey',
+			// 	value: {
+			// 		action: 'start',
+			// 		...dynamicPlaylistConfig,
+			// 	},
+			// });
 
 			// let counter = 0;
 			const intervalId = setInterval(async () => {
@@ -481,14 +495,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.getPlaylistVersion(),
 						Date.now(),
 					);
-					await this.sos.sync.broadcastValue({
-						groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-						key: 'myKey',
-						value: {
-							action: 'start',
-							...dynamicPlaylistConfig,
-						},
-					});
+					await broadcastSyncValue(
+						this.sos,
+						dynamicPlaylistConfig,
+						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+						'start',
+					);
+					// await this.sos.sync.broadcastValue({
+					// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					// 	key: 'myKey',
+					// 	value: {
+					// 		action: 'start',
+					// 		...dynamicPlaylistConfig,
+					// 	},
+					// });
 				} else {
 					clearInterval(intervalId);
 				}
@@ -1530,14 +1550,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				if (syncEndCounter > 1) {
 					clearInterval(intervalID);
 				}
-				await this.sos.sync.broadcastValue({
-					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-					key: 'myKey',
-					value: {
-						action: 'end',
-						...currentDynamicPlaylist.dynamicConfig,
-					},
-				});
+				await broadcastSyncValue(
+					this.sos,
+					currentDynamicPlaylist.dynamicConfig,
+					`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					'end',
+				);
+				// await this.sos.sync.broadcastValue({
+				// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+				// 	key: 'myKey',
+				// 	value: {
+				// 		action: 'end',
+				// 		...currentDynamicPlaylist.dynamicConfig,
+				// 	},
+				// });
 			}, 10);
 
 			// TODO: fix to end priority playlist with proper timesPlayed mechanism

@@ -11,6 +11,7 @@ import { CurrentlyPlayingRegion, PlaylistOptions, VideoPreparing } from '../../.
 import { PriorityRule } from '../../../enums/priorityEnums';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
+import { broadcastSyncValue } from '../tools/dynamicTools';
 
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
@@ -162,14 +163,20 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					if (syncEndCounter > 1) {
 						clearInterval(intervalID);
 					}
-					await this.sos.sync.broadcastValue({
-						groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
-						key: 'myKey',
-						value: {
-							action: 'end',
-							...currentDynamicPlaylist.dynamicConfig,
-						},
-					});
+					await broadcastSyncValue(
+						this.sos,
+						currentDynamicPlaylist.dynamicConfig,
+						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+						'end',
+					);
+					// await this.sos.sync.broadcastValue({
+					// 	groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					// 	key: 'myKey',
+					// 	value: {
+					// 		action: 'end',
+					// 		...currentDynamicPlaylist.dynamicConfig,
+					// 	},
+					// });
 				}, 10);
 
 				// TODO: fix to end priority playlist with proper timesPlayed mechanism
