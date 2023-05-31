@@ -47,7 +47,7 @@
     "@babel/preset-env": "7.9.0",
     "@mdx-js/mdx": "3.0.0",
     "@signageos/codestyle": "0.0.21",
-    "@signageos/front-applet": "5.12.0-kytart-sync-cancel-wait.1397",
+    "@signageos/front-applet": "5.12.0-kytart-sync-cancel-wait.1419",
     "@signageos/front-display": "12.1.1",
     "@signageos/webpack-plugin": "^0.1.1",
     "@types/chai": "4.1.7",

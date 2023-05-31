@@ -76,7 +76,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	 */
 	public handleTriggers = async (media: SMILMedia, element: HTMLElement | undefined = undefined) => {
 		let regionInfo = media.regionInfo;
-		await sleep(50);
+		// TODO: was 50 and no dynamic check
+		if (!media.dynamicValue) {
+			console.log('WAITING TIMEOUT TO AVOID RACE CONDITION', media);
+			await sleep(250);
+		}
+		console.log('HOVNO', this.isRegionOrNestedActive(regionInfo));
 		while (
 			this.isRegionOrNestedActive(regionInfo) &&
 			!(media.hasOwnProperty(SMILTriggersEnum.triggerValue) || media.hasOwnProperty(SMILDynamicEnum.dynamicValue))
@@ -167,7 +172,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
 		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
-			console.log('received udp request', dynamicPlaylistConfig, Date.now());
+			// console.log('received udp request', dynamicPlaylistConfig, Date.now());
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
@@ -193,7 +198,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			if (this.dynamicPlaylist[dynamicPlaylistId]?.play && dynamicPlaylistConfig.action === 'start') {
-				console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
+				// console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
 				return;
 			}
 
