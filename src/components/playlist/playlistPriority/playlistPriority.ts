@@ -156,20 +156,23 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
 				);
 
-				let syncEndCounter = 0;
-				let intervalID = setInterval(async () => {
-					console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
-					syncEndCounter++;
-					if (syncEndCounter > 1) {
-						clearInterval(intervalID);
-					}
-					await broadcastSyncValue(
-						this.sos,
-						currentDynamicPlaylist.dynamicConfig,
-						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-						'end',
-					);
-				}, 10);
+				// let intervalID = setInterval(async () => {
+				// 	console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
+				// 	await broadcastSyncValue(
+				// 		this.sos,
+				// 		currentDynamicPlaylist.dynamicConfig,
+				// 		`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+				// 		'end',
+				// 	);
+				// 	clearInterval(intervalID);
+				// }, 10);
+
+				await broadcastSyncValue(
+					this.sos,
+					currentDynamicPlaylist.dynamicConfig,
+					`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+					'end',
+				);
 
 				// TODO: fix to end priority playlist with proper timesPlayed mechanism
 				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
@@ -556,9 +559,12 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return false;
 		}
-
 		// wait for new potential playlist to appear
-		await sleep((this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100);
+		if (!currentIndexPriority.media.dynamicValue) {
+			await sleep(
+				(this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100,
+			);
+		}
 		return true;
 	};
 

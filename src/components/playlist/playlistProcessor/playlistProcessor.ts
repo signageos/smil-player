@@ -427,7 +427,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (this.triggers.dynamicPlaylist[dynamicPlaylistId]?.play) {
-				console.log('Dynamic playlist is already playing: ', dynamicPlaylistId, version);
+				// console.log('Dynamic playlist is already playing: ', dynamicPlaylistId, version);
 				await sleep(300);
 				return;
 			}
@@ -733,7 +733,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 				let arrayIndex = 0;
 				for (const valueElement of value) {
-					debug('processing seq element: %O', valueElement);
+					// debug('processing seq element: %O', valueElement);
 					if (valueElement.hasOwnProperty(ExprTag)) {
 						conditionalExpr = valueElement[ExprTag];
 					}
@@ -1481,20 +1481,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
 			);
 
-			let syncEndCounter = 0;
-			let intervalID = setInterval(async () => {
-				console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
-				syncEndCounter++;
-				if (syncEndCounter > 1) {
-					clearInterval(intervalID);
-				}
-				await broadcastSyncValue(
-					this.sos,
-					currentDynamicPlaylist.dynamicConfig,
-					`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-					'end',
-				);
-			}, 10);
+			// let syncEndCounter = 0;
+			// let intervalID = setInterval(async () => {
+			// 	console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
+			// 	syncEndCounter++;
+			// 	if (syncEndCounter > 1) {
+			// 		clearInterval(intervalID);
+			// 	}
+			// 	await broadcastSyncValue(
+			// 		this.sos,
+			// 		currentDynamicPlaylist.dynamicConfig,
+			// 		`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+			// 		'end',
+			// 	);
+			// }, 10);
+			await broadcastSyncValue(
+				this.sos,
+				currentDynamicPlaylist.dynamicConfig,
+				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
+				'end',
+			);
 
 			// TODO: fix to end priority playlist with proper timesPlayed mechanism
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
@@ -1518,7 +1524,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return false;
 		}
 
+		// TODO: ten default co ceka ve fronte za prvnim defaultem tu nekdy stihne projet a udela problik
 		console.log(media.src);
+		console.log(regionInfo.regionName);
 		console.log(this.currentlyPlaying[regionInfo.regionName].src);
 		console.log('------------------------------------------------');
 		if (
@@ -1549,6 +1557,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			currentIndexPriority?.player.contentPause !== 0 ||
 			currentIndexPriority?.behaviour === 'pause'
 		) {
+			// wait a bit to avoid race condition during lower priority wait and dynamic content switch
+			await sleep(300);
 			debug('Playlist was stopped/paused by higher priority during await: %O', currentIndexPriority);
 			return false;
 		}
@@ -1725,6 +1735,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				})(),
 			];
 
+			// give time to smil player to play video before massive wallclock processing
+			await sleep(1000);
+
 			// await Promise.all(this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction!);
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
@@ -1760,6 +1773,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			debug('Calling## video play function - single video: %O', video);
 			await sosVideoObject.play(...params);
+			debug('After## video play function - single video: %O', video);
 		} catch (err) {
 			await this.files.sendMediaReport(video, moment().toDate(), 'video', err.message);
 			await sosVideoObject.stop(
