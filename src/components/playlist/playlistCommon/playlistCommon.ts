@@ -208,7 +208,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				localRegionInfo.height,
 			);
 			video.playing = false;
-			debug(`previous ${videoElement} stopped`);
+			debug(`previous ${videoElement} stopped: %O`, video);
 		} catch (err) {
 			debug('error during video cancellation: %O', err);
 		}
