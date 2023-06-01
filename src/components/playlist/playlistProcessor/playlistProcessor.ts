@@ -14,7 +14,6 @@ import { FilesManager } from '../../files/filesManager';
 import { SMILFile, SMILFileObject } from '../../../models/filesModels';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { FileStructure } from '../../../enums/fileEnums';
-import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
 import {
 	SMILIntro,
 	SMILMedia,
@@ -69,6 +68,7 @@ import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamic
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { broadcastSyncValue, getDynamicTagsFromPlaylist, joinSyncGroup } from '../tools/dynamicTools';
+import { connectSyncSafe } from '../tools/syncTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -233,8 +233,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					let initCalled = false;
 					// connect to the sync server only on start of smil, not on updates
 					if (firstIteration) {
-						// await this.sos.sync.connect('ws://localhost:8085');
-						await this.sos.sync.connect({ engine: SyncEngine.Udp });
+						await connectSyncSafe(this.sos);
 					}
 					// delay between connect and init to prevent deviceId not present in sync server
 					// await sleep(1000);
