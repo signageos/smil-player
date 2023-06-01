@@ -66,7 +66,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				try {
 					console.log('will restart');
 					await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
-					await sleep(1000);
+					await sleep(5e3);
 					await this.sos.management.power.appRestart();
 				} catch (e) {
 					console.log('error while restarting', e);
