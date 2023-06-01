@@ -61,10 +61,16 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		// handles slaves dynamic playback
 		await this.watchUdpRequest(playlistVersion, filesLoop);
 		this.sos.sync.onClosed(async (error?: Error) => {
+			console.log('SYNC CLOSED', error);
 			if (error) {
-				await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
-				await sleep(1000);
-				await this.sos.management.power.appRestart();
+				try {
+					console.log('will restart');
+					await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
+					await sleep(1000);
+					await this.sos.management.power.appRestart();
+				} catch (e) {
+					console.log('error while restarting', e);
+				}
 			}
 		});
 	};
