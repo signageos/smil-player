@@ -37,12 +37,17 @@ export async function broadcastSyncValue(
 	groupName: string,
 	action: string,
 ) {
+	const requestUid = Math.random().toString(36).substr(2, 10);
+	console.log(
+		`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`,
+	);
 	await sos.sync.broadcastValue({
 		groupName,
 		key: 'myKey',
 		value: {
 			action,
 			...dynamicPlaylistConfig,
+			requestUid,
 		},
 	});
 }
