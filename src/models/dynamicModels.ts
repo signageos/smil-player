@@ -5,6 +5,7 @@ export type DynamicPlaylist = {
 	data: string;
 	syncId: string;
 	action: string;
+	requestUid: string;
 };
 
 export type DynamicPlaylistElement = {
