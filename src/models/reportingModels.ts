@@ -39,6 +39,13 @@ export type SmilError = {
 	errorMessage: string;
 };
 
-export type Report = MediaPlayed | FileDownload | PlaybackStarted | SmilError;
+export type SyncWait = {
+	type: 'SMIL.SyncWait-Started' | 'SMIL.SyncWait-Ended';
+	source: Source;
+	startedAt: Date;
+	groupName: string;
+};
+
+export type Report = MediaPlayed | FileDownload | PlaybackStarted | SmilError | SyncWait;
 export type ItemType = 'image' | 'video' | 'ref' | 'smil' | 'ticker';
 export type MediaItemType = 'image' | 'video' | 'ref' | 'ticker';

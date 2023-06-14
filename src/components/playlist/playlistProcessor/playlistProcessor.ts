@@ -60,7 +60,7 @@ import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
-import { createLocalFilePath, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
+import { createLocalFilePath, createSourceReportObject, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
 import { isArray, isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -445,11 +445,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
-					console.log(
-						'sending udp request start ' + dynamicPlaylistConfig.data + ' ' + Date.now() + ' ' + version,
-						this.getPlaylistVersion(),
-						Date.now(),
-					);
 					await broadcastSyncValue(
 						this.sos,
 						dynamicPlaylistConfig,
@@ -2253,7 +2248,31 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				console.log('BEFORE WAIT', groupName, value.syncIndex, Date.now());
 				try {
+					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+						this.files.sendReport({
+							type: 'SMIL.SyncWait-Started',
+							source: createSourceReportObject(
+								value.localFilePath,
+								value.src,
+								this.internalStorageUnit.type,
+							),
+							startedAt: moment().toDate(),
+							groupName,
+						});
+					}
 					currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+						this.files.sendReport({
+							type: 'SMIL.SyncWait-Ended',
+							source: createSourceReportObject(
+								value.localFilePath,
+								value.src,
+								this.internalStorageUnit.type,
+							),
+							startedAt: moment().toDate(),
+							groupName,
+						});
+					}
 				} catch (err) {
 					console.log('ERROR occurred during sync.wait', err);
 				}

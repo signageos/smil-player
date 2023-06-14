@@ -178,7 +178,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
 		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
-			// console.log('received udp request', dynamicPlaylistConfig, Date.now());
+			console.log(
+				`received udp request ${JSON.stringify(
+					dynamicPlaylistConfig,
+				)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
+			);
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
@@ -204,7 +208,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			if (this.dynamicPlaylist[dynamicPlaylistId]?.play && dynamicPlaylistConfig.action === 'start') {
-				// console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
+				console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
 				return;
 			}
 
