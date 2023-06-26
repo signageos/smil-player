@@ -1,5 +1,5 @@
 import { PlaylistElement } from '../../../models/playlistModels';
-import { removeDigits } from './generalTools';
+import { debug, removeDigits, sleep } from './generalTools';
 import { isObject } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
@@ -14,7 +14,6 @@ export function getDynamicTagsFromPlaylist(playlist: PlaylistElement | PlaylistE
 		if (!isObject(value)) {
 			continue;
 		}
-		console.log('key', key);
 		if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic') {
 			dynamicTags.push(value.data);
 		}
@@ -36,18 +35,29 @@ export async function broadcastSyncValue(
 	dynamicPlaylistConfig: DynamicPlaylist,
 	groupName: string,
 	action: string,
+	retryCount: number = 3,
 ) {
-	const requestUid = Math.random().toString(36).substr(2, 10);
-	console.log(
-		`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`,
-	);
-	await sos.sync.broadcastValue({
-		groupName,
-		key: 'myKey',
-		value: {
-			action,
-			...dynamicPlaylistConfig,
-			requestUid,
-		},
-	});
+	try {
+		const requestUid = Math.random().toString(36).substr(2, 10);
+		console.log(
+			`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`,
+		);
+		await sos.sync.broadcastValue({
+			groupName,
+			key: 'myKey',
+			value: {
+				action,
+				...dynamicPlaylistConfig,
+				requestUid,
+			},
+		});
+	} catch (err) {
+		debug('broadcastSyncValue error', err);
+		if (retryCount > 0) {
+			// 5s, 10s, 15s
+			await sleep(5000 * (4 - retryCount));
+			debug('broadcastSyncValue retry with retryCount: %s', retryCount);
+			await broadcastSyncValue(sos, dynamicPlaylistConfig, groupName, action, retryCount - 1);
+		}
+	}
 }

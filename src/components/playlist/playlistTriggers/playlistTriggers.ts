@@ -61,10 +61,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		// handles slaves dynamic playback
 		await this.watchUdpRequest(playlistVersion, filesLoop);
 		this.sos.sync.onClosed(async (error?: Error) => {
-			console.log('SYNC CLOSED', error);
 			if (error) {
 				try {
-					console.log('will restart');
 					await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
 					await sleep(5e3);
 					await this.sos.management.power.appRestart();
@@ -87,10 +85,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			console.log('WAITING TIMEOUT TO AVOID RACE CONDITION', media);
 			await sleep(250);
 		}
-		console.log('HOVNO', this.isRegionOrNestedActive(regionInfo));
 		while (
-			this.isRegionOrNestedActive(regionInfo) &&
-			!(media.hasOwnProperty(SMILTriggersEnum.triggerValue) || media.hasOwnProperty(SMILDynamicEnum.dynamicValue))
+			!(
+				media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
+				media.hasOwnProperty(SMILDynamicEnum.dynamicValue)
+			) &&
+			this.isRegionOrNestedActive(regionInfo)
 		) {
 			// debug(
 			// 	'Cant play media because its region is occupied by trigger. video: %O, region: %O',
@@ -178,11 +178,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
 		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
-			console.log(
-				`received udp request ${JSON.stringify(
-					dynamicPlaylistConfig,
-				)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
-			);
+			// console.log(
+			// 	`received udp request ${JSON.stringify(
+			// 		dynamicPlaylistConfig,
+			// 	)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
+			// );
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
@@ -208,7 +208,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			if (this.dynamicPlaylist[dynamicPlaylistId]?.play && dynamicPlaylistConfig.action === 'start') {
-				console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
+				// console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
 				return;
 			}
 
@@ -224,9 +224,17 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				currentDynamicPlaylist.play = false;
 
 				// cancel wait for dynamic playlist sync to avoid deadlocks
-				await this.sos.sync.cancelWait(
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-				);
+				try {
+					await this.sos.sync.cancelWait(
+						`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+					);
+				} catch (err) {
+					debug(
+						'Error while cancelling wait for dynamic playlist: %O, with err: %O',
+						currentDynamicPlaylist,
+						err,
+					);
+				}
 
 				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
@@ -263,7 +271,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			// if another dynamic playlist is playing, wait for timeout to avoid race condition with default content
 			for (const [, elem] of Object.entries(this.dynamicPlaylist)) {
 				if (elem?.play) {
-					debug('found active dynamic playlist: %O, waiting for timeout', elem);
+					debug(
+						'found active dynamic playlist: %O, waiting for timeout for dynamic playlist: %O',
+						elem,
+						dynamicPlaylistConfig,
+					);
 					await sleep(300);
 				}
 			}
@@ -276,7 +288,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
 				console.log(
-					'joined group 2',
+					'joined group slave',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 					Date.now(),
 				);
@@ -771,6 +783,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				if (this.currentlyPlaying[region.regionName]?.playing) {
 					return true;
 				}
+			}
+		}
+
+		// check if any dynamic playlist is being played or prepared
+		for (const [, value] of Object.entries(this.dynamicPlaylist)) {
+			if (value.play && regionInfo.regionName === value.parentRegion) {
+				return true;
 			}
 		}
 		return false;
