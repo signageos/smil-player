@@ -1088,8 +1088,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		console.log(this.currentlyPlaying[regionInfo.regionName]?.src !== element.src);
-		console.log(this.currentlyPlaying[regionInfo.regionName]?.playing);
 		// cancel dynamic from dynamic even if its marked as not playing to avoid race condition
 		if (
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== element.src &&
@@ -1165,6 +1163,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (element.dynamicValue) {
 			console.log('setting dynamic value: %s', element.dynamicValue);
 			this.currentlyPlaying[regionName].dynamicValue = element.dynamicValue;
+		} else {
+			delete this.currentlyPlaying[regionName].dynamicValue;
 		}
 	};
 
@@ -1519,10 +1519,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// TODO: ten default co ceka ve fronte za prvnim defaultem tu nekdy stihne projet a udela problik
-		console.log(media.src);
-		console.log(regionInfo.regionName);
-		console.log(this.currentlyPlaying[regionInfo.regionName].src);
-		console.log('------------------------------------------------');
+		// console.log(media.src);
+		// console.log(regionInfo.regionName);
+		// console.log(this.currentlyPlaying[regionInfo.regionName].src);
+		// console.log('------------------------------------------------');
 		if (
 			media.dynamicValue &&
 			!this.triggers.dynamicPlaylist[media.dynamicValue!]?.play &&
@@ -1558,17 +1558,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
-		console.log(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000);
-		console.log(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0);
-		console.log('/////////////////////////////');
 		if (
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
 		) {
-			console.log(currentIndexPriority?.player.timesPlayed);
-			console.log(endTime);
-			console.log(regionInfo.regionName);
-			console.log(currentIndex);
 			debug('Playtime for playlist: %O was exceeded wait, exiting', currentIndexPriority);
 			await this.priority.handlePriorityWhenDone(
 				media as SMILMedia,
