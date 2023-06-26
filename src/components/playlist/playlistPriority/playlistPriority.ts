@@ -148,13 +148,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
 				const currentDynamicPlaylist = triggers?.dynamicPlaylist[value.dynamicValue!]!;
 				clearInterval(currentDynamicPlaylist.intervalId);
-				console.log('dynamic playlist done', currentDynamicPlaylist);
+				console.log('dynamic playlist done master', currentDynamicPlaylist);
 				set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
 
-				console.log(
-					'LEAVING GROUP MASTER: ',
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
-				);
+				// console.log(
+				// 	'LEAVING GROUP MASTER: ',
+				// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
+				// );
 
 				// let intervalID = setInterval(async () => {
 				// 	console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
@@ -350,7 +350,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		priorityRegionName: string,
 		currentIndex: number,
 		previousPlayingIndex: number,
-		videoPreparing: VideoPreparing,
+		_videoPreparing: VideoPreparing,
 	): Promise<void> => {
 		let currentPriorityRegion = this.currentlyPlayingPriority[priorityRegionName];
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
@@ -373,15 +373,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			currentIndexPriority.player.stop = false;
 
 			debug('Stop behaviour lock released for playlist: %O', currentIndexPriority);
-			console.log(priorityRegionName);
-			console.log(this.currentlyPlayingPriority.fullScreenTrigger);
-			console.log('*****************************');
 
-			if (videoPreparing.fullScreenTrigger.dynamicValue) {
-				debug('Dynamic value is being prepared, waiting for it to finish: %O', currentIndexPriority);
-				console.log(videoPreparing);
-				// await sleep(300);
-			}
+			// TODO: fix not working
+			// if (videoPreparing.fullScreenTrigger.dynamicValue) {
+			// 	debug('Dynamic value is being prepared, waiting for it to finish: %O', currentIndexPriority);
+			// 	console.log(videoPreparing);
+			// 	// await sleep(300);
+			// }
 
 			// regenerate
 			let newPreviousIndex = getIndexOfPlayingMedia(this.currentlyPlayingPriority[priorityRegionName]);
@@ -633,9 +631,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					// same playlist is played again, increase count to track how many times it was already played
 					// not for triggers or infinite playlists
 					if (isNil(value.triggerValue) && endTime !== 0) {
-						console.log(priorityRegionName);
-						console.log(arrayIndex);
-						console.log('increasing times played for playlist1: %O', infoObject);
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;
