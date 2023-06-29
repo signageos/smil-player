@@ -14,6 +14,7 @@ export class SmilPlayerPlaylist {
 		promiseAwaiting: {},
 		currentlyPlayingPriority: {},
 		synchronization: initSyncObject(),
+		videoPreparing: {},
 	};
 
 	constructor(sos: FrontApplet, files: FilesManager) {
