@@ -1,13 +1,13 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { SMILMedia } from '../../../models/mediaModels';
+import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
-import { getIndexOfPlayingMedia, sleep } from '../tools/generalTools';
-import { isEqual, isNil, set } from 'lodash';
+import { getIndexOfPlayingMedia, removeDigits, sleep } from '../tools/generalTools';
+import { cloneDeep, isEqual, isNil, set } from 'lodash';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
-import { CurrentlyPlayingRegion, PlaylistOptions, VideoPreparing } from '../../../models/playlistModels';
+import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
 import { PriorityRule } from '../../../enums/priorityEnums';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
@@ -23,6 +23,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	/**
 	 * Handles lifecycle of playlist in priority behaviour
 	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo | SMILTicker
+	 * @param elementKey
 	 * @param version - smil internal version of current playlist
 	 * @param parent - parent specifying parent object in xml with randomly generated suffix (par-98324)
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
@@ -30,11 +31,11 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 */
 	public priorityBehaviour = async (
 		value: SMILMedia,
+		elementKey: string,
 		version: number,
 		parent: string = '0',
 		endTime: number = 0,
 		priorityObject: PriorityObject = <PriorityObject>{},
-		videoPreparing: VideoPreparing,
 	): Promise<{
 		currentIndex: number;
 		previousPlayingIndex: number;
@@ -67,13 +68,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				this.currentlyPlayingPriority[priorityRegionName][currentIndex],
 			);
 			await this.handlePriorityBeforePlay(
+				elementKey,
 				priorityObject,
 				priorityRegionName,
 				currentIndex,
 				previousPlayingIndex,
 				parent,
 				endTime,
-				videoPreparing,
 			);
 		}
 
@@ -200,6 +201,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 * @param priorityRule - which priority rule will be used ( never, stop, pause or defer )
 	 */
 	private handlePriorityRules = async (
+		elementKey: string,
 		priorityObject: PriorityObject,
 		priorityRegionName: string,
 		currentIndex: number,
@@ -207,7 +209,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		parent: string,
 		endTime: number,
 		priorityRule: string,
-		videoPreparing: VideoPreparing,
 	): Promise<void> => {
 		switch (priorityRule) {
 			case PriorityRule.never:
@@ -221,13 +222,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				break;
 			case PriorityRule.defer:
 				await this.handleDeferBehaviour(
+					elementKey,
 					priorityObject,
 					priorityRegionName,
 					currentIndex,
 					previousPlayingIndex,
 					parent,
 					endTime,
-					videoPreparing,
 				);
 				break;
 			default:
@@ -245,13 +246,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 */
 	private handlePriorityBeforePlay = async (
+		elementKey: string,
 		priorityObject: PriorityObject,
 		priorityRegionName: string,
 		currentIndex: number,
 		previousPlayingIndex: number,
 		parent: string,
 		endTime: number,
-		videoPreparing: VideoPreparing,
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		const previousIndexPriority = this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex];
@@ -262,7 +263,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				priorityRegionName,
 				currentIndex,
 				previousPlayingIndex,
-				videoPreparing,
 			);
 		}
 
@@ -278,6 +278,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			);
 
 			await this.handlePriorityRules(
+				elementKey,
 				priorityObject,
 				priorityRegionName,
 				currentIndex,
@@ -285,7 +286,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				parent,
 				endTime,
 				previousIndexPriority.priority.higher,
-				videoPreparing,
 			);
 		}
 
@@ -303,6 +303,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			);
 
 			await this.handlePriorityRules(
+				elementKey,
 				priorityObject,
 				priorityRegionName,
 				currentIndex,
@@ -310,7 +311,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				parent,
 				endTime,
 				previousIndexPriority.priority.peer,
-				videoPreparing,
 			);
 		}
 
@@ -326,6 +326,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			);
 
 			await this.handlePriorityRules(
+				elementKey,
 				priorityObject,
 				priorityRegionName,
 				currentIndex,
@@ -333,7 +334,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				parent,
 				endTime,
 				previousIndexPriority.priority.lower,
-				videoPreparing,
 			);
 		}
 	};
@@ -350,7 +350,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		priorityRegionName: string,
 		currentIndex: number,
 		previousPlayingIndex: number,
-		_videoPreparing: VideoPreparing,
 	): Promise<void> => {
 		let currentPriorityRegion = this.currentlyPlayingPriority[priorityRegionName];
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
@@ -463,13 +462,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 * @param endTime - time when should playlist end in millis or as repeatCount ( less than 1000 )
 	 */
 	private handleDeferBehaviour = async (
+		elementKey: string,
 		priorityObject: PriorityObject,
 		priorityRegionName: string,
 		currentIndex: number,
 		previousPlayingIndex: number,
 		parent: string,
 		endTime: number,
-		videoPreparing: VideoPreparing,
 	): Promise<void> => {
 		let currentPriorityRegion = this.currentlyPlayingPriority[priorityRegionName];
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
@@ -477,6 +476,31 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour = 'defer';
 		// set current deferred content to not playing
 		currentIndexPriority.player.playing = false;
+
+		// prepare video beforehand for peer priority dynamic values
+		// ( usecase when defer lock is released video is not prepared and hisense has issues with it )
+		try {
+			if (currentIndexPriority.media.dynamicValue && removeDigits(elementKey) === 'video') {
+				if (
+					this.currentlyPlaying[currentIndexPriority.media.regionInfo.regionName]?.src !==
+					currentIndexPriority.media.src
+				) {
+					const video = currentIndexPriority.media as SMILVideo;
+					await this.sos.video.prepare(
+						video.localFilePath,
+						currentIndexPriority.media.regionInfo.left,
+						currentIndexPriority.media.regionInfo.top,
+						currentIndexPriority.media.regionInfo.width,
+						currentIndexPriority.media.regionInfo.height,
+					);
+
+					this.videoPreparing.fullScreenTrigger = cloneDeep(video);
+					debug('Prepared dynamic content video during peer priority defer stage: %O', video);
+				}
+			}
+		} catch (err) {
+			debug('Error while preparing dynamic content video during peer priority defer stage: %O', err);
+		}
 
 		while (true) {
 			if (
@@ -517,13 +541,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				previousPlayingIndex = newPreviousIndex;
 			} else {
 				await this.handlePriorityBeforePlay(
+					elementKey,
 					priorityObject,
 					priorityRegionName,
 					currentIndex,
 					newPreviousIndex,
 					parent,
 					endTime,
-					videoPreparing,
 				);
 				break;
 			}

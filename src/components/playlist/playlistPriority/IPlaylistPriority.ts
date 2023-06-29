@@ -6,6 +6,7 @@ import { VideoPreparing } from '../../../models/playlistModels';
 export interface IPlaylistPriority {
 	priorityBehaviour: (
 		value: SMILMedia,
+		elementKey: string,
 		version: number,
 		parent: string,
 		endTime: number,

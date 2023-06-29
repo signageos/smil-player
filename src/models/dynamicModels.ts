@@ -19,6 +19,7 @@ export type DynamicPlaylistElement = {
 	dynamicConfig: DynamicPlaylist;
 	intervalId: Timeout;
 	version: number;
+	dynamicPlaylistId: string;
 };
 
 export type DynamicPlaylistEndless = {

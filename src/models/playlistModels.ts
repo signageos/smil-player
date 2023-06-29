@@ -14,6 +14,7 @@ export type PlaylistOptions = {
 	promiseAwaiting: PromiseAwaiting;
 	currentlyPlayingPriority: CurrentlyPlayingPriority;
 	synchronization: Synchronization;
+	videoPreparing: VideoPreparing;
 };
 
 export type BackupElement = {

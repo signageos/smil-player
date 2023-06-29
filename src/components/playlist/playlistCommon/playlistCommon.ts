@@ -4,6 +4,7 @@ import {
 	CurrentlyPlayingPriority,
 	PlaylistOptions,
 	PromiseAwaiting,
+	VideoPreparing,
 } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
@@ -28,6 +29,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected promiseAwaiting: PromiseAwaiting = {};
 	protected currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	protected synchronization: Synchronization;
+	protected videoPreparing: VideoPreparing = {};
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		this.sos = sos;
@@ -37,6 +39,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 		this.promiseAwaiting = options.promiseAwaiting;
 		this.currentlyPlayingPriority = options.currentlyPlayingPriority;
 		this.synchronization = options.synchronization;
+		this.videoPreparing = options.videoPreparing;
 	}
 
 	// disables endless loop for media playing
