@@ -60,6 +60,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		await this.watchSyncTriggers();
 		// handles slaves dynamic playback
 		await this.watchUdpRequest(playlistVersion, filesLoop);
+		// stops slave dynamic playback if master stops sending messages
+		await this.watchIfDynamicStillActive();
 		this.sos.sync.onClosed(async (error?: Error) => {
 			if (error) {
 				try {
@@ -158,6 +160,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.dynamicPlaylist[dynamicPlaylistId].syncId = dynamicPlaylistConfig.syncId;
 		this.dynamicPlaylist[dynamicPlaylistId].dynamicConfig = dynamicPlaylistConfig;
 		this.dynamicPlaylist[dynamicPlaylistId].version = version;
+		this.dynamicPlaylist[dynamicPlaylistId].dynamicPlaylistId = dynamicPlaylistId;
 
 		const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
 		const dynamicRandom = getRandomInt(100000);
@@ -176,13 +179,68 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		console.log('PLAYING DYNAMIC PLAYLIST FINISHED: ', dynamicPlaylistId);
 	};
 
+	private cancelDynamicPlaylist = async (dynamicPlaylistId: string, dynamicPlaylistConfig: DynamicPlaylist) => {
+		const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
+		// masters sends end to all at the start even when it was not played yet
+		if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
+			debug('Dynamic playlist was already cancelled');
+			return;
+		}
+		currentDynamicPlaylist.play = false;
+
+		// cancel wait for dynamic playlist sync to avoid deadlocks
+		try {
+			await this.sos.sync.cancelWait(
+				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+			);
+		} catch (err) {
+			debug('Error while cancelling wait for dynamic playlist: %O, with err: %O', currentDynamicPlaylist, err);
+		}
+
+		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
+					debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+					elem.player.playing = false;
+				}
+			}
+		}
+
+		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
+					debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+					elem.player.playing = false;
+				}
+			}
+		}
+		set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
+		console.log(
+			'LEAVING GROUP SLAVE: ',
+			`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+		);
+		return;
+	};
+
+	private watchIfDynamicStillActive = async () => {
+		while (true) {
+			for (const dynamic of Object.values(this.dynamicPlaylist)) {
+				if (dynamic.play && dynamic.latestEventFired + 2500 < Date.now() && !dynamic.isMaster) {
+					debug('Dynamic playlist %s is not active anymore', dynamic.dynamicPlaylistId);
+					await this.cancelDynamicPlaylist(dynamic.dynamicPlaylistId, dynamic.dynamicConfig);
+				}
+			}
+			await sleep(1000);
+		}
+	};
+
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
 		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
-			// console.log(
-			// 	`received udp request ${JSON.stringify(
-			// 		dynamicPlaylistConfig,
-			// 	)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
-			// );
+			console.log(
+				`received udp request ${JSON.stringify(
+					dynamicPlaylistConfig,
+				)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
+			);
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
@@ -207,58 +265,64 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				return;
 			}
 
-			if (this.dynamicPlaylist[dynamicPlaylistId]?.play && dynamicPlaylistConfig.action === 'start') {
-				// console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
-				return;
+			if (dynamicPlaylistConfig.action === 'start') {
+				// record last call from master
+				this.dynamicPlaylist[dynamicPlaylistId].latestEventFired = Date.now();
+				if (this.dynamicPlaylist[dynamicPlaylistId]?.play) {
+					console.log('Dynamic playlist is already playing: ', dynamicPlaylistId);
+					return;
+				}
 			}
 
 			const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
 			currentDynamicPlaylist.play = true;
 
 			if (dynamicPlaylistConfig.action === 'end') {
-				// masters sends end to all at the start even when it was not played yet
-				if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
-					debug('Dynamic playlist was already cancelled');
-					return;
-				}
-				currentDynamicPlaylist.play = false;
-
-				// cancel wait for dynamic playlist sync to avoid deadlocks
-				try {
-					await this.sos.sync.cancelWait(
-						`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-					);
-				} catch (err) {
-					debug(
-						'Error while cancelling wait for dynamic playlist: %O, with err: %O',
-						currentDynamicPlaylist,
-						err,
-					);
-				}
-
-				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-						if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-							debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
-							elem.player.playing = false;
-						}
-					}
-				}
-
-				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-						if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-							debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
-							elem.player.playing = false;
-						}
-					}
-				}
-				set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
-				console.log(
-					'LEAVING GROUP SLAVE: ',
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-				);
+				await this.cancelDynamicPlaylist(dynamicPlaylistId, dynamicPlaylistConfig);
 				return;
+				// // masters sends end to all at the start even when it was not played yet
+				// if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
+				// 	debug('Dynamic playlist was already cancelled');
+				// 	return;
+				// }
+				// currentDynamicPlaylist.play = false;
+				//
+				// // cancel wait for dynamic playlist sync to avoid deadlocks
+				// try {
+				// 	await this.sos.sync.cancelWait(
+				// 		`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				// 	);
+				// } catch (err) {
+				// 	debug(
+				// 		'Error while cancelling wait for dynamic playlist: %O, with err: %O',
+				// 		currentDynamicPlaylist,
+				// 		err,
+				// 	);
+				// }
+				//
+				// if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+				// 	for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+				// 		if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
+				// 			debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+				// 			elem.player.playing = false;
+				// 		}
+				// 	}
+				// }
+				//
+				// if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+				// 	for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
+				// 		if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
+				// 			debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+				// 			elem.player.playing = false;
+				// 		}
+				// 	}
+				// }
+				// set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
+				// console.log(
+				// 	'LEAVING GROUP SLAVE: ',
+				// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				// );
+				// return;
 			}
 
 			const priorityObject: PriorityObject = {
