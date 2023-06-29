@@ -7,7 +7,7 @@ import set = require('lodash/set');
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
-import { PlayingInfo, PlaylistElement, PlaylistOptions, VideoPreparing } from '../../../models/playlistModels';
+import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
@@ -77,7 +77,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private readonly playerId: string;
 	private triggers: PlaylistTriggers;
 	private priority: PlaylistPriority;
-	private videoPreparing: VideoPreparing = {};
 	private foundNewPlaylist: boolean = false;
 	private playlistVersion: number = 0;
 	private internalStorageUnit: IStorageUnit;
@@ -521,12 +520,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
 				const isLast = lastPlaylistElem === key;
 				const { currentIndex, previousPlayingIndex } = await this.priority.priorityBehaviour(
-					<SMILMedia>value,
+					value as SMILMedia,
+					key,
 					version,
 					parent,
 					endTime,
 					priorityObject,
-					this.videoPreparing,
 				);
 				await this.playElement(
 					value as SMILMedia,
