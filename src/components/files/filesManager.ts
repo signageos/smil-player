@@ -18,6 +18,7 @@ import {
 	isWidgetUrl,
 	mapFileType,
 	shouldNotDownload,
+	updateJsonObject,
 } from './tools';
 import { FileStructure } from '../../enums/fileEnums';
 import {
@@ -153,38 +154,36 @@ export class FilesManager implements IFilesManager {
 		internalStorageUnit: IStorageUnit,
 		localFilePath: string,
 		media: MergedDownloadList,
-		_mediaInfoObject: MediaInfoObject,
+		mediaInfoObject: MediaInfoObject,
 	): Promise<boolean> => {
-		// const currentLastModified =
-		// 	'fetchLastModified' in media && media.fetchLastModified
-		// 		? await media.fetchLastModified()
-		// 		: await this.fetchLastModified(media.src);
-		// // file was not found
-		// if (isNil(currentLastModified)) {
-		// 	debug(`File was not found on remote server: %O `, media.src);
-		// 	// return false;
-		// 	// TODO: hotfix for bp adobe cors issue
-		// 	return true;
-		// }
+		const currentLastModified =
+			'fetchLastModified' in media && media.fetchLastModified
+				? await media.fetchLastModified()
+				: await this.fetchLastModified(media.src);
+		// file was not found
+		if (isNil(currentLastModified)) {
+			debug(`File was not found on remote server: %O `, media.src);
+			return false;
+		}
 
 		if (!(await this.fileExists(internalStorageUnit, createLocalFilePath(localFilePath, media.src)))) {
 			debug(`File does not exist: %s  downloading`, media.src);
-			// updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
 		}
 
-		// const storedLastModified = mediaInfoObject[getFileName(media.src)];
-		// if (isNil(storedLastModified)) {
-		// 	updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
-		// 	return true;
-		// }
-		//
-		// if (moment(storedLastModified).valueOf() < moment(currentLastModified).valueOf()) {
-		// 	debug(`New file version detected: %O `, media.src);
-		// 	// update mediaInfo object
-		// 	updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
-		// 	return true;
-		// }
+		const storedLastModified = mediaInfoObject[getFileName(media.src)];
+		if (isNil(storedLastModified)) {
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			return true;
+		}
+
+		if (moment(storedLastModified).valueOf() < moment(currentLastModified).valueOf()) {
+			debug(`New file version detected: %O `, media.src);
+			// update mediaInfo object
+			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
+			return true;
+		}
 
 		debug(`File is already downloaded in internal storage: %O `, media.src);
 		return false;
@@ -407,7 +406,7 @@ export class FilesManager implements IFilesManager {
 			const newLastModified = await response.headers.get('last-modified');
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
-			debug('Unexpected error occured during lastModified fetch: %O', err);
+			debug('Unexpected error occurred during lastModified fetch: %O', err);
 			return null;
 		}
 	};
