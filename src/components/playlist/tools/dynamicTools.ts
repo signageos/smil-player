@@ -1,27 +1,10 @@
-import { PlaylistElement } from '../../../models/playlistModels';
-import { debug, removeDigits, sleep } from './generalTools';
-import { isObject } from 'lodash';
+import { CurrentlyPlaying, CurrentlyPlayingPriority } from '../../../models/playlistModels';
+import { debug } from './generalTools';
+import { set } from 'lodash';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
-
-export function getDynamicTagsFromPlaylist(playlist: PlaylistElement | PlaylistElement[], _dynamicTags: string[] = []) {
-	const dynamicTags = _dynamicTags;
-	for (let [key, loopValue] of Object.entries(playlist)) {
-		let value = loopValue as {
-			data: string;
-		};
-		if (!isObject(value)) {
-			continue;
-		}
-		if (removeDigits(key) === 'EXPERIMENTAL_emitDynamic') {
-			dynamicTags.push(value.data);
-		}
-		getDynamicTagsFromPlaylist(value as PlaylistElement | PlaylistElement[], dynamicTags);
-	}
-
-	return dynamicTags;
-}
+import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 
 export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchronization, groupName: string) {
 	await sos.sync.joinGroup({
@@ -35,29 +18,46 @@ export async function broadcastSyncValue(
 	dynamicPlaylistConfig: DynamicPlaylist,
 	groupName: string,
 	action: string,
-	retryCount: number = 3,
 ) {
-	try {
-		const requestUid = Math.random().toString(36).substr(2, 10);
-		console.log(
-			`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`,
-		);
-		await sos.sync.broadcastValue({
-			groupName,
-			key: 'myKey',
-			value: {
-				action,
-				...dynamicPlaylistConfig,
-				requestUid,
-			},
-		});
-	} catch (err) {
-		debug('broadcastSyncValue error', err);
-		if (retryCount > 0) {
-			// 5s, 10s, 15s
-			await sleep(5000 * (4 - retryCount));
-			debug('broadcastSyncValue retry with retryCount: %s', retryCount);
-			await broadcastSyncValue(sos, dynamicPlaylistConfig, groupName, action, retryCount - 1);
+	const requestUid = Math.random().toString(36).substr(2, 10);
+	debug(`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`);
+	await sos.sync.broadcastValue({
+		groupName,
+		key: 'myKey',
+		value: {
+			action,
+			...dynamicPlaylistConfig,
+			requestUid,
+		},
+	});
+}
+
+export async function cancelDynamicPlaylistMaster(
+	triggers: PlaylistTriggers,
+	sos: FrontApplet,
+	currentlyPlaying: CurrentlyPlaying,
+	synchronization: Synchronization,
+	currentlyPlayingPriority: CurrentlyPlayingPriority,
+	dynamicValue: string,
+) {
+	const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue]!;
+	clearInterval(currentDynamicPlaylist.intervalId);
+	set(currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
+	await broadcastSyncValue(
+		sos,
+		currentDynamicPlaylist.dynamicConfig,
+		`${synchronization.syncGroupName}-fullScreenTrigger`,
+		'end',
+	);
+
+	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
+		elem.player.playing = false;
+	}
+
+	currentDynamicPlaylist.play = false;
+	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+		if (elem.media.dynamicValue) {
+			elem.player.playing = false;
 		}
 	}
 }

@@ -1,7 +1,12 @@
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
-import { sleep } from './generalTools';
+import { debug, sleep } from './generalTools';
+import { isArray, isNil } from 'lodash';
+import { broadcastSyncValue, joinSyncGroup } from './dynamicTools';
+import { SMILFileObject } from '../../../models/filesModels';
+import { getDynamicTagsFromPlaylist } from './dynamicPlaylistTools';
+import { DynamicPlaylist } from '../../../models/dynamicModels';
 
 // sets synchronization object to its starting values
 export function initSyncObject(): Synchronization {
@@ -17,10 +22,83 @@ export function initSyncObject(): Synchronization {
 	};
 }
 
-export async function connectSyncSafe(
+export async function broadcastEndActionToAllDynamics(
 	sos: FrontApplet,
-	retryCount: number = 3,
+	synchronization: Synchronization,
+	smilObject: SMILFileObject,
 ) {
+	const dynamicInPlaylist = getDynamicTagsFromPlaylist(smilObject.playlist);
+	debug('Dynamic tags in playlist: %O', dynamicInPlaylist);
+	for (let dynamicId in smilObject.dynamic) {
+		if (dynamicInPlaylist.includes(dynamicId)) {
+			debug('Dynamic tag %s is in playlist, sending end event', dynamicId);
+			await broadcastSyncValue(
+				sos,
+				{
+					data: dynamicId,
+				} as DynamicPlaylist,
+				`${synchronization.syncGroupName}-fullScreenTrigger`,
+				'end',
+			);
+		}
+	}
+}
+
+export async function joinAllSyncGroupsOnSmilStart(
+	sos: FrontApplet,
+	synchronization: Synchronization,
+	smilObject: SMILFileObject,
+): Promise<void> {
+	let initCalled = false;
+
+	synchronization.syncGroupName = sos.config.syncGroupName ?? 'testingSmilGroup';
+	synchronization.syncGroupIds = sos.config.syncGroupIds?.split(',') ?? [];
+	synchronization.syncDeviceId = sos.config.syncDeviceId;
+	synchronization.syncGroupIds.sort();
+	for (let [key, value] of Object.entries(smilObject.region)) {
+		if (!isNil(value.region)) {
+			if (!isArray(value.region)) {
+				value.region = [value.region];
+			}
+			for (let [, nestedValue] of Object.entries(value.region)) {
+				if (nestedValue.sync) {
+					// has to be initialized by value because it iterates over array
+					debug(
+						'Initializing sync server group: %s with deviceSyncId: %s',
+						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
+						synchronization.syncDeviceId,
+					);
+					await joinSyncGroup(
+						sos,
+						synchronization,
+						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
+					);
+					initCalled = true;
+				}
+			}
+		}
+		if (value.sync) {
+			debug(
+				'Initializing sync server group: %s with deviceSyncId: %s',
+				`${synchronization.syncGroupName}-${key}`,
+				synchronization.syncDeviceId,
+			);
+			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}`);
+			initCalled = true;
+		}
+	}
+	if (!initCalled) {
+		debug(
+			'Initializing sync server group: %s with deviceSyncId: %s',
+			`${synchronization.syncGroupName}`,
+			synchronization.syncDeviceId,
+		);
+		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
+	}
+	synchronization.shouldSync = true;
+}
+
+export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
 		// await this.sos.sync.connect('ws://localhost:8085');
 		await sos.sync.connect({ engine: SyncEngine.Udp });

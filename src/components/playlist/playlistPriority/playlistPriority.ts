@@ -2,7 +2,7 @@
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { getIndexOfPlayingMedia, removeDigits, sleep } from '../tools/generalTools';
-import { cloneDeep, isEqual, isNil, set } from 'lodash';
+import { cloneDeep, isEqual, isNil } from 'lodash';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
@@ -11,7 +11,7 @@ import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlis
 import { PriorityRule } from '../../../enums/priorityEnums';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
-import { broadcastSyncValue } from '../tools/dynamicTools';
+import { cancelDynamicPlaylistMaster } from '../tools/dynamicTools';
 
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
@@ -147,45 +147,15 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			currentIndexPriority.player.playing = false;
 
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
-				const currentDynamicPlaylist = triggers?.dynamicPlaylist[value.dynamicValue!]!;
-				clearInterval(currentDynamicPlaylist.intervalId);
-				console.log('dynamic playlist done master', currentDynamicPlaylist);
-				set(this.currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
-
-				// console.log(
-				// 	'LEAVING GROUP MASTER: ',
-				// 	`${this.synchronization.syncGroupName}-fullScreenTrigger-${currentDynamicPlaylist.syncId}`,
-				// );
-
-				// let intervalID = setInterval(async () => {
-				// 	console.log('sending udp request end ' + currentDynamicPlaylist.dynamicConfig.data);
-				// 	await broadcastSyncValue(
-				// 		this.sos,
-				// 		currentDynamicPlaylist.dynamicConfig,
-				// 		`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-				// 		'end',
-				// 	);
-				// 	clearInterval(intervalID);
-				// }, 10);
-
-				await broadcastSyncValue(
+				debug('Dynamic playlist finished: %O for region: %s', currentIndexPriority.media, priorityRegionName);
+				await cancelDynamicPlaylistMaster(
+					triggers,
 					this.sos,
-					currentDynamicPlaylist.dynamicConfig,
-					`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-					'end',
+					this.currentlyPlaying,
+					this.synchronization,
+					this.currentlyPlayingPriority,
+					value.dynamicValue!,
 				);
-
-				// TODO: fix to end priority playlist with proper timesPlayed mechanism
-				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
-					elem.player.playing = false;
-				}
-
-				currentDynamicPlaylist.play = false;
-				for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
-					if (elem.media.dynamicValue) {
-						elem.player.playing = false;
-					}
-				}
 			}
 		}
 	};
@@ -372,13 +342,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			currentIndexPriority.player.stop = false;
 
 			debug('Stop behaviour lock released for playlist: %O', currentIndexPriority);
-
-			// TODO: fix not working
-			// if (videoPreparing.fullScreenTrigger.dynamicValue) {
-			// 	debug('Dynamic value is being prepared, waiting for it to finish: %O', currentIndexPriority);
-			// 	console.log(videoPreparing);
-			// 	// await sleep(300);
-			// }
 
 			// regenerate
 			let newPreviousIndex = getIndexOfPlayingMedia(this.currentlyPlayingPriority[priorityRegionName]);
@@ -676,7 +639,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 						isNil(value.triggerValue) &&
 						endTime !== 0
 					) {
-						console.log('increasing times played for playlist2: %O', infoObject);
 						infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
 					}
 					// remember first in playlist

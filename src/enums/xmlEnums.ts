@@ -1,6 +1,8 @@
+import { SMILDynamicEnum } from './dynamicEnums';
+
 export const XmlTags = {
 	extractedElements: ['video', 'audio', 'img', 'ref'],
-	dynamicPlaylist: ['EXPERIMENTAL_emitDynamic'],
+	dynamicPlaylist: [SMILDynamicEnum.emitDynamic],
 	textElements: ['ticker'],
 	structureTags: ['seq', 'par', 'excl', 'priorityClass'],
 	// TODO: add all structure tags in the future
