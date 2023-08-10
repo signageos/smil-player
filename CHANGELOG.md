@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 - fix rare bug which occurs in widget optimization during smil playlist update
+- clarification that advanced usage with extra configuration is still in development
 
 ### Added
 - added option to stop trigger using same triggerId as to invoke it
