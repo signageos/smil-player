@@ -303,7 +303,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					this.synchronization,
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
-				console.log(
+				debug(
 					'joined group slave',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 					Date.now(),
