@@ -1,6 +1,6 @@
 import { CurrentlyPlaying, CurrentlyPlayingPriority } from '../../../models/playlistModels';
 import { debug } from './generalTools';
-import { set } from 'lodash';
+import set = require('lodash/set');
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
