@@ -486,11 +486,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (key === 'excl') {
-				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
+				promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'priorityClass') {
-				promises = await this.processPriorityTag(value, version, 'seq', endTime, conditionalExpr);
+				promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
 			if (removeDigits(key) === SMILDynamicEnum.emitDynamic && this.synchronization.shouldSync) {
@@ -975,7 +975,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(this.synchronization.shouldCancelAll ||
 				(element.hasOwnProperty(SMILDynamicEnum.dynamicValue) && !this.currentlyPlaying.fullScreenTrigger))
 		) {
-			console.log('canceling all content');
 			this.synchronization.shouldCancelAll = false;
 			await this.stopAllContent(false);
 		}
@@ -2099,7 +2098,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
 			regionInfo = currentRegionInfo;
 		}
-		console.log('syncing for region: %s', regionInfo.regionName, this.synchronization.shouldSync);
 		if (regionInfo.sync && this.synchronization.shouldSync) {
 			debug('synchronizing for region %s', regionInfo.regionName);
 			let currentSyncIndex = this.synchronization.syncValue;

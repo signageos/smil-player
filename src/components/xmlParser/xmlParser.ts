@@ -52,8 +52,6 @@ export class XmlParser implements IXmlParser {
 
 		debug('Xml file parsed to json object: %O', xmlObject);
 
-		console.log('xmlObject', xmlObject);
-
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
@@ -82,7 +80,7 @@ export class XmlParser implements IXmlParser {
 				...XmlTags.extractedElements,
 				...XmlTags.textElements,
 				...XmlTags.dynamicPlaylist,
-				...XmlTags.indexedStructureTags,
+				// ...XmlTags.indexedStructureTags,
 			].includes(tagName)
 		) {
 			return `${tagName}${this.tagNameCounter++}`;
