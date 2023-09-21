@@ -188,9 +188,10 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		// TODO: unify region cancellation with master
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
+			console.log(this.currentlyPlayingPriority);
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-					debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
 					elem.player.playing = false;
 				}
 			}
@@ -199,7 +200,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-					debug('Cancelling dynamic playlist with dynamic value %s', dynamicPlaylistConfig.data);
+					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
 					elem.player.playing = false;
 				}
 			}
@@ -286,7 +287,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			// if another dynamic playlist is playing, wait for timeout to avoid race condition with default content
 			for (const [, elem] of Object.entries(this.dynamicPlaylist)) {
-				if (elem?.play) {
+				if (elem?.play && elem?.dynamicPlaylistId !== dynamicPlaylistId) {
 					debug(
 						'found active dynamic playlist: %O, waiting for timeout for dynamic playlist: %O',
 						elem,

@@ -95,6 +95,9 @@ export async function joinAllSyncGroupsOnSmilStart(
 		);
 		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
 	}
+
+	//TODO: testing, join synchronization group for syncinc nonsync content
+	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
 	synchronization.shouldSync = true;
 }
 

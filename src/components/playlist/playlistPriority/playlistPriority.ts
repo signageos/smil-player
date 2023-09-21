@@ -226,6 +226,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		const previousIndexPriority = this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex];
+		console.log('handlePriorityBeforePlay++', currentIndexPriority.media.src);
 		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (currentIndexPriority.parent === parent && currentIndexPriority.behaviour === 'stop') {
 			await this.handlePrecedingContentStop(
@@ -493,6 +494,17 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			// no playlist currently playing, this one can proceed to playback
 			if (newPreviousIndex === -1) {
 				debug('Defer behaviour, no active playlist found');
+				// // TODO: remove
+				const video = currentIndexPriority.media as SMILVideo;
+				await this.sos.video.prepare(
+					video.localFilePath,
+					currentIndexPriority.media.regionInfo.left,
+					currentIndexPriority.media.regionInfo.top,
+					currentIndexPriority.media.regionInfo.width,
+					currentIndexPriority.media.regionInfo.height,
+				);
+				this.videoPreparing[currentIndexPriority.media.regionInfo.regionName] = cloneDeep(video);
+				debug('Prepared## video during peer priority defer stage: %O', video);
 				break;
 			}
 
@@ -534,6 +546,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+		// TODO: previously currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime
 		if (
 			(currentIndexPriority.player.endTime <= Date.now() && currentIndexPriority.player.endTime > 1000) ||
 			(currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime &&

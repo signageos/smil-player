@@ -69,6 +69,7 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { broadcastSyncValue, cancelDynamicPlaylistMaster, joinSyncGroup } from '../tools/dynamicTools';
 import { broadcastEndActionToAllDynamics, connectSyncSafe, joinAllSyncGroupsOnSmilStart } from '../tools/syncTools';
+import { startTickerAnimation } from '../tools/tickerTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -79,6 +80,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private priority: PlaylistPriority;
 	private foundNewPlaylist: boolean = false;
 	private playlistVersion: number = 0;
+	private syncContentPrepared: {
+		[key: string]: {
+			syncGroupName: string;
+			numberOfNonSync: number;
+		};
+	} = {};
 	private internalStorageUnit: IStorageUnit;
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
@@ -996,6 +1003,24 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
+		// if (this.syncContentPrepared?.fullScreenTrigger) {
+		// 	console.log(this.syncContentPrepared);
+		// 	console.log(this.syncContentPrepared?.fullScreenTrigger);
+		// 	console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
+		// 	console.log(
+		// 		'start1 of fist non-sync media after dynamic content end in syncgroup',
+		// 		this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+		// 		Date.now(),
+		// 	);
+		// 	await this.sos.sync.wait('customValue', this.syncContentPrepared?.fullScreenTrigger.syncGroupName, 1000);
+		// 	console.log(
+		// 		'end1 of fist non-sync media after dynamic content end in syncgroup',
+		// 		this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+		// 		Date.now(),
+		// 	);
+		// 	delete this.syncContentPrepared?.fullScreenTrigger;
+		// }
+
 		// cancel if video is not same as previous one played in the parent region ( triggers case )
 		if (
 			parentRegion.regionName !== regionInfo.regionName &&
@@ -1073,7 +1098,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (this.currentlyPlaying?.fullScreenTrigger && !element.dynamicValue) {
 			debug(
 				'cancelling dynamic media: %s from element: %s',
-				this.currentlyPlaying[this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo?.regionName].src,
+				this.currentlyPlaying[this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo?.regionName]
+					?.src,
 				element.src,
 			);
 			if (this.triggers.dynamicPlaylist[precedingDynamicValue]?.regionInfo) {
@@ -1100,8 +1126,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (element.dynamicValue) {
 			debug('setting dynamic value: %s', element.dynamicValue);
 			this.currentlyPlaying[regionName].dynamicValue = element.dynamicValue;
+			this.currentlyPlaying[regionName].syncGroupName = element.syncGroupName;
 		} else {
 			delete this.currentlyPlaying[regionName].dynamicValue;
+			delete this.currentlyPlaying[regionName].syncGroupName;
 		}
 	};
 
@@ -1136,6 +1164,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				dur: value.dur,
 				regionInfo: value.regionInfo,
 				localFilePath: value.localFilePath,
+				dynamicValue: value.dynamicValue,
 			};
 
 			if (!isNil(value.triggerValue)) {
@@ -1159,12 +1188,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 					changeZIndex(value, element, +1, false);
 
-					// if (
-					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
-					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
-					// ) {
-					// 	startTickerAnimation(element, value as SMILTicker);
-					// }
+					if (
+						this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
+						this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
+					) {
+						startTickerAnimation(element, value as SMILTicker);
+					}
 
 					element.style.visibility = 'visible';
 					await this.waitMediaOnScreen(
@@ -1243,6 +1272,30 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
 
+		console.log(
+			'before of fist non-sync media after dynamic content end in syncgroup',
+			this.syncContentPrepared?.fullScreenTrigger,
+			element.dynamicValue,
+			Date.now(),
+		);
+		if (this.syncContentPrepared?.fullScreenTrigger && !element.dynamicValue && this.synchronization.shouldSync) {
+			// console.log(this.syncContentPrepared);
+			// console.log(this.syncContentPrepared?.fullScreenTrigger);
+			// console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
+			console.log(
+				'start1 of fist non-sync media after dynamic content end in syncgroup',
+				this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+				Date.now(),
+			);
+			await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
+			console.log(
+				'end1 of fist non-sync media after dynamic content end in syncgroup',
+				this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+				Date.now(),
+			);
+			// delete this.syncContentPrepared?.fullScreenTrigger;
+		}
+
 		// rare case during seamless update with only one widget in playlist.
 		if (elementHtml.style.visibility !== 'visible') {
 			elementHtml.style.visibility = 'visible';
@@ -1259,6 +1312,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop &&
 			this.currentlyPlaying[currentRegionInfo.regionName]?.player !== 'stop'
 		) {
+			// TODO: remove
+			if (
+				this.syncContentPrepared?.fullScreenTrigger &&
+				!element.dynamicValue &&
+				this.synchronization.shouldSync
+			) {
+				console.log('non sync starting image countdown', Date.now(), element.src);
+			}
 			while (
 				this.currentlyPlayingPriority[currentRegionInfo.regionName][arrayIndex] &&
 				get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player
@@ -1286,6 +1347,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		debug('element playing finished: %O', element);
+		console.log(
+			'non sync starting image--------------------------------------',
+			this.currentlyPlaying[currentRegionInfo.regionName]?.player,
+			get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop,
+		);
+		console.log(this.currentlyPlayingPriority);
 
 		await this.files.sendMediaReport(
 			element,
@@ -1456,12 +1523,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			currentIndexPriority?.behaviour === 'pause'
 		) {
 			// wait a bit to avoid race condition during lower priority wait and dynamic content switch
-			await sleep(300);
+			// TODO: was this needed?
+			// await sleep(300);
 			debug('Playlist was stopped/paused by higher priority during await: %O', currentIndexPriority);
 			return false;
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+		console.log(currentIndexPriority?.player.timesPlayed);
 		if (
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
@@ -1477,8 +1546,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				this.triggers,
 			);
-
-			await sleep(1000);
+			// TODO: race condition check
+			// await sleep(1000);
 
 			return false;
 		}
@@ -1659,6 +1728,31 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await this.cancelPreviousMedia(currentRegionInfo);
 			return;
 		}
+
+		console.log(
+			'before of fist non-sync media after dynamic content end in syncgroup **',
+			this.syncContentPrepared?.fullScreenTrigger,
+			video.dynamicValue,
+			Date.now(),
+		);
+		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
+			// console.log(this.syncContentPrepared);
+			// console.log(this.syncContentPrepared?.fullScreenTrigger);
+			// console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
+			console.log(
+				'start1 of fist non-sync media after dynamic content end in syncgroup',
+				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+				Date.now(),
+			);
+			await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1000);
+			console.log(
+				'end1 of fist non-sync media after dynamic content end in syncgroup',
+				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+				Date.now(),
+			);
+			// delete this.syncContentPrepared?.fullScreenTrigger;
+		}
+
 		try {
 			debug('Calling## video play function - single video: %O', video);
 			await sosVideoObject.play(...params);
@@ -1718,7 +1812,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		try {
+			console.log(
+				'end2 of fist non-sync media after starting promise race',
+				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+				Date.now(),
+			);
 			await Promise.race(promiseRaceArray);
+			console.log(
+				'end2 of fist non-sync media after ending promise race',
+				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+				Date.now(),
+			);
 			videoEnded = true;
 		} catch (err) {
 			debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
@@ -2046,10 +2150,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(50);
 		}
 
+		console.log('****************************************************');
+		console.log('##', this.currentlyPlaying[regionInfo.regionName]?.src !== value.src);
+		console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
+		console.log('##', this.currentlyPlaying[regionInfo.regionName]);
+		console.log('##', config.videoOptions.background);
+		console.log('##', value.protocol !== StreamEnums.internal);
+		console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
+		console.log('##', value.src);
+		console.log('##', this.currentlyPlaying[regionInfo.regionName]?.playing);
+		console.log('****************************************************');
 		// prepare if video is not same as previous one played or if video should be played in background
 		if (
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== value.src &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src) ||
+			!this.currentlyPlaying[regionInfo.regionName]?.playing ||
 			(config.videoOptions.background &&
 				value.protocol !== StreamEnums.internal &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src)
@@ -2130,6 +2245,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					  }`
 					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}`;
 
+				value.syncGroupName = groupName;
+
+				console.log('element will sync, create state **', value.src);
+				this.syncContentPrepared.fullScreenTrigger = {
+					syncGroupName: groupName,
+					numberOfNonSync: 0,
+				};
 				debug(
 					'synchronization starting in region %s with syncIndex %d with dynamicValue %s with timestamp: %d',
 					regionInfo.regionName,
@@ -2150,7 +2272,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							groupName,
 						});
 					}
+					console.log('waiting for syncIndex', Date.now());
 					currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+					console.log('waiting for syncIndex end', Date.now());
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
 							type: 'SMIL.SyncWait-Ended',
@@ -2188,6 +2312,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (!isEqual(value.syncIndex, currentSyncIndex) && !isNil(currentSyncIndex)) {
 				this.synchronization.syncingInAction = true;
 				return false;
+			}
+		} else {
+			if (this.syncContentPrepared?.fullScreenTrigger) {
+				console.log(
+					'element will not sync, create state **',
+					value.src,
+					this.syncContentPrepared?.fullScreenTrigger,
+				);
+				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
+
+				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {
+					delete this.syncContentPrepared.fullScreenTrigger;
+				}
 			}
 		}
 

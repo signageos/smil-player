@@ -19,6 +19,7 @@ export type SMILVideo = {
 	media?: string;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 };
 
 export type SMILAudio = {
@@ -35,6 +36,7 @@ export type SMILAudio = {
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
 };
 
@@ -54,6 +56,7 @@ export type SMILImage = {
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
 };
 
@@ -73,6 +76,7 @@ export type SMILWidget = {
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
 };
 
@@ -100,6 +104,7 @@ export type SMILTicker = {
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
 };
@@ -114,6 +119,7 @@ export type SosHtmlElement = {
 	isTrigger?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
+	syncGroupName?: string;
 	regionInfo: RegionAttributes;
 	localFilePath: string;
 };

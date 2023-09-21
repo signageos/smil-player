@@ -1,22 +1,21 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
-        <meta log="false"/>
+        <meta http-equiv="Refresh" content="20" onlySmilUpdate="true"/>
+        <meta log="true"/>
         <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
-            <region regionName="cl1y0au1c9166021xk93cqfq872" left="0" top="0" width="1080" height="1728" z-index="3"
-                    backgroundColor="#000000"/>
-            <region regionName="ckzzdj3tb16795521xli3yih4xu4" left="0" top="1728" width="1080" height="192" z-index="1"
-                    backgroundColor="#000000"/>
-            <region regionName="ckzzdiqjr16769111xli23z33ouq" left="0" top="0" width="1080" height="1728" z-index="1"
-                    backgroundColor="#000000"/>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="clgmkrvsh4827581xmz267xq5a7" left="0" top="0" width="1920" height="1080" z-index="2"
+                    backgroundColor="#000000">
+                <region regionName="fullScreenTrigger" left="0" top="0" width="1920" height="1080" z-index="2"
+                        backgroundColor="#000000" sync="true"/>
+            </region>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2023/05/cli5oqlo9000012qhfm8vdu9z.jpeg"
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/clgmkrt804826411xmzjfom4mnz/2023/05/clhkbqjlg002212k832t8bxik.jpeg"
                          dur="5s" fit="fill"/>
                 </seq>
             </seq>
@@ -25,32 +24,1179 @@
                 <excl>
                     <par>
                         <seq repeatCount="indefinite">
-                            <!-- [ExchangeRatesMonetaModule] KL API overlay 8_ (cl1y1bq0s9577881xk96pr2aey5) -->
-                            <seq>
-                                <ref src="https://files.signage-cdn.com/environment/production/modules/exchange-rates-moneta/1c2fde29673a28baeee4871f510373bb.wgt?appUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fgraphql&amp;campaignId=cl1y1bq0s9577881xk96pr2aey5&amp;deviceId=cl1ysrmqz3582b475qhnqq93s&amp;devicePlatformUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fdevice-platform&amp;hash=1c2fde29673a28baeee4871f510373bb&amp;s3Url=https%3A%2F%2Ffiles.signage-cdn.com%2F"
-                                     type="application/widget" dur="221s" region="cl1y0au1c9166021xk93cqfq872"/>
-                            </seq>
-                        </seq>
-                    </par>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [MarqueeModule] Ticker (ckzzdjznn68561xliorafrvng) -->
-                            <seq>
-                                <ref src="https://files.signage-cdn.com/environment/production/modules/marquee/4b9cbefdd2b36e8dcbcea669e40b69dd.wgt?appUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fgraphql&amp;campaignId=ckzzdjznn68561xliorafrvng&amp;deviceId=cl1ysrmqz3582b475qhnqq93s&amp;devicePlatformUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fdevice-platform&amp;hash=4b9cbefdd2b36e8dcbcea669e40b69dd&amp;s3Url=https%3A%2F%2Ffiles.signage-cdn.com%2F"
-                                     type="application/widget" dur="15s" region="ckzzdj3tb16795521xli3yih4xu4"/>
-                            </seq>
-                        </seq>
-                    </par>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] KL background 8 (cl10f2ltz4375191xhhthbuqcl3) -->
-                            <seq>
-                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2023/06/clj76k7vy002u12k8dpobg7f6.mp4"
-                                       soundLevel="0%" region="ckzzdiqjr16769111xli23z33ouq"/>
-                            </seq>
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <!-- [SynchronizationEmitterModule] RewardLaunch-Night-Rankin0 (cllp0sij86143151xlyz1eez4aj) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-12-01+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0shut4739851xkfcs0193oy"
+                                                                  syncId="cllp0shut4739851xkfcs0193oy"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] MealDeal+MealDealV2 - Rankin0 (cllp0yqmy4776051xkfxelsdskp) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w1T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w2T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w3T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w4T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w5T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w6T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w7T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0yq3z6181951xlyvy5qg930"
+                                                                  syncId="cllp0yq3z6181951xlyvy5qg930"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin0 (cllp252yy6501291xhtcjr4ihx9) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp251386442031xlyruxrq3lr"
+                                                                  syncId="cllp251386442031xlyruxrq3lr"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin2 (cllp25oum6517071xht6fcbjacr) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ofi5038881xkf2jeo0ccd"
+                                                                  syncId="cllp25ofi5038881xkf2jeo0ccd"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardLaunch-Day-Rankin0 (cllp0r6s16125021xlykqgcz12e) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0r5zr6183851xhttnso23ft"
+                                                                  syncId="cllp0r5zr6183851xhttnso23ft"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] MealDeal+MealDealV2 - Rankin1 (cllp0z10w6187951xlyi875vs1t) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w1T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w2T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w3T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w4T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w5T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w6T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-24+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-12-01+w7T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp0z0f96187461xlyhozct892"
+                                                                  syncId="cllp0z0f96187461xlyhozct892"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin2 (cllp26zrp5059581xkffam6pdvg) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26zbg5059091xkfuvqco599"
+                                                                  syncId="cllp26zbg5059091xkfuvqco599"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin0 (cllp26e5q5050161xkfqsxp6a00) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26dnk6462931xlyvloizuhg"
+                                                                  syncId="cllp26dnk6462931xlyvloizuhg"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin1 (cllp25fjd5034111xkfhlyomsu7) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp25ewl6450571xly4oqsgat1"
+                                                                  syncId="cllp25ewl6450571xly4oqsgat1"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] Walkers+BottleUp-Day-Rankin0 (cllp2z7wt5207441xkft2ed2s1g) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2z62s5206951xkft5yxv9bg"
+                                                                  syncId="cllp2z62s5206951xkft5yxv9bg"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin1 (cllp26pgh6534361xhtrn14yr2o) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp26p0e5056511xkf1vgrbtxu"
+                                                                  syncId="cllp26p0e5056511xkf1vgrbtxu"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] Walkers+BottleUp-Day-Rankin1 (cllp2zkk76699011xhttecg9x89) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T10:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T14:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp2zk055212371xkfkemkxhwd"
+                                                                  syncId="cllp2zk055212371xkfkemkxhwd"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] M&S Gastropub-Day-Rankin0 (cllp3eg0j6706781xly29xpjbu1) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w1T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w2T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w3T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w4T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w5T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w6T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T14:30/P1D)"
+                                         end="wallclock(R/2023-10-10+w7T22:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3eea46775841xht1x00vhdb"
+                                                                  syncId="cllp3eea46775841xht1x00vhdb"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] Breakfast(Bap+Menu) - Rankin1 (clkva41es3349081xntpw1ofbts) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w1T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w1T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w2T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w2T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w3T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w3T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w4T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w4T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w5T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w5T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w6T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w6T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w7T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w7T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva410e3348591xntbaj99hdi"
+                                                                  syncId="clkva410e3348591xntbaj99hdi"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] WineReward-Day-Rankin0 (cllp3r2af6862731xhtanw1us6w) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T14:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3r1t16803151xlyub7mxgc2"
+                                                                  syncId="cllp3r1t16803151xlyub7mxgc2"/>
+                                    </seq>
+
+                                    <!-- [SynchronizationEmitterModule] WineReward-Night-Rankin0 (cllp3t8ug5406741xkf2qg02pga) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllp3t8c56821321xlycufawmkr"
+                                                                  syncId="cllp3t8c56821321xlycufawmkr"/>
+                                    </seq>
+
+                                    <!-- [SynchronizationEmitterModule] Breakfast(Bap+Menu) - Rankin0 (clkva3t923344111xntvysnmvh6) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w1T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w1T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w2T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w2T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w3T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w3T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w4T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w4T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w5T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w5T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w6T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w6T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-03+w7T05:00/P1D)"
+                                         end="wallclock(R/2023-08-28+w7T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_clkva3sqh3343621xntkq70imjs"
+                                                                  syncId="clkva3sqh3343621xntkq70imjs"/>
+                                    </seq>
+
+                                    <!-- [SynchronizationEmitterModule] Asahi+Guiness-Day-Rankin0 (cllqmevbf10327021xly0gj1ypbt) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmeutu10326521xlye7k4l37p"
+                                                                  syncId="cllqmeutu10326521xlye7k4l37p"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] Asahi+Guiness-Day-Rankin1 (cllqmf50610434241xhtpnbograf) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T16:30/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmf4fi10328541xly69ml4pt3"
+                                                                  syncId="cllqmf4fi10328541xly69ml4pt3"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] Asahi+Guiness-Night-Rankin0 (cllqmj30x10336721xlyjllzdilu) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmj2i29050391xkfzhjo42e6"
+                                                                  syncId="cllqmj2i29050391xkfzhjo42e6"/>
+                                    </seq>
+
+                                    <!-- [SynchronizationEmitterModule] Asahi+Guiness-Night-Rankin1 (cllqmjeze9052081xkfmi7zmfer) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T05:00/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqmjegc10443811xhtp8sx28xf"
+                                                                  syncId="cllqmjegc10443811xhtp8sx28xf"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] BreakFast Menu+Bap+Pastry-Day-Rankin0 (cllqn7wm910370321xlyjvsvhn37) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn7w0410476701xhtty2rk1lh"
+                                                                  syncId="cllqn7w0410476701xhtty2rk1lh"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] BreakFast Menu+Bap+Pastry-Day-Rankin1 (cllqn8afd10373531xly1fdltbqa) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn89xr10373031xlyu16lkp6c"
+                                                                  syncId="cllqn89xr10373031xlyu16lkp6c"/>
+                                    </seq>
+                                    <!-- [SynchronizationEmitterModule] BreakFast Menu+Bap+Pastry-Day-Rankin2 (cllqn8lpp10485031xhtlp7lhs77) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T05:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T10:30/P1D)">
+                                        <EXPERIMENTAL_emitDynamic data="dynamic_cllqn8l7f9097261xkfl5nqtl0s"
+                                                                  syncId="cllqn8l7f9097261xkfl5nqtl0s"/>
+                                    </seq>
+                                    <!-- [GalleryModule] TS1-Default-Rankin (cllpal1gd7816111xlyu9v4tync) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+
+                                    <!-- [GalleryModule] TS1-Default-Rankin (cllpal1gd7816111xlyu9v4tync) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w1T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w1T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w2T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w2T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w3T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w3T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w4T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w4T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w5T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w5T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w6T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w6T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2023-08-29+w7T00:00/P1D)"
+                                         end="wallclock(R/2023-09-27+w7T23:59/P1D)">
+                                        <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/109fdc7e-2b27-4f91-9c9b-9a41d8900226.mp4"
+                                               soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite"/>
+                            </priorityClass>
                         </seq>
                     </par>
                 </excl>
+                <!-- Synchronization campaign playlist -->
+                <par>
+                    <priorityClass>
+                        <seq repeatCount="indefinite"/>
+                    </priorityClass>
+                    <priorityClass higher="pause" pauseDisplay="hide">
+                        <seq repeatCount="indefinite"/>
+                    </priorityClass>
+                    <priorityClass higher="pause" pauseDisplay="hide">
+                        <seq repeatCount="indefinite">
+                            <!-- [GalleryModule] MealDeal+MealDealV2 - Rankin0 Follower 1 (cllp0yrvi6245901xhtrkxhe0n4) -->
+                            <seq repeatCount="1" begin="dynamic_cllp0yq3z6181951xlyvy5qg930" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/3f8db956-f63c-478f-9a82-e1e82ed9860b.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardLaunch-Day-Rankin0 Follower 1 (cllp0r8av6128021xly9z2pmvmg) -->
+                            <seq repeatCount="1" begin="dynamic_cllp0r5zr6183851xhttnso23ft" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/0f8c89cd-47bb-43f4-ac63-6d87d6bb25a3.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardLaunch-Night-Rankin0 Follower 1 (cllp0skaj6146261xlyb7wd4wbr) -->
+                            <seq repeatCount="1" begin="dynamic_cllp0shut4739851xkfcs0193oy" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/0f8c89cd-47bb-43f4-ac63-6d87d6bb25a3.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin2 Follower 1 (cllp270xh6541011xhtmrcy9acl) -->
+                            <seq repeatCount="1" begin="dynamic_cllp26zbg5059091xkfuvqco599" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/97b5f739-b248-4751-b234-c5d0bb568b92.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] MealDeal+MealDealV2 - Rankin1 Follower 1 (cllp0z27k4779991xkfh25as5pc) -->
+                            <seq repeatCount="1" begin="dynamic_cllp0z0f96187461xlyhozct892" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/6026fba1-760b-4d0a-9017-adc231bf8bb8.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin0 Follower 1 (cllp2559h5028691xkffkhtoo9y) -->
+                            <seq repeatCount="1" begin="dynamic_cllp251386442031xlyruxrq3lr" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/e6d610c6-df90-4cd3-8bdf-3127b8822e06.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin1 Follower 1 (cllp25gpg6451151xlyz49ul8u2) -->
+                            <seq repeatCount="1" begin="dynamic_cllp25ewl6450571xly4oqsgat1" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/9dee674d-9809-45b3-ae8a-0cb6da4b6847.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Day-Rankin2 Follower 1 (cllp25q5x6519051xhtpfyrjhsu) -->
+                            <seq repeatCount="1" begin="dynamic_cllp25ofi5038881xkf2jeo0ccd" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/97b5f739-b248-4751-b234-c5d0bb568b92.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin0 Follower 1 (cllp26fbl5052171xkfqteksugb) -->
+                            <seq repeatCount="1" begin="dynamic_cllp26dnk6462931xlyvloizuhg" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/e6d610c6-df90-4cd3-8bdf-3127b8822e06.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] RewardMont+RewardMontV2+Mondelz-Night-Rankin1 Follower 1 (cllp26qwj6535371xhtg05w91kr) -->
+                            <seq repeatCount="1" begin="dynamic_cllp26p0e5056511xkf1vgrbtxu" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/9dee674d-9809-45b3-ae8a-0cb6da4b6847.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Walkers+BottleUp-Day-Rankin0 Follower 1 (cllp2zajy6641551xlyvyo5e8ad) -->
+                            <seq repeatCount="1" begin="dynamic_cllp2z62s5206951xkft5yxv9bg" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/09887b6d-25cc-4516-ac36-2582f53ae426.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Walkers+BottleUp-Day-Rankin1 Follower 1 (cllp2zlro5213441xkfnoyoc1fx) -->
+                            <seq repeatCount="1" begin="dynamic_cllp2zk055212371xkfkemkxhwd" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/fa01bba1-00f5-481b-b623-9851f411bae1.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Night1 Follower 1 (clki64wmf2847681xnv74i497te) -->
+                            <seq repeatCount="1" begin="dynamic_clki64uui2772861xp9hvyf70ao" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/f3744fec-a510-4019-ae09-d507fe9668f7.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Gastropub-Day-Rankin0 Follower 1 (cllp3eie96708771xlynxyu0xz0) -->
+                            <seq repeatCount="1" begin="dynamic_cllp3eea46775841xht1x00vhdb" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/dfb9c44b-2ee6-46ef-95f8-934a184f6cc5.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] WineReward-Night-Rankin0 Follower 1 (cllp3tamh5408431xkfoa97gvxq) -->
+                            <seq repeatCount="1" begin="dynamic_cllp3t8c56821321xlycufawmkr" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/b4e7e10d-6707-4180-9d02-cbaec45e54eb.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Wine - Day - Rankin0 Follower 1 (clki7d8j53027731xnvtcgou4pw) -->
+                            <seq repeatCount="1" begin="dynamic_clki7d4yv2948861xp9z3hcyhdw" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/837a8249-c7af-4dc7-ae78-ac63196d7132.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Day0 Follower 1 (clki608x32798791xnvpbbnbmez) -->
+                            <seq repeatCount="1" begin="dynamic_clki603uy2734381xp98qy6p9hd" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/f4684640-8385-4286-ad13-03b52fc4da57.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Day1 Follower 1 (clki60k262805861xnvodg4g88f) -->
+                            <seq repeatCount="1" begin="dynamic_clki60iis2803381xnvunju22ti" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/f3744fec-a510-4019-ae09-d507fe9668f7.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Day2 Follower 1 (clki60xby2748671xp9mtpcwkz9) -->
+                            <seq repeatCount="1" begin="dynamic_clki60vk42746201xp94s8prk6g" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/2cbd23a7-0d85-4cb0-976c-4a9712f2f053.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] WineReward-Day-Rankin0 Follower 1 (cllp3r3bb6864721xhtwxkwgp1j) -->
+                            <seq repeatCount="1" begin="dynamic_cllp3r1t16803151xlyub7mxgc2" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/b4e7e10d-6707-4180-9d02-cbaec45e54eb.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Day3 Follower 1 (clki618za2818071xnv25u9c7am) -->
+                            <seq repeatCount="1" begin="dynamic_clki617bo2816551xnvnkchv8e7" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/92b057f6-d5bc-4fde-947b-e8b43f8077bc.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Night0 Follower 1 (clki64kij2770811xp98oiqdstw) -->
+                            <seq repeatCount="1" begin="dynamic_clki64ili2837931xnvji85mkg3" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/f4684640-8385-4286-ad13-03b52fc4da57.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Breakfast(Bap+Menu) - Rankin1 Follower 1 (clkva42bq3350101xnt21wa211r) -->
+                            <seq repeatCount="1" begin="dynamic_clkva410e3348591xntbaj99hdi" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/022c6ece-e84e-4b34-8992-af0ce03cbe36.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Night2 Follower 1 (clki6553t2775621xp9sl0amw9v) -->
+                            <seq repeatCount="1" begin="dynamic_clki653d62855801xnvp8mcbfwx" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/2cbd23a7-0d85-4cb0-976c-4a9712f2f053.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Tropicana+Kind+Rockstar+RewardMontage-Night3 Follower 1 (clki65e212863981xnvxvdbqycq) -->
+                            <seq repeatCount="1" begin="dynamic_clki65cpe2861821xnvh2jukq2s" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/92b057f6-d5bc-4fde-947b-e8b43f8077bc.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Breakfast(Bap+Menu) - Rankin0 Follower 1 (clkva3u6v3346091xnts536rlrw) -->
+                            <seq repeatCount="1" begin="dynamic_clkva3sqh3343621xntkq70imjs" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/8504c605-565e-4bd6-bd37-9d4d223f9408.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Grill - Day - Rankin0 Follower 1 (clki6w35y2959751xnvm3ama27u) -->
+                            <seq repeatCount="1" begin="dynamic_clki6w1b62957281xnvvonq6491" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/4c83df6f-fc6a-4f55-948f-bdd1dfebe1d6.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Heineken+Imperial - Night - Rankin0 Follower 1 (clki7xsln3032501xp98a5qk51d) -->
+                            <seq repeatCount="1" begin="dynamic_clki7xqup3118681xnvug3etzoa" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/b9a25bac-4c1a-4d06-a5a2-10a2f90960fd.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Wine - Night - Rankin0 Follower 1 (clki7edfa3035051xnvx8fmt1qn) -->
+                            <seq repeatCount="1" begin="dynamic_clki7ebji2960101xp9qqlsipmu" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/837a8249-c7af-4dc7-ae78-ac63196d7132.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Heineken+Imperial - Day - Rankin0 Follower 1 (clki7w22a3019901xp90ubsocld) -->
+                            <seq repeatCount="1" begin="dynamic_clki7vy4p3102641xnve4cvuwpl" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/b9a25bac-4c1a-4d06-a5a2-10a2f90960fd.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Heineken+Imperial - Day - Rankin1 Follower 1 (clki7wdl63111161xnv0obqk5e8) -->
+                            <seq repeatCount="1" begin="dynamic_clki7watn3024471xp9biql3td3" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/9408e9be-f507-40fa-b8e9-bd00e06d3780.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Heineken+Imperial - Night - Rankin1 Follower 1 (clki7y1s83039851xp91ow47loi) -->
+                            <seq repeatCount="1" begin="dynamic_clki7xzxb3122901xnvehvx73y4" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/9408e9be-f507-40fa-b8e9-bd00e06d3780.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] BreakFast Menu+Bap+Pastry-Day-Rankin1 Follower 1 (cllqn8boa9095041xkfuacgo3ol) -->
+                            <seq repeatCount="1" begin="dynamic_cllqn89xr10373031xlyu16lkp6c" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/ed65dcf6-e82d-429e-af51-e2b5bba1b449.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Pizza - Day - Rankin0 Follower 1 (clkji6gi46507311xp9lsa0q86l) -->
+                            <seq repeatCount="1" begin="dynamic_clkji6e8c6554081xnv49avbg7q" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/244f4b05-2f37-4c3b-8c21-c1bf6844b6b1.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] M&S Pizza - Night - Rankin0 Follower 1 (clkji8jtm6520821xp9kj94ai8c) -->
+                            <seq repeatCount="1" begin="dynamic_clkji8i716518351xp9lzu064aw" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/07/244f4b05-2f37-4c3b-8c21-c1bf6844b6b1.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Asahi+Guiness-Day-Rankin0 Follower 1 (cllqmex9p9042311xkf49ngpaxz) -->
+                            <seq repeatCount="1" begin="dynamic_cllqmeutu10326521xlye7k4l37p" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/6cd11d1b-39e4-4152-b5a2-5824f83cb520.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Asahi+Guiness-Day-Rankin1 Follower 1 (cllqmf67u10329121xly0pqlfkfj) -->
+                            <seq repeatCount="1" begin="dynamic_cllqmf4fi10328541xly69ml4pt3" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/9b4789dc-e52f-4357-aa0f-427d8dc540f6.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] BreakFast Menu+Bap+Pastry-Day-Rankin0 Follower 1 (cllqn7z3410371331xlyi45nir6u) -->
+                            <seq repeatCount="1" begin="dynamic_cllqn7w0410476701xhtty2rk1lh" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/7d4ff4ec-3330-4dc6-a0eb-0df628ea4b5a.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Asahi+Guiness-Night-Rankin0 Follower 1 (cllqmj4ef10338701xlyyvm6z6ey) -->
+                            <seq repeatCount="1" begin="dynamic_cllqmj2i29050391xkfzhjo42e6" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/6cd11d1b-39e4-4152-b5a2-5824f83cb520.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] Asahi+Guiness-Night-Rankin1 Follower 1 (cllqmjg6d10345921xlyx3w2ofve) -->
+                            <seq repeatCount="1" begin="dynamic_cllqmjegc10443811xhtp8sx28xf" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/18163e73-8a66-4eb5-a30d-45e111f13f9e.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                            <!-- [GalleryModule] BreakFast Menu+Bap+Pastry-Day-Rankin2 Follower 1 (cllqn8mq510486051xht92prd5ei) -->
+                            <seq repeatCount="1" begin="dynamic_cllqn8l7f9097261xkfl5nqtl0s" end="dynamic2">
+                                <video src="https://publish-p65652-e608954.adobeaemcloud.com/content/dam/sde/uk/2023/08/ab51fd54-b247-4adb-ac35-8b1a9af2c66a.mp4"
+                                       soundLevel="0%" region="clgmkrvsh4827581xmz267xq5a7"/>
+                            </seq>
+                        </seq>
+                    </priorityClass>
+                </par>
             </par>
         </par>
     </body>
