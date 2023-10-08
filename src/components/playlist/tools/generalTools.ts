@@ -164,6 +164,24 @@ export function extractAdditionalInfo(
 	return value;
 }
 
+/**
+ * There are two ways of computing sync index for elements in playlist: For dynamic playlists it takes local localRegionSyncIndex meaning that it is increment
+ * for each seq tag separately. For generic playlists it takes globalRegionSyncIndex which is incremented for each region separately.
+ * @param regionSyncIndex
+ * @param regionName
+ */
+export function computeSyncIndex(
+	regionSyncIndex: { [key: string]: number },
+	regionName: string,
+): { [key: string]: number } {
+	if (isNil(regionSyncIndex[regionName])) {
+		regionSyncIndex[regionName] = 0;
+	}
+
+	regionSyncIndex[regionName]++;
+	return regionSyncIndex;
+}
+
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
 export function generateParentId(tagName: string, value: PlaylistElement): string {
 	try {
