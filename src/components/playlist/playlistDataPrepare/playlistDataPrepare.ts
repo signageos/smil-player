@@ -5,7 +5,7 @@ import { SMILFileObject } from '../../../models/filesModels';
 import { IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
+import { computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -23,6 +23,8 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
+	private globalRegionSyncIndex: { [key: string]: number } = {};
+
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
 	}
@@ -47,7 +49,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
-		const regionSyncIndex: { [key: string]: number } = {};
+		let localRegionSyncIndex: { [key: string]: number } = {};
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			specialName =
 				key === 'begin' &&
@@ -92,9 +94,29 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				}
 
 				for (const elem of value) {
+					elem.regionInfo = getRegionInfo(smilObject, elem.region);
+					extractAdditionalInfo(elem);
 					// relative path for triggers has to be fixed here, because trigger media objects are not included in parallel download
+					// there are two ways of computing sync index, more at jsdoc for computeSyncIndex
 					if (isSpecial) {
 						elem.src = convertRelativePathToAbsolute(elem.src, smilUrl);
+
+						if (specialName.startsWith(SMILTriggersEnum.triggerFormat)) {
+							elem.triggerValue = specialName;
+						}
+
+						if (specialName.startsWith(SMILDynamicEnum.dynamicFormat)) {
+							elem.dynamicValue = specialName;
+						}
+
+						localRegionSyncIndex = computeSyncIndex(localRegionSyncIndex, elem.regionInfo.regionName);
+						elem.syncIndex = localRegionSyncIndex[elem.regionInfo.regionName];
+					} else {
+						this.globalRegionSyncIndex = computeSyncIndex(
+							this.globalRegionSyncIndex,
+							elem.regionInfo.regionName,
+						);
+						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
 					const mediaFile = <IVideoFile>await this.sos.fileSystem.getFile({
@@ -119,16 +141,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						}
 					}
 
-					elem.regionInfo = getRegionInfo(smilObject, elem.region);
-
-					if (isNil(regionSyncIndex[elem.regionInfo.regionName])) {
-						regionSyncIndex[elem.regionInfo.regionName] = 0;
-					}
-
-					regionSyncIndex[elem.regionInfo.regionName]++;
-					elem.syncIndex = regionSyncIndex[elem.regionInfo.regionName];
-					extractAdditionalInfo(elem);
-
 					if (
 						(key.startsWith(SMILEnums.img) || key.startsWith('ref')) &&
 						elem.hasOwnProperty(SMILEnums.transitionType)
@@ -144,15 +156,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						}
 					}
 
-					// element will be played only on trigger emit in nested region
-					if (isSpecial && specialName.startsWith(SMILTriggersEnum.triggerFormat)) {
-						elem.triggerValue = specialName;
-					}
-
-					if (isSpecial && specialName.startsWith(SMILDynamicEnum.dynamicFormat)) {
-						elem.dynamicValue = specialName;
-					}
-
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
 						elem.id = createDomElement(elem, htmlElement, key, isSpecial);
@@ -161,6 +164,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					if (key.startsWith(HtmlEnum.ticker)) {
 						elem.id = createTickerElement(elem, elem.regionInfo, key);
 					}
+					debug('all info extracted for element: %O', elem);
 				}
 				// reset widget expression for next elements
 				widgetRootFile = '';
