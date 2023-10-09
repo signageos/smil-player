@@ -1,7 +1,7 @@
 const webpack = require('webpack');
 const path = require('path');
-const { CheckerPlugin } = require('awesome-typescript-loader');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const SignageOSPlugin = require('@signageos/webpack-plugin');
 
 module.exports = (_env, argv) => {
@@ -17,21 +17,18 @@ module.exports = (_env, argv) => {
 		output: {
 			filename: 'index.js',
 		},
+		stats: {
+			modules: true,
+		},
 		resolve: {
 			extensions: ['.ts', '.tsx', '.js', '.jsx'],
 		},
 		module: {
 			rules: [
 				{
-					test: /\.tsx?$/,
-					loader: 'awesome-typescript-loader',
-					include: path.resolve(__dirname, 'src'),
-					options: {
-						useCache: true,
-						cacheDirectory: 'cache/awesome-typescript',
-						forceIsolatedModules: true,
-						reportFiles: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}'],
-					},
+					test: /\.ts?$/,
+					use: 'ts-loader',
+					exclude: path.resolve(__dirname, 'node_modules'),
 				},
 				{
 					test: /\.m?(t|j)sx?$/,
@@ -39,12 +36,6 @@ module.exports = (_env, argv) => {
 					exclude: [],
 					//exclude: new RegExp(`node_modules(?!${path.delimiter}(lodash|debug|async|@signageos${path.delimiter}.+))`),
 					use: [
-						{
-							loader: 'cache-loader',
-							options: {
-								cacheDirectory: 'cache/babel',
-							},
-						},
 						{
 							loader: 'babel-loader',
 							options: {
@@ -72,12 +63,12 @@ module.exports = (_env, argv) => {
 					  }
 					: {}),
 			}),
-			new CheckerPlugin(),
 			new HtmlWebpackPlugin({
 				template: 'public/index.html',
 				inlineSource: '.(js|css)$', // embed all javascript and css inline
 			}),
 			new SignageOSPlugin(),
+			new NodePolyfillPlugin(),
 		],
 	};
 };
