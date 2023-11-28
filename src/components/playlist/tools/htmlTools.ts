@@ -141,9 +141,13 @@ export function resetBodyContent() {
 	// reset body content
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
-	document.body.style.margin = '0px';
+	resetBodyMargin();
 	// remove background image
 	document.body.style.background = 'none';
+}
+
+export function resetBodyMargin() {
+	document.body.style.margin = '0px';
 }
 
 export function setTransitionsDefinition(smilObject: SMILFileObject) {

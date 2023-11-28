@@ -27,10 +27,8 @@ import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels
 import { BinaryOperatorChar } from '../../../enums/conditionalEnums';
 import { IPlaylistTriggers } from './IPlaylistTriggers';
 import { PriorityObject } from '../../../models/priorityModels';
-// @ts-ignore
 import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-// @ts-ignore
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { joinSyncGroup } from '../tools/dynamicTools';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
@@ -56,6 +54,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.smilObject = smilObject;
 		this.watchKeyboardInput();
 		this.watchOnTouchOnClick();
+		this.watchWidgetTriggers();
 		await this.watchRfidAntena();
 		// handles if some devices dies in sync
 		await this.watchSyncTriggers();
@@ -188,7 +187,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		// TODO: unify region cancellation with master
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-			console.log(this.currentlyPlayingPriority);
+			// console.log(this.currentlyPlayingPriority);
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
 					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
@@ -495,6 +494,33 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 		return regionInfo;
 	}
+
+	private watchWidgetTriggers = () => {
+		debug('watching widget triggers');
+		window.addEventListener(
+			'message',
+			async (event) => {
+				if (!event.data || isObject(event.data)) {
+					debug('no valid data received from widget message: %O', event.data);
+					return;
+				}
+
+				const triggerId = event.data.replace('data', '').replace('_', '').replace('_', '');
+				const triggerMedia = this.smilObject.triggers[triggerId];
+				const triggerInfo = {
+					trigger: triggerId,
+				};
+				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
+
+				const stringDuration = findDuration(triggerMedia);
+				if (!isNil(stringDuration)) {
+					await this.processTriggerDuration(triggerInfo as any, triggerMedia, stringDuration);
+					return;
+				}
+			},
+			false,
+		);
+	};
 
 	private watchRfidAntena = async () => {
 		let serialPort;

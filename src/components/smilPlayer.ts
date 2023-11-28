@@ -7,7 +7,7 @@ import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
-import { resetBodyContent, setTransitionsDefinition } from './playlist/tools/htmlTools';
+import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
 import backupImage from '../../public/backupImage/backupImage.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
@@ -200,6 +200,8 @@ export class SmilPlayer implements ISmilPlayer {
 				// reset body content if there is no dynamic content ( dynamic has refresh via applet.refresh so we want to keep backup image visible )
 				if (Object.keys(smilObject.dynamic).length === 0) {
 					resetBodyContent();
+				} else {
+					resetBodyMargin();
 				}
 
 				// download and play intro file if exists  ( image or video ) and if its first iteration of playlist
