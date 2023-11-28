@@ -33,6 +33,7 @@ export interface IFilesManager {
 		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement,
 		taskStartDate: Date,
 		itemType: MediaItemType,
+		isMediaSynced: boolean,
 		errMessage: string | null,
 	) => Promise<void>;
 	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;

@@ -14,8 +14,7 @@ export function parseSmilSchedule(
 	startTime: string,
 	endTime: string = SMILScheduleEnum.endDateAndTimeFuture,
 ): SmilScheduleObject {
-	// TODO: outcomment all debug logs
-	// debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
+	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
 
 	// remove extra characters, wallclock, ( and )
 	let dateStringStart = startTime.replace(/wallclock|\(|\)/g, '');

@@ -5,7 +5,7 @@ export type Source = {
 };
 
 export type MediaPlayed = {
-	type: 'SMIL.MediaPlayed';
+	type: 'SMIL.MediaPlayed' | 'SMIL.MediaPlayed-Synced';
 	itemType: MediaItemType;
 	source: Source;
 	startedAt: Date;

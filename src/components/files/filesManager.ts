@@ -102,10 +102,11 @@ export class FilesManager implements IFilesManager {
 		value: SMILVideo | SMILMediaNoVideo | SMILTicker | SosHtmlElement,
 		taskStartDate: Date,
 		itemType: MediaItemType,
+		isMediaSynced: boolean,
 		errMessage: string | null = null,
 	) => {
 		await this.sendReport({
-			type: 'SMIL.MediaPlayed',
+			type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 			itemType: itemType,
 			source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
 			startedAt: taskStartDate,
