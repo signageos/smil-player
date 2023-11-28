@@ -113,6 +113,7 @@ export type SosHtmlElement = {
 	expr?: string;
 	src: string;
 	id: string;
+	syncIndex?: number;
 	dur?: string;
 	media?: string;
 	playing?: boolean;

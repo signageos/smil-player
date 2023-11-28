@@ -53,7 +53,6 @@ import {
 	generateElementSrc,
 	removeTransitionCss,
 	setTransitionCss,
-	// setTransitionCss,
 } from '../tools/htmlTools';
 import Video from '@signageos/front-applet/es6/FrontApplet/Video/Video';
 import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
@@ -1003,24 +1002,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// if (this.syncContentPrepared?.fullScreenTrigger) {
-		// 	console.log(this.syncContentPrepared);
-		// 	console.log(this.syncContentPrepared?.fullScreenTrigger);
-		// 	console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
-		// 	console.log(
-		// 		'start1 of fist non-sync media after dynamic content end in syncgroup',
-		// 		this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-		// 		Date.now(),
-		// 	);
-		// 	await this.sos.sync.wait('customValue', this.syncContentPrepared?.fullScreenTrigger.syncGroupName, 1000);
-		// 	console.log(
-		// 		'end1 of fist non-sync media after dynamic content end in syncgroup',
-		// 		this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-		// 		Date.now(),
-		// 	);
-		// 	delete this.syncContentPrepared?.fullScreenTrigger;
-		// }
-
 		// cancel if video is not same as previous one played in the parent region ( triggers case )
 		if (
 			parentRegion.regionName !== regionInfo.regionName &&
@@ -1080,6 +1061,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					regionInfo.regionName,
 					element.triggerValue,
 				);
+				debug(
+					'cancelling trigger: %s withId: %s',
+					this.currentlyPlaying[regionInfo.regionName].src,
+					triggerValueToCancel,
+				);
+				debug('cancelling trigger: %O', this.triggers.triggersEndless);
 				// stop trigger
 				set(this.triggers.triggersEndless, `${triggerValueToCancel}.play`, false);
 			}
@@ -1162,6 +1149,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				src: <string>element.getAttribute('src'),
 				id: element.id,
 				dur: value.dur,
+				syncIndex: value.syncIndex ?? undefined,
 				regionInfo: value.regionInfo,
 				localFilePath: value.localFilePath,
 				dynamicValue: value.dynamicValue,
@@ -1241,6 +1229,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				value,
 				taskStartDate,
 				value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+				!!value.syncIndex && this.synchronization.shouldSync,
 				err.message,
 			);
 		}
@@ -1272,27 +1261,25 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
 
-		console.log(
-			'before of fist non-sync media after dynamic content end in syncgroup',
-			this.syncContentPrepared?.fullScreenTrigger,
-			element.dynamicValue,
-			Date.now(),
-		);
+		// console.log(
+		// 	'before of fist non-sync media after dynamic content end in syncgroup',
+		// 	this.syncContentPrepared?.fullScreenTrigger,
+		// 	element.dynamicValue,
+		// 	Date.now(),
+		// );
 		if (this.syncContentPrepared?.fullScreenTrigger && !element.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(this.syncContentPrepared);
-			// console.log(this.syncContentPrepared?.fullScreenTrigger);
-			// console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
-			console.log(
-				'start1 of fist non-sync media after dynamic content end in syncgroup',
-				this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-				Date.now(),
-			);
-			await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
-			console.log(
-				'end1 of fist non-sync media after dynamic content end in syncgroup',
-				this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-				Date.now(),
-			);
+			// console.log(
+			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
+			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+			// 	Date.now(),
+			// );
+			// TODO: uncomment
+			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
+			// console.log(
+			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
+			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
+			// 	Date.now(),
+			// );
 			// delete this.syncContentPrepared?.fullScreenTrigger;
 		}
 
@@ -1312,14 +1299,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop &&
 			this.currentlyPlaying[currentRegionInfo.regionName]?.player !== 'stop'
 		) {
-			// TODO: remove
-			if (
-				this.syncContentPrepared?.fullScreenTrigger &&
-				!element.dynamicValue &&
-				this.synchronization.shouldSync
-			) {
-				console.log('non sync starting image countdown', Date.now(), element.src);
-			}
 			while (
 				this.currentlyPlayingPriority[currentRegionInfo.regionName][arrayIndex] &&
 				get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player
@@ -1347,17 +1326,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		debug('element playing finished: %O', element);
-		console.log(
-			'non sync starting image--------------------------------------',
-			this.currentlyPlaying[currentRegionInfo.regionName]?.player,
-			get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop,
-		);
-		console.log(this.currentlyPlayingPriority);
+		// console.log(
+		// 	'non sync starting image--------------------------------------',
+		// 	this.currentlyPlaying[currentRegionInfo.regionName]?.player,
+		// 	get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop,
+		// );
 
 		await this.files.sendMediaReport(
 			element,
 			taskStartDate,
 			tag === 'ticker' ? 'ticker' : element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+			!!element.syncIndex && this.synchronization.shouldSync,
 		);
 	};
 
@@ -1530,7 +1509,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
-		console.log(currentIndexPriority?.player.timesPlayed);
 		if (
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
@@ -1615,7 +1593,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						debug('Playing video finished: %O in playlist version: %s', video, version);
 
-						await this.files.sendMediaReport(video, taskStartDate, 'video');
+						await this.files.sendMediaReport(
+							video,
+							taskStartDate,
+							'video',
+							!!video.syncIndex && this.synchronization.shouldSync,
+						);
 
 						// create currentlyPlayingPriority for trigger nested region
 						if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
@@ -1689,7 +1672,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						);
 					} catch (err) {
 						debug('Unexpected error: %O occurred during single video playback: O%', err, video);
-						await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
+						await this.files.sendMediaReport(
+							video,
+							taskStartDate,
+							'video',
+							!!video.syncIndex && this.synchronization.shouldSync,
+							err.message,
+						);
 					}
 					debug('finished playing element: %O', video);
 				})(),
@@ -1699,7 +1688,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(1000);
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
-			await this.files.sendMediaReport(video, taskStartDate, 'video', err.message);
+			await this.files.sendMediaReport(
+				video,
+				taskStartDate,
+				'video',
+				!!video.syncIndex && this.synchronization.shouldSync,
+				err.message,
+			);
 		}
 	};
 
@@ -1729,16 +1724,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		console.log(
-			'before of fist non-sync media after dynamic content end in syncgroup **',
-			this.syncContentPrepared?.fullScreenTrigger,
-			video.dynamicValue,
-			Date.now(),
-		);
+		// console.log(
+		// 	'before of fist non-sync media after dynamic content end in syncgroup **',
+		// 	this.syncContentPrepared?.fullScreenTrigger,
+		// 	video.dynamicValue,
+		// 	Date.now(),
+		// );
 		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(this.syncContentPrepared);
-			// console.log(this.syncContentPrepared?.fullScreenTrigger);
-			// console.log(typeof this.syncContentPrepared?.fullScreenTrigger);
 			console.log(
 				'start1 of fist non-sync media after dynamic content end in syncgroup',
 				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
@@ -1758,7 +1750,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sosVideoObject.play(...params);
 			debug('After## video play function - single video: %O', video);
 		} catch (err) {
-			await this.files.sendMediaReport(video, moment().toDate(), 'video', err.message);
+			await this.files.sendMediaReport(
+				video,
+				moment().toDate(),
+				'video',
+				!!video.syncIndex && this.synchronization.shouldSync,
+				err.message,
+			);
 			await sosVideoObject.stop(
 				params[0],
 				currentRegionInfo.left,
@@ -2150,16 +2148,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(50);
 		}
 
-		console.log('****************************************************');
-		console.log('##', this.currentlyPlaying[regionInfo.regionName]?.src !== value.src);
-		console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
-		console.log('##', this.currentlyPlaying[regionInfo.regionName]);
-		console.log('##', config.videoOptions.background);
-		console.log('##', value.protocol !== StreamEnums.internal);
-		console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
-		console.log('##', value.src);
-		console.log('##', this.currentlyPlaying[regionInfo.regionName]?.playing);
-		console.log('****************************************************');
+		// console.log('****************************************************');
+		// console.log('##', this.currentlyPlaying[regionInfo.regionName]?.src !== value.src);
+		// console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
+		// console.log('##', this.currentlyPlaying[regionInfo.regionName]);
+		// console.log('##', config.videoOptions.background);
+		// console.log('##', value.protocol !== StreamEnums.internal);
+		// console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
+		// console.log('##', value.src);
+		// console.log('##', this.currentlyPlaying[regionInfo.regionName]?.playing);
+		// console.log('****************************************************');
 		// prepare if video is not same as previous one played or if video should be played in background
 		if (
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== value.src &&
@@ -2242,7 +2240,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				value.syncGroupName = groupName;
 
-				console.log('element will sync, create state **', value.src);
+				// console.log('element will sync, create state **', value.src);
 				this.syncContentPrepared.fullScreenTrigger = {
 					syncGroupName: groupName,
 					numberOfNonSync: 0,
@@ -2267,9 +2265,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							groupName,
 						});
 					}
-					console.log('waiting for syncIndex', Date.now());
+					// console.log('waiting for syncIndex', Date.now());
 					currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					console.log('waiting for syncIndex end', Date.now());
+					// console.log('waiting for syncIndex end', Date.now());
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
 							type: 'SMIL.SyncWait-Ended',
@@ -2310,11 +2308,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		} else {
 			if (this.syncContentPrepared?.fullScreenTrigger) {
-				console.log(
-					'element will not sync, create state **',
-					value.src,
-					this.syncContentPrepared?.fullScreenTrigger,
-				);
+				// console.log(
+				// 	'element will not sync, create state **',
+				// 	value.src,
+				// 	this.syncContentPrepared?.fullScreenTrigger,
+				// );
 				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
 
 				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {
