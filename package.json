@@ -78,7 +78,7 @@
     "chai": "^4.3.4",
     "cross-env": "^7.0.3",
     "debug": "^4.3.4",
-    "del-cli": "^4.0.1",
+    "del-cli": "^5.1.0",
     "express": "^4.17.1",
     "he": "1.2.0",
     "ical": "git+https://github.com/signageos/ical.js.git#afa98010e0c593b1c49131bb3d884a497fee317a",
