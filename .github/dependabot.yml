@@ -1,0 +1,14 @@
+version: 2
+registries:
+  codeartifact:
+    type: npm-registry
+    url: https://signageos-524256255273.d.codeartifact.eu-central-1.amazonaws.com/npm/private/
+    token: ${{secrets.NPM_AUTH_TOKEN}}
+    replaces-base: true
+updates:
+ - package-ecosystem: "npm"
+   directory: "/"
+   schedule:
+      interval: "weekly"
+   registries:
+     - codeartifact
