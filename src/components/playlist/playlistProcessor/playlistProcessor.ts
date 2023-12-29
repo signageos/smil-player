@@ -67,7 +67,12 @@ import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamic
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { broadcastSyncValue, cancelDynamicPlaylistMaster, joinSyncGroup } from '../tools/dynamicTools';
-import { broadcastEndActionToAllDynamics, connectSyncSafe, joinAllSyncGroupsOnSmilStart } from '../tools/syncTools';
+import {
+	broadcastEndActionToAllDynamics,
+	connectSyncSafe,
+	hasDynamicContent,
+	joinAllSyncGroupsOnSmilStart,
+} from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
@@ -242,11 +247,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 					await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, smilObject);
 
-					if (firstIteration) {
+					if (firstIteration && hasDynamicContent(smilObject)) {
 						await broadcastEndActionToAllDynamics(this.sos, this.synchronization, smilObject);
 					}
 				} catch (error) {
-					debug('Error during playlist processing: %O', error);
+					debug('Error during playlist processing sync setup: %O', error);
 					console.error(error);
 				}
 
