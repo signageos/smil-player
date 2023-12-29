@@ -64,7 +64,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 				if (nestedValue.sync) {
 					// has to be initialized by value because it iterates over array
 					debug(
-						'Initializing sync server group: %s with deviceSyncId: %s',
+						'Initializing sync server group on start dynamic: %s with deviceSyncId: %s',
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 						synchronization.syncDeviceId,
 					);
@@ -79,7 +79,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 		}
 		if (value.sync) {
 			debug(
-				'Initializing sync server group: %s with deviceSyncId: %s',
+				'Initializing sync server group regular: %s with deviceSyncId: %s',
 				`${synchronization.syncGroupName}-${key}`,
 				synchronization.syncDeviceId,
 			);
@@ -103,8 +103,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
-		// await this.sos.sync.connect('ws://localhost:8085');
-		await sos.sync.connect({ engine: SyncEngine.Udp });
+		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
 		resetAppRestartCount();
 	} catch (error) {
 		const nextTryMultiplier = 1 / (Math.log(retryCount) + 1);
@@ -116,6 +115,10 @@ export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) 
 			throw error;
 		}
 	}
+}
+
+export function hasDynamicContent(smilObject: SMILFileObject): boolean {
+	return Object.keys(smilObject.dynamic).length > 0;
 }
 
 async function limitedAppRestart(sos: FrontApplet) {
