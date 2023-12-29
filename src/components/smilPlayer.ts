@@ -122,6 +122,7 @@ export class SmilPlayer implements ISmilPlayer {
 		smilUrl: string,
 		thisSos: FrontApplet,
 		playIntro: boolean = true,
+		firstIteration: boolean = true,
 	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
@@ -238,9 +239,9 @@ export class SmilPlayer implements ISmilPlayer {
 				xmlOkParsed = true;
 
 				debug('Starting to process parsed smil file');
-				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false);
+				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false);
 				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
-				const firstIteration = Object.keys(smilObject.dynamic).length > 0;
+				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilObject, smilFile, firstIteration, restart);
 			} catch (err) {
 				if (smilFileContent === '') {
