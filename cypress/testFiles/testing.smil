@@ -1,23 +1,18 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <meta log="false"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="widgetRegion" left="960" top="0" width="960" height="1080" z-index="1"
-                    backgroundColor="#000000"/>
-            <region regionName="triggerRegion" left="0" top="0" width="960" height="1080" z-index="1"
-                    backgroundColor="#000000">
-                <region regionName="triggerSubRegion" left="0" top="0" width="960" height="1080" z-index="1"
-                        backgroundColor="#000000"/>
-            </region>
+            <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#000000" sync="true"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
+                    <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
                          dur="5s" fit="fill"/>
                 </seq>
             </seq>
@@ -26,74 +21,33 @@
                 <excl>
                     <par>
                         <seq repeatCount="indefinite">
-                            <!-- [OfflineWebsiteModule] widget - trigger emmiter (clowvjjgy192221xhb9de6n8xk) -->
+                            <!-- [GalleryModule] v1 (clqxp3vnl19301xn3pk8s0w9v) -->
                             <seq>
-                                <ref src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/cloyn753y00000xjxciva9p0e.wgt"
-                                     type="application/widget" dur="15s" region="widgetRegion"/>
+                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/12/clqavf5ws00050xn3d7b14j89.mp4"
+                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <!-- [GalleryModule] o1 (clqxp4nco35901xn3bermwyf9) -->
+                            <seq>
+                                <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/12/clq0td9mr000c0xmkf49ffsmh.jpeg"
+                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <!-- [GalleryModule] o2 (clqxp5ta267941xn3dwm4ao2r) -->
+                            <seq begin="wallclock(2000-01-01T00:00)" end="wallclock(2024-01-29T23:00)">
+                                <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/12/clq0t7pfm00030xmk0d1v7fop.jpeg"
+                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <!-- [WebsiteModule] w2 (clqxpkis0235331xn39uksz5wx) -->
+                            <seq begin="wallclock(2024-01-03T13:25)" end="wallclock(2024-01-15T13:30)">
+                                <ref src="https://www.signagelab.com/" type="text/html" dur="10s"
+                                     region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <!-- [GalleryModule] v2 (clqxp596051971xn3ua8efrqn) -->
+                            <seq begin="wallclock(2024-01-03T01:00)" end="wallclock(2024-01-03T23:00)">
+                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/12/clqaveyio00020xn3h25u147y.mp4"
+                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
                             </seq>
                         </seq>
                     </par>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] galerie - no trigger (clowviigg176411xhbbco35bua) -->
-                            <seq>
-                                <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwnyl1000e0xhb00b3fyiy.mp4"
-                                       soundLevel="0%" region="triggerRegion"/>
-                            </seq>
-                        </seq>
-                    </par>
-                    <!-- [GalleryModule] galerie - trigger 2 (clowvh0mi139521xhbbkfitc3r) -->
-                    <par>
-
-                        <seq begin="trigger1" dur="indefinite">
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwixsv00050xhbeyqj41j7.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwiztl00060xhbhaf520kz.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwj2ei00070xhbhsyp56u5.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                        </seq>
-                    </par>
-                    <par>
-
-
-                        <!-- [GalleryModule] galerie - trigger 1 (clowv9reh120221xhbm5or9oho) -->
-                        <seq begin="trigger2" dur="indefinite">
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwi7t100020xhb9eyq7gp8.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwi99w00030xhb76t1cv0z.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwibn300040xhb4t04cdva.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                        </seq>
-                    </par>
-                    <par>
-
-
-                        <!-- [GalleryModule] galerie - trigger 3 (clowvhqo3157101xhb8pqkkuch) -->
-                        <seq begin="trigger3" dur="indefinite">
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwjvxy00080xhb9l2p5yv6.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwjya900090xhbbvkk4gea.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwk0os000a0xhbgih2f07x.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                        </seq>
-                    </par>
-                    <par>
-
-
-                        <!-- [GalleryModule] galerie - trigger 4 (clowvhv5m161031xhbjuz4jxix) -->
-                        <seq begin="trigger4" dur="indefinite">
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwkgka000b0xhb0kqeccqz.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwkioa000c0xhb46oyc2sq.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                            <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwkkyl000d0xhbcfhtgcwh.mp4"
-                                   soundLevel="0%" region="triggerRegion"/>
-                        </seq>
-                    </par>
-
                 </excl>
             </par>
         </par>
