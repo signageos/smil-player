@@ -134,6 +134,8 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			const pausedIndex = currentIndexPriority.controlledPlaylist;
 			// reset counter for finished playlist
 			currentIndexPriority.player.timesPlayed = 0;
+			currentIndexPriority.player.playing = false;
+
 			if (!isNil(pausedIndex)) {
 				const pausedIndexPriority = this.currentlyPlayingPriority[priorityRegionName][pausedIndex];
 				debug(
@@ -144,7 +146,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				pausedIndexPriority.player.contentPause = 0;
 				pausedIndexPriority.behaviour = '';
 			}
-			currentIndexPriority.player.playing = false;
 
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
 				debug('Dynamic playlist finished: %O for region: %s', currentIndexPriority.media, priorityRegionName);
