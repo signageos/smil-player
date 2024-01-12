@@ -505,7 +505,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					return;
 				}
 
-				const triggerId = event.data.replace('data', '').replace('_', '').replace('_', '');
+				const triggerId =
+					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.data}`].trigger;
 				const triggerMedia = this.smilObject.triggers[triggerId];
 				const triggerInfo = {
 					trigger: triggerId,
