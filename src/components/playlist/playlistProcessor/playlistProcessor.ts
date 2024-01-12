@@ -341,6 +341,47 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return promises;
 	};
 
+	public processExclTag = async (
+		value: PlaylistElement | PlaylistElement[],
+		version: number,
+		parent: string = '',
+		endTime: number = 0,
+		conditionalExpr: string = '',
+	): Promise<Promise<void>[]> => {
+		const promises: Promise<void>[] = [];
+		if (!Array.isArray(value)) {
+			value = [value];
+		}
+		let arrayIndex = value.length - 1;
+		for (let elem of value) {
+			// wallclock has higher priority than conditional expression
+			if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
+				debug('Conditional expression: %s, for value: %O is false', elem[ExprTag]!, elem);
+				if (
+					arrayIndex === 0 &&
+					setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait
+				) {
+					debug(
+						'No active sequence find in conditional expression schedule, setting default await: %s',
+						SMILScheduleEnum.defaultAwait,
+					);
+					await sleep(SMILScheduleEnum.defaultAwait);
+				}
+				arrayIndex -= 1;
+				continue;
+			}
+
+			promises.push(
+				(async () => {
+					await this.processPlaylist(elem, version, parent, endTime, {} as PriorityObject, conditionalExpr);
+				})(),
+			);
+			arrayIndex -= 1;
+		}
+
+		return promises;
+	};
+
 	public processDynamicPlaylist = async (
 		dynamicPlaylistConfig: DynamicPlaylist,
 		version: number,
@@ -498,7 +539,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (key === 'excl') {
-				promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
+				// priority is temporary turner off for slab playlist due to sync issue with priority
+				promises = await this.processExclTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
+
+				// promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'priorityClass') {
