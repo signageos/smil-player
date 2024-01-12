@@ -477,6 +477,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					endTime,
 					priorityObject,
 				);
+
 				await this.playElement(
 					value as SMILMedia,
 					version,
@@ -706,7 +707,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							continue;
 						}
 
-						if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
+						if (valueElement.repeatCount !== 'indefinite') {
 							if (timeToStart <= 0) {
 								promises.push(
 									this.createRepeatCountDefinitePromise(
@@ -774,7 +775,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						continue;
 					}
 
-					if (valueElement.hasOwnProperty('repeatCount') && valueElement.repeatCount !== 'indefinite') {
+					if (valueElement.repeatCount !== 'indefinite') {
 						promises.push(
 							this.createRepeatCountDefinitePromise(
 								valueElement,
@@ -858,7 +859,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timeToStart: number = -1,
 		conditionalExpr: string = '',
 	): Promise<void> => {
-		const repeatCount: number = parseInt(value.repeatCount as string);
+		const repeatCount: number = Number.isNaN(parseInt(value.repeatCount as string))
+			? 1
+			: parseInt(value.repeatCount as string);
+
 		let counter = 0;
 		return (async () => {
 			let newParent = generateParentId(parent, value);
@@ -1151,7 +1155,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			let element = <HTMLElement>document.getElementById(<string>value.id);
 
 			let sosHtmlElement: SosHtmlElement = {
-				src: <string>element.getAttribute('src'),
+				src: element.getAttribute('src')!,
 				id: element.id,
 				dur: value.dur,
 				syncIndex: value.syncIndex ?? undefined,
@@ -1181,6 +1185,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 					changeZIndex(value, element, +1, false);
 
+					// TODO: fix ticker condition ( nonticker elements get ticker animation )
 					if (
 						this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
 						this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
@@ -1204,6 +1209,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						'Finished iteration of playlist: %O',
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 					);
+
 					await this.priority.handlePriorityWhenDone(
 						value as SMILMedia,
 						currentRegionInfo.regionName,

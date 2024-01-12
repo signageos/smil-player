@@ -7,7 +7,6 @@ import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 
 export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchronization, groupName: string) {
-	console.log({ ...(synchronization.syncDeviceId ? { deviceIdentification: synchronization.syncDeviceId } : {}) });
 	await sos.sync.joinGroup({
 		groupName,
 		...(synchronization.syncDeviceId ? { deviceIdentification: synchronization.syncDeviceId } : {}),
