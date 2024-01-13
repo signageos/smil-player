@@ -1,7 +1,7 @@
 version: '3'
 services:
     app:
-        image: 172396373649.dkr.ecr.eu-central-1.amazonaws.com/signageos/docker-node:14-alpine-build
+        image: 172396373649.dkr.ecr.eu-central-1.amazonaws.com/signageos/docker-node:16-alpine-build
         volumes:
             - .:/app
         working_dir: /app
