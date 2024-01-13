@@ -5,7 +5,7 @@ sidebar_position: 2
 
 Following guide provides steps to build your version of SMIL Player from Github repository and uploading it to signageOS DevSpace.
 
-## Prerequisites:
+## Prerequisites:
 
 1. signageOS Account
 1. created Organization in Box (create one here)

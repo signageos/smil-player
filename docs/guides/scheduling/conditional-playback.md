@@ -28,12 +28,12 @@ The content of the `expr` tag is an HTML-encoded XPath expression. Following pla
 | ----------- | ----------- | ----------- |
 | smil-playerId() | Returns playerId defined in Timing config as `playerId` in lower case. | expr="compare(smil-playerId(),'f1835d9f-be8f-4054-9e6c-123456789012')" |
 | smil-playerName() | Returns player name defined in Timing config as `playerName`. | expr="compare(smil-playerName(),'Entrance')" |
-| date() | Returns player's local date-time in ISO8601 format. | expr="compare(date(),'2021-01-01T00:00:00')<0" |
-| gmdate() | Returns player's UTC date-time in ISO8601 format (ending in UTC indicator "Z"). | expr="compare(gmdate(),'2021-01-01T00:00:00Z')<0" |
-| time() | Returns player time in HH:MM:SS, 24 hours format | expr="compare(time(),'16:29:15')<0" |
-| weekday() | Returns a number from 0 (Sunday) to 6 (Saturday) indicating player's local day-of-week. | expr="weekday()=1" |
-| gmweekday() | Returns a number from 0 (Sunday) to 6 (Saturday) indicating player's UTC day-of-week. | expr="gmweekday()=1" |
-| compare(string comp1, string comp2) | Returns -1 if comp1 is "less" than comp2 as a string, 0 if equal, 1 if "greater". | expr="compare(date(),'2021-01-01T00:00:00')<0" |
+| date() | Returns player's local date-time in ISO8601 format. | `expr="compare(date() '2021-01-01T00:00:00')<0"` |
+| gmdate() | Returns player's UTC date-time in ISO8601 format (ending in UTC indicator "Z"). | `expr="compare(gmdate(),'2021-01-01T00:00:00Z')<0"` |
+| time() | Returns player time in HH:MM:SS, 24 hours format | `expr="compare(time(),'16:29:15')<0"` |
+| weekday() | Returns a number from 0 (Sunday) to 6 (Saturday) indicating player's local day-of-week. | `expr="weekday()=1"` |
+| gmweekday() | Returns a number from 0 (Sunday) to 6 (Saturday) indicating player's UTC day-of-week. | `expr="gmweekday()=1"` |
+| compare(string comp1, string comp2) | Returns -1 if comp1 is "less" than comp2 as a string, 0 if equal, 1 if "greater". | `expr="compare(date(),'2021-01-01T00:00:00')<0"` |
 
 If you are working with a legacy implementation of the SMIL, you are probably using `adapi-` prefix for functions above. You can keep using it, signageOS SMIL Player supports these functions with or without the `adapi-` prefix.
 

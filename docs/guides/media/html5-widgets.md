@@ -62,4 +62,4 @@ const sos = require('@signageos/front-applet');
 <script src="..path/to/the/front-applet.js" />
 ```
 
-You can manually download the library here: <https://2.signageos.io/lib/front-applet/4.15.0/bundle.js>. You can also download any other version by changing the 4.15.0. to [another version that is available](https://docs.signageos.io/hc/en-us/articles/4409188685074).
+You can manually download the library here: https://2.signageos.io/lib/front-applet/4.15.0/bundle.js. You can also download any other version by changing the 4.15.0. to [another version that is available](https://docs.signageos.io/hc/en-us/articles/4409188685074).
