@@ -1,4 +1,4 @@
-image: $ECR_REGISTRY/signageos/docker-node:14.17.3-alpine-build
+image: $ECR_REGISTRY/signageos/docker-node:14-alpine-build
 services:
     - docker:dind
 

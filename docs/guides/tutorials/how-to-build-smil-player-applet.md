@@ -9,7 +9,7 @@ Following guide provides steps to build your version of SMIL Player from Github 
 
 1. signageOS Account
 1. created Organization in Box (create one here)
-1. Node.js >= 10.15.0
+1. Node.js >= 14
 1. NPM
 1. a shell/terminal environment (like bash, zsh, powershell...)
 1. a source-code editor (like VSCode, Sublime, WebStorm...)
