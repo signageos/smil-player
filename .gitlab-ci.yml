@@ -1,4 +1,4 @@
-image: $CI_REGISTRY/signageos/docker-node:14.17.3-alpine-build
+image: $ECR_REGISTRY/signageos/docker-node:14.17.3-alpine-build
 services:
     - docker:dind
 
@@ -23,7 +23,7 @@ before_script:
     - npm install
 
 prepare:
-    image: $CI_REGISTRY/signageos/docker:master
+    image: $ECR_REGISTRY/signageos/docker:master
     stage: prepare
     before_script: []
     script:
@@ -49,7 +49,7 @@ test:lint:
         - npm run lint
 
 test:changelog:
-    image: $CI_REGISTRY/signageos/docker:master
+    image: $ECR_REGISTRY/signageos/docker:master
     stage: test
     except:
         - tags
@@ -107,7 +107,7 @@ publish:npm-public:
         - npm publish --ignore-scripts
 
 release:tag:
-    image: $CI_REGISTRY/signageos/docker:master
+    image: $ECR_REGISTRY/signageos/docker:master
     stage: release
     only:
         - master
@@ -118,7 +118,7 @@ release:tag:
         - ci-release-tag
 
 release:notes:
-    image: $CI_REGISTRY/signageos/docker:master
+    image: $ECR_REGISTRY/signageos/docker:master
     stage: release
     only:
         - tags
