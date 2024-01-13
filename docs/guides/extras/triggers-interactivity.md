@@ -4,7 +4,7 @@ Triggers allow defining set of rules for triggering specific `seq` or `par` play
 
 ## Defining Triggers
 
-The <triggers> element define a pool of individual <trigger> tags.
+The `<triggers>` element define a pool of individual `<trigger>` tags.
 
 - whenever the `<condition>` is `TRUE`, trigger is set as *activate*.
 - whenever the `<condition>` is `FALSE`, trigger is set as *deactivate*.
