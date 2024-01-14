@@ -62,6 +62,8 @@ test:check:
     except:
         - tags
     allow_failure: true
+    variables:
+        TZ: Europe/Prague
     script:
         - npm run check
 
