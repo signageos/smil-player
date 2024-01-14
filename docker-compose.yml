@@ -7,5 +7,6 @@ services:
         working_dir: /app
         env_file:
             - ~/.signageos/npm.env
-        environment: {}
+        environment:
+          TZ: "Europe/Prague"
         command: tail -f /dev/null
