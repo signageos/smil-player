@@ -165,7 +165,8 @@ export function extractAdditionalInfo(
 }
 
 /**
- * There are two ways of computing sync index for elements in playlist: For dynamic playlists it takes local localRegionSyncIndex meaning that it is increment
+ * There are two ways of computing sync index for elements in playlist: For dynamic playlists
+ * it takes local localRegionSyncIndex meaning that it is increment
  * for each seq tag separately. For generic playlists it takes globalRegionSyncIndex which is incremented for each region separately.
  * @param regionSyncIndex
  * @param regionName
