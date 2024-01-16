@@ -5,13 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- support for dynamic triggers
+- upgrade to node v20
+- improved performance for older devices
+- improved reporting messages
+- added option to start triggers from inside the widget
+
 ## [2.1.0] - 2024-01-15
 
 ### Fixed
+
 - fix rare bug which occurs in widget optimization during smil playlist update
 - clarification that advanced usage with extra configuration is still in development
 
 ### Added
+
 - added option to stop trigger using same triggerId as to invoke it
 - change failover mechanism so all devices take care of broken device
 - added ticker implementation
