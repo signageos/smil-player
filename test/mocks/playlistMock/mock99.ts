@@ -244,6 +244,7 @@ export const mockSMILFileParsed99 = {
 		{ dur: 'indefinite', src: 'adapi:blankScreen' },
 	],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',

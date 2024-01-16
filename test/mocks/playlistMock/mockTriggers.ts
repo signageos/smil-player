@@ -155,6 +155,7 @@ export const mockSMILFileTriggers = {
 	],
 	ref: [],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',
