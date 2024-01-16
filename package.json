@@ -11,8 +11,8 @@
     "package.json"
   ],
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8"
+    "node": ">=20.0.0",
+    "npm": ">=10"
   },
   "scripts": {
     "test": "nyc --check-coverage mocha  -- \"test/**/*.spec.ts\" --require ts-node/register -P tsconfig.json",
