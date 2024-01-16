@@ -193,6 +193,7 @@ export const mockBrokenSmil = {
 	img: [],
 	ref: [],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',
