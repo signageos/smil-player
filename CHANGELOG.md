@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - improved reporting messages
 - added option to start triggers from inside the widget
 
+### Fixed
+
+- bug with conditional expression date and time comparison
+
 ## [2.1.0] - 2024-01-15
 
 ### Fixed
