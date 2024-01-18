@@ -119,9 +119,9 @@ function compareIcsExpr(icsData: string): boolean {
 		const currentDate = generateCurrentDate(false);
 		const closedPastStart = event.rrule?.before(currentDate.toDate(), true);
 		const durationMs =
+			// if duration is in event, parse and use it
 			typeof event.duration === 'string'
-				? // if duration is in event, parse and use it
-				parseRFC5545Duration(event.duration)
+				? parseRFC5545Duration(event.duration)
 				: // if no duration in event, get it from difference of start & end date
 				event.start && event.end
 				? event.end.valueOf() - event.start.valueOf()
@@ -147,10 +147,10 @@ function compareWeekDayExpr(compareValue: string, comparator: ComparatorChar, is
  * @param comparable
  * @param isUtc - if date is in UTC or not
  */
-function compareSimpleDateExpr(inputValue: string, comparable: ComparableExpr, isUtc: boolean): boolean {
-	const formattedDate = generateCurrentDate(isUtc).format(ConditionalExprFormat.dateFormat);
+function compareSimpleDateAndTimeExpr(inputValue: string, comparable: ComparableExpr, isUtc: boolean): boolean {
+	const formattedDate = generateCurrentDate(isUtc).format(ConditionalExprFormat.dateAndTimeFormat);
 	const formattedInputValue = isIsoDate(inputValue)
-		? moment(inputValue).format(ConditionalExprFormat.dateFormat)
+		? moment(inputValue).format(ConditionalExprFormat.dateAndTimeFormat)
 		: inputValue;
 
 	return compareValues(formattedDate, formattedInputValue, comparable);
@@ -339,11 +339,11 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentDate) {
-			return compareSimpleDateExpr(constArg.constValue, comparable, false);
+			return compareSimpleDateAndTimeExpr(constArg.constValue, comparable, false);
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentDateUTC) {
-			return compareSimpleDateExpr(constArg.constValue, comparable, true);
+			return compareSimpleDateAndTimeExpr(constArg.constValue, comparable, true);
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentTime) {
