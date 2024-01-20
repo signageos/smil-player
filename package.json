@@ -1,11 +1,10 @@
 {
   "name": "@signageos/smil-player",
-  "version": "2.1.0",
+  "version": "2.1.0-beta",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
     "dist",
-    "docs",
     "README.md",
     "CHANGELOG.md",
     "package.json"
