@@ -18,6 +18,7 @@ cache:
 before_script:
     - export VERSION=`cat ./VERSION`
     - export TAG=`cat ./PRERELEASE`
+    - cp .npmrc.template .npmrc
     - npx --userconfig ./.npmrc @signageos/lib version-upgrade $VERSION
     - mkdir -p dist
     - npm install
@@ -85,9 +86,6 @@ publish:npm:
         - prepare
         - build
     script:
-        - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
-        - echo 'always-auth=true' >> .npmrc
-        - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
         - npm publish --ignore-scripts
 
 publish:npm-public:
@@ -99,9 +97,6 @@ publish:npm-public:
         - prepare
         - build
     script:
-        - echo 'registry=${NPM_REGISTRY_URL}' > .npmrc
-        - echo 'always-auth=true' >> .npmrc
-        - echo '//${NPM_REGISTRY_HOST}/:_authToken="${NPM_AUTH_TOKEN}"' >> .npmrc
         - export NPM_REGISTRY_URL=https://registry.npmjs.org/
         - export NPM_REGISTRY_HOST=registry.npmjs.org
         - export NPM_AUTH_TOKEN=$PUBLIC_NPM_AUTH_TOKEN
@@ -126,3 +121,31 @@ release:notes:
         - tags
     script:
         - ci-release-notes
+
+.upstream:documentation:
+  stage: release
+  when: on_success
+  needs:
+    - prepare
+    - build
+    - publish:npm
+  trigger:
+    project: signageos/services/documentation
+    strategy: depend
+    branch: master
+
+upstream:check:documentation:
+  extends:
+    - .upstream:documentation
+  except:
+    - tags
+  variables:
+    SMIL_PLAYER_PRERELEASE_TAG: $CI_COMMIT_REF_SLUG
+
+upstream:deploy:documentation:
+  extends:
+    - .upstream:documentation
+  only:
+    - tags
+  variables:
+    FORCE_DEPLOY: production
