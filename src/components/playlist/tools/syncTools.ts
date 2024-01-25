@@ -103,6 +103,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
+		// @ts-ignore
 		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
 		resetAppRestartCount();
 	} catch (error) {
