@@ -25,8 +25,8 @@ export async function broadcastSyncValue(
 		groupName,
 		key: 'myKey',
 		value: {
-			...dynamicPlaylistConfig,
 			action,
+			...dynamicPlaylistConfig,
 			requestUid,
 		},
 	});
