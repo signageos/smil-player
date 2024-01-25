@@ -560,6 +560,10 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		}
 		// wait for new potential playlist to appear
 		if (!currentIndexPriority.media.dynamicValue) {
+			console.log(
+				'sleeping defer prio interval',
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 100,
+			);
 			await sleep(
 				(this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100,
 			);
