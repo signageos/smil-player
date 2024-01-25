@@ -239,8 +239,7 @@ export function addEventOnTriggerWidget(
 ): void {
 	for (let [key, value] of Object.entries(elem)) {
 		if (removeDigits(key) === 'ref') {
-			const iframeId: string = get(value, 'id') ?? '';
-			setupIframeEventListeners(iframeId, triggerEndless, triggerInfo);
+			setupIframeEventListeners(get(value, 'id'), triggerEndless, triggerInfo);
 		}
 		if (isObject(value)) {
 			return addEventOnTriggerWidget(value, triggerEndless, triggerInfo);
