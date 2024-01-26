@@ -36,7 +36,7 @@ Tools folder contains helper functions such as getting file name of path out of 
 Component responsible for recursively processing playlist in json format and playing all types of media. Contains
 function to play video, image, audio and widget as well as some third party web page. For actual playing of media it
 uses mostly SoS sdk functions which you can find more about here
-https://sdk.docs.signageos.io/api/js/content/js-api-introduction.
+https://developers.signageos.io/sdk.
 
 It contains function which is processing SMIL playlist in an infinite loop, as well as checking if smil file or any
 other media changed. If so, it will stop infinite playlist processing and restart whole process with freshly updated
