@@ -33,7 +33,7 @@ Here is an example file structure of the widget with nested folders and files:
 
 ## Using signageOS JS SDK within Widget
 
-The great benefit of the widget is the possibility to use signage [signageOS JS SDK](https://sdk.docs.signageos.io/api/js/content/latest/js-api-introduction) within the widget. It allows you to:
+The great benefit of the widget is the possibility to use signage [signageOS JS SDK](https://developers.signageos.io/sdk) within the widget. It allows you to:
 
 - communicate with RS232 and sensors
 - adjust LED stripes
