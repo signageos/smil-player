@@ -48,7 +48,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	};
 
 	protected getCancelFunction = (): boolean => {
-		return this.cancelFunction[this.cancelFunction.length - 1];
+		return this.cancelFunction[this.cancelFunction?.length - 1];
 	};
 
 	/**

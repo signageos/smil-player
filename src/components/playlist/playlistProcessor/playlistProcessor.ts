@@ -210,8 +210,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Last modified check for smil media files prepared');
 						debug('Checking files for changes');
 						if (
-							fileEtagPromisesMedia.length > 0 ||
-							(fileEtagPromisesSMIL.length > 0 && this.synchronization.shouldSync)
+							fileEtagPromisesMedia?.length > 0 ||
+							(fileEtagPromisesSMIL?.length > 0 && this.synchronization.shouldSync)
 						) {
 							debug('One of the files changed, restarting loop with sync on');
 							await this.sos.refresh();
@@ -219,19 +219,24 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						if (
-							fileEtagPromisesMedia.length > 0 ||
-							(fileEtagPromisesSMIL.length > 0 && !this.synchronization.shouldSync)
+							fileEtagPromisesMedia?.length > 0 ||
+							(fileEtagPromisesSMIL?.length > 0 && !this.synchronization.shouldSync)
 						) {
 							debug('One of the files changed, restarting loop with sync off');
 							this.setCheckFilesLoop(false);
 							break;
 						}
+
+						debug('File changes checked');
+
 						await sleep(smilObject.refresh.refreshInterval * 1000);
+						debug('after check interval');
 					} else {
 						debug('Conditional expression for files update is false: %s', smilObject.refresh.expr);
 						await sleep(smilObject.refresh.refreshInterval * 1000);
 					}
 				}
+				debug('calling restart function');
 				// no await
 				restart();
 			})(),
@@ -309,7 +314,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (!Array.isArray(value)) {
 			value = [value];
 		}
-		let arrayIndex = value.length - 1;
+		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
 			if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
@@ -352,7 +357,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (!Array.isArray(value)) {
 			value = [value];
 		}
-		let arrayIndex = value.length - 1;
+		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
 			if (isConditionalExpExpired(elem, this.playerName, this.playerId)) {
@@ -630,7 +635,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						conditionalExpr = <string>value[ExprTag];
 					}
 
-					if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
+					if (value.repeatCount !== 'indefinite') {
 						promises.push(
 							this.createRepeatCountDefinitePromise(
 								value,
@@ -702,7 +707,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					continue;
 				}
 
-				if (value.hasOwnProperty('repeatCount') && value.repeatCount !== 'indefinite') {
+				if (value.repeatCount !== 'indefinite') {
 					promises.push(
 						this.createRepeatCountDefinitePromise(value, priorityObject, version, key, -1, conditionalExpr),
 					);
@@ -730,7 +735,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (
-							arrayIndex === value.length - 1 &&
+							arrayIndex === value?.length - 1 &&
 							setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait
 						) {
 							debug(
@@ -746,13 +751,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						// wallclock has higher priority than conditional expression
-						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value.length)) {
+						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
 							arrayIndex += 1;
 							continue;
 						}
-
 						if (valueElement.repeatCount !== 'indefinite') {
-							if (timeToStart <= 0) {
+							if (timeToStart <= 0 || value?.length === 1) {
 								promises.push(
 									this.createRepeatCountDefinitePromise(
 										valueElement,
@@ -772,19 +776,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						if (valueElement.repeatCount === 'indefinite') {
-							promises.push(
-								this.createRepeatCountIndefinitePromise(
-									valueElement,
-									priorityObject,
-									version,
-									parent,
-									timeToEnd,
-									key,
-									conditionalExpr,
-									timeToStart,
-								),
-							);
-
+							if (timeToStart <= 0 || value?.length === 1) {
+								promises.push(
+									this.createRepeatCountIndefinitePromise(
+										valueElement,
+										priorityObject,
+										version,
+										parent,
+										timeToEnd,
+										key,
+										conditionalExpr,
+										timeToStart,
+									),
+								);
+							}
 							if (!parent.startsWith('par')) {
 								await Promise.all(promises);
 							}
@@ -793,7 +798,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						// play at least one from array to avoid infinite loop
-						if (value.length === 1 || timeToStart <= 0) {
+						if (value?.length === 1 || timeToStart <= 0) {
 							promises.push(
 								this.createDefaultPromise(
 									valueElement,
@@ -814,7 +819,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					// wallclock has higher priority than conditional expression
-					if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value.length)) {
+					if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
 						arrayIndex += 1;
 						continue;
 					}
@@ -1485,7 +1490,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (
 			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
-			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!.length > 0 &&
+			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!?.length > 0 &&
 			(!media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
 				media.triggerValue === this.promiseAwaiting[regionInfo.regionName].triggerValue)
 		) {
@@ -1584,6 +1589,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			return false;
 		}
+
+		debug('Playlist is ready to play: %O', media);
 		return true;
 	};
 
