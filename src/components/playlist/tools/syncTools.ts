@@ -94,19 +94,23 @@ export async function joinAllSyncGroupsOnSmilStart(
 			synchronization.syncDeviceId,
 		);
 		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
+	} else {
+		// smil has some sync region, turn on sync
+		debug('Sync groups joined, turning sync on');
+		synchronization.shouldSync = true;
+		debug('sync object: %O', synchronization);
 	}
 
-	//TODO: testing, join synchronization group for syncinc nonsync content
-	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
-	synchronization.shouldSync = true;
+	// TODO: testing, join synchronization group for syncinc nonsync content
+	// await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
 }
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
-		// @ts-ignore
 		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
 		resetAppRestartCount();
 	} catch (error) {
+		debug('Error occurred during sync connection: %O', error);
 		const nextTryMultiplier = 1 / (Math.log(retryCount) + 1);
 		await sleep(nextTryMultiplier * 2000);
 		if (retryCount > 0) {
