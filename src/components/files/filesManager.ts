@@ -38,9 +38,9 @@ import {
 	SosHtmlElement,
 } from '../../models/mediaModels';
 import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { IFilesManager } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
-import { IFilesManager } from './IFilesManager';
 
 declare global {
 	interface Window {
