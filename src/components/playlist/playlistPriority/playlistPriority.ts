@@ -58,7 +58,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		);
 
 		if (
-			this.currentlyPlayingPriority[priorityRegionName].length > 1 &&
+			this.currentlyPlayingPriority[priorityRegionName]?.length > 1 &&
 			currentIndex !== previousPlayingIndex &&
 			this.currentlyPlayingPriority[priorityRegionName][currentIndex].version ===
 				this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].version
@@ -565,7 +565,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 100,
 			);
 			await sleep(
-				(this.currentlyPlayingPriority[priorityRegionName].length - priorityObject.priorityLevel) * 100,
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 100,
 			);
 		}
 		return true;
@@ -670,10 +670,10 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					break;
 				}
 				// new element, new parent
-				if (arrayIndex === this.currentlyPlayingPriority[priorityRegionName].length - 1) {
+				if (arrayIndex === this.currentlyPlayingPriority[priorityRegionName]?.length - 1) {
 					infoObject.isFirstInPlaylist = infoObject.media;
 					this.currentlyPlayingPriority[priorityRegionName].push(infoObject);
-					currentIndex = this.currentlyPlayingPriority[priorityRegionName].length - 1;
+					currentIndex = this.currentlyPlayingPriority[priorityRegionName]?.length - 1;
 					break;
 				}
 				arrayIndex += 1;
