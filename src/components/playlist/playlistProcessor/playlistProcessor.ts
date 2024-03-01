@@ -505,7 +505,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			let value: PlaylistElement | PlaylistElement[] | SMILMedia = loopValue;
-			debug('Processing playlist element with key: %O, value: %O, parent: %s', key, value, parent);
+			debug(
+				'Processing playlist element with key: %O, value: %O, parent: %s, endTime: %s',
+				key,
+				value,
+				parent,
+				endTime,
+			);
 			// dont play intro in the actual playlist
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				if (isNil((value as SMILMedia).regionInfo)) {
@@ -545,13 +551,25 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			if (key === 'excl') {
 				// priority is temporary turner off for slab playlist due to sync issue with priority
-				promises = await this.processExclTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
+				promises = await this.processExclTag(
+					value,
+					version,
+					parent === '' ? 'seq' : parent,
+					endTime,
+					conditionalExpr,
+				);
 
 				// promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'priorityClass') {
-				promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
+				promises = await this.processPriorityTag(
+					value,
+					version,
+					parent === '' ? 'seq' : parent,
+					endTime,
+					conditionalExpr,
+				);
 			}
 
 			if (removeDigits(key) === SMILDynamicEnum.emitDynamic && this.synchronization.shouldSync) {
@@ -842,6 +860,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					if (valueElement.repeatCount === 'indefinite') {
+						console.log('creating indefinite promise', endTime);
 						promises.push(
 							this.createRepeatCountIndefinitePromise(
 								valueElement,
