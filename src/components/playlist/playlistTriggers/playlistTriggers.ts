@@ -498,15 +498,15 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	private watchWidgetTriggers = () => {
 		debug('watching widget triggers');
 		window.addEventListener(
-			'message',
-			async (event) => {
-				if (!event.data || isObject(event.data)) {
-					debug('no valid data received from widget message: %O', event.data);
+			'sosEvent',
+			async (event: CustomEvent) => {
+				if (!event.detail || isObject(event.detail)) {
+					debug('no valid data received from widget message: %O', event.detail);
 					return;
 				}
 
 				const triggerId =
-					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.data}`].trigger;
+					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
 				const triggerMedia = this.smilObject.triggers[triggerId];
 				const triggerInfo = {
 					trigger: triggerId,
@@ -521,6 +521,30 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			},
 			false,
 		);
+		// window.addEventListener(
+		// 	'message',
+		// 	async (event) => {
+		// 		if (!event.data || isObject(event.data)) {
+		// 			debug('no valid data received from widget message: %O', event.data);
+		// 			return;
+		// 		}
+		//
+		// 		const triggerId =
+		// 			this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.data}`].trigger;
+		// 		const triggerMedia = this.smilObject.triggers[triggerId];
+		// 		const triggerInfo = {
+		// 			trigger: triggerId,
+		// 		};
+		// 		set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
+		//
+		// 		const stringDuration = findDuration(triggerMedia);
+		// 		if (!isNil(stringDuration)) {
+		// 			await this.processTriggerDuration(triggerInfo as any, triggerMedia, stringDuration);
+		// 			return;
+		// 		}
+		// 	},
+		// 	false,
+		// );
 	};
 
 	private watchRfidAntena = async () => {
