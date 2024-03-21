@@ -31,6 +31,7 @@ import {
 	getIndexOfPlayingMedia,
 	getLastArrayItem,
 	getRegionInfo,
+	processRandomPlayMode,
 	removeDigits,
 	sleep,
 } from '../tools/generalTools';
@@ -743,7 +744,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					value = [value];
 				}
 				let arrayIndex = 0;
-				for (const valueElement of value) {
+				for (let valueElement of value) {
+					debug('processing seq element: %O', valueElement);
+
+					if (valueElement.playMode) {
+						debug('Processing random play mode: %O with parent: %s', valueElement, parent);
+						valueElement = processRandomPlayMode(valueElement, this.randomPlaylist, parent);
+					}
+
 					// debug('processing seq element: %O', valueElement);
 					if (valueElement.hasOwnProperty(ExprTag)) {
 						conditionalExpr = valueElement[ExprTag];
