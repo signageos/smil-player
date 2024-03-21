@@ -9,15 +9,21 @@ import moment from 'moment';
 
 const hasher = require('node-object-hash');
 
-import { BackupPlaylist, CurrentlyPlayingRegion, PlaylistElement } from '../../../models/playlistModels';
+import {
+	BackupPlaylist,
+	CurrentlyPlayingRegion,
+	PlaylistElement,
+	RandomPlaylist,
+} from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { SMILEnums, parentGenerationRemove } from '../../../enums/generalEnums';
+import { SMILEnums, parentGenerationRemove, randomPlaylistPlayableTagsRegex } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
+import { difference, omit } from 'lodash';
 
 export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
@@ -264,4 +270,79 @@ export async function sleep(ms: number): Promise<void> {
 	});
 
 	clearTimeout(timeoutId);
+}
+
+export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
+	const ordered = Object.keys(jsonObject)
+		.sort()
+		.reduce((obj: { [objKey in string]: unknown }, key) => {
+			obj[key] = jsonObject[key];
+			return obj;
+		}, {});
+
+	return ordered;
+}
+
+export function shuffleObject(playlist: { [key in string]: unknown }): { [key in string]: unknown } {
+	let shuffledPlaylist: {
+		[key in string]: unknown;
+	} = {};
+	let keys = Object.keys(playlist);
+	keys.sort(() => Math.random() - 0.5);
+	keys.forEach((key) => {
+		shuffledPlaylist[key] = playlist[key];
+	});
+	return shuffledPlaylist;
+}
+
+export function pickRandomOne(playlist: { [key in string]: unknown }) {
+	const localPlaylist = cloneDeep(playlist);
+	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
+	let picked = playableParts[Math.floor(Math.random() * playableParts.length)];
+	// case playmode is set seq/par containing other seq/par tags and not directly img, video etc...
+	if (Array.isArray(localPlaylist[picked])) {
+		const pickedWithIndex = `${picked}[${Math.floor(
+			Math.random() * (localPlaylist[picked] as Array<{ [key in string]: unknown }>).length,
+		)}]`;
+		const finalObject: { [key in string]: unknown } = omit(localPlaylist, pickedWithIndex);
+		finalObject[picked] = (finalObject[picked] as Array<{ [key in string]: unknown }>).filter((elem) => elem);
+		return finalObject;
+	}
+	const diff = difference(playableParts, [picked]);
+	return omit(localPlaylist, diff);
+}
+
+export function getNextElementToPlay(
+	playlist: { [key in string]: unknown },
+	randomPlaylistInfo: RandomPlaylist,
+	parent: string,
+) {
+	if (!randomPlaylistInfo[parent]) {
+		randomPlaylistInfo[parent] = {
+			previousIndex: 0,
+		};
+	}
+	const localPlaylist = cloneDeep(playlist);
+	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
+	const picked = playableParts[randomPlaylistInfo[parent].previousIndex++ % playableParts.length];
+	const diff = difference(playableParts, [picked]);
+	return omit(localPlaylist, diff);
+}
+
+export function processRandomPlayMode(
+	playlist: { [key in string]: string },
+	randomPlaylistInfo: RandomPlaylist,
+	parent: string,
+) {
+	switch (playlist.playMode.toLowerCase()) {
+		case 'random':
+			return shuffleObject(playlist);
+		case 'random_one':
+			return pickRandomOne(playlist);
+		case 'one':
+			return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
+		default:
+			debug('No valid playMode specified, returning original object, playMode: %s', playlist.playmode);
+			return playlist;
+	}
 }
