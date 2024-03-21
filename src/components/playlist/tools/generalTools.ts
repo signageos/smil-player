@@ -192,9 +192,13 @@ export function computeSyncIndex(
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
 export function generateParentId(tagName: string, value: PlaylistElement): string {
 	try {
+		debug('Generating parent id for: %s', tagName, value);
 		let clone = cloneDeep(value);
+		clone = orderJsonObject(clone);
 		removeNestedProperties(clone, parentGenerationRemove);
-		return `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
+		const parent = `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
+		debug('Generated parent id: %s', parent);
+		return parent;
 	} catch (err) {
 		debug('Error during parent generation: %O', err);
 		return `${tagName}-undefined`;
