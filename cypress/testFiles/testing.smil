@@ -21,7 +21,7 @@
                 <excl>
                     <priorityClass>
                         <!-- [GalleryModule] priorita (clt2pf3fh07281xivglwfg2wh) -->
-                        <seq begin="wallclock(2024-03-01T10:30)" end="wallclock(2024-03-01T10:31)"
+                        <seq begin="wallclock(2024-03-13T17:40)" end="wallclock(2024-03-13T17:41)"
                              repeatCount="indefinite">
                             <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmq9epah000k0xnfcel2dlne.jpeg"
                                  dur="15s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
@@ -31,30 +31,28 @@
                         <seq repeatCount="indefinite">
                             <seq>
                                 <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/widgets/customEvent.wgt"
-                                     type="application/widget" dur="999s"
+                                     type="application/widget" dur="5s"
                                      region="cllul8o1y284991xnt62uxvy1g"/>
                             </seq>
-                            <!-- [GalleryModule] video 1 (clsiuy1lv328281xk001y6i1w3) -->
-                            <!--                            <seq>-->
-                            <!--                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuyjck000f0xk0fmycal0k.mp4"-->
-                            <!--                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                            <!--                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuykkl000g0xk0bezograk.mp4"-->
-                            <!--                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                            <!--                            </seq>-->
-                            <!--                            &lt;!&ndash; [WeatherModule] wgt (clsiuz83z346141xk0bfe8izys) &ndash;&gt;-->
-                            <!--                            <seq>-->
-                            <!--                                <ref src="https://files.signage-cdn.com/environment/stage/modules/weather/33ecc9088f9c6f78aba55369c15cbba9.wgt?appUrl=https%3A%2F%2Fstage.signagelab.com%2Fapi%2Fgraphql&amp;campaignId=clsiuz83z346141xk0bfe8izys&amp;deviceId=cljh3u5ma143431xlcqzvwp7vd&amp;devicePlatformUrl=https%3A%2F%2Fstage.signagelab.com%2Fapi%2Fdevice-platform&amp;hash=33ecc9088f9c6f78aba55369c15cbba9&amp;s3Url=https%3A%2F%2Ffiles.signage-cdn.com%2F"-->
-                            <!--                                     type="application/widget" dur="7s"-->
-                            <!--                                     region="cllul8o1y284991xnt62uxvy1g"/>-->
-                            <!--                            </seq>-->
-                            <!--                            <seq begin="wallclock(2024-03-01T10:32)" end="wallclock(2024-03-01T10:33)"-->
-                            <!--                                 repeatCount="indefinite">-->
-                            <!--                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwi7t100020xhb9eyq7gp8.mp4"-->
-                            <!--                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                            <!--                                <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowpn8l900000xhbar9j39ok.jpeg"-->
-                            <!--                                     dur="7s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                            <!--                            </seq>-->
-
+                            <!--                            [GalleryModule] video 1 (clsiuy1lv328281xk001y6i1w3)-->
+                            <seq>
+                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuyjck000f0xk0fmycal0k.mp4"
+                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuykkl000g0xk0bezograk.mp4"
+                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <!-- [WeatherModule] wgt (clsiuz83z346141xk0bfe8izys) -->
+                            <seq>
+                                <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt"
+                                     region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
+                            <seq begin="wallclock(2024-03-01T10:32)" end="wallclock(2024-03-01T10:33)"
+                                 repeatCount="indefinite">
+                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwi7t100020xhb9eyq7gp8.mp4"
+                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                                <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowpn8l900000xhbar9j39ok.jpeg"
+                                     dur="7s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
+                            </seq>
                         </seq>
                     </priorityClass>
                 </excl>
