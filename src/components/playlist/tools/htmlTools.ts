@@ -135,7 +135,7 @@ export function resetBodyContent() {
 			}
 		}
 	} catch (err) {
-		debug('Error: %O during removing image: %O', err, document.images[document.images.length]);
+		debug('Error: %O during removing image: %O', err, document.images[document.images?.length]);
 	}
 
 	// reset body content
