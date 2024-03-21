@@ -15,6 +15,7 @@ export class SmilPlayerPlaylist {
 		currentlyPlayingPriority: {},
 		synchronization: initSyncObject(),
 		videoPreparing: {},
+		randomPlaylist: {},
 	};
 
 	constructor(sos: FrontApplet, files: FilesManager) {

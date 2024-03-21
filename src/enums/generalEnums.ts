@@ -15,4 +15,16 @@ export enum SMILEnums {
 	syncServer = 'syncServerUrl',
 }
 
-export const parentGenerationRemove = ['promiseFunction', 'media', 'playing', 'player', 'lastModified'];
+export const parentGenerationRemove = [
+	'promiseFunction',
+	'media',
+	'playing',
+	'player',
+	'lastModified',
+	'isFirstInPlaylist',
+	'syncIndex',
+	'timeoutReference',
+	'parent',
+];
+
+export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;

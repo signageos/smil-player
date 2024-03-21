@@ -15,6 +15,15 @@ export type PlaylistOptions = {
 	currentlyPlayingPriority: CurrentlyPlayingPriority;
 	synchronization: Synchronization;
 	videoPreparing: VideoPreparing;
+	randomPlaylist: RandomPlaylist;
+};
+
+export type RandomPlaylist = {
+	[playlistParentName: string]: IndexRecord;
+};
+
+export type IndexRecord = {
+	previousIndex: number;
 };
 
 export type BackupElement = {
@@ -31,6 +40,7 @@ export type BackupPlaylist = {
 };
 
 export type PlaylistElement = {
+	playMode?: string;
 	expr?: string;
 	begin?: string;
 	end?: string;
