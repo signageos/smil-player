@@ -1378,7 +1378,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
 			// 	Date.now(),
 			// );
-			// TODO: uncomment
 			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
 			// console.log(
 			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
