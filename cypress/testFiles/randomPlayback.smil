@@ -14,7 +14,6 @@
         <par repeatCount="indefinite">
             <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-
                 <!-- indefinite loop of media files in the selected order -->
                 <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
                 <seq repeatCount="indefinite">

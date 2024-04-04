@@ -1,61 +1,67 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
-        <meta log="true"/>
+        <meta http-equiv="refresh" content="10"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
-                    backgroundColor="#000000"/>
+            <!-- define the screen resolution -->
+            <root-layout width="1920" height="1080" backgroundColor="#18182cccc"/>
+
+            <!-- define the screen layout, in this case single fullscreen zone -->
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#18182c"/>
         </layout>
     </head>
     <body>
         <par repeatCount="indefinite">
-            <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
-                         dur="5s" fit="fill"/>
-                </seq>
-            </seq>
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <!-- Campaign playlist -->
-                <excl>
-                    <priorityClass>
-                        <!-- [GalleryModule] priorita (clt2pf3fh07281xivglwfg2wh) -->
-                        <seq begin="wallclock(2024-03-13T17:40)" end="wallclock(2024-03-13T17:41)"
-                             repeatCount="indefinite">
-                            <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmq9epah000k0xnfcel2dlne.jpeg"
-                                 dur="15s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
-                        </seq>
-                    </priorityClass>
+                <!-- indefinite loop of media files in the selected order -->
+                <!-- in this case it will play  -->
+                <seq repeatCount="indefinite">
                     <priorityClass>
                         <seq repeatCount="indefinite">
-                            <seq>
-                                <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/widgets/customEvent.wgt"
-                                     type="application/widget" dur="5s"
-                                     region="cllul8o1y284991xnt62uxvy1g"/>
-                            </seq>
-                            <!--                            [GalleryModule] video 1 (clsiuy1lv328281xk001y6i1w3)-->
-                            <seq>
-                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuyjck000f0xk0fmycal0k.mp4"
-                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/02/clsiuykkl000g0xk0bezograk.mp4"
-                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                            </seq>
-                            <!-- [WeatherModule] wgt (clsiuz83z346141xk0bfe8izys) -->
-                            <seq>
-                                <ref src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/bottomWidget.wgt"
-                                     region="cllul8o1y284991xnt62uxvy1g"/>
-                            </seq>
-                            <seq begin="wallclock(2024-03-01T10:32)" end="wallclock(2024-03-01T10:33)"
-                                 repeatCount="indefinite">
-                                <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowwi7t100020xhb9eyq7gp8.mp4"
-                                       soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/11/clowpn8l900000xhbar9j39ok.jpeg"
-                                     dur="7s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
+                            <seq begin="wallclock(2024-04-04T14:39)" end="wallclock(2024-04-04T14:40)">
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/c1.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/c2.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/c3.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/c4.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/c5.mp4"
+                                       region="main" soundLevel="0%"></video>
                             </seq>
                         </seq>
                     </priorityClass>
-                </excl>
+                    <priorityClass higher="pause" pauseDisplay="hide">
+                        <seq repeatCount="indefinite">
+                            <seq playMode="one">
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/m1.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/m2.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/m3.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/m4.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/m5.mp4"
+                                       region="main" soundLevel="0%"></video>
+                            </seq>
+                            <seq playMode="one">
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/z1.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/z2.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/z3.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/z4.mp4"
+                                       region="main" soundLevel="0%"></video>
+                                <video src="https://1.signage-cdn.com/other/Martin/test_video/z5.mp4"
+                                       region="main" soundLevel="0%"></video>
+                            </seq>
+                        </seq>
+                    </priorityClass>
+                </seq>
             </par>
         </par>
     </body>
