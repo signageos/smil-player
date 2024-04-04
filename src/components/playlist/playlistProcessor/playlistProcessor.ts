@@ -749,7 +749,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 					if (valueElement.playMode) {
 						debug('Processing random play mode: %O with parent: %s', valueElement, parent);
-						valueElement = processRandomPlayMode(valueElement, this.randomPlaylist, parent);
+						valueElement = processRandomPlayMode(
+							valueElement,
+							this.randomPlaylist,
+							generateParentId('seq', valueElement),
+						);
 					}
 
 					// debug('processing seq element: %O', valueElement);
