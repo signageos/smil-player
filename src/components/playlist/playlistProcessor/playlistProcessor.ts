@@ -788,7 +788,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 										valueElement,
 										priorityObject,
 										version,
-										'seq',
+										parent,
 										timeToStart,
 										conditionalExpr,
 									),
@@ -803,18 +803,32 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						if (valueElement.repeatCount === 'indefinite') {
 							if (timeToStart <= 0 || value?.length === 1) {
-								promises.push(
-									this.createRepeatCountIndefinitePromise(
-										valueElement,
-										priorityObject,
-										version,
-										parent,
-										timeToEnd,
-										key,
-										conditionalExpr,
-										timeToStart,
-									),
-								);
+								if (value?.length === 1) {
+									promises.push(
+										this.createRepeatCountIndefinitePromise(
+											valueElement,
+											priorityObject,
+											version,
+											parent,
+											timeToEnd,
+											key,
+											conditionalExpr,
+											timeToStart,
+										),
+									);
+								} else {
+									// override combination of wallclock and repeatCount=indefinite in multiple seq tags to repeatCount=1
+									promises.push(
+										this.createRepeatCountDefinitePromise(
+											valueElement,
+											priorityObject,
+											version,
+											parent,
+											timeToStart,
+											conditionalExpr,
+										),
+									);
+								}
 							}
 							if (!parent.startsWith('par')) {
 								await Promise.all(promises);
@@ -1820,17 +1834,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// 	Date.now(),
 		// );
 		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
-			console.log(
-				'start1 of fist non-sync media after dynamic content end in syncgroup',
-				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-				Date.now(),
-			);
-			await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1000);
-			console.log(
-				'end1 of fist non-sync media after dynamic content end in syncgroup',
-				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-				Date.now(),
-			);
+			// console.log(
+			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
+			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+			// 	Date.now(),
+			// );
+			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1000);
+			// console.log(
+			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
+			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
+			// 	Date.now(),
+			// );
 			// delete this.syncContentPrepared?.fullScreenTrigger;
 		}
 
