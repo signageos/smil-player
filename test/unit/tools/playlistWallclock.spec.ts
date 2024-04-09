@@ -7,7 +7,7 @@ import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 const expect = chai.expect;
 
 // TODO: vyresit posun casu
-describe.skip('Playlist tools component parseSmilSchedule tests', () => {
+describe('Playlist tools component parseSmilSchedule tests', () => {
 	it('Should return correct times for how long to wait and how long to play', async () => {
 		let testStartString = moment().format('YYYY-MM-DD');
 		let testEndString = moment().add(1, 'days').format('YYYY-MM-DD');
