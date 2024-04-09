@@ -60,7 +60,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			testExpression = "adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0";
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
 
-			const today = moment().format('YYYY-MM-DD');
+			const today = moment().format('YYYY-MM-DDTHH:mm:ss');
 			testExpression = `adapi-compare(adapi-date(),\'${today}\')=0`;
 			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
 
