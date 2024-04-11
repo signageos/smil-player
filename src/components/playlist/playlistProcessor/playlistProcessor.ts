@@ -2132,7 +2132,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.handleHtmlElementPrepare(value as SMILImage, element, version);
 				break;
 			case 'ref':
-				this.handleHtmlElementPrepare(value as SMILWidget, element, version);
+				this.handleHtmlElementPrepare(value as SMILWidget, element, version, true);
 				break;
 			case 'ticker':
 				break;
@@ -2295,11 +2295,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		};
 	};
 
-	private handleHtmlElementPrepare = (value: SMILImage | SMILWidget, element: HTMLElement, version: number) => {
+	private handleHtmlElementPrepare = (
+		value: SMILImage | SMILWidget,
+		element: HTMLElement,
+		version: number,
+		isWidget: boolean = false,
+	) => {
 		changeZIndex(value, element, +1);
 
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
-		let src = generateElementSrc(value.src, value.localFilePath, version, smilUrlVersion);
+		let src = generateElementSrc(value.src, value.localFilePath, version, smilUrlVersion, isWidget);
 
 		// add query parameter to invalidate cache on devices
 		if ((element.getAttribute('src') === null || element.getAttribute('src') !== src) && value.preload !== false) {
