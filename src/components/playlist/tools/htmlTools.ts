@@ -61,9 +61,10 @@ export function generateElementSrc(
 	localFilePath: string,
 	playlistVersion: number = 0,
 	smilUrlVersion: string | null = null,
+	isWidget: boolean = false,
 ): string {
 	// BrightSign does not support query parameters in filesystem
-	let src = createVersionedUrl(localFilePath, playlistVersion, smilUrlVersion);
+	let src = createVersionedUrl(localFilePath, playlistVersion, smilUrlVersion, isWidget);
 	// TODO this would not work & break BS. Solve it other way in future before merge
 	src = copyQueryParameters(elementSrc, src);
 	return src;
