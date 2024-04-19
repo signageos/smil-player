@@ -96,9 +96,10 @@ export class PlaylistCommon implements IPlaylistCommon {
 						if (!Array.isArray(region.regionInfo.region)) {
 							region.regionInfo.region = [region.regionInfo.region];
 						}
-					}
-					for (const nestedRegion of region.regionInfo.region) {
-						await this.cancelPreviousMedia(nestedRegion, true);
+
+						for (const nestedRegion of region.regionInfo.region) {
+							await this.cancelPreviousMedia(nestedRegion, true);
+						}
 					}
 				}
 			} else {
