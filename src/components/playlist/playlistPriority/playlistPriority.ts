@@ -208,7 +208,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	};
 
 	/**
-	 * Function checks if conditions are met for various priority cases
+	 * Function checks if conditions are met for va rious priority cases
 	 * @param priorityObject - information about priority rules for given playlist
 	 * @param priorityRegionName - regionName in which playlist will be played
 	 * @param currentIndex - at which index is playlist stored in currentlyPlayingPriority object
@@ -227,6 +227,22 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		const previousIndexPriority = this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex];
+
+		const isPeerPriorityConflict =
+			previousIndexPriority.priority.priorityLevel === priorityObject.priorityLevel &&
+			previousIndexPriority.parent !== parent &&
+			previousIndexPriority.player.playing &&
+			(Date.now() <= endTime || endTime <= 1000);
+
+		// ignore priority behaviour if syncing is in action
+		// ( one device is skipping playlist elements to catch up to other devices in the group )
+		if ((this.synchronization.syncingInAction || this.synchronization.movingForward) && isPeerPriorityConflict) {
+			// turn off previous priority playlist marked as playing
+			this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].player.playing = false;
+			debug('Syncing in action, skipping priority behaviour');
+			return;
+		}
+
 		// console.log('handlePriorityBeforePlay++', currentIndexPriority.media.src);
 		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (currentIndexPriority.parent === parent && currentIndexPriority.behaviour === 'stop') {
@@ -262,12 +278,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		}
 
 		// playlist has same ( peer ) priority than currently playing
-		if (
-			previousIndexPriority.priority.priorityLevel === priorityObject.priorityLevel &&
-			previousIndexPriority.parent !== parent &&
-			previousIndexPriority.player.playing &&
-			(Date.now() <= endTime || endTime <= 1000)
-		) {
+		if (isPeerPriorityConflict) {
 			debug(
 				'Found conflict with same priority playlists, old: %O, new: %O',
 				previousIndexPriority,
@@ -361,6 +372,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				debug('Stop behaviour, no active playlist found');
 				break;
 			}
+
 			previousPlayingIndex = newPreviousIndex;
 			// break only if priority level is not same, because if it is, peer priority which comes later in
 			// playlist is playing, and previous playlist cannot cancel it
@@ -541,6 +553,8 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			await sleep(25);
 		}
 
+		console.log('Jumped OUT!!!!', currentIndexPriority);
+
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
 			return false;
@@ -556,16 +570,19 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
+			await sleep(
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
+			);
 			return false;
 		}
 		// wait for new potential playlist to appear
 		if (!currentIndexPriority.media.dynamicValue) {
 			debug(
 				'sleeping defer priority interval: %s',
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
 			);
 			await sleep(
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
 			);
 		}
 		return true;
@@ -607,7 +624,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			controlledPlaylist: null,
 			version,
 			behaviour: '',
-			isFirstInPlaylist: <SMILMedia>{},
+			isFirstInPlaylist: {} as SMILMedia,
 		};
 
 		if (isNil(this.currentlyPlayingPriority[priorityRegionName])) {
