@@ -25,6 +25,7 @@ export const parentGenerationRemove = [
 	'syncIndex',
 	'timeoutReference',
 	'parent',
+	'syncGroupName',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;

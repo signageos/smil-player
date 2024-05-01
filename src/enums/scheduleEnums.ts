@@ -5,7 +5,8 @@ export enum SMILScheduleEnum {
 	endDatePast = '1970-01-01',
 	neverPlay = -3600000,
 	playImmediately = 0,
-	defaultAwait = 200,
+	// TODO: set back to 200
+	defaultAwait = 3000,
 	defaultDuration = 5000,
 	fileCheckTimeout = 2000,
 	triggerPlaylistVersion = 9999,

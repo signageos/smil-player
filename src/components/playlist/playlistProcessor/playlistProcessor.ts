@@ -74,7 +74,6 @@ import {
 	hasDynamicContent,
 	joinAllSyncGroupsOnSmilStart,
 } from '../tools/syncTools';
-import { startTickerAnimation } from '../tools/tickerTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -551,7 +550,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (key === 'excl') {
-				// priority is temporary turner off for slab playlist due to sync issue with priority
+				// priority is temporary turned off for slab playlist due to sync issue with priority
 				promises = await this.processExclTag(
 					value,
 					version,
@@ -1280,12 +1279,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					changeZIndex(value, element, +1, false);
 
 					// TODO: fix ticker condition ( nonticker elements get ticker animation )
-					if (
-						this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
-						this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
-					) {
-						startTickerAnimation(element, value as SMILTicker);
-					}
+					// if (
+					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
+					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
+					// ) {
+					// 	startTickerAnimation(element, value as SMILTicker);
+					// }
 
 					element.style.visibility = 'visible';
 					await this.waitMediaOnScreen(
@@ -1324,6 +1323,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					changeZIndex(value, element, -2);
+
+					if (
+						!(await this.handleElementSynchronization(value, currentRegionInfo, parentRegionInfo, 'after'))
+					) {
+						return;
+					}
 
 					debug('finished playing element: %O', value);
 				})(),
@@ -1599,6 +1604,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return true;
 		}
 		const currentIndexPriority = this.currentlyPlayingPriority[regionInfo.regionName][currentIndex];
+		console.log('currentIndexPriority', JSON.stringify(currentIndexPriority));
 		// playlist was already stopped/paused during await
 		if (
 			currentIndexPriority?.player.stop ||
@@ -1608,7 +1614,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// wait a bit to avoid race condition during lower priority wait and dynamic content switch
 			// TODO: was this needed?
 			// await sleep(300);
-			debug('Playlist was stopped/paused by higher priority during await: %O', currentIndexPriority);
+			debug(
+				'Playlist was stopped/paused by higher priority during await: %O, media: %O',
+				currentIndexPriority,
+				media,
+			);
 			return false;
 		}
 
@@ -1617,7 +1627,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
 			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
 		) {
-			debug('Playtime for playlist: %O was exceeded wait, exiting', currentIndexPriority);
+			debug('Playtime for playlist: %O with media: %O was exceeded wait, exiting', currentIndexPriority, media);
 			await this.priority.handlePriorityWhenDone(
 				media as SMILMedia,
 				regionInfo.regionName,
@@ -1634,7 +1644,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return false;
 		}
 
-		debug('Playlist is ready to play: %O', media);
+		debug('Playlist is ready to play: %O with media: %O', currentIndexPriority, media);
 		return true;
 	};
 
@@ -1785,6 +1795,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!!video.syncIndex && this.synchronization.shouldSync,
 							err.message,
 						);
+					}
+
+					if (
+						!(await this.handleElementSynchronization(video, currentRegionInfo, parentRegionInfo, 'after'))
+					) {
+						return;
 					}
 					debug('finished playing element: %O', video);
 				})(),
@@ -2316,7 +2332,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		value: SMILMedia,
 		currentRegionInfo: RegionAttributes,
 		parentRegionInfo: RegionAttributes,
+		suffix: 'after' | 'before' = 'before',
 	): Promise<boolean> => {
+		// do not sync at the end of the element playback if syncing with another device is in progress
+		if (suffix === 'after' && (this.synchronization.syncingInAction || this.synchronization.movingForward)) {
+			debug('synchronization in action, skipping after sync for element %O', value);
+			console.log('this.synchronization.syncingInAction', this.synchronization.syncingInAction);
+			console.log('this.synchronization.movingForward', this.synchronization.movingForward);
+			return false;
+		}
 		let regionInfo = value.regionInfo;
 		// sync of nested regions ( dynamic playlist )
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
@@ -2324,18 +2348,27 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 		if (regionInfo.sync && this.synchronization.shouldSync) {
 			debug('synchronizing for region %s', regionInfo.regionName);
-			let currentSyncIndex = this.synchronization.syncValue;
+			let desiredSyncIndex = this.synchronization.syncValue;
 			if (
 				isNil(this.synchronization.syncValue) ||
 				isEqual(value.syncIndex, this.synchronization.syncValue) ||
 				this.synchronization.movingForward
 			) {
+				debug(
+					`entering ${suffix} sync handling in region %s with syncIndex %d with syncValue %s with movingForward`,
+					regionInfo.regionName,
+					value.syncIndex,
+					this.synchronization.syncValue,
+					this.synchronization.movingForward,
+				);
+
 				if (
 					!isNil(this.synchronization.syncValue) &&
 					isEqual(value.syncIndex, this.synchronization.syncValue) &&
 					this.synchronization.syncingInAction
 				) {
 					//move one forward
+					debug('synchronizing for region, moving forward %s', regionInfo.regionName);
 					this.synchronization.syncingInAction = false;
 					this.synchronization.movingForward = true;
 					this.synchronization.syncValue = undefined;
@@ -2357,10 +2390,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					numberOfNonSync: 0,
 				};
 				debug(
-					'synchronization starting in region %s with syncIndex %d with dynamicValue %s with timestamp: %d',
+					`synchronization ${suffix} staring in region %s with syncIndex %d with dynamicValue %s with groupName %s with timestamp: %d`,
 					regionInfo.regionName,
 					value.syncIndex,
 					value.dynamicValue,
+					groupName,
 					Date.now(),
 				);
 				try {
@@ -2376,9 +2410,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							groupName,
 						});
 					}
-					// console.log('waiting for syncIndex', Date.now());
-					currentSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					// console.log('waiting for syncIndex end', Date.now());
+
+					console.log('start of sync.wait##', groupName, value.syncIndex, value.src);
+					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+					console.log('end of sync.wait##', groupName, value.syncIndex, desiredSyncIndex, value.src);
+
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
 							type: 'SMIL.SyncWait-Ended',
@@ -2392,10 +2428,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						});
 					}
 				} catch (err) {
+					this.synchronization.syncingInAction = false;
+					this.synchronization.movingForward = false;
 					debug('ERROR occurred during sync.wait', err);
 				}
+
 				debug(
-					'synchronization finished in region %s with syncIndex %d with timestamp: %d',
+					`synchronization ${suffix} finished in region %s with syncIndex %d with timestamp: %d`,
 					regionInfo.regionName,
 					value.syncIndex,
 					Date.now(),
@@ -2406,14 +2445,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					return false;
 				}
 
-				if (value.syncIndex !== currentSyncIndex) {
-					this.synchronization.syncValue = currentSyncIndex;
+				if (value.syncIndex !== desiredSyncIndex) {
+					this.synchronization.syncValue = desiredSyncIndex;
 				}
+
 				this.synchronization.syncingInAction = false;
 				this.synchronization.movingForward = false;
 			}
 
-			if (!isEqual(value.syncIndex, currentSyncIndex) && !isNil(currentSyncIndex)) {
+			if (!isEqual(value.syncIndex, desiredSyncIndex) && !isNil(desiredSyncIndex)) {
+				debug(
+					'starting synchronization process desired syncIndex %d, current syncIndex %d',
+					desiredSyncIndex,
+					value.syncIndex,
+				);
 				this.synchronization.syncingInAction = true;
 				return false;
 			}
