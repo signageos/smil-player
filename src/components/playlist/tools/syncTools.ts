@@ -101,8 +101,8 @@ export async function joinAllSyncGroupsOnSmilStart(
 		debug('sync object: %O', synchronization);
 	}
 
-	// TODO: testing, join synchronization group for syncinc nonsync content
-	// await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
+	// TODO: testing, join synchronization group for syncing start of priority
+	await joinSyncGroup(sos, synchronization, `prioritySync`);
 }
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
