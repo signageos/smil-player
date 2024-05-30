@@ -550,6 +550,15 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		priorityObject: PriorityObject,
 	): Promise<boolean> => {
 		while (currentPriorityRegion[previousPlayingIndex].player.playing) {
+			if (this.promiseAwaiting[priorityRegionName]) {
+				debug(
+					'waiting for previous promise in current region during priority defer/stop %s, %O',
+					priorityRegionName,
+					currentIndexPriority,
+				);
+				debug(this.promiseAwaiting[priorityRegionName]);
+				await Promise.all(this.promiseAwaiting[priorityRegionName].promiseFunction!);
+			}
 			await sleep(25);
 		}
 
@@ -558,6 +567,17 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
 			return false;
+		}
+
+		// wait for new potential playlist to appear
+		if (!currentIndexPriority.media.dynamicValue) {
+			debug(
+				'sleeping defer priority interval: %s',
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
+			);
+			await sleep(
+				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
+			);
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
@@ -570,21 +590,9 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
-			await sleep(
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
-			);
 			return false;
 		}
-		// wait for new potential playlist to appear
-		if (!currentIndexPriority.media.dynamicValue) {
-			debug(
-				'sleeping defer priority interval: %s',
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
-			);
-			await sleep(
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
-			);
-		}
+
 		return true;
 	};
 

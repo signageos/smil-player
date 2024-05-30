@@ -779,6 +779,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							continue;
 						}
 
+						if (
+							(timeToStart <= 0 || value?.length === 1) &&
+							this.synchronization.shouldSync &&
+							!this.synchronization.syncingInAction &&
+							!this.synchronization.movingForward
+						) {
+							console.log('start of sync.wait priority##', parent, Date.now());
+							await this.sos.sync.wait('', 'prioritySync');
+							console.log('end of sync.wait priority##', parent, Date.now());
+						}
+
 						// wallclock has higher priority than conditional expression
 						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
 							arrayIndex += 1;
@@ -2411,9 +2422,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						});
 					}
 
-					console.log('start of sync.wait##', groupName, value.syncIndex, value.src);
+					console.log(`start of ${suffix} sync.wait##`, groupName, value.syncIndex, value.src);
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					console.log('end of sync.wait##', groupName, value.syncIndex, desiredSyncIndex, value.src);
+					console.log(
+						`end of ${suffix} sync.wait##`,
+						groupName,
+						value.syncIndex,
+						desiredSyncIndex,
+						value.src,
+					);
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
