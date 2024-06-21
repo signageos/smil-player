@@ -333,7 +333,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				continue;
 			}
 
-			const priorityObject = createPriorityObject(elem as PriorityObject, arrayIndex);
+			const priorityObject = createPriorityObject(elem as PriorityObject, arrayIndex, value?.length - 1);
 
 			promises.push(
 				(async () => {
@@ -771,7 +771,36 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'No active sequence find in wallclock schedule, setting default await: %s',
 								SMILScheduleEnum.defaultAwait,
 							);
-							await sleep(SMILScheduleEnum.defaultAwait);
+							console.log('shouldSync', this.synchronization.shouldSync);
+							console.log('syncingInAction', this.synchronization.syncingInAction);
+							console.log('movingForward', this.synchronization.movingForward);
+							console.log('syncValue', this.synchronization.syncValue);
+							if (
+								this.synchronization.shouldSync &&
+								!this.synchronization.syncingInAction &&
+								!this.synchronization.movingForward &&
+								isNil(this.synchronization.syncValue)
+							) {
+								console.log(
+									'start of sync.wait priority no content##',
+									parent,
+									Date.now(),
+									this.synchronization.syncValue,
+								);
+								await this.sos.sync.wait(
+									'idle',
+									`${this.synchronization.syncGroupName}-idlePrioritySync`,
+								);
+								console.log(
+									'end of sync.wait priority no content##',
+									parent,
+									Date.now(),
+									this.synchronization.syncValue,
+								);
+							} else {
+								await sleep(SMILScheduleEnum.defaultAwait);
+							}
+							// await sleep(SMILScheduleEnum.defaultAwait);
 						}
 
 						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
@@ -783,11 +812,22 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							(timeToStart <= 0 || value?.length === 1) &&
 							this.synchronization.shouldSync &&
 							!this.synchronization.syncingInAction &&
-							!this.synchronization.movingForward
+							!this.synchronization.movingForward &&
+							isNil(this.synchronization.syncValue)
 						) {
-							console.log('start of sync.wait priority##', parent, Date.now());
-							await this.sos.sync.wait('', 'prioritySync');
-							console.log('end of sync.wait priority##', parent, Date.now());
+							console.log(
+								'start of sync.wait priority##',
+								parent,
+								Date.now(),
+								this.synchronization.syncValue,
+							);
+							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`);
+							console.log(
+								'end of sync.wait priority##',
+								parent,
+								Date.now(),
+								this.synchronization.syncValue,
+							);
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -1314,6 +1354,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 					);
 
+					await this.handleElementSynchronization(
+						value,
+						currentRegionInfo,
+						parentRegionInfo,
+						currentIndex,
+						'after',
+					);
+
 					await this.priority.handlePriorityWhenDone(
 						value as SMILMedia,
 						currentRegionInfo.regionName,
@@ -1335,11 +1383,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 					changeZIndex(value, element, -2);
 
-					if (
-						!(await this.handleElementSynchronization(value, currentRegionInfo, parentRegionInfo, 'after'))
-					) {
-						return;
-					}
+					// if (
+					// 	!(await this.handleElementSynchronization(
+					// 		value,
+					// 		currentRegionInfo,
+					// 		parentRegionInfo,
+					// 		currentIndex,
+					// 		'after',
+					// 	))
+					// ) {
+					// 	return;
+					// }
 
 					debug('finished playing element: %O', value);
 				})(),
@@ -1562,9 +1616,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.foundNewPlaylist = true;
 			}
 			if (this.promiseAwaiting[regionInfo.regionName]) {
-				debug('waiting for previous promise in current region:: %s, %O', regionInfo.regionName, media);
+				debug(
+					'waiting for previous promise in current region: %s, %O, with timestamp : %s',
+					regionInfo.regionName,
+					media,
+					Date.now(),
+				);
 				debug(this.promiseAwaiting[regionInfo.regionName]);
 				await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
+				debug(
+					'waiting for previous promise in current region finished: %s, %O with timestamp: %s',
+					regionInfo.regionName,
+					media,
+					Date.now(),
+				);
 			}
 		}
 
@@ -1633,11 +1698,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return false;
 		}
 
+		// TODO: previous contition, check if needed
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
-		if (
-			(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
-			(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
-		) {
+		// if (
+		// 	(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
+		// 	(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
+		// ) {
+
+		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
+		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) {
 			debug('Playtime for playlist: %O with media: %O was exceeded wait, exiting', currentIndexPriority, media);
 			await this.priority.handlePriorityWhenDone(
 				media as SMILMedia,
@@ -1655,7 +1724,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return false;
 		}
 
+		// previous element in playlist was deffered, dont play it
+		// if (currentIndexPriority?.behaviour === 'defer') {
+		// 	debug('Playlist was deferred by higher priority during await: %O, media: %O', currentIndexPriority, media);
+		// 	await sleep(250);
+		// }
+
 		debug('Playlist is ready to play: %O with media: %O', currentIndexPriority, media);
+		// regenerate that current priority is playing due to mechanic that priority ends itself plus sync at the end of the playlist
+		// ( another playlist can jump in during the process, this is to prevent it )
+		this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player.playing = true;
 		return true;
 	};
 
@@ -1748,6 +1826,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 									'Finished iteration of playlist: %O',
 									this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 								);
+
+								await this.handleElementSynchronization(
+									video,
+									currentRegionInfo,
+									parentRegionInfo,
+									currentIndex,
+									'after',
+								);
+
 								await this.priority.handlePriorityWhenDone(
 									video as SMILMedia,
 									currentRegionInfo.regionName,
@@ -1770,6 +1857,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'Finished iteration of playlist: %O',
 								this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 							);
+
+							await this.handleElementSynchronization(
+								video,
+								currentRegionInfo,
+								parentRegionInfo,
+								currentIndex,
+								'after',
+							);
+
 							await this.priority.handlePriorityWhenDone(
 								video as SMILMedia,
 								currentRegionInfo.regionName,
@@ -1787,6 +1883,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							'Finished iteration of playlist: %O',
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
+
+						await this.handleElementSynchronization(
+							video,
+							currentRegionInfo,
+							parentRegionInfo,
+							currentIndex,
+							'after',
+						);
+
 						await this.priority.handlePriorityWhenDone(
 							video as SMILMedia,
 							currentRegionInfo.regionName,
@@ -1807,12 +1912,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							err.message,
 						);
 					}
-
-					if (
-						!(await this.handleElementSynchronization(video, currentRegionInfo, parentRegionInfo, 'after'))
-					) {
-						return;
-					}
+					//
+					// if (
+					// 	!(await this.handleElementSynchronization(
+					// 		video,
+					// 		currentRegionInfo,
+					// 		parentRegionInfo,
+					// 		currentIndex,
+					// 		'after',
+					// 	))
+					// ) {
+					// 	return;
+					// }
 					debug('finished playing element: %O', video);
 				})(),
 			];
@@ -2183,7 +2294,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// should sync mechanism skip current element
-		if (!(await this.handleElementSynchronization(value, currentRegionInfo, parentRegionInfo))) {
+		if (!(await this.handleElementSynchronization(value, currentRegionInfo, parentRegionInfo, currentIndex))) {
 			return;
 		}
 
@@ -2343,6 +2454,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		value: SMILMedia,
 		currentRegionInfo: RegionAttributes,
 		parentRegionInfo: RegionAttributes,
+		currentIndex: number,
 		suffix: 'after' | 'before' = 'before',
 	): Promise<boolean> => {
 		// do not sync at the end of the element playback if syncing with another device is in progress
@@ -2422,6 +2534,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						});
 					}
 
+					// regenerate that current priority is playing due to mechanic that priority ends itself plus sync at the end of the playlist
+					// ( another playlist can jump in during the process, this is to prevent it )
+					if (suffix === 'before') {
+						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
+					}
+
 					console.log(`start of ${suffix} sync.wait##`, groupName, value.syncIndex, value.src);
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
 					console.log(
@@ -2456,6 +2574,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					value.syncIndex,
 					Date.now(),
 				);
+
+				// if synchronization is not at the start of the element, dont set any config values
+				// if (suffix !== 'before') {
+				// 	return true;
+				// }
 
 				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
 					debug('dynamic playlist was stopped during sync.wait: %O', value);

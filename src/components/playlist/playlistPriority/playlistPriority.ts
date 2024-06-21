@@ -129,7 +129,12 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		const expiredVersion: boolean = version < currentVersion;
 
 		if (((endTimeExpired || repeatCountExpired) && isLastElement) || smilFileUpdated || expiredVersion) {
-			debug('Finished playing playlist: %O for region: %s', currentIndexPriority, priorityRegionName);
+			debug(
+				'Finished playing playlist: %O for region: %s and element: %s',
+				currentIndexPriority,
+				priorityRegionName,
+				currentIndexPriority.media.src,
+			);
 			// some playlist was paused by this one, unpause it
 			const pausedIndex = currentIndexPriority.controlledPlaylist;
 			// reset counter for finished playlist
@@ -351,9 +356,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				return;
 			}
 
-			currentIndexPriority.behaviour = '';
-			currentIndexPriority.player.stop = false;
-
 			debug('Stop behaviour lock released for playlist: %O', currentIndexPriority);
 
 			// regenerate
@@ -370,6 +372,8 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				newPreviousIndex = 0;
 				previousPlayingIndex = newPreviousIndex;
 				debug('Stop behaviour, no active playlist found');
+				currentIndexPriority.behaviour = '';
+				currentIndexPriority.player.stop = false;
 				break;
 			}
 
@@ -380,6 +384,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				debug('Stop behaviour: breaking from stop lock');
 				break;
 			}
+
 			debug(
 				'New found playlist has same priority, wait for it to finish, setting stop behaviour for playlist: %O',
 				currentIndexPriority,
@@ -507,6 +512,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			// no playlist currently playing, this one can proceed to playback
 			if (newPreviousIndex === -1) {
 				debug('Defer behaviour, no active playlist found');
+				currentIndexPriority.behaviour = '';
 				// TODO: make it work for all media
 				// const video = currentIndexPriority.media as SMILVideo;
 				// await this.sos.video.prepare(
@@ -528,6 +534,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				);
 				previousPlayingIndex = newPreviousIndex;
 			} else {
+				currentIndexPriority.behaviour = '';
 				await this.handlePriorityBeforePlay(
 					elementKey,
 					priorityObject,
@@ -550,19 +557,20 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		priorityObject: PriorityObject,
 	): Promise<boolean> => {
 		while (currentPriorityRegion[previousPlayingIndex].player.playing) {
+			await sleep(25);
 			if (this.promiseAwaiting[priorityRegionName]) {
 				debug(
-					'waiting for previous promise in current region during priority defer/stop %s, %O',
+					'waiting for previous promise in current region during priority defer/stop %s, %O, currentlyPlaying: %O',
 					priorityRegionName,
 					currentIndexPriority,
+					currentPriorityRegion[previousPlayingIndex],
 				);
 				debug(this.promiseAwaiting[priorityRegionName]);
 				await Promise.all(this.promiseAwaiting[priorityRegionName].promiseFunction!);
 			}
-			await sleep(25);
 		}
 
-		console.log('Jumped OUT!!!!', currentIndexPriority);
+		console.log('Jumped OUT!!!!', currentIndexPriority, Date.now());
 
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
@@ -571,12 +579,22 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 
 		// wait for new potential playlist to appear
 		if (!currentIndexPriority.media.dynamicValue) {
+			// debug(
+			// 	'sleeping defer priority interval: %s',
+			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+			// );
+			// await sleep(
+			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+			// );
+
 			debug(
-				'sleeping defer priority interval: %s',
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
+				'sleeping defer/stop priority interval: %s',
+				(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
 			);
-			await sleep(
-				(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 50,
+			await sleep((priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100);
+			debug(
+				'finished sleeping defer/stop priority interval: %s',
+				(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
 			);
 		}
 
@@ -584,11 +602,26 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		// TODO: previously currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime
 		if (
 			(currentIndexPriority.player.endTime <= Date.now() && currentIndexPriority.player.endTime > 1000) ||
-			(currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime &&
+			(currentIndexPriority.player.timesPlayed > currentIndexPriority.player.endTime &&
 				currentIndexPriority.player.endTime !== 0)
 		) {
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
+			console.log('playlist stoppped', JSON.stringify(this.currentlyPlayingPriority[priorityRegionName]));
+			// debug(
+			// 	'sleeping defer priority interval for exceeded priority: %s',
+			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+			// );
+			// await sleep(
+			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
+			// );
+
+			// debug(
+			// 	'sleeping defer/stop priority interval for exceeded priority: %s',
+			// 	(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
+			// );
+			// await sleep((priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100);
+
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return false;
 		}
