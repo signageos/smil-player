@@ -46,6 +46,7 @@ export class SmilPlayer implements ISmilPlayer {
 		await sos.onReady();
 		debug('sOS is ready');
 		Debug.enable('@signageos/smil-player:*');
+		// Debug.disable();
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
 
