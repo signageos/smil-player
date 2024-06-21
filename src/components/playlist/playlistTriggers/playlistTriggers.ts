@@ -279,6 +279,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const priorityObject: PriorityObject = {
 				priorityLevel: 1000,
+				maxPriorityLevel: 1000,
 				higher: 'stop',
 				lower: 'defer',
 				peer: 'defer',

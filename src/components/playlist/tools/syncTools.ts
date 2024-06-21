@@ -102,12 +102,14 @@ export async function joinAllSyncGroupsOnSmilStart(
 	}
 
 	// TODO: testing, join synchronization group for syncing start of priority
-	await joinSyncGroup(sos, synchronization, `prioritySync`);
+	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-prioritySync`);
+	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-idlePrioritySync`);
 }
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
-		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
+		// TODO: return
+		await sos.sync.connect({ engine: SyncEngine.SyncServer });
 		resetAppRestartCount();
 	} catch (error) {
 		debug('Error occurred during sync connection: %O', error);
