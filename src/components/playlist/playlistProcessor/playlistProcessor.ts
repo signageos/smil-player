@@ -11,7 +11,7 @@ import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/p
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
-import { SMILFile, SMILFileObject } from '../../../models/filesModels';
+import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/filesModels';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { FileStructure } from '../../../enums/fileEnums';
 import {
@@ -91,6 +91,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		};
 	} = {};
 	private internalStorageUnit: IStorageUnit;
+	private smilObject: SMILFileObject;
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
@@ -102,6 +103,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	public setCheckFilesLoop = (checkFilesLoop: boolean) => {
 		this.checkFilesLoop = checkFilesLoop;
+	};
+
+	public setSmilObject = (smilObject: SMILFileObject) => {
+		this.smilObject = smilObject;
 	};
 
 	public setStorageUnit = (internalStorageUnit: IStorageUnit) => {
@@ -126,15 +131,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	/**
 	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
-	 * @param smilObject - JSON representation of parsed smil file
 	 */
-	public playIntro = async (smilObject: SMILFileObject): Promise<Promise<void>[]> => {
+	public playIntro = async (): Promise<Promise<void>[]> => {
 		let media: string = '';
 		let fileStructure: string = '';
 		let downloadPromises: Promise<void>[] = [];
 		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
-		for (const property in smilObject.intro[0]) {
+		for (const property in this.smilObject.intro[0]) {
 			if (property.startsWith(HtmlEnum.video)) {
 				media = property;
 				fileStructure = FileStructure.videos;
@@ -149,27 +153,27 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		downloadPromises = downloadPromises.concat(
 			await this.files.parallelDownloadAllFiles(
 				this.internalStorageUnit,
-				[<SMILVideo | SMILImage>smilObject.intro[0][media]],
+				[this.smilObject.intro[0][media]] as MergedDownloadList[],
 				fileStructure,
 			),
 		);
 
 		await Promise.all(downloadPromises);
 
-		const intro: SMILIntro = smilObject.intro[0];
+		const intro: SMILIntro = this.smilObject.intro[0];
 
 		debug('Intro media object: %O', intro);
 		switch (removeDigits(media)) {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
 					const imageIntro = intro[media] as SMILImage;
-					imageElement = await this.setupIntroImage(imageIntro, smilObject, media);
+					imageElement = await this.setupIntroImage(imageIntro, this.smilObject, media);
 					this.setCurrentlyPlaying(imageIntro, 'html', SMILEnums.defaultRegion);
 				}
 				break;
 			default:
 				const videoIntro = intro[media] as SMILVideo;
-				await this.setupIntroVideo(videoIntro, smilObject);
+				await this.setupIntroVideo(videoIntro, this.smilObject);
 				this.setCurrentlyPlaying(videoIntro, 'video', SMILEnums.defaultRegion);
 		}
 
@@ -181,17 +185,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	/**
 	 * main processing function of smil player, runs playlist in endless loop and periodically
 	 * checks for smil and media update in parallel
-	 * @param smilObject - JSON representation of parsed smil file
 	 * @param smilFile - representation of actual SMIL file
 	 * @param firstIteration
 	 * @param restart
 	 */
-	public processingLoop = async (
-		smilObject: SMILFileObject,
-		smilFile: SMILFile,
-		firstIteration: boolean,
-		restart: () => void,
-	): Promise<void> => {
+	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
 		const promises = [];
 
 		promises.push(
@@ -201,12 +199,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					await sleep(1000);
 				}
 				while (this.getCheckFilesLoop()) {
-					if (isNil(smilObject.refresh.expr) || !isConditionalExpExpired(smilObject.refresh)) {
+					if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
 						debug('Prepare ETag check for smil media files prepared');
 						const {
 							fileEtagPromisesMedia: fileEtagPromisesMedia,
 							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-						} = await this.files.prepareLastModifiedSetup(this.internalStorageUnit, smilObject, smilFile);
+						} = await this.files.prepareLastModifiedSetup(
+							this.internalStorageUnit,
+							this.smilObject,
+							smilFile,
+						);
 						debug('Last modified check for smil media files prepared');
 						debug('Checking files for changes');
 						if (
@@ -229,11 +231,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						debug('File changes checked');
 
-						await sleep(smilObject.refresh.refreshInterval * 1000);
+						await sleep(this.smilObject.refresh.refreshInterval * 1000);
 						debug('after check interval');
 					} else {
-						debug('Conditional expression for files update is false: %s', smilObject.refresh.expr);
-						await sleep(smilObject.refresh.refreshInterval * 1000);
+						debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
+						await sleep(this.smilObject.refresh.refreshInterval * 1000);
 					}
 				}
 				debug('calling restart function');
@@ -250,10 +252,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						await connectSyncSafe(this.sos);
 					}
 
-					await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, smilObject);
+					await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
 
-					if (firstIteration && hasDynamicContent(smilObject)) {
-						await broadcastEndActionToAllDynamics(this.sos, this.synchronization, smilObject);
+					if (firstIteration && hasDynamicContent(this.smilObject)) {
+						await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
 					}
 				} catch (error) {
 					debug('Error during playlist processing sync setup: %O', error);
@@ -266,7 +268,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				await this.runEndlessLoop(async () => {
 					try {
 						const dateTimeBegin = Date.now();
-						await this.processPlaylist(smilObject.playlist, version);
+						await this.processPlaylist(this.smilObject.playlist, version);
 						debug(
 							'One smil playlist iteration finished ' +
 								version +
@@ -288,7 +290,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		promises.push(
 			(async () => {
 				// triggers processing
-				await this.triggers.watchTriggers(smilObject, this.getPlaylistVersion, this.getCheckFilesLoop);
+				await this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop);
 			})(),
 		);
 
@@ -403,10 +405,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				return;
 			}
 
-			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(
-				dynamicPlaylistConfig,
-				this.triggers.smilObject,
-			);
+			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
 			if (!dynamicPlaylistId || !dynamicMedia) {
 				debug('Dynamic playlist for %s was not found', `${dynamicPlaylistConfig.data}`);
@@ -650,10 +649,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					if (value.hasOwnProperty(ExprTag)) {
-						conditionalExpr = <string>value[ExprTag];
+						conditionalExpr = value[ExprTag] as string;
 					}
 
-					if (value.repeatCount !== 'indefinite') {
+					if (
+						!Number.isNaN(parseInt(value.repeatCount as string)) ||
+						(isNil(value.repeatCount) && this.smilObject.defaultRepeatCount === '1')
+					) {
 						promises.push(
 							this.createRepeatCountDefinitePromise(
 								value,
@@ -668,7 +670,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						continue;
 					}
 
-					if (value.repeatCount === 'indefinite') {
+					if (
+						value.repeatCount === 'indefinite' ||
+						(isNil(value.repeatCount) && this.smilObject.defaultRepeatCount === 'indefinite')
+					) {
 						promises.push(
 							this.createRepeatCountIndefinitePromise(
 								value,
@@ -709,7 +714,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					conditionalExpr = value[ExprTag]!;
 				}
 
-				if (value.repeatCount === 'indefinite') {
+				if (
+					value.repeatCount === 'indefinite' ||
+					(isNil(value.repeatCount) && this.smilObject.defaultRepeatCount === 'indefinite')
+				) {
 					promises.push(
 						this.createRepeatCountIndefinitePromise(
 							value,
@@ -725,7 +733,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					continue;
 				}
 
-				if (value.repeatCount !== 'indefinite') {
+				if (
+					!Number.isNaN(parseInt(value.repeatCount as string)) ||
+					(isNil(value.repeatCount) && this.smilObject.defaultRepeatCount === '1')
+				) {
 					promises.push(
 						this.createRepeatCountDefinitePromise(value, priorityObject, version, key, -1, conditionalExpr),
 					);
@@ -738,6 +749,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (removeDigits(key) === 'seq') {
+				console.log(this.smilObject.defaultRepeatCount);
+				console.log('****************************');
+
 				let newParent = generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
@@ -835,7 +849,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							arrayIndex += 1;
 							continue;
 						}
-						if (valueElement.repeatCount !== 'indefinite') {
+						if (
+							!Number.isNaN(parseInt(valueElement.repeatCount as string)) ||
+							(isNil(valueElement.repeatCount) && this.smilObject.defaultRepeatCount === '1')
+						) {
 							if (timeToStart <= 0 || value?.length === 1) {
 								promises.push(
 									this.createRepeatCountDefinitePromise(
@@ -855,7 +872,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							continue;
 						}
 
-						if (valueElement.repeatCount === 'indefinite') {
+						if (
+							valueElement.repeatCount === 'indefinite' ||
+							(isNil(valueElement.repeatCount) && this.smilObject.defaultRepeatCount === 'indefinite')
+						) {
 							if (timeToStart <= 0 || value?.length === 1) {
 								if (value?.length === 1) {
 									promises.push(
@@ -918,7 +938,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						continue;
 					}
 
-					if (valueElement.repeatCount !== 'indefinite') {
+					if (
+						!Number.isNaN(parseInt(valueElement.repeatCount as string)) ||
+						(isNil(valueElement.repeatCount) && this.smilObject.defaultRepeatCount === '1')
+					) {
 						promises.push(
 							this.createRepeatCountDefinitePromise(
 								valueElement,
@@ -935,7 +958,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						continue;
 					}
 
-					if (valueElement.repeatCount === 'indefinite') {
+					if (
+						valueElement.repeatCount === 'indefinite' ||
+						(isNil(valueElement.repeatCount) && this.smilObject.defaultRepeatCount === 'indefinite')
+					) {
 						console.log('creating indefinite promise', endTime);
 						promises.push(
 							this.createRepeatCountIndefinitePromise(
@@ -1003,6 +1029,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timeToStart: number = -1,
 		conditionalExpr: string = '',
 	): Promise<void> => {
+		debug('Processing playlist element with repeatCount definite. Value: %O', value);
 		const repeatCount: number = Number.isNaN(parseInt(value.repeatCount as string))
 			? 1
 			: parseInt(value.repeatCount as string);

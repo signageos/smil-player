@@ -2,6 +2,7 @@
     <head>
         <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <meta log="true"/>
+        <meta defaultRepeatCount="1"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
             <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
@@ -9,32 +10,50 @@
         </layout>
     </head>
     <body>
-        <par repeatCount="indefinite">
+        <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
                          dur="5s" fit="fill"/>
                 </seq>
             </seq>
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+            <par begin="__prefetchEnd.endEvent">
                 <!-- Campaign playlist -->
                 <excl>
                     <par repeatCount="indefinite">
                         <seq repeatCount="indefinite">
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <!-- [GalleryModule] priorita (cluqolrpa84512mla5phgokyd) -->
+                                    <!-- <seq begin="wallclock(2024-05-17T14:15)" end="wallclock(2024-05-17T14:16)" repeatCount="indefinite"> -->
+                                    <!-- <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/03/clteaucjw00000xle49li8clr.mp4" soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>								 -->
+                                    <!-- </seq> -->
+                                    <seq begin="wallclock(2024-06-11T10:17)" end="wallclock(2024-06-11T10:21)"
+                                         repeatCount="indefinite">
+                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh8ln00050xn0g59976x9.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/03/cltczdmd500010xn752ebgcrq.png"
+                                             dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
+                                    </seq>
+                                    <seq begin="wallclock(2024-06-11T10:19)" end="wallclock(2024-06-11T10:20)"
+                                         repeatCount="indefinite">
+                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/12/clqavexew00010xn33ublfkpw.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
                             <priorityClass higher="pause" pauseDisplay="hide">
                                 <seq repeatCount="indefinite">
                                     <!-- [GalleryModule] cervena (clumdgcix10802mn0m1dydlwu) -->
-                                    <seq>
+                                    <seq repeatCount="3">
                                         <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgojg00010xn0fh5ndk4y.jpeg"
                                              dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
                                         <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgpm000020xn09h486u86.jpeg"
                                              dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgqow00030xn08moa2274.jpeg"
-                                             dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh99r00060xn01ves43ec.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh8ln00050xn0g59976x9.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
+                                        <!--                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgqow00030xn08moa2274.jpeg"-->
+                                        <!--                                             dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>-->
+                                        <!--                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh99r00060xn01ves43ec.mp4"-->
+                                        <!--                                        soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>-->
                                     </seq>
                                     <!-- [GalleryModule] zelena (clumdi2r135122mn0jfeeyjv2) -->
                                     <seq>
@@ -50,7 +69,7 @@
                                                soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
                                     </seq>
                                     <!-- [GalleryModule] modra wallclock (clumdj1uu55742mn0a5ilpnpk) -->
-                                    <seq begin="wallclock(2024-04-19T10:35)" end="wallclock(2024-04-19T10:40)"
+                                    <seq begin="wallclock(2024-05-17T10:46)" end="wallclock(2024-05-17T10:50)"
                                          playMode="one" repeatCount="indefinite">
                                         <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdj8rk000c0xn01xd99j21.mp4"
                                                soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
@@ -59,8 +78,6 @@
                                         <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdj9zb000e0xn04of4cbbr.mp4"
                                                soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
                                         <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdjaw0000f0xn0fsdeaub6.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdjbwt000g0xn0arwoa4il.mp4"
                                                soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
                                     </seq>
                                 </seq>

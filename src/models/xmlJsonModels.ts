@@ -12,6 +12,7 @@ export type RegionsObject = {
 	onlySmilFileUpdate: boolean;
 	log: boolean;
 	syncServerUrl?: string;
+	defaultRepeatCount?: '1' | 'indefinite';
 	[key: string]: any;
 };
 
@@ -60,6 +61,7 @@ export type SMILMetaObject = {
 	onlySmilUpdate: boolean | string;
 	expr?: string;
 	syncServerUrl?: string;
+	defaultRepeatCount?: '1' | 'indefinite';
 };
 
 export type RegionAttributes = {
