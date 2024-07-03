@@ -341,6 +341,9 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
 			regions.syncServerUrl = metaRecord.syncServerUrl;
 		}
+		if (metaRecord.hasOwnProperty(SMILEnums.defaultRepeatCount)) {
+			regions.defaultRepeatCount = metaRecord.defaultRepeatCount;
+		}
 	}
 }
 
