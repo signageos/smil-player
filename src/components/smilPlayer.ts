@@ -189,6 +189,8 @@ export class SmilPlayer implements ISmilPlayer {
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
 				debug('SMIL file parsed: %O', smilObject);
 
+				this.processor.setSmilObject(smilObject);
+
 				await this.files.sendSmiFileReport(
 					`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
 					smilFile.src,
@@ -213,7 +215,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 					downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
-					introPromises.concat(await this.processor.playIntro(smilObject));
+					introPromises.concat(await this.processor.playIntro());
 
 					introPromises.push(
 						(async () => {
@@ -243,7 +245,7 @@ export class SmilPlayer implements ISmilPlayer {
 				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false);
 				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
 				// const firstIteration = hasDynamicContent(smilObject);
-				await this.processor.processingLoop(smilObject, smilFile, firstIteration, restart);
+				await this.processor.processingLoop(smilFile, firstIteration, restart);
 			} catch (err) {
 				if (smilFileContent === '') {
 					debug('Unexpected error occurred during smil file download : %O', err);
