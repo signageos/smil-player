@@ -109,14 +109,14 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
-		console.log(JSON.stringify(currentIndexPriority));
+		// console.log(JSON.stringify(currentIndexPriority));
 		// increase times played if not trigger or endless
 		if (isNil(value.triggerValue) && endTime !== 0 && value.src === currentIndexPriority.isFirstInPlaylist.src) {
-			console.log('increasing number times played', value.src);
-			console.log('increasing number times played', currentIndexPriority.isFirstInPlaylist.src);
+			// console.log('increasing number times played', value.src);
+			// console.log('increasing number times played', currentIndexPriority.isFirstInPlaylist.src);
 			this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed++;
 		}
-		console.log(JSON.stringify(currentIndexPriority));
+		// console.log(JSON.stringify(currentIndexPriority));
 		/*
 			condition which determines if this was last iteration of playlist
 			endTimeExpired: if endTime in millis is lower as current time and at the same time is higher than 1000
@@ -578,7 +578,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			}
 		}
 
-		console.log('Jumped OUT!!!!', currentIndexPriority, Date.now());
+		// console.log('Jumped OUT!!!!', currentIndexPriority, Date.now());
 
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
@@ -615,7 +615,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		) {
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
-			console.log('playlist stoppped', JSON.stringify(this.currentlyPlayingPriority[priorityRegionName]));
 			// debug(
 			// 	'sleeping defer priority interval for exceeded priority: %s',
 			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
@@ -676,7 +675,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			isFirstInPlaylist: {} as SMILMedia,
 		};
 
-		console.log('handlePriorityInfoObject++', JSON.stringify(this.currentlyPlayingPriority[priorityRegionName]));
+		// console.log('handlePriorityInfoObject++', JSON.stringify(this.currentlyPlayingPriority[priorityRegionName]));
 
 		if (isNil(this.currentlyPlayingPriority[priorityRegionName])) {
 			this.currentlyPlayingPriority[priorityRegionName] = [];
@@ -696,9 +695,9 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		if (!skipLoop) {
 			let arrayIndex: number = 0;
 			for (const elem of this.currentlyPlayingPriority[priorityRegionName]) {
-				console.log(JSON.stringify(elem));
-				console.log(JSON.stringify(infoObject));
-				console.log('??????????????????????????');
+				// console.log(JSON.stringify(elem));
+				// console.log(JSON.stringify(infoObject));
+				// console.log('??????????????????????????');
 				if (
 					isEqual(elem.media, infoObject.media) &&
 					elem.parent === infoObject.parent &&
