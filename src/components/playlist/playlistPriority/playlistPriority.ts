@@ -696,10 +696,14 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		if (!skipLoop) {
 			let arrayIndex: number = 0;
 			for (const elem of this.currentlyPlayingPriority[priorityRegionName]) {
-				console.log(elem.media);
-				console.log(infoObject.media);
+				console.log(JSON.stringify(elem));
+				console.log(JSON.stringify(infoObject));
 				console.log('??????????????????????????');
-				if (isEqual(elem.media, infoObject.media) && elem.parent === infoObject.parent) {
+				if (
+					isEqual(elem.media, infoObject.media) &&
+					elem.parent === infoObject.parent &&
+					elem.version === infoObject.version
+				) {
 					// preserve behaviour of previous element from same parent
 					infoObject.behaviour = elem.behaviour;
 					infoObject.player.playing = elem.player.playing;
@@ -721,7 +725,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				}
 
 				// same parent of playlist, update currently playing object
-				if (elem.parent === infoObject.parent) {
+				if (elem.parent === infoObject.parent && elem.version === infoObject.version) {
 					// preserve behaviour of previous element from same parent
 					infoObject.behaviour = elem.behaviour;
 					infoObject.player.playing = elem.player.playing;
