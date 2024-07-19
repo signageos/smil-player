@@ -749,9 +749,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (removeDigits(key) === 'seq') {
-				console.log(this.smilObject.defaultRepeatCount);
-				console.log('****************************');
-
 				let newParent = generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
@@ -785,32 +782,32 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'No active sequence find in wallclock schedule, setting default await: %s',
 								SMILScheduleEnum.defaultAwait,
 							);
-							console.log('shouldSync', this.synchronization.shouldSync);
-							console.log('syncingInAction', this.synchronization.syncingInAction);
-							console.log('movingForward', this.synchronization.movingForward);
-							console.log('syncValue', this.synchronization.syncValue);
+							// console.log('shouldSync', this.synchronization.shouldSync);
+							// console.log('syncingInAction', this.synchronization.syncingInAction);
+							// console.log('movingForward', this.synchronization.movingForward);
+							// console.log('syncValue', this.synchronization.syncValue);
 							if (
 								this.synchronization.shouldSync &&
 								!this.synchronization.syncingInAction &&
 								!this.synchronization.movingForward &&
 								isNil(this.synchronization.syncValue)
 							) {
-								console.log(
-									'start of sync.wait priority no content##',
-									parent,
-									Date.now(),
-									this.synchronization.syncValue,
-								);
+								// console.log(
+								// 	'start of sync.wait priority no content##',
+								// 	parent,
+								// 	Date.now(),
+								// 	this.synchronization.syncValue,
+								// );
 								await this.sos.sync.wait(
 									'idle',
 									`${this.synchronization.syncGroupName}-idlePrioritySync`,
 								);
-								console.log(
-									'end of sync.wait priority no content##',
-									parent,
-									Date.now(),
-									this.synchronization.syncValue,
-								);
+								// console.log(
+								// 	'end of sync.wait priority no content##',
+								// 	parent,
+								// 	Date.now(),
+								// 	this.synchronization.syncValue,
+								// );
 							} else {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
@@ -829,19 +826,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
-							console.log(
-								'start of sync.wait priority##',
-								parent,
-								Date.now(),
-								this.synchronization.syncValue,
-							);
+							// console.log(
+							// 	'start of sync.wait priority##',
+							// 	parent,
+							// 	Date.now(),
+							// 	this.synchronization.syncValue,
+							// );
 							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`);
-							console.log(
-								'end of sync.wait priority##',
-								parent,
-								Date.now(),
-								this.synchronization.syncValue,
-							);
+							// console.log(
+							// 	'end of sync.wait priority##',
+							// 	parent,
+							// 	Date.now(),
+							// 	this.synchronization.syncValue,
+							// );
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -962,7 +959,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						valueElement.repeatCount === 'indefinite' ||
 						(isNil(valueElement.repeatCount) && this.smilObject.defaultRepeatCount === 'indefinite')
 					) {
-						console.log('creating indefinite promise', endTime);
 						promises.push(
 							this.createRepeatCountIndefinitePromise(
 								valueElement,
@@ -1712,7 +1708,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return true;
 		}
 		const currentIndexPriority = this.currentlyPlayingPriority[regionInfo.regionName][currentIndex];
-		console.log('currentIndexPriority', JSON.stringify(currentIndexPriority));
 		// playlist was already stopped/paused during await
 		if (
 			currentIndexPriority?.player.stop ||
@@ -2074,17 +2069,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		try {
-			console.log(
-				'end2 of fist non-sync media after starting promise race',
-				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-				Date.now(),
-			);
 			await Promise.race(promiseRaceArray);
-			console.log(
-				'end2 of fist non-sync media after ending promise race',
-				this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-				Date.now(),
-			);
 			videoEnded = true;
 		} catch (err) {
 			debug('Unexpected error: %O during single video playback onceEnded at video: %O', err, video);
@@ -2480,8 +2465,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// do not sync at the end of the element playback if syncing with another device is in progress
 		if (suffix === 'after' && (this.synchronization.syncingInAction || this.synchronization.movingForward)) {
 			debug('synchronization in action, skipping after sync for element %O', value);
-			console.log('this.synchronization.syncingInAction', this.synchronization.syncingInAction);
-			console.log('this.synchronization.movingForward', this.synchronization.movingForward);
 			return false;
 		}
 		let regionInfo = value.regionInfo;
@@ -2560,15 +2543,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
 					}
 
-					console.log(`start of ${suffix} sync.wait##`, groupName, value.syncIndex, value.src);
+					// console.log(`start of ${suffix} sync.wait##`, groupName, value.syncIndex, value.src);
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					console.log(
-						`end of ${suffix} sync.wait##`,
-						groupName,
-						value.syncIndex,
-						desiredSyncIndex,
-						value.src,
-					);
+					// console.log(
+					// 	`end of ${suffix} sync.wait##`,
+					// 	groupName,
+					// 	value.syncIndex,
+					// 	desiredSyncIndex,
+					// 	value.src,
+					// );
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
