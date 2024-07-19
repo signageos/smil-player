@@ -602,15 +602,19 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchOnTouchOnClick = () => {
-		window.parent.document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
-			await this.processOnTouchOnClick();
-		});
+		try {
+			window.parent.document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+				await this.processOnTouchOnClick();
+			});
+
+			window.parent.document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+				await this.processOnTouchOnClick();
+			});
+		} catch (err) {
+			debug('error while adding event listener on click: %O', err);
+		}
 
 		document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
-			await this.processOnTouchOnClick();
-		});
-
-		window.parent.document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
 			await this.processOnTouchOnClick();
 		});
 
@@ -660,9 +664,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			lastKeyTime: Date.now(),
 		};
 
-		window.parent.document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
-			state = await this.processKeyDownEvent(event, state);
-		});
+		try {
+			window.parent.document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
+				state = await this.processKeyDownEvent(event, state);
+			});
+		} catch (err) {
+			debug('error while adding event listener on keyboard: %O', err);
+		}
 
 		document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
 			state = await this.processKeyDownEvent(event, state);
