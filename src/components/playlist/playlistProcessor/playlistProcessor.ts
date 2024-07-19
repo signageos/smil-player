@@ -1322,6 +1322,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		parentRegionInfo: RegionAttributes,
 	): Promise<void> => {
 		const taskStartDate = moment().toDate();
+		const handlePriorityWhenDone = () =>
+			this.priority.handlePriorityWhenDone(
+				value as SMILMedia,
+				currentRegionInfo.regionName,
+				currentIndex,
+				endTime,
+				isLast,
+				version,
+				this.playlistVersion,
+				this.triggers,
+			);
 		try {
 			let element = <HTMLElement>document.getElementById(<string>value.id);
 
@@ -1389,16 +1400,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						'after',
 					);
 
-					await this.priority.handlePriorityWhenDone(
-						value as SMILMedia,
-						currentRegionInfo.regionName,
-						currentIndex,
-						endTime,
-						isLast,
-						version,
-						this.playlistVersion,
-						this.triggers,
-					);
+					await handlePriorityWhenDone();
 					debug(
 						'Finished checking iteration of playlist: %O',
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
@@ -1427,6 +1429,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			];
 		} catch (err) {
 			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+
+			await handlePriorityWhenDone();
+
 			await this.files.sendMediaReport(
 				value,
 				taskStartDate,
@@ -1790,6 +1795,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		params: VideoParams,
 	) => {
 		const taskStartDate = moment().toDate();
+		const handlePriorityWhenDone = () =>
+			this.priority.handlePriorityWhenDone(
+				video as SMILMedia,
+				currentRegionInfo.regionName,
+				currentIndex,
+				endTime,
+				isLast,
+				version,
+				this.playlistVersion,
+				this.triggers,
+			);
 
 		try {
 			debug('Playing video: %O', video);
@@ -1862,16 +1878,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 									'after',
 								);
 
-								await this.priority.handlePriorityWhenDone(
-									video as SMILMedia,
-									currentRegionInfo.regionName,
-									currentIndex,
-									endTime,
-									isLast,
-									version,
-									this.playlistVersion,
-									this.triggers,
-								);
+								await handlePriorityWhenDone();
 								break;
 							}
 						}
@@ -1893,16 +1900,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'after',
 							);
 
-							await this.priority.handlePriorityWhenDone(
-								video as SMILMedia,
-								currentRegionInfo.regionName,
-								currentIndex,
-								endTime,
-								isLast,
-								version,
-								this.playlistVersion,
-								this.triggers,
-							);
+							await handlePriorityWhenDone();
 							return;
 						}
 
@@ -1919,18 +1917,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							'after',
 						);
 
-						await this.priority.handlePriorityWhenDone(
-							video as SMILMedia,
-							currentRegionInfo.regionName,
-							currentIndex,
-							endTime,
-							isLast,
-							version,
-							this.playlistVersion,
-							this.triggers,
-						);
+						await handlePriorityWhenDone();
 					} catch (err) {
 						debug('Unexpected error: %O occurred during single video playback: O%', err, video);
+
+						await handlePriorityWhenDone();
+
 						await this.files.sendMediaReport(
 							video,
 							taskStartDate,
@@ -1959,6 +1951,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(1000);
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
+			await handlePriorityWhenDone();
 			await this.files.sendMediaReport(
 				video,
 				taskStartDate,
