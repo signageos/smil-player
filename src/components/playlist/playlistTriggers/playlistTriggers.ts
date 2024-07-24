@@ -326,7 +326,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchSyncTriggers = async () => {
 		this.sos.sync.onStatus(async (onStatus) => {
-			// TODO: fix in sync server, connectedPeers is undefined
 			debug('received onStatus: %O', onStatus);
 			if (!onStatus.connectedPeers) {
 				// debug('received undefined connectedPeers: %O', onStatus);
