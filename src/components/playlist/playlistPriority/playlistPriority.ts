@@ -109,14 +109,10 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): Promise<void> => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
-		// console.log(JSON.stringify(currentIndexPriority));
 		// increase times played if not trigger or endless
 		if (isNil(value.triggerValue) && endTime !== 0 && value.src === currentIndexPriority.isFirstInPlaylist.src) {
-			// console.log('increasing number times played', value.src);
-			// console.log('increasing number times played', currentIndexPriority.isFirstInPlaylist.src);
 			this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.timesPlayed++;
 		}
-		// console.log(JSON.stringify(currentIndexPriority));
 		/*
 			condition which determines if this was last iteration of playlist
 			endTimeExpired: if endTime in millis is lower as current time and at the same time is higher than 1000
@@ -256,7 +252,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			return;
 		}
 
-		// console.log('handlePriorityBeforePlay++', currentIndexPriority.media.src);
 		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (currentIndexPriority.parent === parent && currentIndexPriority.behaviour === 'stop') {
 			await this.handlePrecedingContentStop(
@@ -578,8 +573,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			}
 		}
 
-		// console.log('Jumped OUT!!!!', currentIndexPriority, Date.now());
-
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
 			return false;
@@ -675,8 +668,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			isFirstInPlaylist: {} as SMILMedia,
 		};
 
-		// console.log('handlePriorityInfoObject++', JSON.stringify(this.currentlyPlayingPriority[priorityRegionName]));
-
 		if (isNil(this.currentlyPlayingPriority[priorityRegionName])) {
 			this.currentlyPlayingPriority[priorityRegionName] = [];
 			// remember first media in the playlist chain
@@ -695,9 +686,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		if (!skipLoop) {
 			let arrayIndex: number = 0;
 			for (const elem of this.currentlyPlayingPriority[priorityRegionName]) {
-				// console.log(JSON.stringify(elem));
-				// console.log(JSON.stringify(infoObject));
-				// console.log('??????????????????????????');
 				if (
 					isEqual(elem.media, infoObject.media) &&
 					elem.parent === infoObject.parent &&
@@ -708,14 +696,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any>elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
-					// same playlist is played again, increase count to track how many times it was already played
-					// not for triggers or infinite playlists
-					// console.log('increasing number times played');
-					// if (isNil(value.triggerValue) && endTime !== 0) {
-					// 	console.log('increasing number times played', elem.player.timesPlayed);
-					// 	// infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
-					// 	infoObject.player.timesPlayed = elem.player.timesPlayed;
-					// }
 					// remember first in playlist
 					infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;
@@ -730,16 +710,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any>elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
-					// increase times played only if first media in chain is playing again
-					// not for triggers or infinite playlists
-					// if (
-					// 	isEqual(elem.isFirstInPlaylist, infoObject.media) &&
-					// 	isNil(value.triggerValue) &&
-					// 	endTime !== 0
-					// ) {
-					// 	// infoObject.player.timesPlayed = elem.player.timesPlayed + 1;
-					// 	infoObject.player.timesPlayed = elem.player.timesPlayed;
-					// }
 					// remember first in playlist
 					infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;
