@@ -1,6 +1,6 @@
 {
-  "name": "@signageos/smil-player",
-  "version": "9.9.8",
+  "name": "@signagelab/smil-player",
+  "version": "3.0.0",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
@@ -101,7 +101,7 @@
     "xml2js": "^0.4.23"
   },
   "sos": {
-    "appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2",
+    "appletUid": "95ad53133701d098541b1b2d8475c59e72cce6c65278c42f73",
     "config": [
       {
         "name": "smilUrl",

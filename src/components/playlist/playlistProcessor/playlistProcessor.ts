@@ -782,36 +782,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'No active sequence find in wallclock schedule, setting default await: %s',
 								SMILScheduleEnum.defaultAwait,
 							);
-							// console.log('shouldSync', this.synchronization.shouldSync);
-							// console.log('syncingInAction', this.synchronization.syncingInAction);
-							// console.log('movingForward', this.synchronization.movingForward);
-							// console.log('syncValue', this.synchronization.syncValue);
 							if (
 								this.synchronization.shouldSync &&
 								!this.synchronization.syncingInAction &&
 								!this.synchronization.movingForward &&
 								isNil(this.synchronization.syncValue)
 							) {
-								// console.log(
-								// 	'start of sync.wait priority no content##',
-								// 	parent,
-								// 	Date.now(),
-								// 	this.synchronization.syncValue,
-								// );
 								await this.sos.sync.wait(
 									'idle',
 									`${this.synchronization.syncGroupName}-idlePrioritySync`,
 								);
-								// console.log(
-								// 	'end of sync.wait priority no content##',
-								// 	parent,
-								// 	Date.now(),
-								// 	this.synchronization.syncValue,
-								// );
 							} else {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
-							// await sleep(SMILScheduleEnum.defaultAwait);
 						}
 
 						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
@@ -826,19 +809,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
-							// console.log(
-							// 	'start of sync.wait priority##',
-							// 	parent,
-							// 	Date.now(),
-							// 	this.synchronization.syncValue,
-							// );
 							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`);
-							// console.log(
-							// 	'end of sync.wait priority##',
-							// 	parent,
-							// 	Date.now(),
-							// 	this.synchronization.syncValue,
-							// );
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -1464,12 +1435,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
 
-		// console.log(
-		// 	'before of fist non-sync media after dynamic content end in syncgroup',
-		// 	this.syncContentPrepared?.fullScreenTrigger,
-		// 	element.dynamicValue,
-		// 	Date.now(),
-		// );
 		if (this.syncContentPrepared?.fullScreenTrigger && !element.dynamicValue && this.synchronization.shouldSync) {
 			// console.log(
 			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
@@ -1528,11 +1493,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		debug('element playing finished: %O', element);
-		// console.log(
-		// 	'non sync starting image--------------------------------------',
-		// 	this.currentlyPlaying[currentRegionInfo.regionName]?.player,
-		// 	get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop,
-		// );
 
 		await this.files.sendMediaReport(
 			element,
@@ -1983,12 +1943,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// console.log(
-		// 	'before of fist non-sync media after dynamic content end in syncgroup **',
-		// 	this.syncContentPrepared?.fullScreenTrigger,
-		// 	video.dynamicValue,
-		// 	Date.now(),
-		// );
 		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
 			// console.log(
 			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
@@ -2397,16 +2351,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(50);
 		}
 
-		// console.log('****************************************************');
-		// console.log('##', this.currentlyPlaying[regionInfo.regionName]?.src !== value.src);
-		// console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
-		// console.log('##', this.currentlyPlaying[regionInfo.regionName]);
-		// console.log('##', config.videoOptions.background);
-		// console.log('##', value.protocol !== StreamEnums.internal);
-		// console.log('##', this.videoPreparing[regionInfo.regionName]?.src !== value.src);
-		// console.log('##', value.src);
-		// console.log('##', this.currentlyPlaying[regionInfo.regionName]?.playing);
-		// console.log('****************************************************');
 		// prepare if video is not same as previous one played or if video should be played in background
 		if (
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== value.src &&
@@ -2510,7 +2454,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				value.syncGroupName = groupName;
 
-				// console.log('element will sync, create state **', value.src);
 				this.syncContentPrepared.fullScreenTrigger = {
 					syncGroupName: groupName,
 					numberOfNonSync: 0,
@@ -2543,15 +2486,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
 					}
 
-					// console.log(`start of ${suffix} sync.wait##`, groupName, value.syncIndex, value.src);
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					// console.log(
-					// 	`end of ${suffix} sync.wait##`,
-					// 	groupName,
-					// 	value.syncIndex,
-					// 	desiredSyncIndex,
-					// 	value.src,
-					// );
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
@@ -2607,11 +2542,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		} else {
 			if (this.syncContentPrepared?.fullScreenTrigger) {
-				// console.log(
-				// 	'element will not sync, create state **',
-				// 	value.src,
-				// 	this.syncContentPrepared?.fullScreenTrigger,
-				// );
 				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
 
 				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {

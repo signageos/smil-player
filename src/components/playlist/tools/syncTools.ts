@@ -101,7 +101,6 @@ export async function joinAllSyncGroupsOnSmilStart(
 		debug('sync object: %O', synchronization);
 	}
 
-	// TODO: testing, join synchronization group for syncing start of priority
 	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-prioritySync`);
 	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-idlePrioritySync`);
 }
