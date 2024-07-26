@@ -6,7 +6,7 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
-import { FileStructure, mapObject, WidgetExtensions } from '../../../enums/fileEnums';
+import { FileStructure, mapObject, WidgetExtensions, WidgetFullPath } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
 
@@ -61,10 +61,15 @@ export function createVersionedUrl(
 	sourceUrl: string,
 	playlistVersion: number = 0,
 	smilUrlVersion: string | null = null,
+	isWidget: boolean = false,
 ): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
 	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
+	// do not generate unique query string __smil_version for websites
+	if (isWidget && !isLocalFileWidget(sourceUrl)) {
+		return urlWithoutSearch;
+	}
 	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
 }
@@ -97,6 +102,10 @@ export function copyQueryParameters(fromUrl: string, toUrl: string) {
 	const searchLength = parsedToUrl.search?.length ?? 0;
 	const toUrlWithoutSearch = toUrl.substr(0, toUrl.length - searchLength);
 	Object.assign(parsedToUrl.query, parsedFromUrl.query);
+	// no query parameters, return url without ? character
+	if (Object.keys(parsedToUrl.query).length === 0) {
+		return toUrlWithoutSearch;
+	}
 	return toUrlWithoutSearch + '?' + querystring.encode(parsedToUrl.query);
 }
 
@@ -146,4 +155,8 @@ export function isWidgetUrl(widgetUrl: string): boolean {
 		}
 	}
 	return false;
+}
+
+export function isLocalFileWidget(filePath: string): boolean {
+	return filePath.includes(WidgetFullPath);
 }
