@@ -34,8 +34,9 @@ import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
 import { isRelativePath } from '../../files/tools';
-import cloneDeep = require('lodash/cloneDeep');
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
+import { smilLogging } from '../../../enums/fileEnums';
+import cloneDeep = require('lodash/cloneDeep');
 
 export const debug = Debug('@signageos/smil-player:xmlParser');
 
@@ -274,7 +275,10 @@ export function extractDataFromPlaylist(
 					node.value = [node.value];
 				}
 				node.value.forEach((element: SMILMediaSingle) => {
-					if ('src' in element && !containsElement(downloads[removeDigits(node.key)], <string>element.src)) {
+					if (
+						'src' in element &&
+						!containsElement(downloads[removeDigits(node.key)], element.src as string)
+					) {
 						// @ts-ignore
 						downloads[removeDigits(node.key)].push(element);
 					}
@@ -336,7 +340,10 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
-			regions.log = metaRecord.log === true;
+			regions.logger = {
+				enabled: metaRecord.log === true,
+				type: metaRecord.type === smilLogging.proofOfPlay ? smilLogging.proofOfPlay : smilLogging.standard,
+			};
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
 			regions.syncServerUrl = metaRecord.syncServerUrl;
@@ -409,7 +416,10 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 			refreshInterval: 0,
 		},
 		onlySmilFileUpdate: false,
-		log: false,
+		logger: {
+			enabled: false,
+			type: smilLogging.standard,
+		},
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
@@ -480,12 +490,12 @@ export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObj
 	const transitionsObject: TransitionsObject = {
 		transition: {},
 	};
-	Object.keys(xmlObject).forEach((rootKey: any) => {
+	Object.keys(xmlObject).forEach((rootKey: string) => {
 		if (rootKey === SMILEnums.transition) {
 			// multiple regions in layout element
 			if (Array.isArray(xmlObject[rootKey])) {
 				// iterate over array of objects
-				Object.keys(xmlObject[rootKey]).forEach((index: any) => {
+				Object.keys(xmlObject[rootKey]).forEach((index: string) => {
 					if (xmlObject[rootKey][index].hasOwnProperty('transitionName')) {
 						transitionsObject.transition[xmlObject[rootKey][index].transitionName] = <TransitionAttributes>(
 							xmlObject[rootKey][index]
