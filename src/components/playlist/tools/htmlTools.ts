@@ -127,6 +127,18 @@ export function createDomElement(
 	return element.id;
 }
 
+type ObjectWithStringKeys = Record<string, any>;
+
+export function extractAttributesByPrefix<T extends ObjectWithStringKeys>(obj: T, prefix: string): Partial<T> {
+	const result: Partial<T> = {};
+	for (const key in obj) {
+		if (key.startsWith(prefix)) {
+			result[key] = obj[key];
+		}
+	}
+	return result;
+}
+
 export function resetBodyContent() {
 	try {
 		for (let i = document.images.length; i-- > 0; ) {

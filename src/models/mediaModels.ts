@@ -1,6 +1,14 @@
 import { RegionAttributes, TransitionAttributes } from './xmlJsonModels';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 
+export type PoPAttributes = {
+	popName?: string;
+	popCustomId?: string;
+	popType?: 'video' | 'image' | 'html' | 'custom';
+	popTags?: string;
+	popFileName?: string;
+};
+
 export type SMILVideo = {
 	id?: string;
 	expr?: string;
@@ -20,7 +28,7 @@ export type SMILVideo = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
-};
+} & PoPAttributes;
 
 export type SMILAudio = {
 	id?: string;
@@ -38,7 +46,7 @@ export type SMILAudio = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILImage = {
 	id?: string;
@@ -58,7 +66,7 @@ export type SMILImage = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILWidget = {
 	id?: string;
@@ -78,7 +86,7 @@ export type SMILWidget = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILTicker = {
 	id?: string;
@@ -107,7 +115,7 @@ export type SMILTicker = {
 	syncGroupName?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
-};
+} & PoPAttributes;
 
 export type SosHtmlElement = {
 	expr?: string;
@@ -123,7 +131,7 @@ export type SosHtmlElement = {
 	syncGroupName?: string;
 	regionInfo: RegionAttributes;
 	localFilePath: string;
-};
+} & PoPAttributes;
 
 export type SMILIntro = {
 	expr?: string;

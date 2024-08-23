@@ -197,7 +197,9 @@ export class SmilPlayer implements ISmilPlayer {
 				);
 
 				// set variable to enable/disable events logs
-				this.files.setSmiLogging(smilObject.log);
+				if (smilObject.logger) {
+					this.files.setSmiLogging(smilObject.logger);
+				}
 
 				setTransitionsDefinition(smilObject);
 

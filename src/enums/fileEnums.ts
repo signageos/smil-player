@@ -17,5 +17,11 @@ export enum mapObject {
 	audios = 'audio',
 }
 
+export enum smilLogging {
+	standard = 'standard',
+	proofOfPlay = 'manual',
+	proofOfPlayPrefix = 'pop',
+}
+
 export const WidgetExtensions = ['.ipk', '.apk', '.wgt', '.zip'];
 export const WidgetFullPath = 'internal/smil/widgets/';

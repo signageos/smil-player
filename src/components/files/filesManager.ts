@@ -20,7 +20,7 @@ import {
 	shouldNotDownload,
 	updateJsonObject,
 } from './tools';
-import { FileStructure } from '../../enums/fileEnums';
+import { FileStructure, smilLogging } from '../../enums/fileEnums';
 import {
 	CheckETagFunctions,
 	MediaInfoObject,
@@ -41,6 +41,8 @@ import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
 import { IFilesManager } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
+import { SmilLogger } from '../../models/xmlJsonModels';
+import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 
 declare global {
 	interface Window {
@@ -51,7 +53,9 @@ declare global {
 export class FilesManager implements IFilesManager {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
-	private smilLogging: boolean = false;
+	private smilLogging: SmilLogger = {
+		enabled: false,
+	};
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -61,13 +65,21 @@ export class FilesManager implements IFilesManager {
 		this.smilFileUrl = url;
 	};
 
-	public setSmiLogging = (smilLogging: boolean) => {
-		this.smilLogging = smilLogging;
+	public setSmiLogging = (_smilLogging: SmilLogger) => {
+		this.smilLogging = _smilLogging;
 	};
 
 	public sendReport = async (message: Report) => {
-		if (this.smilLogging) {
+		if (this.smilLogging.enabled) {
+			debug('Sending report: %O', message);
 			await this.sos.command.dispatch(message);
+		}
+	};
+
+	public sendPoPReport = async (message: IRecordItemOptions) => {
+		if (this.smilLogging.enabled) {
+			debug('Sending PoP report: %O', message);
+			await this.sos.proofOfPlay.recordItemPlayed(message);
 		}
 	};
 
@@ -105,6 +117,18 @@ export class FilesManager implements IFilesManager {
 		isMediaSynced: boolean,
 		errMessage: string | null = null,
 	) => {
+		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+			const message = {
+				...{
+					name: value.popName,
+				},
+				...(value.popCustomId ? { customId: value.popCustomId } : {}),
+				...(value.popType ? { type: value.popType } : {}),
+				...(value.popTags ? { tags: value.popTags.split(',') } : {}),
+				...(value.popFileName ? { fileName: value.popFileName } : {}),
+			};
+			await this.sendPoPReport(message);
+		}
 		await this.sendReport({
 			type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 			itemType: itemType,

@@ -15,10 +15,11 @@ import {
 	SMILFile,
 	SMILFileObject,
 } from '../../models/filesModels';
+import { SmilLogger } from '../../models/xmlJsonModels';
 
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
-	setSmiLogging: (smilLogging: boolean) => void;
+	setSmiLogging: (smilLogging: SmilLogger) => void;
 	sendReport: (message: Report) => Promise<void>;
 	sendGeneralErrorReport: (message: string) => Promise<void>;
 	sendDownloadReport: (

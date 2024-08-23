@@ -13,7 +13,7 @@ import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/filesModels';
 import { HtmlEnum } from '../../../enums/htmlEnums';
-import { FileStructure } from '../../../enums/fileEnums';
+import { FileStructure, smilLogging } from '../../../enums/fileEnums';
 import {
 	SMILIntro,
 	SMILMedia,
@@ -51,6 +51,7 @@ import moment from 'moment';
 import {
 	changeZIndex,
 	createHtmlElement,
+	extractAttributesByPrefix,
 	generateElementSrc,
 	removeTransitionCss,
 	setTransitionCss,
@@ -232,7 +233,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('File changes checked');
 
 						await sleep(this.smilObject.refresh.refreshInterval * 1000);
-						debug('after check interval');
+						debug('after file check interval');
 					} else {
 						debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
 						await sleep(this.smilObject.refresh.refreshInterval * 1000);
@@ -788,10 +789,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								!this.synchronization.movingForward &&
 								isNil(this.synchronization.syncValue)
 							) {
+								await sleep(SMILScheduleEnum.defaultAwait);
+								console.log('start waiting for idle priority sync', Date.now());
 								await this.sos.sync.wait(
 									'idle',
 									`${this.synchronization.syncGroupName}-idlePrioritySync`,
 								);
+								console.log('finished waiting for idle priority sync', Date.now());
 							} else {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
@@ -1311,6 +1315,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionInfo: value.regionInfo,
 				localFilePath: value.localFilePath,
 				dynamicValue: value.dynamicValue,
+				...extractAttributesByPrefix(value, smilLogging.proofOfPlayPrefix),
 			};
 
 			if (!isNil(value.triggerValue)) {
@@ -2450,7 +2455,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					? `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${
 							this.triggers.dynamicPlaylist[value.dynamicValue].syncId
 					  }`
-					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}`;
+					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${suffix}`;
 
 				value.syncGroupName = groupName;
 
@@ -2486,7 +2491,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
 					}
 
+					console.log('start waiting for playing element sync', Date.now(), suffix, value.syncIndex);
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+					console.log('finished waiting for playing element sync', Date.now(), suffix, value.syncIndex);
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
 						this.files.sendReport({
@@ -2512,11 +2519,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					value.syncIndex,
 					Date.now(),
 				);
-
-				// if synchronization is not at the start of the element, dont set any config values
-				// if (suffix !== 'before') {
-				// 	return true;
-				// }
 
 				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
 					debug('dynamic playlist was stopped during sync.wait: %O', value);
