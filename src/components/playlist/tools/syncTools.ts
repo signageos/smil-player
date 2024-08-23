@@ -83,7 +83,8 @@ export async function joinAllSyncGroupsOnSmilStart(
 				`${synchronization.syncGroupName}-${key}`,
 				synchronization.syncDeviceId,
 			);
-			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}`);
+			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-before`);
+			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-after`);
 			initCalled = true;
 		}
 	}
