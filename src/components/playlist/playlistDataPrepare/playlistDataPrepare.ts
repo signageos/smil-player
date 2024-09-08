@@ -143,15 +143,16 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 					if (
 						(key.startsWith(SMILEnums.img) || key.startsWith('ref')) &&
-						elem.hasOwnProperty(SMILEnums.transitionType)
+						(elem[SMILEnums.transitionType] || smilObject.defaultTransition)
 					) {
-						if (!isNil(smilObject.transition[elem.transIn])) {
-							elem.transitionInfo = smilObject.transition[elem.transIn];
+						const transitionId = elem[SMILEnums.transitionType] ?? smilObject.defaultTransition;
+						if (!isNil(smilObject.transition[transitionId])) {
+							elem.transitionInfo = smilObject.transition[transitionId];
 						} else {
 							debug(
 								`No corresponding transition found for element: %O, with transitionType: %s`,
 								elem,
-								elem.transIn,
+								transitionId,
 							);
 						}
 					}

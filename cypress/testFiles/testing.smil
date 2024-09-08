@@ -1,9 +1,12 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
-        <meta log="true"/>
+        <meta http-equiv="Refresh" content="5" onlySmilUpdate="true"/>
+        <meta log="true" type="manual"/>
         <meta defaultRepeatCount="indefinite"/>
+        <meta defaultTransition="billboard"/>
         <layout>
+            <transition xml:id="billboard" type="billboard" subtype="billboard" dur="2s" columnCount="4"
+                        direction="right"/>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
             <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
                     backgroundColor="#000000"/>
@@ -13,7 +16,7 @@
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
+                    <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmqaftxv00010xk7e73dc4c2.jpeg"
                          dur="5s" fit="fill"/>
                 </seq>
             </seq>
@@ -22,45 +25,43 @@
                 <excl>
                     <par>
                         <seq repeatCount="indefinite">
-                            <priorityClass>
-                                <seq repeatCount="indefinite">
-                                    <!-- [GalleryModule] priorita (clxyeysbd0014pd3iv2sp3lbo) -->
-                                    <seq begin="wallclock(2023-09-09T13:40)" end="wallclock(2026-01-09T13:40)">
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh8ln00050xn0g59976x9.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                    </seq>
-                                    <!-- [GalleryModule] priorita 2 (clxyf428j001jpd3ibghgmepw) -->
-                                    <seq begin="wallclock(2023-07-10T11:29)" end="wallclock(2026-08-10T11:35)">
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdieyz000b0xn06ghu59av.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                    </seq>
-                                </seq>
-                            </priorityClass>
-                            <priorityClass higher="pause" pauseDisplay="hide">
-                                <seq repeatCount="indefinite">
-                                    <!-- [GalleryModule] video 1 (clxyev0lh0009pd3ivtmh111e) -->
-                                    <seq repeatCount="1">
-                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clve0gg3300000xolhio9fmmw.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <video src="https://fra1.digitaloceanspaces.com/signagelab-alfa-space/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/01/clrukcoid000i0xk16xgh1cx9.mp4"
-                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <!--                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/05/clvqgxept00010xlx9k3wekn6.png"-->
-                                        <!--                                             dur="6s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                                    </seq>
-                                    <!-- [GalleryModule] video 2 (clxyexaw6000opd3iq5j6x7xe) -->
-                                    <seq repeatCount="2">
-                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/06/clx4mwzfq00000xlwb10mc16g.jpeg"
-                                             dur="9s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>
-                                        <!--                                        <img src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/05/clvqgx4ch00000xlx17s1853o.png"-->
-                                        <!--                                             dur="3s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                                    </seq>
-                                    <!-- [GalleryModule] cervena 5 (clxyexaw6000opd3iq5j6x7xe) -->
-                                    <!--                                    <seq repeatCount="1">-->
-                                    <!--                                        <video src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdh8ln00050xn0g59976x9.mp4"-->
-                                    <!--                                               soundLevel="10%" region="cllul8o1y284991xnt62uxvy1g"/>-->
-                                    <!--                                    </seq>-->
-                                </seq>
-                            </priorityClass>
+                            <!-- [GalleryModule] bb1 (cm0wg1oy900c5i1l4xea8pomf) -->
+                            <seq repeatCount="1" playMode="one">
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgojg00010xn0fh5ndk4y.jpeg"
+                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgolj14122mn0dxukw7uk"/>
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgpm000020xn09h486u86.jpeg"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgpoo15062mn0rqypqy6i"/>
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgqow00030xn08moa2274.jpeg"
+                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgqt116072mn0o0e2eia9"/>
+                            </seq>
+                            <!-- [GalleryModule] bb2 (cm0wg2j7d00cki1l4p8qfkcq8) -->
+                            <seq repeatCount="1" playMode="one">
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/05/clh8zse9g00000xohcnyv2sht.jpeg"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg2j7d00cki1l4p8qfkcq8,clh8zseh433301xohm8y8jp14"/>
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/05/clh8ztilm00010xohcbapdh9z.jpeg"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg2j7d00cki1l4p8qfkcq8,clh8ztimu51541xoh9cf5ciwe"/>
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/05/clh8zuraf00020xoh7lrjd4cv.jpeg"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg2j7d00cki1l4p8qfkcq8,clh8zurdf68401xohprfn89e2"/>
+                            </seq>
+                            <!-- [GalleryModule] bb3 (cm0wg483t00czi1l4lv3xfn7s) -->
+                            <seq repeatCount="1" playMode="one">
+                                <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmq9epah000k0xnfcel2dlne.jpeg"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     popType="image"
+                                     popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg483t00czi1l4lv3xfn7s,clmq9epbz499791xnf0twnwp8s"/>
+                            </seq>
                         </seq>
                     </par>
                 </excl>

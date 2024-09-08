@@ -1305,7 +1305,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.triggers,
 			);
 		try {
-			let element = <HTMLElement>document.getElementById(<string>value.id);
+			let element = <HTMLElement>document.getElementById(value.id!);
 
 			let sosHtmlElement: SosHtmlElement = {
 				src: element.getAttribute('src')!,
@@ -1315,6 +1315,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionInfo: value.regionInfo,
 				localFilePath: value.localFilePath,
 				dynamicValue: value.dynamicValue,
+				transitionInfo: value.transitionInfo ?? undefined,
 				...extractAttributesByPrefix(value, smilLogging.proofOfPlayPrefix),
 			};
 
@@ -1484,10 +1485,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 			if (
 				transitionDuration !== 0 &&
-				duration === transitionDuration &&
-				this.currentlyPlaying[currentRegionInfo.regionName].nextElement.type === 'html'
+				duration < transitionDuration &&
+				this.currentlyPlaying[currentRegionInfo.regionName].nextElement?.type === 'html'
 			) {
 				setTransitionCss(
+					element,
 					elementHtml,
 					this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
 					transitionDuration,
@@ -2102,6 +2104,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		image.localFilePath = currentImageDetails.localUri;
 		debug('Setting-up intro image: %O', image);
 		const element: HTMLElement = createHtmlElement(
+			image,
 			HtmlEnum.img,
 			image.localFilePath,
 			image.regionInfo,
@@ -2208,7 +2211,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		let sosVideoObject: Video | Stream = this.sos.video;
 		let params: VideoParams = getDefaultVideoParams();
-		let element = <HTMLElement>document.getElementById(value.id ?? '');
+		let element = document.getElementById(value.id ?? '') as HTMLElement;
 
 		const parentRegionInfo = value.regionInfo;
 		let currentRegionInfo = await this.triggers.handleTriggers(value, element);
@@ -2398,6 +2401,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
 		let src = generateElementSrc(value.src, value.localFilePath, version, smilUrlVersion, isWidget);
 
+		if (value.transitionInfo?.type === 'billboard' && !element.style.backgroundImage) {
+			element.childNodes.forEach((child: HTMLElement) => {
+				child.childNodes.forEach((div: HTMLElement) => {
+					div.style.backgroundImage = `url(${src})`;
+				});
+			});
+		}
 		// add query parameter to invalidate cache on devices
 		if ((element.getAttribute('src') === null || element.getAttribute('src') !== src) && value.preload !== false) {
 			element.setAttribute('src', src);

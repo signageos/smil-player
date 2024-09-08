@@ -351,6 +351,9 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		if (metaRecord.hasOwnProperty(SMILEnums.defaultRepeatCount)) {
 			regions.defaultRepeatCount = metaRecord.defaultRepeatCount;
 		}
+		if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
+			regions.defaultTransition = metaRecord.defaultTransition;
+		}
 	}
 }
 
