@@ -8,15 +8,18 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { debug, generateElementId, removeDigits } from './generalTools';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum, ObjectFitEnum } from '../../../enums/htmlEnums';
-import { SMILImage, SMILMediaNoVideo, SMILWidget } from '../../../models/mediaModels';
+import { SMILImage, SMILMediaNoVideo, SMILWidget, SosHtmlElement } from '../../../models/mediaModels';
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { ParsedTriggerCondition, TriggerEndless } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
 import { copyQueryParameters, createVersionedUrl } from '../../files/tools';
 import { CssElementsPosition } from '../../../models/htmlModels';
+import { BillboardTransition, BillboardTransitionDirection } from '../../../enums/transitionEnums';
+import { setElementDuration } from './scheduleTools';
 
 export function createHtmlElement(
+	value: SMILImage | SMILWidget,
 	htmlElement: string,
 	filepath: string,
 	regionInfo: RegionAttributes,
@@ -24,12 +27,41 @@ export function createHtmlElement(
 	elementSrc: string,
 	isSpecial: boolean = false,
 ): HTMLElement {
-	const element: HTMLElement = document.createElement(htmlElement);
+	let element: HTMLElement;
+	// special case when image is represented as <ol><li> object due to billboard transition
+	if (htmlElement === HtmlEnum.img && value.transitionInfo?.type === 'billboard') {
+		const columnCount = value.transitionInfo.columnCount || BillboardTransition.defaultColumnCount;
+		element = document.createElement('ol');
+		element.style.left = `-40px`;
+		element.style.top = `-15px`;
+
+		for (let i = 0; i < columnCount; i++) {
+			const liElement = document.createElement('li');
+			const divElement = document.createElement('div');
+			liElement.style.display = 'inline';
+			liElement.style.float = 'left';
+			liElement.style.paddingLeft = '0px';
+
+			divElement.style.height = `${regionInfo.height}px`;
+			divElement.style.width = `${regionInfo.width / columnCount + 2}px`;
+			divElement.style.setProperty('background-position', `-${i * (regionInfo.width / columnCount)}px 0`);
+			divElement.style.setProperty('margin-left', `${i * (regionInfo.width / columnCount)}px`);
+			divElement.style.position = 'absolute';
+			divElement.style.webkitBackfaceVisibility = 'hidden';
+			divElement.style.webkitTransitionProperty = '-webkit-transform';
+
+			liElement.appendChild(divElement);
+			element.appendChild(liElement);
+		}
+	} else {
+		element = document.createElement(htmlElement);
+	}
 
 	element.id = generateElementId(filepath, regionInfo.regionName, key);
 	Object.keys(regionInfo).forEach((attr: string) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
-			element.style[attr as keyof CssElementsPosition] = `${regionInfo[attr]}px`;
+			element.style[attr as keyof CssElementsPosition] =
+				element.style[attr as keyof CssElementsPosition] || `${regionInfo[attr]}px`;
 		}
 		if (XmlTags.cssElements.includes(attr)) {
 			element.style[attr as keyof CssElementsPosition] = regionInfo[attr];
@@ -122,7 +154,7 @@ export function createDomElement(
 		return elementId;
 	}
 	const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
-	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, value.src, isSpecial);
+	const element = createHtmlElement(value, htmlElement, localFilePath, value.regionInfo, key, value.src, isSpecial);
 	document.body.appendChild(element);
 	return element.id;
 }
@@ -165,7 +197,7 @@ export function resetBodyMargin() {
 
 export function setTransitionsDefinition(smilObject: SMILFileObject) {
 	if (Object.keys(smilObject.transition).length > 0 && isNil(document.getElementById(HtmlEnum.transitionStyleId))) {
-		const css = `@keyframes fadeOut {
+		const cssFadeOut = `@keyframes fadeOut {
 			  0% {
 				opacity:1;
 			  }
@@ -209,33 +241,74 @@ export function setTransitionsDefinition(smilObject: SMILFileObject) {
 				opacity:0;
 			}`;
 
+		const cssBillboard = `@-webkit-keyframes rotate {
+			from {
+					-webkit-transform: rotateY(0deg);
+			}
+			to {
+					-webkit-transform: rotateY(90deg);
+			}
+		}`;
+
 		const style = document.createElement('style') as any;
 		style.id = HtmlEnum.transitionStyleId;
 		if (style.styleSheet) {
-			style.styleSheet.cssText = css;
+			style.styleSheet.cssText = cssBillboard.concat(cssFadeOut);
 		} else {
-			style.appendChild(document.createTextNode(css));
+			style.appendChild(document.createTextNode(cssBillboard.concat(cssFadeOut)));
 		}
 
 		document.getElementsByTagName('head')[0].appendChild(style);
 	}
 }
 
-export function setTransitionCss(element: HTMLElement, id: string, transitionDuration: number) {
-	const nextElement = <HTMLElement>document.getElementById(<string>id);
-	const transitionString = `fadeOut ease ${transitionDuration}ms forwards`;
-
+export function setTransitionCss(
+	element: SosHtmlElement,
+	htmlElement: HTMLElement,
+	id: string,
+	transitionDuration: number,
+) {
+	const nextElement = <HTMLElement>document.getElementById(id);
 	nextElement.style.setProperty('visibility', 'visible');
+	if (element.transitionInfo?.subtype === 'billboard') {
+		htmlElement.childNodes.forEach((child: HTMLElement) => {
+			child.childNodes.forEach((div: HTMLElement) => {
+				// transition duration has to be doubled because of 2 steps in animation (180 vs 360 deg, we are using only 180)
+				div.style.setProperty(
+					'-webkit-animation',
+					`rotate ${Math.min(transitionDuration, setElementDuration(element.dur))}ms linear`,
+				);
+				div.style.setProperty('-webkit-animation-iteration-count', '1');
+				div.style.setProperty(
+					'-webkit-transform-origin',
+					BillboardTransitionDirection[element.transitionInfo?.direction!] ||
+						BillboardTransition.defaultDirection,
+				);
+			});
+		});
+	}
 
-	element.style.setProperty('animation', transitionString);
-	element.style.setProperty('-webkit-animation', transitionString);
-	element.style.setProperty('-moz-animation', transitionString);
-	element.style.setProperty('-o-animation', transitionString);
-	element.style.setProperty('-ms-animation', transitionString);
-	element.style.setProperty('-webkit-backface-visibility', 'hidden');
+	if (element.transitionInfo?.subtype === 'crossfade') {
+		const transitionString = `fadeOut ease ${transitionDuration}ms forwards`;
+
+		htmlElement.style.setProperty('animation', transitionString);
+		htmlElement.style.setProperty('-webkit-animation', transitionString);
+		htmlElement.style.setProperty('-moz-animation', transitionString);
+		htmlElement.style.setProperty('-o-animation', transitionString);
+		htmlElement.style.setProperty('-ms-animation', transitionString);
+		htmlElement.style.setProperty('-webkit-backface-visibility', 'hidden');
+	}
 }
 
 export function removeTransitionCss(element: HTMLElement) {
+	element.childNodes.forEach((child: HTMLElement) => {
+		child.childNodes.forEach((div: HTMLElement) => {
+			div.style.removeProperty('-webkit-animation');
+			div.style.removeProperty('-webkit-animation-iteration-count');
+			div.style.removeProperty('-webkit-transform-origin');
+		});
+	});
+
 	element.style.removeProperty('animation');
 	element.style.removeProperty('-webkit-animation');
 	element.style.removeProperty('-moz-animation');
