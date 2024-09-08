@@ -14,6 +14,7 @@ export enum SMILEnums {
 	onlySmilUpdate = 'onlySmilUpdate',
 	syncServer = 'syncServerUrl',
 	defaultRepeatCount = 'defaultRepeatCount',
+	defaultTransition = 'defaultTransition',
 }
 
 export const parentGenerationRemove = [
@@ -27,6 +28,7 @@ export const parentGenerationRemove = [
 	'timeoutReference',
 	'parent',
 	'syncGroupName',
+	'transitionInfo',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
