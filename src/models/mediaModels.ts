@@ -130,6 +130,7 @@ export type SosHtmlElement = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	regionInfo: RegionAttributes;
+	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
 } & PoPAttributes;
 

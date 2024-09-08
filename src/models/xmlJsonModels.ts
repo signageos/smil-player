@@ -15,6 +15,7 @@ export type RegionsObject = {
 	logger: SmilLogger;
 	syncServerUrl?: string;
 	defaultRepeatCount?: '1' | 'indefinite';
+	defaultTransition?: string;
 	[key: string]: any;
 };
 
@@ -70,6 +71,7 @@ export type SMILMetaObject = {
 	expr?: string;
 	syncServerUrl?: string;
 	defaultRepeatCount?: '1' | 'indefinite';
+	defaultTransition?: string;
 };
 
 export type RegionAttributes = {
@@ -90,6 +92,8 @@ export type RegionAttributes = {
 export type TransitionAttributes = {
 	transitionName: string;
 	type: string;
-	subType: string;
+	subtype: string;
 	dur: string;
+	columnCount?: number;
+	direction?: 'right' | 'left';
 };
