@@ -9,6 +9,7 @@ import { checksumString } from './checksum';
 import { FileStructure, mapObject, WidgetExtensions, WidgetFullPath } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
+import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 
 export const debug = Debug('@signageos/smil-player:filesManager');
 
@@ -159,4 +160,22 @@ export function isWidgetUrl(widgetUrl: string): boolean {
 
 export function isLocalFileWidget(filePath: string): boolean {
 	return filePath.includes(WidgetFullPath);
+}
+
+export function createPoPMessagePayload(
+	value: MergedDownloadList,
+	errMessage: string | null,
+	event: 'download' | undefined = undefined,
+): IRecordItemOptions {
+	return {
+		...{
+			name: value.popName!,
+		},
+		...(event !== 'download' ? { playbackSuccess: !errMessage } : {}),
+		...(errMessage ? { errorMessage: errMessage } : {}),
+		...(value.popCustomId ? { customId: value.popCustomId } : {}),
+		...(value.popType ? { type: value.popType } : {}),
+		...(value.popTags ? { tags: value.popTags.split(',') } : {}),
+		...(value.popFileName ? { fileName: value.popFileName } : {}),
+	};
 }
