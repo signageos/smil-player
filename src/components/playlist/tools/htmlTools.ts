@@ -268,8 +268,8 @@ export function setTransitionCss(
 	id: string,
 	transitionDuration: number,
 ) {
-	const nextElement = <HTMLElement>document.getElementById(id);
-	nextElement.style.setProperty('visibility', 'visible');
+	const nextElement = document.getElementById(id);
+	nextElement?.style.setProperty('visibility', 'visible');
 	if (element.transitionInfo?.subtype === 'billboard') {
 		htmlElement.childNodes.forEach((child: HTMLElement) => {
 			child.childNodes.forEach((div: HTMLElement) => {

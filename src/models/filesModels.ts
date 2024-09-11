@@ -1,7 +1,7 @@
 import { DynamicPlaylistList, TriggerList } from './triggerModels';
 import { RegionsObject, TransitionsObject } from './xmlJsonModels';
 import { SMILPlaylist } from './playlistModels';
-import { SMILAudio, SMILImage, SMILIntro, SMILVideo, SMILWidget } from './mediaModels';
+import { PoPAttributes, SMILAudio, SMILImage, SMILIntro, SMILVideo, SMILWidget } from './mediaModels';
 
 export type DownloadsList = {
 	video: SMILVideo[];
@@ -24,7 +24,7 @@ export type SMILFile = {
 	download?: () => Promise<void>;
 	/** Optional callback which overrides default checking for last-modified header using HEAD */
 	fetchLastModified?: () => Promise<string | number | null>;
-};
+} & PoPAttributes;
 
 export type MediaInfoObject = {
 	[fileName: string]: string | null | number;
