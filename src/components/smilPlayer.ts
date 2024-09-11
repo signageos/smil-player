@@ -61,7 +61,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const storageUnits = await sos.fileSystem.listStorageUnits();
 
 		// reference to persistent storage unit, where player stores all content
-		const internalStorageUnit = <IStorageUnit>storageUnits.find((storageUnit) => !storageUnit.removable);
+		const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable)!;
 
 		this.processor.setStorageUnit(internalStorageUnit);
 

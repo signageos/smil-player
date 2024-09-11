@@ -12,6 +12,7 @@ import {
 	createDownloadPath,
 	createJsonStructureMediaInfo,
 	createLocalFilePath,
+	createPoPMessagePayload,
 	createSourceReportObject,
 	debug,
 	getFileName,
@@ -95,14 +96,19 @@ export class FilesManager implements IFilesManager {
 		fileType: ItemType,
 		localFilePath: string,
 		internalStorageUnit: IStorageUnit,
-		fileSrc: string,
+		value: MergedDownloadList,
 		taskStartDate: Date,
 		errMessage: string | null = null,
 	) => {
+		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+			// to create difference between download and media played
+			value.popName = 'media-download';
+			await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
+		}
 		await this.sendReport({
 			type: 'SMIL.FileDownloaded',
 			itemType: fileType,
-			source: createSourceReportObject(localFilePath, fileSrc, internalStorageUnit.type),
+			source: createSourceReportObject(localFilePath, value.src, internalStorageUnit.type),
 			startedAt: taskStartDate,
 			succeededAt: isNil(errMessage) ? moment().toDate() : null,
 			failedAt: isNil(errMessage) ? null : moment().toDate(),
@@ -118,16 +124,9 @@ export class FilesManager implements IFilesManager {
 		errMessage: string | null = null,
 	) => {
 		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
-			const message = {
-				...{
-					name: value.popName,
-				},
-				...(value.popCustomId ? { customId: value.popCustomId } : {}),
-				...(value.popType ? { type: value.popType } : {}),
-				...(value.popTags ? { tags: value.popTags.split(',') } : {}),
-				...(value.popFileName ? { fileName: value.popFileName } : {}),
-			};
-			await this.sendPoPReport(message);
+			// to create difference between download and media played
+			value.popName = 'media-playback';
+			await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
 		}
 		await this.sendReport({
 			type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
@@ -141,7 +140,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
-		await this.sendReport(<Report>{
+		await this.sendReport({
 			type: 'SMIL.PlaybackStarted',
 			source: createSourceReportObject(localFilePath, src),
 			succeededAt: isNil(errMessage) ? moment().toDate() : null,
@@ -312,7 +311,7 @@ export class FilesManager implements IFilesManager {
 								fileType,
 								fullLocalFilePath,
 								internalStorageUnit,
-								file.src,
+								file,
 								taskStartDate,
 							);
 						} catch (err) {
@@ -321,7 +320,7 @@ export class FilesManager implements IFilesManager {
 								fileType,
 								fullLocalFilePath,
 								internalStorageUnit,
-								file.src,
+								file,
 								taskStartDate,
 								err.message,
 							);

@@ -1,11 +1,11 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="5" onlySmilUpdate="true"/>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <meta log="true" type="manual"/>
         <meta defaultRepeatCount="indefinite"/>
         <meta defaultTransition="billboard"/>
         <layout>
-            <transition xml:id="billboard" type="billboard" subtype="billboard" dur="2s" columnCount="4"
+            <transition xml:id="billboard" type="billboard" subtype="billboard" dur="1s" columnCount="45"
                         direction="right"/>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
             <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
@@ -28,7 +28,7 @@
                             <!-- [GalleryModule] bb1 (cm0wg1oy900c5i1l4xea8pomf) -->
                             <seq repeatCount="1" playMode="one">
                                 <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgojg00010xn0fh5ndk4y.jpeg"
-                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
                                      popType="image"
                                      popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgolj14122mn0dxukw7uk"/>
                                 <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgpm000020xn09h486u86.jpeg"
@@ -36,7 +36,7 @@
                                      popType="image"
                                      popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgpoo15062mn0rqypqy6i"/>
                                 <img src="https://signagelab-alfa-space.fra1.digitaloceanspaces.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2024/04/clumdgqow00030xn08moa2274.jpeg"
-                                     dur="5s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
+                                     dur="10s" fit="fill" region="cllul8o1y284991xnt62uxvy1g" popName="signagelab_event"
                                      popType="image"
                                      popTags="ckr1u68ig890351znnshenikir,cm0avhrt6000zhdfgz53mt4lb,cm0wg1oy900c5i1l4xea8pomf,clumdgqt116072mn0o0e2eia9"/>
                             </seq>

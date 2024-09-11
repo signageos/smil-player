@@ -26,7 +26,7 @@ export interface IFilesManager {
 		fileType: ItemType,
 		localFilePath: string,
 		internalStorageUnit: IStorageUnit,
-		fileSrc: string,
+		value: MergedDownloadList,
 		taskStartDate: Date,
 		errMessage: string | null,
 	) => Promise<void>;
