@@ -204,7 +204,11 @@ export class SmilPlayer implements ISmilPlayer {
 				setTransitionsDefinition(smilObject);
 
 				// reset body content if there is no dynamic content ( dynamic has refresh via applet.refresh so we want to keep backup image visible )
-				if (Object.keys(smilObject.dynamic).length === 0) {
+				// or reset body content if billboard transition is set because of dynamic div elements for columns
+				if (
+					(Object.keys(smilObject.dynamic).length === 0 && firstIteration) ||
+					smilObject.transition?.billboard
+				) {
 					resetBodyContent();
 				} else {
 					resetBodyMargin();
