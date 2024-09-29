@@ -109,7 +109,7 @@ export function changeZIndex(
 	useValueZIndex: boolean = true,
 ): void {
 	const valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
-	const currentElementZIndex = parseInt(element.style.getPropertyValue(HtmlEnum.zIndex));
+	const currentElementZIndex = parseInt(element?.style.getPropertyValue(HtmlEnum.zIndex));
 	let resultZIndex = useValueZIndex ? valueZIndex : 0;
 	if ('transitionInfo' in value) {
 		resultZIndex = transitionConstant + valueZIndex;
@@ -129,8 +129,8 @@ export function changeZIndex(
 	if (resultZIndex < currentElementZIndex && !('transitionInfo' in value)) {
 		resultZIndex = 0;
 	}
-
-	element.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
+	debug('changing zIndex for element: %O : %s', element, resultZIndex);
+	element?.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 }
 
 /**
@@ -246,7 +246,7 @@ export function setTransitionsDefinition(smilObject: SMILFileObject) {
 					-webkit-transform: rotateY(0deg);
 			}
 			to {
-					-webkit-transform: rotateY(90deg);
+					-webkit-transform: rotateY(135deg);
 			}
 		}`;
 
@@ -270,13 +270,14 @@ export function setTransitionCss(
 ) {
 	const nextElement = document.getElementById(id);
 	nextElement?.style.setProperty('visibility', 'visible');
+	// because of seamless update next element sometimes does not have zIndex set to original value
+	nextElement?.style.setProperty(HtmlEnum.zIndex, `${parseInt(htmlElement.style.zIndex) - 1}`);
 	if (element.transitionInfo?.subtype === 'billboard') {
 		htmlElement.childNodes.forEach((child: HTMLElement) => {
 			child.childNodes.forEach((div: HTMLElement) => {
-				// transition duration has to be doubled because of 2 steps in animation (180 vs 360 deg, we are using only 180)
 				div.style.setProperty(
 					'-webkit-animation',
-					`rotate ${Math.min(transitionDuration, setElementDuration(element.dur))}ms linear`,
+					`rotate ${Math.min(transitionDuration * 1.5, setElementDuration(element.dur))}ms linear`,
 				);
 				div.style.setProperty('-webkit-animation-iteration-count', '1');
 				div.style.setProperty(
