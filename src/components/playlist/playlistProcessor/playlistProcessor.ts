@@ -813,7 +813,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
+							console.log('start waiting for priority sync', Date.now());
 							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`);
+							console.log('finished waiting for priority sync', Date.now());
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -1365,13 +1367,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 					);
 
-					await this.handleElementSynchronization(
-						value,
-						currentRegionInfo,
-						parentRegionInfo,
-						currentIndex,
-						'after',
-					);
+					// await this.handleElementSynchronization(
+					// 	value,
+					// 	currentRegionInfo,
+					// 	parentRegionInfo,
+					// 	currentIndex,
+					// 	'after',
+					// );
 
 					await handlePriorityWhenDone();
 					debug(
@@ -1438,6 +1440,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	): Promise<void> => {
 		debug('Starting to play element: %O', element);
 		let duration = setElementDuration(element.dur);
+		let transitionSet = false;
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
 
@@ -1486,8 +1489,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (
 				transitionDuration !== 0 &&
 				duration < transitionDuration &&
-				this.currentlyPlaying[currentRegionInfo.regionName].nextElement?.type === 'html'
+				this.currentlyPlaying[currentRegionInfo.regionName].nextElement?.type === 'html' &&
+				!transitionSet
 			) {
+				transitionSet = true;
+				debug('setting transition css for element: %O', element, duration, transitionDuration);
 				setTransitionCss(
 					element,
 					elementHtml,
@@ -1832,13 +1838,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 									this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 								);
 
-								await this.handleElementSynchronization(
-									video,
-									currentRegionInfo,
-									parentRegionInfo,
-									currentIndex,
-									'after',
-								);
+								// await this.handleElementSynchronization(
+								// 	video,
+								// 	currentRegionInfo,
+								// 	parentRegionInfo,
+								// 	currentIndex,
+								// 	'after',
+								// );
 
 								await handlePriorityWhenDone();
 								break;
@@ -1854,13 +1860,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 							);
 
-							await this.handleElementSynchronization(
-								video,
-								currentRegionInfo,
-								parentRegionInfo,
-								currentIndex,
-								'after',
-							);
+							// await this.handleElementSynchronization(
+							// 	video,
+							// 	currentRegionInfo,
+							// 	parentRegionInfo,
+							// 	currentIndex,
+							// 	'after',
+							// );
 
 							await handlePriorityWhenDone();
 							return;
@@ -1871,13 +1877,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
-						await this.handleElementSynchronization(
-							video,
-							currentRegionInfo,
-							parentRegionInfo,
-							currentIndex,
-							'after',
-						);
+						// await this.handleElementSynchronization(
+						// 	video,
+						// 	currentRegionInfo,
+						// 	parentRegionInfo,
+						// 	currentIndex,
+						// 	'after',
+						// );
 
 						await handlePriorityWhenDone();
 					} catch (err) {
