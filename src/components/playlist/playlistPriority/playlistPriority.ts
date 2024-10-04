@@ -327,6 +327,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				previousIndexPriority.priority.lower,
 			);
 		}
+		debug('finished handling priority before play');
 	};
 
 	/**
