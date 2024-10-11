@@ -1,0 +1,313 @@
+<smil>
+    <head>
+        <meta createdAt="2024-10-10T12:09:01.629+00:00"/>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta log="true" type="manual"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <meta defaultTransition="metadata-transition"/>
+        <layout>
+            <transition xml:id="metadata-transition" type="billboard" subtype="billboard" dur="1s" columnCount="50"
+                        direction="left"/>
+            <root-layout width="960" height="360" backgroundColor="#000000"/>
+            <region regionName="cm1kk7rmk0005bfefhlh9hqb6" left="0" top="0" width="960" height="360" z-index="1"
+                    backgroundColor="#000000"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://1.signage-cdn.com/global/smil-placeholders/content-downloading-landcape.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <!-- [GalleryModule] černá pro LED 22 - 00 (cm1pfgccn01g6zzo4fty9gx1u) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w1T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w1T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w2T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w2T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w3T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w3T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w4T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w4T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w5T11:52/P1D)"
+                                         end="wallclock(R/3000-01-01+w5T11:53/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w6T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w6T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w7T22:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w7T23:59/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pfgccn01g6zzo4fty9gx1u,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <!-- [GalleryModule] černá pro LED 00 - 06 (cm1pflgo0026sib0by2ax83ce) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w1T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w1T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w2T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w2T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w3T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w3T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w4T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w4T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w5T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w5T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w6T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w6T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2000-01-01+w7T00:00/P1D)"
+                                         end="wallclock(R/3000-01-01+w7T06:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1pfgj2z00gg12pb3hoobhmf.png"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1pflgo0026sib0by2ax83ce,cm1pfgj7w00aqdsosx8c82ahp"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+                                    <!-- [GalleryModule] Volný BB LED 960x360 statika 1 (cm1ks1rtp004ylb6qlyo1nixo) -->
+                                    <seq repeatCount="1" playMode="one">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1owsxk1006g12qs6dgr2bcl.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ks1rtp004ylb6qlyo1nixo,cm1owsxnf01lo7vfsribnhq9p"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm2082xja003b12qtbo4m80au.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ks1rtp004ylb6qlyo1nixo,cm2082xoq001kfyzo5fujqyr2"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm2082yrc003c12qtedln60su.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ks1rtp004ylb6qlyo1nixo,cm2082yxk002ep92gainfjuyw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm20830bx003d12qt7fhp5s2i.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ks1rtp004ylb6qlyo1nixo,cm208317h002hp92g204h4ih6"/>
+                                    </seq>
+                                    <!-- [GalleryModule] Volný BB LED 960x360 statika 2 (cm1ks1rw40050lb6qtcfot5ri) -->
+                                    <seq repeatCount="1" playMode="one">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1owv9yu006m12qs1nrmcql3.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ks1rw40050lb6qtcfot5ri,cm1owva1m01l2a49922hyvdo0"/>
+                                    </seq>
+                                    <!-- [GalleryModule] 18147175 30.9.-31.12. č.1/1 op.1/1 Ahold LT 15% sleva 960 x 360 STAT (cm1ozvw1d0084ib0bk9uodzhp) -->
+                                    <seq repeatCount="1" begin="wallclock(2000-01-01T00:00)"
+                                         end="wallclock(2024-12-31T23:59)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1ozw4el000t12pb1i9xea68.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1ozvw1d0084ib0bk9uodzhp,cm1ozw4h7008ab4j6au4e42ew"/>
+                                    </seq>
+                                    <!-- [GalleryModule] 18150576 1.10.-31.10. č.1/4 op.1/1 Škoda ELROQ - LED - 10/2024 0:00-18:00 do 18 Flamingo a cloud 960 x 360 STAT (cm1s0bjmk0003vipfxzjvzomx) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w1T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w1T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w2T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w2T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w3T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w3T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w4T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w4T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w5T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w5T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w6T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w6T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w7T00:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w7T18:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0hc1x001m12oa361oae5c.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0hc4e00s4hffbumfw2lpw"/>
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0h9wm001l12oa4p9h193k.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0bjmk0003vipfxzjvzomx,cm1s0ha0m00p3b3ta9ngcbvbg"/>
+                                    </seq>
+                                    <!-- [GalleryModule] 18150576 1.10.-31.10. č.1/4 op.1/1 Škoda ELROQ - LED - 10/2024 18:00-24:00 od 18 moon 960 x 360 STAT (cm1s0jo9f001cvipf88wmzgny) -->
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w1T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w1T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w2T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w2T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w3T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w3T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w4T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w4T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w5T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w5T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w6T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w6T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(R/2024-10-01+w7T18:00/P1D)"
+                                         end="wallclock(R/2024-10-31+w7T24:00/P1D)">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1s0mbjt001p12oa4nj0dvce.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm1s0jo9f001cvipf88wmzgny,cm1s0mbq600stkcjyv8vo9fl7"/>
+                                    </seq>
+                                    <!-- [GalleryModule] 1854445555 1.10.-15.10. č.2/4 op.1/1 KCP 1-15 / 10 960 x 360 STAT (cm22w9rvi000fhnusvgjn8im5) -->
+                                    <seq repeatCount="1" begin="wallclock(2024-10-01T00:00)"
+                                         end="wallclock(2024-10-15T23:59)" playMode="one">
+                                        <img src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm22wc06n002l12pe9snkgahd.jpeg"
+                                             dur="10s" fit="fill" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                             popName="signagelab_event" popType="image"
+                                             popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s0w009nbfeffyxarxmz,cm22w9rvi000fhnusvgjn8im5,cm22wc0bp00d4cnx4u5fwoy8n"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>
