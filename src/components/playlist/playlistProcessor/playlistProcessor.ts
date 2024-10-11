@@ -814,7 +814,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							isNil(this.synchronization.syncValue)
 						) {
 							console.log('start waiting for priority sync', Date.now());
-							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`);
+							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
 							console.log('finished waiting for priority sync', Date.now());
 						}
 
