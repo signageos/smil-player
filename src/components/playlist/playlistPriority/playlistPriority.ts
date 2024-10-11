@@ -409,6 +409,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): void => {
 		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
 		const previousIndexPriority = this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex];
+
+		// if cancelling lower priority playlist which has transitions, hide next element from dom as well
+		if (previousIndexPriority.media.hasOwnProperty('transitionInfo')) {
+			const nextElementHtml = document.getElementById(this.currentlyPlaying[priorityRegionName].nextElement.id!);
+			nextElementHtml?.style.setProperty('visibility', 'hidden');
+		}
+
 		debug('Pausing playlist: %O', previousIndexPriority);
 		previousIndexPriority.player.contentPause = 9999999;
 		previousIndexPriority.player.playing = false;
@@ -423,6 +430,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	 */
 	private handleStopBehaviour = (priorityRegionName: string, previousPlayingIndex: number): void => {
 		const previousIndexPriority = this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex];
+
+		// if cancelling lower priority playlist which has transitions, hide next element from dom as well
+		if (previousIndexPriority.media.hasOwnProperty('transitionInfo')) {
+			const nextElementHtml = document.getElementById(this.currentlyPlaying[priorityRegionName].nextElement.id!);
+			nextElementHtml?.style.setProperty('visibility', 'hidden');
+		}
+
 		debug('Stopping playlist: %O', previousIndexPriority);
 		previousIndexPriority.player.stop = true;
 		previousIndexPriority.player.playing = false;

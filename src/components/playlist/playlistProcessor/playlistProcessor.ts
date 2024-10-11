@@ -1424,6 +1424,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param element - displayed SOS HTML element
 	 * @param arrayIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
 	 * @param elementHtml - actual HTML element visible on page
+	 * @param currentElementPriorityLevel
 	 * @param transitionDuration - duration of transitions between images
 	 * @param taskStartDate - date when element was displayed
 	 * @param version - smil internal version of current playlist
@@ -1612,6 +1613,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlaying[regionInfo.regionName].nextElement = cloneDeep(media);
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
 				get(media, 'localFilePath', 'default').indexOf(FileStructure.videos) === -1 ? 'html' : 'video';
+
 			debug('checking if this playlist is newer version than currently playing');
 			if (version > this.playlistVersion && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
 				this.foundNewPlaylist = true;

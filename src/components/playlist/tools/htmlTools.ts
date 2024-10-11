@@ -265,13 +265,13 @@ export function setTransitionsDefinition(smilObject: SMILFileObject) {
 export function setTransitionCss(
 	element: SosHtmlElement,
 	htmlElement: HTMLElement,
-	id: string,
+	nextElementId: string,
 	transitionDuration: number,
 ) {
-	const nextElement = document.getElementById(id);
-	nextElement?.style.setProperty('visibility', 'visible');
+	const nextElementHtml = document.getElementById(nextElementId);
+	nextElementHtml?.style.setProperty('visibility', 'visible');
 	// because of seamless update next element sometimes does not have zIndex set to original value
-	nextElement?.style.setProperty(HtmlEnum.zIndex, `${parseInt(htmlElement.style.zIndex) - 1}`);
+	nextElementHtml?.style.setProperty(HtmlEnum.zIndex, `${parseInt(htmlElement.style.zIndex) - 1}`);
 	if (element.transitionInfo?.subtype === 'billboard') {
 		htmlElement.childNodes.forEach((child: HTMLElement) => {
 			child.childNodes.forEach((div: HTMLElement) => {
