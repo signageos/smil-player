@@ -218,10 +218,12 @@ export class SmilPlayer implements ISmilPlayer {
 				// seamlessly updated playlist dont start with intro
 				if (smilObject.intro.length > 0 && playIntro && Object.keys(smilObject.dynamic).length === 0) {
 					const introPromises: Promise<void>[] = [];
+					// download intro file before anything else
+					const introMedia = await this.processor.downloadIntro();
 
 					downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
 
-					introPromises.concat(await this.processor.playIntro());
+					introPromises.concat(await this.processor.playIntro(introMedia));
 
 					introPromises.push(
 						(async () => {
