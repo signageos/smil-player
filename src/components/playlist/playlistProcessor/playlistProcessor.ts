@@ -131,22 +131,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	/**
-	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
+	 * downloads intro media before actual playlist starts, returns identifier if intro is video or image
 	 */
-	public playIntro = async (): Promise<Promise<void>[]> => {
-		let media: string = '';
+	public downloadIntro = async (): Promise<string> => {
+		let introMedia: string = '';
 		let fileStructure: string = '';
 		let downloadPromises: Promise<void>[] = [];
-		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
 		for (const property in this.smilObject.intro[0]) {
 			if (property.startsWith(HtmlEnum.video)) {
-				media = property;
+				introMedia = property;
 				fileStructure = FileStructure.videos;
 			}
 
 			if (property.startsWith(HtmlEnum.img)) {
-				media = property;
+				introMedia = property;
 				fileStructure = FileStructure.images;
 			}
 		}
@@ -154,33 +153,41 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		downloadPromises = downloadPromises.concat(
 			await this.files.parallelDownloadAllFiles(
 				this.internalStorageUnit,
-				[this.smilObject.intro[0][media]] as MergedDownloadList[],
+				[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
 				fileStructure,
 			),
 		);
 
 		await Promise.all(downloadPromises);
+		debug('Intro media downloaded: %O', this.smilObject.intro[0]);
+		return introMedia;
+	};
+
+	/**
+	 * plays intro media before actual playlist starts, default behaviour is to play video as intro
+	 * @param introMedia - identifier if intro is video or image
+	 */
+	public playIntro = async (introMedia: string): Promise<Promise<void>[]> => {
+		let imageElement: HTMLElement = document.createElement(HtmlEnum.img);
 
 		const intro: SMILIntro = this.smilObject.intro[0];
 
 		debug('Intro media object: %O', intro);
-		switch (removeDigits(media)) {
+		switch (removeDigits(introMedia)) {
 			case HtmlEnum.img:
 				if (imageElement.getAttribute('src') === null) {
-					const imageIntro = intro[media] as SMILImage;
-					imageElement = await this.setupIntroImage(imageIntro, this.smilObject, media);
+					const imageIntro = intro[introMedia] as SMILImage;
+					imageElement = await this.setupIntroImage(imageIntro, this.smilObject, introMedia);
 					this.setCurrentlyPlaying(imageIntro, 'html', SMILEnums.defaultRegion);
 				}
 				break;
 			default:
-				const videoIntro = intro[media] as SMILVideo;
+				const videoIntro = intro[introMedia] as SMILVideo;
 				await this.setupIntroVideo(videoIntro, this.smilObject);
 				this.setCurrentlyPlaying(videoIntro, 'video', SMILEnums.defaultRegion);
 		}
 
-		debug('Intro media downloaded: %O', intro);
-
-		return this.playIntroLoop(media, intro);
+		return this.playIntroLoop(introMedia, intro);
 	};
 
 	/**

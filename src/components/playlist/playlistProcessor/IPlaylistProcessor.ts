@@ -10,7 +10,7 @@ export interface IPlaylistProcessor {
 	setPlaylistVersion: (num: number) => void;
 	getPlaylistVersion: () => number;
 	setCancelFunction: (value: boolean, index: number) => void;
-	playIntro: () => Promise<Promise<void>[]>;
+	playIntro: (introMedia: string) => Promise<Promise<void>[]>;
 	processingLoop: (smilFile: SMILFile, firstIteration: boolean, restart: () => void) => Promise<void>;
 	processPriorityTag: (
 		value: PlaylistElement | PlaylistElement[],
