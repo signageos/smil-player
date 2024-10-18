@@ -32,8 +32,9 @@ export function createHtmlElement(
 	if (htmlElement === HtmlEnum.img && value.transitionInfo?.type === 'billboard') {
 		const columnCount = value.transitionInfo.columnCount || BillboardTransition.defaultColumnCount;
 		element = document.createElement('ol');
-		element.style.left = `-40px`;
-		element.style.top = `-15px`;
+		element.style.listStyle = 'none';
+		element.style.padding = '0px';
+		element.style.margin = '0px';
 
 		for (let i = 0; i < columnCount; i++) {
 			const liElement = document.createElement('li');
