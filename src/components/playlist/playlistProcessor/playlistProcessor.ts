@@ -220,8 +220,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Last modified check for smil media files prepared');
 						debug('Checking files for changes');
 						if (
-							fileEtagPromisesMedia?.length > 0 ||
-							(fileEtagPromisesSMIL?.length > 0 && this.synchronization.shouldSync)
+							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
+							this.synchronization.shouldSync
 						) {
 							debug('One of the files changed, restarting loop with sync on');
 							await this.sos.refresh();
@@ -229,8 +229,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						if (
-							fileEtagPromisesMedia?.length > 0 ||
-							(fileEtagPromisesSMIL?.length > 0 && !this.synchronization.shouldSync)
+							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
+							!this.synchronization.shouldSync
 						) {
 							debug('One of the files changed, restarting loop with sync off');
 							this.setCheckFilesLoop(false);
