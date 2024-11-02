@@ -2,7 +2,7 @@
     <head>
         <meta createdAt="2024-09-27T13:53:35.085+00:00"/>
         <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
-        <meta log="false" type="manual"/>
+        <meta log="false" type="manual" endpoint="testingEndpoint"/>
         <meta defaultRepeatCount="indefinite"/>
         <layout>
             <root-layout width="1080" height="1920" backgroundColor="#000000"/>

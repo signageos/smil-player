@@ -7,6 +7,7 @@ export enum FileStructure {
 	images = 'smil/images',
 	widgets = 'smil/widgets',
 	extracted = 'smil/widgets/extracted',
+	offlineReports = 'offlineReports',
 }
 
 export enum mapObject {
@@ -25,3 +26,4 @@ export enum smilLogging {
 
 export const WidgetExtensions = ['.ipk', '.apk', '.wgt', '.zip'];
 export const WidgetFullPath = 'internal/smil/widgets/';
+export const CUSTOM_ENDPOINT_REPORT_FILE_LIMIT = 100;
