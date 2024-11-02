@@ -53,6 +53,10 @@ export function getLastArrayItem(array: any[]): any {
 	return array[array.length - 1];
 }
 
+export function removeLastArrayItem(array: any[]): any[] {
+	return array.slice(0, array.length - 1);
+}
+
 /**
  * set correct dimensions to work on all displays correctly, changes values from % to fix numbers ( 50% -> 800px )
  * recalculates bottom position to top to work properly with signageOs videos

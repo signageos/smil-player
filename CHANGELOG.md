@@ -7,11 +7,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+DOPLNIT CHANGELOG
+
 ### Added
 
 - support for dynamic triggers
 - upgrade to node v20
 - improved performance for older devices
+- improve video playback performance
 - improved reporting messages
 - added option to start triggers from inside the widget
 

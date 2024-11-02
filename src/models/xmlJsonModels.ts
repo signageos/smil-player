@@ -22,6 +22,7 @@ export type RegionsObject = {
 export type SmilLogger = {
 	enabled: boolean;
 	type?: smilLogging.standard | smilLogging.proofOfPlay;
+	endpoint?: string;
 };
 
 export type TransitionsObject = {
@@ -67,6 +68,7 @@ export type SMILMetaObject = {
 	content: string;
 	log: boolean | string;
 	type?: smilLogging.standard | smilLogging.proofOfPlay;
+	endpoint?: string;
 	onlySmilUpdate: boolean | string;
 	expr?: string;
 	syncServerUrl?: string;

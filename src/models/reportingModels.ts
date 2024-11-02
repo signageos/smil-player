@@ -1,3 +1,5 @@
+import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
+
 export type Source = {
 	filePath: { path: string; storage: string };
 	uri: string;
@@ -45,6 +47,10 @@ export type SyncWait = {
 	startedAt: Date;
 	groupName: string;
 };
+
+export interface CustomEndpointReport extends IRecordItemOptions {
+	recordedAt: string;
+}
 
 export type Report = MediaPlayed | FileDownload | PlaybackStarted | SmilError | SyncWait;
 export type ItemType = 'image' | 'video' | 'ref' | 'smil' | 'ticker';

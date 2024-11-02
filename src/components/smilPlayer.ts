@@ -64,21 +64,20 @@ export class SmilPlayer implements ISmilPlayer {
 		const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable)!;
 
 		this.processor.setStorageUnit(internalStorageUnit);
+		this.files.setLocalStorageUnit(internalStorageUnit);
 
-		await this.files.createFileStructure(internalStorageUnit);
+		await this.files.createFileStructure();
 
 		debug('File structure created');
 
 		if (
 			await this.files.fileExists(
-				internalStorageUnit,
 				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 			)
 		) {
 			try {
 				const fileContent = JSON.parse(
 					await this.files.readFile(
-						internalStorageUnit,
 						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 					),
 				);
@@ -87,7 +86,6 @@ export class SmilPlayer implements ISmilPlayer {
 				if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
 					// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
 					await this.files.deleteFile(
-						internalStorageUnit,
 						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 					);
 				}
@@ -95,7 +93,6 @@ export class SmilPlayer implements ISmilPlayer {
 				debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
 				// file is malformed, delete from internal storage
 				await this.files.deleteFile(
-					internalStorageUnit,
 					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 				);
 			}
@@ -148,7 +145,6 @@ export class SmilPlayer implements ISmilPlayer {
 					src: sos.config.backupImageUrl,
 				};
 				downloadPromises = await this.files.parallelDownloadAllFiles(
-					internalStorageUnit,
 					[backupImageObject],
 					FileStructure.images,
 					forceDownload,
@@ -170,7 +166,6 @@ export class SmilPlayer implements ISmilPlayer {
 				if (!isNil(await this.files.fetchLastModified(smilFile.src))) {
 					forceDownload = true;
 					downloadPromises = await this.files.parallelDownloadAllFiles(
-						internalStorageUnit,
 						[smilFile],
 						FileStructure.rootFolder,
 						forceDownload,
@@ -221,7 +216,7 @@ export class SmilPlayer implements ISmilPlayer {
 					// download intro file before anything else
 					const introMedia = await this.processor.downloadIntro();
 
-					downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
 
 					introPromises.concat(await this.processor.playIntro(introMedia));
 
@@ -240,7 +235,7 @@ export class SmilPlayer implements ISmilPlayer {
 				} else {
 					// no intro
 					debug('No intro element found');
-					downloadPromises = await this.files.prepareDownloadMediaSetup(internalStorageUnit, smilObject);
+					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
 					await Promise.all(downloadPromises);
 					debug('SMIL media files download finished');
 					await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
