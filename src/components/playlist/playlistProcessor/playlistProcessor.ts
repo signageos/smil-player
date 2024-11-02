@@ -152,7 +152,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		downloadPromises = downloadPromises.concat(
 			await this.files.parallelDownloadAllFiles(
-				this.internalStorageUnit,
 				[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
 				fileStructure,
 			),
@@ -212,11 +211,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						const {
 							fileEtagPromisesMedia: fileEtagPromisesMedia,
 							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-						} = await this.files.prepareLastModifiedSetup(
-							this.internalStorageUnit,
-							this.smilObject,
-							smilFile,
-						);
+						} = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
 						debug('Last modified check for smil media files prepared');
 						debug('Checking files for changes');
 						if (
@@ -288,7 +283,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							await sleep(2000);
 						}
 					} catch (err) {
-						debug('Unexpected error during playlist processing: %O', err);
+						debug('Unexpected errprocessingor during playlist processing: %O', err);
 						await sleep(SMILScheduleEnum.defaultAwait);
 					}
 				}, version);
@@ -299,6 +294,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(async () => {
 				// triggers processing
 				await this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop);
+			})(),
+		);
+
+		promises.push(
+			(async () => {
+				// worker to process offline custom endpoint reports
+				await this.runEndlessLoop(
+					async () => {
+						await this.files.watchCustomEndpointReports();
+					},
+					firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1,
+				);
 			})(),
 		);
 
@@ -1334,79 +1341,97 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			this.promiseAwaiting[currentRegionInfo.regionName].promiseFunction! = [
 				(async () => {
-					let transitionDuration = 0;
+					try {
+						let transitionDuration = 0;
 
-					// widget detected with attribute preload set to false, reset before play
-					if (element.nodeName === 'IFRAME' && value.preload === false) {
-						let src = generateElementSrc(value.src, value.localFilePath, version);
-						element.setAttribute('src', src);
-						sosHtmlElement.src = src;
+						// widget detected with attribute preload set to false, reset before play
+						if (element.nodeName === 'IFRAME' && value.preload === false) {
+							let src = generateElementSrc(value.src, value.localFilePath, version);
+							element.setAttribute('src', src);
+							sosHtmlElement.src = src;
+						}
+
+						const hasTransition = 'transitionInfo' in value;
+						if (hasTransition) {
+							transitionDuration = setElementDuration(value.transitionInfo!.dur);
+						}
+						changeZIndex(value, element, +1, false);
+
+						// TODO: fix ticker condition ( nonticker elements get ticker animation )
+						// if (
+						// 	this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
+						// 	this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
+						// ) {
+						// 	startTickerAnimation(element, value as SMILTicker);
+						// }
+
+						element.style.visibility = 'visible';
+						await this.waitMediaOnScreen(
+							currentRegionInfo,
+							parentRegionInfo,
+							sosHtmlElement,
+							arrayIndex,
+							element,
+							transitionDuration,
+							taskStartDate,
+							version,
+						);
+
+						debug(
+							'Finished iteration of playlist: %O',
+							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
+						);
+
+						// await this.handleElementSynchronization(
+						// 	value,
+						// 	currentRegionInfo,
+						// 	parentRegionInfo,
+						// 	currentIndex,
+						// 	'after',
+						// );
+
+						await handlePriorityWhenDone();
+						debug(
+							'Finished checking iteration of playlist: %O',
+							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
+						);
+
+						if (hasTransition) {
+							removeTransitionCss(element);
+						}
+
+						changeZIndex(value, element, -2);
+
+						// if (
+						// 	!(await this.handleElementSynchronization(
+						// 		value,
+						// 		currentRegionInfo,
+						// 		parentRegionInfo,
+						// 		currentIndex,
+						// 		'after',
+						// 	))
+						// ) {
+						// 	return;
+						// }
+
+						debug('finished playing element: %O', value);
+					} catch (err) {
+						debug(
+							'Unexpected error: %O during html element playback promise function: %s',
+							err,
+							value.localFilePath,
+						);
+
+						await handlePriorityWhenDone();
+
+						await this.files.sendMediaReport(
+							value,
+							taskStartDate,
+							value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+							!!value.syncIndex && this.synchronization.shouldSync,
+							err.message,
+						);
 					}
-
-					const hasTransition = 'transitionInfo' in value;
-					if (hasTransition) {
-						transitionDuration = setElementDuration(value.transitionInfo!.dur);
-					}
-					changeZIndex(value, element, +1, false);
-
-					// TODO: fix ticker condition ( nonticker elements get ticker animation )
-					// if (
-					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
-					// 	this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
-					// ) {
-					// 	startTickerAnimation(element, value as SMILTicker);
-					// }
-
-					element.style.visibility = 'visible';
-					await this.waitMediaOnScreen(
-						currentRegionInfo,
-						parentRegionInfo,
-						sosHtmlElement,
-						arrayIndex,
-						element,
-						transitionDuration,
-						taskStartDate,
-						version,
-					);
-
-					debug(
-						'Finished iteration of playlist: %O',
-						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
-					);
-
-					// await this.handleElementSynchronization(
-					// 	value,
-					// 	currentRegionInfo,
-					// 	parentRegionInfo,
-					// 	currentIndex,
-					// 	'after',
-					// );
-
-					await handlePriorityWhenDone();
-					debug(
-						'Finished checking iteration of playlist: %O',
-						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
-					);
-
-					if (hasTransition) {
-						removeTransitionCss(element);
-					}
-
-					changeZIndex(value, element, -2);
-
-					// if (
-					// 	!(await this.handleElementSynchronization(
-					// 		value,
-					// 		currentRegionInfo,
-					// 		parentRegionInfo,
-					// 		currentIndex,
-					// 		'after',
-					// 	))
-					// ) {
-					// 	return;
-					// }
-
-					debug('finished playing element: %O', value);
 				})(),
 			];
 		} catch (err) {
@@ -2384,10 +2409,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src)
 		) {
 			if (
-				!(await this.files.fileExists(
-					this.internalStorageUnit,
-					createLocalFilePath(FileStructure.videos, value.src),
-				)) &&
+				!(await this.files.fileExists(createLocalFilePath(FileStructure.videos, value.src))) &&
 				!value.isStream
 			) {
 				debug(`Video does not exists in local storage: %O with params: %O`, value, params);

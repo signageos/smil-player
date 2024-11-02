@@ -186,7 +186,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 	) => {
-		await this.files.currentFilesSetup(smilObject.ref, internalStorageUnit, smilObject, smilUrl);
+		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, internalStorageUnit, smilUrl, true);

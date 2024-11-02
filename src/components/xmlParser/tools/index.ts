@@ -343,6 +343,7 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.logger = {
 				enabled: metaRecord.log === true,
 				type: metaRecord.type === smilLogging.proofOfPlay ? smilLogging.proofOfPlay : smilLogging.standard,
+				endpoint: metaRecord.endpoint,
 			};
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
