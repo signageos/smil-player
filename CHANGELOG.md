@@ -7,7 +7,53 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
-DOPLNIT CHANGELOG
+## [3.2.0] - 2024-08-10
+
+### Added
+
+- added ISO timestamp to PoP event reports
+- added option to specify custom endpoint in smil file header to send PoP event reports to
+
+### Fixed
+
+## [3.1.3] - 2024-29-09
+
+### Changed
+
+- change intro media display process to display intro as soon as possible to avoid black screen during smil player
+  startup
+
+### Fixed
+
+- fixed issue with billboard transitions positioning not properly reflecting regions coordinates
+
+## [3.1.2] - 2024-29-09
+
+### Added
+
+- add a timeout for priority sync to avoid rare case when playlist freezes
+
+### Fixed
+
+- fixed issue with default transition and priority content not working properly
+
+## [3.1.0] - 2024-29-09
+
+### Added
+
+- added proof of play (PoP) support
+- added multiple sync group for synchronization before sync content plays and after sync content finishes for smoother
+  sync transitions
+- added billboard transitions support for images
+- added option to specify default transition in smil file header ( default transition is used for all images in playlist
+  unless different transition is specified)
+
+## [3.0.0] - 2024-24-07
+
+### Changed
+
+- sync index for the content is now computed for the whole regions instead of separate parts of playlist (seq, par tags
+- removed __smil_version query string from widgets displaying websites
 
 ### Added
 
@@ -16,11 +62,32 @@ DOPLNIT CHANGELOG
 - improved performance for older devices
 - improve video playback performance
 - improved reporting messages
+- ability to restart applet when sync service fails
+- ability to monitor synchronization with event reports
 - added option to start triggers from inside the widget
+- event reports now reporting if media is being synchronized with playback on other devices
+- upgrade tools like typescript webpack to newer versions
+- ability to run triggered content from inside the widget
+- added random playback support with ability to shuffle content ro randomly select content from the playlist
+- improve priority types stop and defer performance
+- added option to specify default repeat count in smil file header ( default repeat count is used everywhere where
+  repeat count
+  is not specified )
 
 ### Fixed
 
 - bug with conditional expression date and time comparison
+- fixed rare occurrence of top priority content flickering when returning to lower priority
+- fixed issues with seamless update and top priority content
+- fixed prepare of dynamic content on slave playlist devices to ensure gapless playback
+- fixed issue with parent overriding child content in priority playback
+- fixed body css bug during smil player start
+- fixed issue with wallclock notation when no repeatCount is specified
+- fixed issue when priority content specified with wallclock not starting properly
+- fixed parent generation bug for dynamic and priority segments
+- fixed issues with seamless update and sync content
+- fixed rewinding sync content to find the correct one to play with priority defined
+- fixed issue with trigger parent window listeners on android devices
 
 ## [2.1.0] - 2024-01-15
 
