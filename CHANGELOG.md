@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+## [3.2.1] - 2024-15-11
+
+### Changed
+
+- increase interval for sending event reports to 10 minutes
+
+### Fixed
+
+- make sending event reports async to avoid blocking playback
+
 ## [3.2.0] - 2024-08-10
 
 ### Added
