@@ -145,8 +145,8 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		}
-
-		await sleep(60 * 1000);
+		// ten minutes
+		await sleep(60 * 1000 * 10);
 	};
 
 	public sendCustomEndpointReport = async (
@@ -540,10 +540,17 @@ export class FilesManager implements IFilesManager {
 			);
 			return;
 		}
-		let currentFileIndex =
-			Object.keys(this.offlineReportsInfoObject).length === 0
-				? 0
-				: Object.keys(this.offlineReportsInfoObject).length - 1;
+
+		const arrayOfReportFiles = await this.sos.fileSystem.listFiles({
+			storageUnit: this.internalStorageUnit,
+			filePath: FileStructure.offlineReports,
+		});
+
+		debug('Number of custom endpoint report files', arrayOfReportFiles.length);
+
+		let currentFileIndex = arrayOfReportFiles.length === 0 ? 0 : arrayOfReportFiles.length - 1;
+
+		debug('Number of custom endpoint report files custom index', currentFileIndex);
 
 		if (!this.offlineReportsInfoObject[currentFileIndex]) {
 			this.offlineReportsInfoObject[currentFileIndex] = {
