@@ -283,7 +283,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							await sleep(2000);
 						}
 					} catch (err) {
-						debug('Unexpected errprocessingor during playlist processing: %O', err);
+						debug('Unexpected error processing during playlist processing: %O', err);
 						await sleep(SMILScheduleEnum.defaultAwait);
 					}
 				}, version);
@@ -1424,7 +1424,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						await handlePriorityWhenDone();
 
-						await this.files.sendMediaReport(
+						// no await to not to block playback when server takes too long to respond
+						this.files.sendMediaReport(
 							value,
 							taskStartDate,
 							value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
@@ -1439,7 +1440,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			await handlePriorityWhenDone();
 
-			await this.files.sendMediaReport(
+			// no await to not to block playback when server takes too long to respond
+			this.files.sendMediaReport(
 				value,
 				taskStartDate,
 				value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
@@ -1540,7 +1542,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		debug('element playing finished: %O', element);
 
-		await this.files.sendMediaReport(
+		// no await to not to block playback when server takes too long to respond
+		this.files.sendMediaReport(
 			element,
 			taskStartDate,
 			tag === 'ticker' ? 'ticker' : element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
@@ -1843,7 +1846,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						debug('Playing video finished: %O in playlist version: %s', video, version);
 
-						await this.files.sendMediaReport(
+						// no await to not to block playback when server takes too long to respond
+						this.files.sendMediaReport(
 							video,
 							taskStartDate,
 							'video',
@@ -1925,7 +1929,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						await handlePriorityWhenDone();
 
-						await this.files.sendMediaReport(
+						// no await to not to block playback when server takes too long to respond
+						this.files.sendMediaReport(
 							video,
 							taskStartDate,
 							'video',
@@ -1954,7 +1959,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		} catch (err) {
 			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
 			await handlePriorityWhenDone();
-			await this.files.sendMediaReport(
+			// no await to not to block playback when server takes too long to respond
+			this.files.sendMediaReport(
 				video,
 				taskStartDate,
 				'video',
@@ -2010,7 +2016,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sosVideoObject.play(...params);
 			debug('After## video play function - single video: %O', video);
 		} catch (err) {
-			await this.files.sendMediaReport(
+			// no await to not to block playback when server takes too long to respond
+			this.files.sendMediaReport(
 				video,
 				moment().toDate(),
 				'video',
