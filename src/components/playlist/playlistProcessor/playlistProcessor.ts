@@ -75,6 +75,7 @@ import {
 	hasDynamicContent,
 	joinAllSyncGroupsOnSmilStart,
 } from '../tools/syncTools';
+import { startTickerAnimation } from '../tools/tickerTools';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -1357,13 +1358,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 						changeZIndex(value, element, +1, false);
 
-						// TODO: fix ticker condition ( nonticker elements get ticker animation )
-						// if (
-						// 	this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
-						// 	this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id
-						// ) {
-						// 	startTickerAnimation(element, value as SMILTicker);
-						// }
+						if (
+							(this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
+								this.currentlyPlaying[currentRegionInfo.regionName]?.id !== element.id) &&
+							element.id.indexOf('ticker') > -1
+						) {
+							startTickerAnimation(element, value as SMILTicker);
+						}
 
 						element.style.visibility = 'visible';
 						await this.waitMediaOnScreen(
