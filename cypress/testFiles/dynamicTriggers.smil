@@ -56,14 +56,14 @@
                              dur="5s" fit="hidden" region="video">
                             <param name="cacheControl" value="auto"/>
                         </img>
-                        <EXPERIMENTAL_emitDynamic data="dynamic2,dynamic4"/>
+                        <emitDynamic data="dynamic2,dynamic4"/>
                     </seq>
                 </par>
             </priorityClass>
             <priorityClass higher="stop" lower="defer" peer="never">
                 <par begin="wallclock(R/2011-01-01T22:02:00/P1D)" end="wallclock(R/2011-01-01T22:05:00/P1D)">
                     <seq>
-                        <EXPERIMENTAL_emitDynamic data="dynamic1,dynamic3"/>
+                        <emitDynamic data="dynamic1,dynamic3"/>
                     </seq>
                 </par>
             </priorityClass>
