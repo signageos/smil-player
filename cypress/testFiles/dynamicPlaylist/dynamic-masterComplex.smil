@@ -50,8 +50,8 @@
                                     </seq>
                                 </seq>
                             </par>
-                            <EXPERIMENTAL_emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
-                            <EXPERIMENTAL_emitDynamic data="dynamic176162,dynamic176162" syncId="7274"/>
+                            <emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
+                            <emitDynamic data="dynamic176162,dynamic176162" syncId="7274"/>
                             <par repeatCount="1">
                                 <seq repeatCount="1">
                                     <img src="https://v3.netipbox.com/media/2724/resources/327577/327577_1643627324_cdn_eggs.jpg"
@@ -74,8 +74,8 @@
                                     </seq>
                                 </seq>
                             </par>
-                            <EXPERIMENTAL_emitDynamic data="dynamic176161,dynamic176161" syncId="7275"/>
-                            <EXPERIMENTAL_emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
+                            <emitDynamic data="dynamic176161,dynamic176161" syncId="7275"/>
+                            <emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
                         </seq>
                     </priorityClass>
                 </excl>

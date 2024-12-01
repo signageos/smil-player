@@ -27,38 +27,38 @@
                             <!-- [SynchronizationEmitterModule] Leader Magnum (clh62yadk4419501xi490ln0zbh) -->
                             <seq begin="wallclock(R/2023-05-02+w1T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w1T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w2T10:00/P1D)"
                                  end="wallclock(R/2023-05-03+w2T18:00/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w3T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w3T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w4T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w4T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w5T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w5T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w6T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w6T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <seq begin="wallclock(R/2023-05-02+w7T00:00/P1D)"
                                  end="wallclock(R/2023-05-03+w7T23:59/P1D)">
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
-                                                          syncId="clh62unkn4410831xi4u2mny1lu"/>
+                                <emitDynamic data="dynamic_clh62unkn4410831xi4u2mny1lu"
+                                             syncId="clh62unkn4410831xi4u2mny1lu"/>
                             </seq>
                             <!-- [GalleryModule] Sweet Treats (clh69tuz36222611xk4ubhmiweh) -->
                             <seq begin="wallclock(R/2023-05-02+w1T00:00/P1D)"

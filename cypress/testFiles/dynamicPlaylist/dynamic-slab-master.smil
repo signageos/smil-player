@@ -26,8 +26,8 @@
                         <seq repeatCount="indefinite">
                             <!-- [SynchronizationEmitterModule] sync 1 (clh0lpnoz72251xm32dbuyhwx) -->
                             <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lowq665961xm36si3kdui"
-                                                          syncId="clh0lowq665961xm36si3kdui"/>
+                                <emitDynamic data="dynamic_clh0lowq665961xm36si3kdui"
+                                             syncId="clh0lowq665961xm36si3kdui"/>
                             </seq>
                             <seq>
                                 <video src="https://publish-p65652-e605949.adobeaemcloud.com/content/dam/sde/de/2023/05/4f0b1840-cb05-4de7-a27b-7c0eb3e2e9b9.mp4"
@@ -36,17 +36,17 @@
 
                             <!-- [SynchronizationEmitterModule] sync 2 (clh0ls2qp133711xm3xdl9pn7i) -->
                             <seq>
-                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lp18u67001xm310yg8pbi"
-                                                          syncId="clh0lp18u67001xm310yg8pbi"/>
+                                <emitDynamic data="dynamic_clh0lp18u67001xm310yg8pbi"
+                                             syncId="clh0lp18u67001xm310yg8pbi"/>
                             </seq>
                             <!-- [SynchronizationEmitterModule] sync 3 (clh0m3kpe1815991xjxbmijpjbg) -->
                             <!--                            <seq>-->
-                            <!--                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0lp4tg68521xm3624lqn2n"-->
+                            <!--                                <emitDynamic data="dynamic_clh0lp4tg68521xm3624lqn2n"-->
                             <!--                                                          syncId="clh0lp4tg68521xm3624lqn2n"/>-->
                             <!--                            </seq>-->
                             <!--                            &lt;!&ndash; [SynchronizationEmitterModule] sync 4 (clh0m3z0e1818881xjxqaymyk5t) &ndash;&gt;-->
                             <!--                            <seq>-->
-                            <!--                                <EXPERIMENTAL_emitDynamic data="dynamic_clh0m39po302511xm38a23n87i"-->
+                            <!--                                <emitDynamic data="dynamic_clh0m39po302511xm38a23n87i"-->
                             <!--                                                          syncId="clh0m39po302511xm38a23n87i"/>-->
                             <!--                            </seq>-->
                         </seq>
