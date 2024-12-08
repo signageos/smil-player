@@ -23,7 +23,7 @@
             </trigger>
         </triggers>
         <layout>
-            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s" />
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
             <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
             <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
                     backgroundColor="#FFFFFF"
@@ -122,11 +122,13 @@
                                             <seq repeatCount="indefinite">
                                             </seq>
 
-                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)"
+                                                  end="wallclock(R/2011-01-01T17:00:00/P1D)">
 
                                             </excl>
 
-                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                            <excl begin="wallclock(R/2011-01-01T07:00:00/P1D)"
+                                                  end="wallclock(R/2011-01-01T17:00:00/P1D)">
                                                 <priorityClass lower="never" peer="stop" higher="stop">
 
                                                 </priorityClass>
@@ -166,7 +168,8 @@
                                                 </par>
                                             </seq>
 
-                                            <par begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                            <par begin="wallclock(R/2011-01-01T07:00:00/P1D)"
+                                                 end="wallclock(R/2011-01-01T17:00:00/P1D)">
                                                 <seq repeatCount="1">
                                                     <seq repeatCount="1">
                                                         <seq repeatCount="1">
@@ -175,7 +178,8 @@
                                                 </seq>
                                             </par>
 
-                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)"
+                                                 end="wallclock(R/2011-01-01T17:00:00/P1D)">
                                                 <par repeatCount="2">
                                                     <par repeatCount="2">
                                                         <par repeatCount="121">
@@ -188,11 +192,11 @@
 
                                             <par>
                                                 <seq repeatCount="1">
-                                                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                    <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                            type="application/widget" region="video">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </video>
-                                                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                    <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                            type="application/widget" region="video">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </video>
@@ -201,23 +205,24 @@
                                             </par>
 
                                             <seq repeatCount="indefinite">
-                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                        type="application/widget" region="video">
                                                     <param name="cacheControl" value="onlyIfCached"/>
                                                 </video>
-                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                        type="application/widget" region="video">
                                                     <param name="cacheControl" value="onlyIfCached"/>
                                                 </video>
 
                                             </seq>
 
-                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)" end="wallclock(R/2011-01-01T17:00:00/P1D)">
-                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                            <seq begin="wallclock(R/2011-01-01T07:00:00/P1D)"
+                                                 end="wallclock(R/2011-01-01T17:00:00/P1D)">
+                                                <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                        type="application/widget" region="video">
                                                     <param name="cacheControl" value="onlyIfCached"/>
                                                 </video>
-                                                <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4"
+                                                <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
                                                        type="application/widget" region="video">
                                                     <param name="cacheControl" value="onlyIfCached"/>
                                                 </video>

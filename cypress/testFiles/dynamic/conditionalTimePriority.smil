@@ -3,14 +3,16 @@
         <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
-            <region regionName="video" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+            <region regionName="video" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#000000"/>
         </layout>
     </head>
     <body>
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg" dur="5s" fit="fill"/>
+                    <img src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/global/smil-placeholders/content-downloading-landcape.jpeg"
+                         dur="5s" fit="fill"/>
                 </seq>
             </seq>
 
@@ -19,11 +21,13 @@
                     <priorityClass higher="stop" lower="defer" peer="stop">
                         <par expr="compare(time(),'TIME_BEGIN')>0 and compare(time(),'TIME_END')<=0">
                             <seq repeatCount="indefinite">
-                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
-                                    <param name="cacheControl" value="auto" />
+                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                       id="annons0" fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto"/>
                                 </video>
-                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="3s" fit="hidden" region="video">
-                                    <param name="cacheControl" value="auto" />
+                                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1" dur="3s"
+                                     fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto"/>
                                 </img>
                             </seq>
                         </par>
@@ -31,14 +35,17 @@
                     <priorityClass higher="stop" lower="defer" peer="stop">
                         <par>
                             <seq repeatCount="indefinite">
-                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1" dur="3s" fit="hidden" region="video">
-                                    <param name="cacheControl" value="auto" />
+                                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1" dur="3s"
+                                     fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto"/>
                                 </img>
-                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="3s" fit="hidden" region="video">
-                                    <param name="cacheControl" value="auto" />
+                                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1" dur="3s"
+                                     fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto"/>
                                 </img>
-                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
-                                    <param name="cacheControl" value="auto" />
+                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                       id="annons0" fit="hidden" region="video">
+                                    <param name="cacheControl" value="auto"/>
                                 </video>
                             </seq>
                         </par>

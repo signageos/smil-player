@@ -99,11 +99,11 @@
 
                                             <par>
                                                 <seq repeatCount="1">
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_4.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
@@ -116,7 +116,7 @@
                                             <par>
                                                 <seq begin="trigger">
 
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
                                                          region="widget13" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
@@ -127,11 +127,11 @@
 
                                             <par>
                                                 <seq begin="trigger2">
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_5.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_5.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
@@ -142,11 +142,11 @@
 
                                             <par>
                                                 <seq begin="trigger3">
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
-                                                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_6.jpg"
+                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_6.jpg"
                                                          region="video" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>

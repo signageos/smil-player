@@ -60,7 +60,8 @@
                                soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
                     </seq>
                     <!-- [GalleryModule] sync gallery 2-1 (clh0lyczu255151xm3njbi8quj) -->
-                    <seq repeatCount="1" begin="dynamic_clh0lp18u67001xm310yg8pbi" end="dynamic2">
+                    <seq repeatCount="1" begin="dynamic_clh0lpdynamic_clh0lp18u67001xm310yg8pbi18u67001xm310yg8pbi"
+                         end="dynamic2">
                         <video src="https://signagelab-alfa-space.fra1.cdn.digitaloceanspaces.com/environment/production/accounts-data/cl2q7ifzd15744951xklau418vnj/2023/04/clh0lyatr004p12og4z0ra4oo.mp4"
                                soundLevel="0%" region="cl2q7jqlu15755811xklizc1al4d"/>
                     </seq>

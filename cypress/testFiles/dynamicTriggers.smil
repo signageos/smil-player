@@ -51,7 +51,7 @@
             <priorityClass higher="stop" lower="defer" peer="never">
                 <par begin="wallclock(R/2011-01-01T16:32:00/P1D)" end="wallclock(R/2011-01-01T18:33:00/P1D)">
                     <seq repeatCount="indefinite">
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg"
+                        <img src=" https://demo.signageos.io/smil/zones/files/img_4.jpg"
                              id="annons1"
                              dur="5s" fit="hidden" region="video">
                             <param name="cacheControl" value="auto"/>
@@ -70,7 +70,7 @@
             <priorityClass higher="stop" peer="stop" lower="defer">
                 <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
                     <seq repeatCount="indefinite">
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                        <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg"
                              id="annons1" dur="3s" fit="hidden" region="video">
                             <param name="cacheControl" value="auto"/>
                         </img>
@@ -93,7 +93,7 @@
                        id="annons1" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </video>
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1"
+                <img src=" https://demo.signageos.io/smil/zones/files/img_4.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>
@@ -102,7 +102,7 @@
 
         <par>
             <seq begin="dynamic1" end="dynamic3" repeatCount="indefinite">
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1"
+                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>
@@ -114,7 +114,7 @@
         </par>
         <par>
             <seq begin="dynamic2" end="dynamic3">
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1"
+                <img src=" https://demo.signageos.io/smil/zones/files/img_4.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>
