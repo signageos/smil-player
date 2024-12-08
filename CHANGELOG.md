@@ -7,11 +7,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
-## [3.2.1] - 2024-15-11
+### Added
+
+- documentation for new features
+
+### Fixed
+
+- few outdated parts in documentation
+
+## [3.2.2] - 2024-15-11
 
 ### Changed
 
 - increase interval for sending event reports to 10 minutes
+
+## [3.2.1] - 2024-15-11
 
 ### Fixed
 
@@ -23,8 +33,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - added ISO timestamp to PoP event reports
 - added option to specify custom endpoint in smil file header to send PoP event reports to
-
-### Fixed
 
 ## [3.1.3] - 2024-29-09
 
@@ -77,8 +85,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - added option to start triggers from inside the widget
 - event reports now reporting if media is being synchronized with playback on other devices
 - upgrade tools like typescript webpack to newer versions
-- ability to run triggered content from inside the widget
-- added random playback support with ability to shuffle content ro randomly select content from the playlist
+- added random playback support with ability to shuffle content or randomly select content from the playlist
 - improve priority types stop and defer performance
 - added option to specify default repeat count in smil file header ( default repeat count is used everywhere where
   repeat count
@@ -89,11 +96,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - bug with conditional expression date and time comparison
 - fixed rare occurrence of top priority content flickering when returning to lower priority
 - fixed issues with seamless update and top priority content
-- fixed prepare of dynamic content on slave playlist devices to ensure gapless playback
+- fixed prepare of dynamic content on slave playlist devices to ensure gapLess playback
 - fixed issue with parent overriding child content in priority playback
 - fixed body css bug during smil player start
-- fixed issue with wallclock notation when no repeatCount is specified
-- fixed issue when priority content specified with wallclock not starting properly
+- fixed issue with wallClock notation when no repeatCount is specified
+- fixed issue when priority content specified with wallClock not starting properly
 - fixed parent generation bug for dynamic and priority segments
 - fixed issues with seamless update and sync content
 - fixed rewinding sync content to find the correct one to play with priority defined
@@ -109,7 +116,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Added
 
 - added option to stop trigger using same triggerId as to invoke it
-- change failover mechanism so all devices take care of broken device
+- change failOver mechanism so all devices take care of broken device
 - added ticker implementation
 - added markdown documentation for the smil playlist creation and syntax
 
@@ -117,9 +124,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
-- fixed wallclock and repeatCount=indefinite edge case bug
+- fixed wallClock and repeatCount=indefinite edge case bug
 - fixed background video single loop freeze
-- fixed repeatCount issues when combined with priorityClasses and wallclock notations
+- fixed repeatCount issues when combined with priorityClasses and wallClock notations
 - fixed relative src path for triggers
 - fixed rare bug with multiple triggers using same region not working correctly
 - fixed bug with keyboard triggers with specified duration
@@ -141,7 +148,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - added transitions support for widgets
 - added support for applet-synchronizer
 - added option to synchronize playback among multiple devices in same sync group
-- added support for synchronization failover content ( when one device withing sync group goes offline, other one
+- added support for synchronization failOver content ( when one device withing sync group goes offline, other one
   takes care of its playback )
 - added new home screen
 - added new default backup image
@@ -169,7 +176,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - fixed bug with video playback in background not working properly
 - fixed rare bug with malformed files in internal storage
 - fixed rare bug with wallClock definitions
-- fixed rare bug with wallclock endTime
+- fixed rare bug with wallClock endTime
 
 ### Added
 
@@ -221,7 +228,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - added smil event reporting support
 - added onClick/onTouch triggers with duration specified in seconds
-- added support for image to image crossfade transition
+- added support for image to image crossFade transition
 - added optional `serialPortDevice` in sos.config to dynamically define device address for serial communication
 - added support for fixed video duration
 - added support for widgets with query parameters
@@ -281,7 +288,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
-- fixed bug with file update blocked by wallclock functions
+- fixed bug with file update blocked by wallClock functions
 - fixed bug with one playlist blocking another during wait
 - improved performance for LG devices
 
@@ -293,6 +300,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - webos video playback hotfix with sleep(videoDuration) and Promise.race
 - add priority behaviour support (excl and priorityClass tags)
 - add conditional playback support
+- add improved error handling
+- add new instance of playlist during each smil restart
+- add lastModified check during media files download at the start of the smil processing
+- add check for empty localFilePath during video playback
 
 ### Fixed
 
@@ -301,13 +312,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - fixed media files update check
 - fixed image intro
 - fixed image/widgets update check, add random query string to avoid caching except for brightsign device
-- add improved error handling
-- add new instance of playlist during each smil restart
-- add lastModified check during media files download at the start of the smil processing
-- add check for empty localFilePath during video playback
 - remove navigator.online and replace it with fetch functionality
 - fixed edge case bug causing infinite loop when no playlist is active
-- fixed wallclock bug for different dates without repeat
+- fixed wallClock bug for different dates without repeat
 
 ## [1.0.1] - 2020-09-17
 
