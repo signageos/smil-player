@@ -326,28 +326,32 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchSyncTriggers = async () => {
 		this.sos.sync.onStatus(async (onStatus) => {
-			debug('received onStatus: %O', onStatus);
-			if (!onStatus.connectedPeers) {
-				// debug('received undefined connectedPeers: %O', onStatus);
-				return;
+			try {
+				debug('received onStatus: %O', onStatus);
+				if (!onStatus.connectedPeers) {
+					// debug('received undefined connectedPeers: %O', onStatus);
+					return;
+				}
+
+				onStatus.connectedPeers = onStatus.connectedPeers
+					.filter((el: string) => el !== null && el !== 'null')
+					.sort();
+
+				if (onStatus.connectedPeers.length === 0) {
+					return;
+				}
+
+				// smil xml file has failover triggers defined, use it if one or more devices are not connected in sync group
+				if (Object.keys(this.triggersEndless).length > 0) {
+					await this.handleSyncTriggersFailover(onStatus);
+					return;
+				}
+
+				// turn off sync and play default content if one or more devices are not connected in sync group
+				await this.handleSyncTriggers(onStatus);
+			} catch (err) {
+				debug('Unexpected error occurred during sync triggers: %O', err);
 			}
-
-			onStatus.connectedPeers = onStatus.connectedPeers
-				.filter((el: string) => el !== null && el !== 'null')
-				.sort();
-
-			if (onStatus.connectedPeers.length === 0) {
-				return;
-			}
-
-			// smil xml file has failover triggers defined, use it if one or more devices are not connected in sync group
-			if (Object.keys(this.triggersEndless).length > 0) {
-				await this.handleSyncTriggersFailover(onStatus);
-				return;
-			}
-
-			// turn off sync and play default content if one or more devices are not connected in sync group
-			await this.handleSyncTriggers(onStatus);
 		});
 	};
 
