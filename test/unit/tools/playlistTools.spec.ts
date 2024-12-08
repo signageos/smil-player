@@ -394,7 +394,7 @@ describe('Playlist tools component', () => {
 						begin: 'trigger3',
 						dur: 'duration',
 						video6: {
-							src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+							src: ' https://demo.signageos.io/smil/zones/files/video_3.mp4',
 							id: 'annons1',
 							fit: 'hidden',
 							region: 'video',
@@ -407,7 +407,7 @@ describe('Playlist tools component', () => {
 						begin: 'trigger3',
 						dur: '11s',
 						video6: {
-							src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+							src: ' https://demo.signageos.io/smil/zones/files/video_3.mp4',
 							id: 'annons1',
 							fit: 'hidden',
 							region: 'video',
@@ -422,7 +422,7 @@ describe('Playlist tools component', () => {
 								begin: 'trigger3',
 								dur: '888',
 								video6: {
-									src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+									src: ' https://demo.signageos.io/smil/zones/files/video_3.mp4',
 									id: 'annons1',
 									fit: 'hidden',
 									region: 'video',
@@ -439,7 +439,7 @@ describe('Playlist tools component', () => {
 							par: {
 								begin: 'trigger3',
 								video6: {
-									src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+									src: ' https://demo.signageos.io/smil/zones/files/video_3.mp4',
 									id: 'annons1',
 									fit: 'hidden',
 									region: 'video',
