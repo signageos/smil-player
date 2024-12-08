@@ -17,7 +17,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <img src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                    <img src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
                 </seq>
             </seq>
             <!-- Wait for the prefetch of media files, once done, start the playback -->
@@ -32,10 +32,10 @@
 
                     <seq repeatCount="2">
                         <img dur="3s"
-                             src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                             src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                              region="main" fit="fill"></img>
                         <img dur="3s"
-                             src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                             src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                              region="main" fit="fill"></img>
                     </seq>
 

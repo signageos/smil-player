@@ -19,7 +19,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 

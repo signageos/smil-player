@@ -34,7 +34,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -53,7 +53,7 @@
                                                        id="annons0" fit="hidden" region="video">
                                                     <param name="cacheControl" value="auto"/>
                                                 </video>
-                                                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                                                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                                                      id="annons1" dur="3s" fit="hidden" region="video">
                                                     <param name="cacheControl" value="auto"/>
                                                 </img>

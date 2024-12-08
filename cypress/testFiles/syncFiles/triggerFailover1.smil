@@ -22,7 +22,7 @@
     <body>
         <par>
             <seq repeatCount="indefinite">
-                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
             </seq>
@@ -30,10 +30,10 @@
 
         <par>
             <seq begin="triggerDisplay3" dur="indefinite">
-                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
             </seq>
@@ -41,13 +41,13 @@
 
         <par>
             <seq begin="triggerDisplay2Display3" dur="indefinite">
-                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                 </img>
             </seq>

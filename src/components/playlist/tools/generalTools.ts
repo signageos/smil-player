@@ -3,12 +3,9 @@ import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import unset = require('lodash/unset');
 import isObject = require('lodash/isObject');
-import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
+import { inspect } from 'util';
 import moment from 'moment';
-
-const hasher = require('node-object-hash');
-
 import {
 	BackupPlaylist,
 	CurrentlyPlayingRegion,
@@ -20,10 +17,12 @@ import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { SMILEnums, parentGenerationRemove, randomPlaylistPlayableTagsRegex } from '../../../enums/generalEnums';
+import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import { difference, omit } from 'lodash';
+
+const hasher = require('node-object-hash');
 
 export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
@@ -281,14 +280,12 @@ export async function sleep(ms: number): Promise<void> {
 }
 
 export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
-	const ordered = Object.keys(jsonObject)
+	return Object.keys(jsonObject)
 		.sort()
 		.reduce((obj: { [objKey in string]: unknown }, key) => {
 			obj[key] = jsonObject[key];
 			return obj;
-		}, {});
-
-	return ordered;
+		},      {});
 }
 
 export function shuffleObject(playlist: { [key in string]: unknown }): { [key in string]: unknown } {

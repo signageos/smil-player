@@ -17,16 +17,16 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
             <!-- Downloading resources into the internal storage -->
             <seq>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.mp4"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.mp4"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
 
                 <seq id="__prefetchEnd" dur="1s"/>
             </seq>
@@ -38,18 +38,18 @@
                 <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
                 <seq repeatCount="indefinite">
 
-                    <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4" region="main"
+                    <video src="https://demo.signageos.io/smil/samples/assets/landscape1.mp4" region="main"
                            soundLevel="0%"></video>
 
                     <seq repeatCount="2">
-                        <img dur="3s" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main"
+                        <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main"
                              fit="fill"></img>
-                        <img dur="3s" src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main"
+                        <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main"
                              fit="fill"></img>
                     </seq>
 
                     <seq repeatCount="2">
-                        <video src=" https://demo.signageos.io/smil/samples/assets/landscape2.mp4" region="main"
+                        <video src="https://demo.signageos.io/smil/samples/assets/landscape2.mp4" region="main"
                                soundLevel="0%"></video>
                     </seq>
 

@@ -32,7 +32,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -40,14 +40,14 @@
             <seq>
                 <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
                 <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"/>
-                <prefetch src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/zones/files/img_1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/zones/files/img_2.jpg"/>
                 <prefetch
-                        src=" https://demo.signageos.io/smil/zones/files/widget_image_1.png"/>
+                        src="https://demo.signageos.io/smil/zones/files/widget_image_1.png"/>
                 <prefetch
-                        src=" https://demo.signageos.io/smil/zones/files/widget_image_2.png"/>
-                <prefetch src=" https://demo.signageos.io/smil/zones/files/topOverlay.wgt"/>
-                <prefetch src=" https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"/>
+                        src="https://demo.signageos.io/smil/zones/files/widget_image_2.png"/>
+                <prefetch src="https://demo.signageos.io/smil/zones/files/topOverlay.wgt"/>
+                <prefetch src="https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"/>
 
                 <seq id="__prefetchEnd" dur="1s"/>
             </seq>
@@ -64,7 +64,7 @@
                                         <par begin="0">
                                             <par>
                                                 <seq repeatCount="indefinite">
-                                                    <ref src=" https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
+                                                    <ref src="https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
                                                          type="application/widget" region="topOverlay" dur="20s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </ref>
@@ -74,7 +74,7 @@
 
                                             <par>
                                                 <seq repeatCount="indefinite">
-                                                    <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
+                                                    <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
                                                          type="application/widget" region="bottomWidget" dur="20s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </ref>
@@ -84,7 +84,7 @@
 
                                             <par>
                                                 <seq repeatCount="indefinite">
-                                                    <img src=" https://demo.signageos.io/smil/zones/files/widget_image_1.png"
+                                                    <img src="https://demo.signageos.io/smil/zones/files/widget_image_1.png"
                                                          region="topRightWidget" dur="5s">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
@@ -95,7 +95,7 @@
                                             <par>
                                                 <seq repeatCount="2">
                                                     <!-- no duration specified, testing default duration -->
-                                                    <img src=" https://demo.signageos.io/smil/zones/files/widget_image_2.png"
+                                                    <img src="https://demo.signageos.io/smil/zones/files/widget_image_2.png"
                                                          region="bottomRightWidget">
                                                         <param name="cacheControl" value="onlyIfCached"/>
                                                     </img>
@@ -111,11 +111,11 @@
                                                            id="annons0" fit="hidden" region="video">
                                                         <param name="cacheControl" value="auto"/>
                                                     </video>
-                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                                                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                                                          id="annons1" dur="5s" fit="hidden" region="video">
                                                         <param name="cacheControl" value="auto"/>
                                                     </img>
-                                                    <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                                                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
                                                          id="annons1" dur="5s" fit="hidden" region="video">
                                                         <param name="cacheControl" value="auto"/>
                                                     </img>

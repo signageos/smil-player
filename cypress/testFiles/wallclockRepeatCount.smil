@@ -23,7 +23,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -31,8 +31,8 @@
             <seq>
                 <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
                 <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
                 <seq id="__prefetchEnd" dur="1s"/>
             </seq>
 
@@ -47,14 +47,14 @@
 
                 <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">
                     <seq repeatCount="indefinite">
-                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                        <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                              region="top-right" fit="fill"></img>
                     </seq>
                 </par>
 
                 <!--                <par repeatCount="indefinite">-->
                 <!--                    <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">-->
-                <!--                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="bottom-left" fit="fill"></img>-->
+                <!--                        <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="bottom-left" fit="fill"></img>-->
                 <!--                    </seq>-->
                 <!--                </par>-->
 

@@ -19,15 +19,15 @@
                                region="main" soundLevel="0%"/>
 
                         <img dur="3s"
-                             src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                             src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                              region="main" fit="fill"/>
                         <img dur="3s"
-                             src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                             src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                              region="main" fit="fill"/>
-                        <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                        <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                              id="annons1" dur="3s" fit="hidden" region="main">
                         </img>
-                        <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                        <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
                              id="annons1" dur="3s" fit="hidden" region="main">
                         </img>
                     </seq>
