@@ -3,6 +3,7 @@ import sos from '@signageos/front-applet';
 import { EventEmitter } from 'events';
 import { SMILVideo } from '../../../models/mediaModels';
 import { StreamEnums } from '../../../enums/mediaEnums';
+import { IStreamErrorEvent } from '@signageos/front-applet/es6/FrontApplet/Stream/streamEvents';
 
 class SmilEventEmitter extends EventEmitter {
 	constructor() {
@@ -12,7 +13,7 @@ class SmilEventEmitter extends EventEmitter {
 			debug('Stream: %O emitted onDisconnected event: %O', event);
 		});
 
-		sos.stream.onError((event) => {
+		sos.stream.onError((event: IStreamErrorEvent) => {
 			this.emit(StreamEnums.errorEvent);
 			debug('Stream: %O emitted onError event: %O', event);
 		});

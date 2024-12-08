@@ -22,7 +22,13 @@ import {
 	shouldNotDownload,
 	updateJsonObject,
 } from './tools';
-import { CUSTOM_ENDPOINT_REPORT_FILE_LIMIT, FileStructure, smilLogging } from '../../enums/fileEnums';
+import {
+	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
+	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+	FileStructure,
+	MINIMAL_STORAGE_FREE_SPACE,
+	smilLogging,
+} from '../../enums/fileEnums';
 import {
 	CheckETagFunctions,
 	MediaInfoObject,
@@ -53,7 +59,6 @@ declare global {
 }
 
 export class FilesManager implements IFilesManager {
-	private MINIMAL_STORAGE_FREE_SPACE: number = 50 * 1024;
 	private sos: FrontApplet;
 	private smilFileUrl: string;
 	private internalStorageUnit: IStorageUnit;
@@ -136,6 +141,8 @@ export class FilesManager implements IFilesManager {
 						},
 						true,
 					);
+
+					debug('Custom endpoint report file deleted: %s', file.filePath);
 				} catch (err) {
 					debug(
 						'Unexpected error occurred during sending custom endpoint report file: %s, error: %O',
@@ -145,8 +152,7 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		}
-		// ten minutes
-		await sleep(60 * 1000 * 10);
+		await sleep(CUSTOM_ENDPOINT_OFFLINE_INTERVAL);
 	};
 
 	public sendCustomEndpointReport = async (
@@ -172,9 +178,10 @@ export class FilesManager implements IFilesManager {
 			}
 		} catch (error) {
 			debug('Unexpected error occurred during custom endpoint report:', error);
-			if (!offlineUpload) {
-				await this.saveCustomEndpointInfo(message as CustomEndpointReport);
+			if (offlineUpload) {
+				throw new Error('Error during offline custom endpoint report upload');
 			}
+			await this.saveCustomEndpointInfo(message as CustomEndpointReport);
 		}
 	};
 
@@ -533,7 +540,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
-		if (this.internalStorageUnit.freeSpace <= this.MINIMAL_STORAGE_FREE_SPACE) {
+		if (this.internalStorageUnit.freeSpace <= MINIMAL_STORAGE_FREE_SPACE) {
 			debug(
 				'Not enough space on device to save custom endpoint report, free space: %s',
 				this.internalStorageUnit.freeSpace,
