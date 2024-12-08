@@ -21,7 +21,6 @@ import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcesso
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
-// import Debug from 'debug';
 
 applyFetchPolyfill();
 
