@@ -3,10 +3,9 @@
         <meta http-equiv="refresh" content="20"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
-
-            <!-- define the screen layout zones in relative % -->
-            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <root-layout width="1920" height="1080"/>
+            <!-- define the screen layout, in this case single fullscreen zone -->
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
         </layout>
     </head>
     <body>
@@ -16,19 +15,20 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
-            <!-- Wait for the prefetch of media files, once done, start the playback -->
             <par repeatCount="indefinite">
-                <!-- should not play all, inactive conditional -->
                 <!-- indefinite loop of media files in the selected order -->
                 <seq repeatCount="indefinite">
-                    <img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-right" fit="fill"></img>
+                    <img dur="3"
+                         src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"/>
                     <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
-                           id="annons1" fit="hidden" region="top-right"></video>
-                    <video src="https://www.rmp-streaming.com/media/bbb-360p.mp4" isStream="true" dur="10" region="top-right" soundLevel="0%"></video>
+                           id="annons1" fit="hidden" region="main"/>
+                    <video src="https://www.rmp-streaming.com/media/bbb-360p.mp4" isStream="true" dur="10"
+                           region="main" soundLevel="0%"/>
                 </seq>
             </par>
         </par>

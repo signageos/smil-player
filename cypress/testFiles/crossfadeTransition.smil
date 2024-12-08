@@ -3,8 +3,7 @@
     <head>
         <meta content="60" http-equiv="Refresh"/>
         <layout>
-            <transition xml:id="bwt" type="billboard" subtype="billboard" dur="1s" columnCount="50"
-                        direction="left"/>
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
             <root-layout backgroundColor="#000000" height="1080" width="1920"/>
             <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
                     mediaAlign="topLeft">

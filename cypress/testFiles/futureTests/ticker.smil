@@ -3,13 +3,13 @@
         <meta http-equiv="refresh" content="10"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182cccc"/>
+            <root-layout width="1920" height="1080"/>
 
             <!-- define the screen layout, in this case single fullscreen zone -->
-            <region regionName="video" left="0" top="0" width="1920" height="1080" z-index="1"
-                    backgroundColor="#18182c"/>
-            <region regionName="image" left="0" top="0" width="960" height="1080" z-index="1"
-                    backgroundColor="#18182c"/>
+            <region regionName="video" left="0" top="0" width="960" height="1080" z-index="1"
+            />
+            <region regionName="image" left="960" top="0" width="960" height="1080" z-index="1"
+            />
         </layout>
     </head>
     <body>
@@ -19,27 +19,13 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4"/>
+                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
-            <!-- Downloading resources into the internal storage -->
-            <seq>
-                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
-                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
-                <prefetch
-                        src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg"/>
-                <prefetch
-                        src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg"/>
-
-                <seq id="__prefetchEnd" dur="1s"/>
-            </seq>
-
             <!-- Wait for the prefetch of media files, once done, start the playback -->
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-
+            <par repeatCount="indefinite">
                 <!-- indefinite loop of media files in the selected order -->
-                <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
                 <par repeatCount="indefinite">
                     <ticker region="image" dur="10s" fontName="Arial" fontSize="30"
                             fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
@@ -47,7 +33,7 @@
                         <text>This is testing content for new Ticker component.</text>
                         <text>This is testing content for new Ticker component.</text>
                     </ticker>
-                    <ticker region="image" dur="10s" fontName="Arial" fontSize="30"
+                    <ticker region="video" dur="10s" fontName="Arial" fontSize="30"
                             fontColor="#ffd800" linearGradient="#ff0000 0%, #aa9999 100%"
                             indentation="50" velocity="50">
                         <text>AAAAAA.</text>

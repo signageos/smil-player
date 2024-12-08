@@ -3,13 +3,17 @@
         <meta http-equiv="refresh" content="20"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182c" />
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
 
             <!-- define the screen layout zones in relative % -->
-            <region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="bottom-left" left="0" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
-            <region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
+            <region regionName="top-left" left="0" top="0" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="bottom-left" left="0" top="50%" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
+            <region regionName="bottom-right" left="50%" top="50%" width="50%" height="50%" z-index="1"
+                    backgroundColor="#fdc400"/>
         </layout>
     </head>
     <body>
@@ -19,42 +23,45 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
             <!-- Downloading resources into the internal storage -->
             <seq>
-                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" />
-                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
-                <seq id="__prefetchEnd" dur="1s" />
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
+                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
             </seq>
 
             <par>
 
                 <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">
                     <seq>
-                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="top-left" soundLevel="0%"></video>
+                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                               region="top-left" soundLevel="0%"></video>
                     </seq>
                 </par>
 
                 <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">
                     <seq repeatCount="indefinite">
-                        <img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="top-right" fit="fill"></img>
+                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                             region="top-right" fit="fill"></img>
                     </seq>
                 </par>
 
-<!--                <par repeatCount="indefinite">-->
-<!--                    <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">-->
-<!--                        <img dur="3" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="bottom-left" fit="fill"></img>-->
-<!--                    </seq>-->
-<!--                </par>-->
+                <!--                <par repeatCount="indefinite">-->
+                <!--                    <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">-->
+                <!--                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="bottom-left" fit="fill"></img>-->
+                <!--                    </seq>-->
+                <!--                </par>-->
 
                 <par>
                     <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" repeatCount="2">
-                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="bottom-right" soundLevel="0%"></video>
+                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                               region="bottom-right" soundLevel="0%"></video>
                     </seq>
                 </par>
 

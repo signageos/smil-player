@@ -16,7 +16,7 @@
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loading_min.jpeg"
+                    <img src=" https://demo.signageos.io/smil/samples/assets/loading_min.jpeg"
                          fit="fill"/>
                 </seq>
             </seq>

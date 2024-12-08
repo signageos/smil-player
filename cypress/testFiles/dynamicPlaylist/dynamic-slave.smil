@@ -16,14 +16,14 @@
         <par>
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loading_min.jpeg"
+                    <img src=" https://demo.signageos.io/smil/samples/assets/loading_min.jpeg"
                          fit="fill"/>
                 </seq>
             </seq>
             <excl begin="0" repeatCount="indefinite">
                 <priorityClass higher="stop" lower="defer" peer="never">
                     <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
-                        <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_3.jpg"
+                        <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg"
                              id="annons1" dur="4s" fit="hidden" region="region_0_0_1920_1080">
                             <param name="cacheControl" value="auto"/>
                         </img>
@@ -36,7 +36,7 @@
         </par>
         <par>
             <seq begin="dynamic1" end="dynamic2" repeatCount="indefinite">
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg"
+                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
                      id="annons1" dur="3s" fit="hidden" region="region_0_0_1920_1080">
                     <param name="cacheControl" value="auto"/>
                 </img>

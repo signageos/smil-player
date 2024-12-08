@@ -3,10 +3,11 @@
         <meta http-equiv="refresh" content="888"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080" backgroundColor="#18182cccc" />
+            <root-layout width="1920" height="1080" backgroundColor="#18182cccc"/>
 
             <!-- define the screen layout, in this case single fullscreen zone -->
-            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#18182c"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#18182c"/>
         </layout>
     </head>
     <body>
@@ -16,18 +17,18 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
             <!-- Downloading resources into the internal storage -->
             <seq>
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" />
-                <prefetch src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" />
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4"/>
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.mp4"/>
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
 
-                <seq id="__prefetchEnd" dur="1s" />
+                <seq id="__prefetchEnd" dur="1s"/>
             </seq>
 
             <!-- Wait for the prefetch of media files, once done, start the playback -->
@@ -37,15 +38,19 @@
                 <!-- in this case it will play landscape1.mp4, then landscape1.jpg, landscape2.jpg, landscape1.jpg, landscape2.jpg, then landscape2.mp4, landscape2.mp4 and repeat -->
                 <seq repeatCount="indefinite">
 
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4" region="main" soundLevel="0%"></video>
+                    <video src=" https://demo.signageos.io/smil/samples/assets/landscape1.mp4" region="main"
+                           soundLevel="0%"></video>
 
                     <seq repeatCount="2">
-                        <img dur="3s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg" region="main" fit="fill"></img>
-                        <img dur="3s" src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg" region="main" fit="fill"></img>
+                        <img dur="3s" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main"
+                             fit="fill"></img>
+                        <img dur="3s" src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main"
+                             fit="fill"></img>
                     </seq>
 
                     <seq repeatCount="2">
-                        <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4" region="main" soundLevel="0%"></video>
+                        <video src=" https://demo.signageos.io/smil/samples/assets/landscape2.mp4" region="main"
+                               soundLevel="0%"></video>
                     </seq>
 
                 </seq>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="20"/>
+        <triggers>
+            <trigger id="triggerDisplay1" condition="or">
+                <condition origin="sync" data="Display1"/>
+            </trigger>
+            <trigger id="triggerDisplay2Display3" condition="or">
+                <condition origin="sync" data="Display1Display3"/>
+            </trigger>
+        </triggers>
+        <layout>
+            <root-layout height="1080" width="1920"/>
+            <region regionName="video" left="10" top="10" width="1280" height="720" z-index="1"
+                    mediaAlign="topLeft">
+                <region regionName="video1" left="0" top="0" width="1280" height="720" z-index="1"
+                />
+            </region>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+            </seq>
+        </par>
+
+        <par>
+            <seq begin="triggerDisplay1" dur="indefinite">
+                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+            </seq>
+        </par>
+
+        <par>
+            <seq begin="triggerDisplay2Display3" dur="indefinite">
+                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+                <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+                <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" id="annons1"
+                     dur="5s" fit="hidden" region="video">
+                </img>
+            </seq>
+        </par>
+    </body>
+</smil>
