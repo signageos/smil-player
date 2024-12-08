@@ -17,7 +17,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <img src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                    <img src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
                 </seq>
             </seq>
 
@@ -29,7 +29,7 @@
                 <seq repeatCount="indefinite">
                     <video src="https://statttttic.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                            region="main" soundLevel="0%"></video>
-                    <img dur="3s" src=" https://demo.signageos.io/smil/zones/files/img_1.jpg" region="main"
+                    <img dur="3s" src="https://demo.signageos.io/smil/zones/files/img_1.jpg" region="main"
                          fit="fill"></img>
                     <img dur="3s"
                          src="https://signaaaaaageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.jpg"

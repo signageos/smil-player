@@ -23,7 +23,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -31,8 +31,8 @@
             <seq>
                 <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
                 <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
                 <seq id="__prefetchEnd" dur="1s"/>
             </seq>
 
@@ -42,7 +42,7 @@
                 <par repeatCount="indefinite">
                     <!-- indefinite loop of media files in the selected order -->
                     <seq>
-                        <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
+                        <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
                              type="application/widget" region="top-right" dur="20s">
                             <param name="cacheControl" value="onlyIfCached"/>
                         </ref>
@@ -52,7 +52,7 @@
                 <par repeatCount="indefinite">
                     <!-- indefinite loop of media files in the selected order -->
                     <seq>
-                        <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.zip"
+                        <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.zip"
                              type="application/widget" region="top-left" dur="20s">
                             <param name="cacheControl" value="onlyIfCached"/>
                         </ref>
@@ -63,7 +63,7 @@
                 <par repeatCount="indefinite">
                     <!-- indefinite loop of media files in the selected order -->
                     <seq>
-                        <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.ipk"
+                        <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.ipk"
                              type="application/widget" region="bottom-right" dur="20s">
                             <param name="cacheControl" value="onlyIfCached"/>
                         </ref>
@@ -74,7 +74,7 @@
                 <par repeatCount="indefinite">
                     <!-- indefinite loop of media files in the selected order -->
                     <seq>
-                        <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.apk"
+                        <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.apk"
                              type="application/widget" region="bottom-left" dur="20s">
                             <param name="cacheControl" value="onlyIfCached"/>
                         </ref>

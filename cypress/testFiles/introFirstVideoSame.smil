@@ -30,7 +30,7 @@
                            region="main" soundLevel="0%" fit="fill"></video>
                     <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                            region="main" soundLevel="0%" fit="fill"></video>
-                    <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main"
+                    <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main"
                          fit="fill"></img>
                 </seq>
             </par>

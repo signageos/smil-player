@@ -15,15 +15,15 @@
                     <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                            region="main" soundLevel="0%"/>
                     <img dur="3s"
-                         src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                          region="main" fit="fill"/>
                     <img dur="3s"
-                         src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                          region="main" fit="fill"/>
-                    <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                          dur="3s" fit="hidden" region="main">
                     </img>
-                    <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
                          dur="3s" fit="hidden" region="main">
                     </img>
                 </seq>

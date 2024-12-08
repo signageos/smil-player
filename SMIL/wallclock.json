@@ -25,23 +25,23 @@
           "seq": {
             "repeatCount": "indefinite",
             "video": {
-              "src": " https://demo.signageos.io/smil/samples/assets/loader.mp4"
+              "src": "https://demo.signageos.io/smil/samples/assets/loader.mp4"
             }
           }
         },
         {
           "prefetch": [
             {
-              "src": " https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
+              "src": "https://demo.signageos.io/smil/samples/assets/landscape1.mp4"
             },
             {
-              "src": " https://demo.signageos.io/smil/samples/assets/landscape2.mp4"
+              "src": "https://demo.signageos.io/smil/samples/assets/landscape2.mp4"
             },
             {
-              "src": " https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+              "src": "https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+              "src": "https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
             }
           ],
           "seq": {
@@ -62,12 +62,12 @@
               "repeatCount": "1",
               "video": [
                 {
-                  "src": " https://demo.signageos.io/smil/samples/assets/landscape1.mp4",
+                  "src": "https://demo.signageos.io/smil/samples/assets/landscape1.mp4",
                   "region": "main",
                   "soundLevel": "0%"
                 },
                 {
-                  "src": " https://demo.signageos.io/smil/samples/assets/landscape2.mp4",
+                  "src": "https://demo.signageos.io/smil/samples/assets/landscape2.mp4",
                   "region": "main",
                   "soundLevel": "0%"
                 }
@@ -80,13 +80,13 @@
               "img": [
                 {
                   "dur": "3s",
-                  "src": " https://demo.signageos.io/smil/samples/assets/landscape1.jpg",
+                  "src": "https://demo.signageos.io/smil/samples/assets/landscape1.jpg",
                   "region": "main",
                   "fit": "fill"
                 },
                 {
                   "dur": "5s",
-                  "src": " https://demo.signageos.io/smil/samples/assets/landscape2.jpg",
+                  "src": "https://demo.signageos.io/smil/samples/assets/landscape2.jpg",
                   "region": "main",
                   "fit": "fill"
                 }
@@ -99,15 +99,15 @@
   },
   "video": [
     {
-      "src": " https://demo.signageos.io/smil/samples/assets/loader.mp4"
+      "src": "https://demo.signageos.io/smil/samples/assets/loader.mp4"
     },
     {
-      "src": " https://demo.signageos.io/smil/samples/assets/landscape1.mp4",
+      "src": "https://demo.signageos.io/smil/samples/assets/landscape1.mp4",
       "region": "main",
       "soundLevel": "0%"
     },
     {
-      "src": " https://demo.signageos.io/smil/samples/assets/landscape2.mp4",
+      "src": "https://demo.signageos.io/smil/samples/assets/landscape2.mp4",
       "region": "main",
       "soundLevel": "0%"
     }
@@ -115,13 +115,13 @@
   "img": [
     {
       "dur": "3s",
-      "src": " https://demo.signageos.io/smil/samples/assets/landscape1.jpg",
+      "src": "https://demo.signageos.io/smil/samples/assets/landscape1.jpg",
       "region": "main",
       "fit": "fill"
     },
     {
       "dur": "5s",
-      "src": " https://demo.signageos.io/smil/samples/assets/landscape2.jpg",
+      "src": "https://demo.signageos.io/smil/samples/assets/landscape2.jpg",
       "region": "main",
       "fit": "fill"
     }
@@ -132,7 +132,7 @@
     {
       "repeatCount": "indefinite",
       "video": {
-        "src": " https://demo.signageos.io/smil/samples/assets/loader.mp4"
+        "src": "https://demo.signageos.io/smil/samples/assets/loader.mp4"
       }
     }
   ]

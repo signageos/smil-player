@@ -95,7 +95,7 @@ export const mockBrokenSmil = {
 													seq: {
 														repeatCount: '1',
 														video1: {
-															src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: {
@@ -104,7 +104,7 @@ export const mockBrokenSmil = {
 															},
 														},
 														video2: {
-															src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: {
@@ -119,7 +119,7 @@ export const mockBrokenSmil = {
 												{
 													repeatCount: 'indefinite',
 													video3: {
-														src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -128,7 +128,7 @@ export const mockBrokenSmil = {
 														},
 													},
 													video4: {
-														src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -141,7 +141,7 @@ export const mockBrokenSmil = {
 													begin: 'wallclock(R/2011-01-01T07:00:00/P1D)',
 													end: 'wallclock(R/2011-01-01T17:00:00/P1D)',
 													video5: {
-														src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -150,7 +150,7 @@ export const mockBrokenSmil = {
 														},
 													},
 													video6: {
-														src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -181,7 +181,7 @@ export const mockBrokenSmil = {
 			src: 'http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4',
 		},
 		{
-			src: ' https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
+			src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 			type: 'application/widget',
 			region: 'video',
 			param: {

@@ -17,19 +17,19 @@
                            popName="videoEvent" popType="video"
                            popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
                     <img dur="3s"
-                         src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                          region="main" fit="fill"
                          popName="imageEvent" popType="image"
                          popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
                     <img dur="3s"
-                         src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                          region="main" fit="fill"
                          popName="imageEvent" popType="image"
                          popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
-                    <img src=" https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                          id="annons1" dur="3s" fit="hidden" region="main">
                     </img>
-                    <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
                          id="annons1" dur="3s" fit="hidden" region="main"
                          popName="imageEvent" popType="image"
                          popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg">

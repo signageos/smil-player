@@ -64,47 +64,47 @@
           "seq": {
             "repeatCount": "indefinite",
             "video": {
-              "src": " https://demo.signageos.io/smil/zones/files/loader.mp4"
+              "src": "https://demo.signageos.io/smil/zones/files/loader.mp4"
             }
           }
         },
         {
           "prefetch": [
             {
-              "src": " https://demo.signageos.io/smil/zones/files/video_1.mp4"
+              "src": "https://demo.signageos.io/smil/zones/files/video_1.mp4"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/video_2.mp4"
+              "src": "https://demo.signageos.io/smil/zones/files/video_2.mp4"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_1.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_1.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_2.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_2.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_3.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_3.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_4.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_4.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_5.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_5.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/img_7.jpg"
+              "src": "https://demo.signageos.io/smil/zones/files/img_7.jpg"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/widget_image_1.png"
+              "src": "https://demo.signageos.io/smil/zones/files/widget_image_1.png"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/widget_image_2.png"
+              "src": "https://demo.signageos.io/smil/zones/files/widget_image_2.png"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
+              "src": "https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
             },
             {
-              "src": " https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
+              "src": "https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
             }
           ],
           "seq": {
@@ -146,16 +146,16 @@
                               {
                                 "prefetch": [
                                   {
-                                    "src": " https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
+                                    "src": "https://demo.signageos.io/smil/zones/files/topOverlay.wgt"
                                   },
                                   {
-                                    "src": " https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
+                                    "src": "https://demo.signageos.io/smil/zones/files/bottomWidget.wgt"
                                   },
                                   {
-                                    "src": " https://demo.signageos.io/smil/zones/files/widget_image_1.png"
+                                    "src": "https://demo.signageos.io/smil/zones/files/widget_image_1.png"
                                   },
                                   {
-                                    "src": " https://demo.signageos.io/smil/zones/files/widget_image_2.png"
+                                    "src": "https://demo.signageos.io/smil/zones/files/widget_image_2.png"
                                   }
                                 ]
                               }
@@ -165,7 +165,7 @@
                             "seq": {
                               "repeatCount": "indefinite",
                               "ref": {
-                                "src": " https://demo.signageos.io/smil/zones/files/topOverlay.wgt",
+                                "src": "https://demo.signageos.io/smil/zones/files/topOverlay.wgt",
                                 "type": "application/widget",
                                 "region": "topOverlay",
                                 "dur": "60s",
@@ -180,7 +180,7 @@
                             "seq": {
                               "repeatCount": "indefinite",
                               "ref": {
-                                "src": " https://demo.signageos.io/smil/zones/files/bottomWidget.wgt",
+                                "src": "https://demo.signageos.io/smil/zones/files/bottomWidget.wgt",
                                 "type": "application/widget",
                                 "region": "bottomWidget",
                                 "dur": "60s",
@@ -195,7 +195,7 @@
                             "seq": {
                               "repeatCount": "indefinite",
                               "img": {
-                                "src": " https://demo.signageos.io/smil/zones/files/widget_image_1.png",
+                                "src": "https://demo.signageos.io/smil/zones/files/widget_image_1.png",
                                 "region": "topRightWidget",
                                 "dur": "60s",
                                 "param": {
@@ -209,7 +209,7 @@
                             "seq": {
                               "repeatCount": "indefinite",
                               "img": {
-                                "src": " https://demo.signageos.io/smil/zones/files/widget_image_2.png",
+                                "src": "https://demo.signageos.io/smil/zones/files/widget_image_2.png",
                                 "region": "bottomRightWidget",
                                 "dur": "60s",
                                 "param": {
@@ -224,7 +224,7 @@
                           "repeatCount": "indefinite",
                           "video": [
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/video_1.mp4",
+                              "src": "https://demo.signageos.io/smil/zones/files/video_1.mp4",
                               "id": "annons0",
                               "fit": "hidden",
                               "region": "video",
@@ -234,7 +234,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/video_2.mp4",
+                              "src": "https://demo.signageos.io/smil/zones/files/video_2.mp4",
                               "id": "annons0",
                               "fit": "hidden",
                               "region": "video",
@@ -246,7 +246,7 @@
                           ],
                           "img": [
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_1.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_1.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -257,7 +257,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_2.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_2.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -268,7 +268,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_3.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_3.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -279,7 +279,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_4.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_4.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -290,7 +290,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_5.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_5.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -301,7 +301,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_6.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_6.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -312,7 +312,7 @@
                               }
                             },
                             {
-                              "src": " https://demo.signageos.io/smil/zones/files/img_7.jpg",
+                              "src": "https://demo.signageos.io/smil/zones/files/img_7.jpg",
                               "id": "annons1",
                               "dur": "5s",
                               "fit": "hidden",
@@ -354,10 +354,10 @@
   },
   "video": [
     {
-      "src": " https://demo.signageos.io/smil/zones/files/loader.mp4"
+      "src": "https://demo.signageos.io/smil/zones/files/loader.mp4"
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/video_1.mp4",
+      "src": "https://demo.signageos.io/smil/zones/files/video_1.mp4",
       "id": "annons0",
       "fit": "hidden",
       "region": "video",
@@ -367,7 +367,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/video_2.mp4",
+      "src": "https://demo.signageos.io/smil/zones/files/video_2.mp4",
       "id": "annons0",
       "fit": "hidden",
       "region": "video",
@@ -379,7 +379,7 @@
   ],
   "img": [
     {
-      "src": " https://demo.signageos.io/smil/zones/files/widget_image_1.png",
+      "src": "https://demo.signageos.io/smil/zones/files/widget_image_1.png",
       "region": "topRightWidget",
       "dur": "60s",
       "param": {
@@ -388,7 +388,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/widget_image_2.png",
+      "src": "https://demo.signageos.io/smil/zones/files/widget_image_2.png",
       "region": "bottomRightWidget",
       "dur": "60s",
       "param": {
@@ -397,7 +397,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_1.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_1.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -408,7 +408,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_2.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_2.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -419,7 +419,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_3.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_3.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -430,7 +430,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_4.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_4.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -441,7 +441,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_5.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_5.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -452,7 +452,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_6.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_6.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -463,7 +463,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/img_7.jpg",
+      "src": "https://demo.signageos.io/smil/zones/files/img_7.jpg",
       "id": "annons1",
       "dur": "5s",
       "fit": "hidden",
@@ -476,7 +476,7 @@
   ],
   "ref": [
     {
-      "src": " https://demo.signageos.io/smil/zones/files/topOverlay.wgt",
+      "src": "https://demo.signageos.io/smil/zones/files/topOverlay.wgt",
       "type": "application/widget",
       "region": "topOverlay",
       "dur": "60s",
@@ -486,7 +486,7 @@
       }
     },
     {
-      "src": " https://demo.signageos.io/smil/zones/files/bottomWidget.wgt",
+      "src": "https://demo.signageos.io/smil/zones/files/bottomWidget.wgt",
       "type": "application/widget",
       "region": "bottomWidget",
       "dur": "60s",
@@ -505,7 +505,7 @@
     {
       "repeatCount": "indefinite",
       "video": {
-        "src": " https://demo.signageos.io/smil/zones/files/loader.mp4"
+        "src": "https://demo.signageos.io/smil/zones/files/loader.mp4"
       }
     }
   ]

@@ -17,7 +17,7 @@
     <body>
         <par>
             <seq repeatCount="indefinite">
-                <img src=" https://demo.signageos.io/smil/zones/files/img_4.jpg" id="annons1" dur="5s" fit="hidden"
+                <img src="https://demo.signageos.io/smil/zones/files/img_4.jpg" id="annons1" dur="5s" fit="hidden"
                      region="video" transIn="bwt">
                     <param name="cacheControl" value="auto"/>
                 </img>
@@ -25,20 +25,20 @@
                        id="annons0" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </video>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden"
+                <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1" dur="5s" fit="hidden"
                      region="video" transIn="bwt"
                      expr="adapi-weekday()&gt;=9">
                     <param name="cacheControl" value="auto"/>
                 </img>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden"
+                <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg" id="annons1" dur="5s" fit="hidden"
                      region="video" transIn="bwt">
                     <param name="cacheControl" value="auto"/>
                 </img>
-                <ref src=" https://demo.signageos.io/smil/zones/files/bottomWidget.wgt" type="application/widget"
+                <ref src="https://demo.signageos.io/smil/zones/files/bottomWidget.wgt" type="application/widget"
                      region="video" dur="5s" transIn="bwt">
                     <param name="cacheControl" value="onlyIfCached"/>
                 </ref>
-                <img src=" https://demo.signageos.io/smil/zones/files/img_5.jpg" id="annons1" dur="5s" fit="hidden"
+                <img src="https://demo.signageos.io/smil/zones/files/img_5.jpg" id="annons1" dur="5s" fit="hidden"
                      region="video" transIn="bwt">
                     <param name="cacheControl" value="auto"/>
                 </img>

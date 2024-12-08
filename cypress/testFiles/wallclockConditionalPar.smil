@@ -23,7 +23,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src=" https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -31,8 +31,8 @@
             <seq>
                 <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
                 <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
-                <prefetch src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
                 <seq id="__prefetchEnd" dur="1s"/>
             </seq>
 
@@ -46,7 +46,7 @@
                     <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                region="top-left" soundLevel="0%"></video>
-                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                        <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                              region="top-left" fit="fill"></img>
                     </seq>
                 </par>
@@ -58,7 +58,7 @@
                     <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                region="top-right" soundLevel="0%"></video>
-                        <img dur="3" src=" https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                        <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
                              region="top-right" fit="fill"></img>
                     </seq>
                 </par>
@@ -70,7 +70,7 @@
                     <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                                region="bottom-left" soundLevel="0%"></video>
-                        <img dur="5" src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                        <img dur="5" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                              region="bottom-left" fit="fill"></img>
                     </seq>
                 </par>
@@ -81,7 +81,7 @@
                     <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                                region="bottom-right" soundLevel="0%"></video>
-                        <img dur="5" src=" https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                        <img dur="5" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
                              region="bottom-right" fit="fill"></img>
                     </seq>
                 </par>
