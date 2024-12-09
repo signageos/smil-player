@@ -39,7 +39,10 @@ export function getDynamicTagsFromPlaylist(playlist: PlaylistElement | PlaylistE
 		if (!isObject(value)) {
 			continue;
 		}
-		if (removeDigits(key) === SMILDynamicEnum.emitDynamic) {
+		if (
+			removeDigits(key) === SMILDynamicEnum.emitDynamic ||
+			removeDigits(key) === SMILDynamicEnum.emitDynamicLegacy
+		) {
 			dynamicTags.push(value.data);
 		}
 		getDynamicTagsFromPlaylist(value as PlaylistElement | PlaylistElement[], dynamicTags);

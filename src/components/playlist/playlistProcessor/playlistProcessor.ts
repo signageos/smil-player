@@ -587,7 +587,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				);
 			}
 
-			if (removeDigits(key) === SMILDynamicEnum.emitDynamic && this.synchronization.shouldSync) {
+			if (
+				(removeDigits(key) === SMILDynamicEnum.emitDynamic ||
+					removeDigits(key) === SMILDynamicEnum.emitDynamicLegacy) &&
+				this.synchronization.shouldSync
+			) {
 				await this.processDynamicPlaylist(
 					value as DynamicPlaylist,
 					version,
@@ -600,7 +604,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			// in case smil has only dynamic content and sync is off, wait for defaultAwait to avoid infinite loop
-			if (removeDigits(key) === SMILDynamicEnum.emitDynamic && !this.synchronization.shouldSync) {
+			if (
+				(removeDigits(key) === SMILDynamicEnum.emitDynamic ||
+					removeDigits(key) === SMILDynamicEnum.emitDynamicLegacy) &&
+				!this.synchronization.shouldSync
+			) {
 				await sleep(1000);
 				continue;
 			}
