@@ -34,7 +34,9 @@ export function getFileName(url: string) {
 		return url;
 	}
 	const parsedUrl = URLVar.parse(url);
-	const filePathChecksum = parsedUrl.host ? `_${checksumString(parsedUrl.host + parsedUrl.pathname, 8)}` : '';
+	const filePathChecksum = parsedUrl.host
+		? `_${checksumString(parsedUrl.host + parsedUrl.pathname + JSON.stringify(parsedUrl.query), 8)}`
+		: '';
 	const fileName = path.basename(parsedUrl.pathname ?? url);
 	const sanitizedExtname = path
 		.extname(parsedUrl.pathname ?? url)
