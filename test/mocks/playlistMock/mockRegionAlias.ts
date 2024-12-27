@@ -23,7 +23,10 @@ export const mockSMILFileParsedRegionAlias = {
 		left: '0',
 		regionName: 'rootLayout',
 	},
-	log: false,
+	logger: {
+		enabled: false,
+		type: 'standard',
+	},
 	onlySmilFileUpdate: true,
 	playlist: {
 		systemComponent: 'http://www.w3.org/1999/xhtml',
