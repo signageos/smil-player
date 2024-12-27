@@ -20,7 +20,8 @@ import { XmlTags } from '../../../enums/xmlEnums';
 import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
-import { difference, omit } from 'lodash';
+import difference from 'lodash/difference';
+import omit from 'lodash/omit';
 
 const hasher = require('node-object-hash');
 

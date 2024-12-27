@@ -33,13 +33,13 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
 
 		testStartString = `wallclock(R/${formatDate(moment().add(1, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(6, 'hours'))}/P1D)`;
+		testEndString = `wallclock(R/${formatDate(moment().add(2, 'hours'))}/P1D)`;
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		expect(Math.abs(3600000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
 
 		testStartString = `wallclock(R/${formatDate(moment().add(1, 'day'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(6, 'hours'))}/P1D)`;
+		testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(2, 'hours'))}/P1D)`;
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// schedule start for tommorow 24hours
 		expect(Math.abs(86400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
