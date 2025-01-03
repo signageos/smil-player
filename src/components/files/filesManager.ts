@@ -112,6 +112,10 @@ export class FilesManager implements IFilesManager {
 		if (arrayOfReportFiles.length > 0) {
 			for (const file of arrayOfReportFiles) {
 				try {
+					// get fileIndex of the current file
+					const fileIndex = parseInt(file.filePath.split('.csv')[0].replace(/\D/g, ''), 10);
+
+					debug('getting file index for offline reports', fileIndex);
 					const fileContent = await this.sos.fileSystem.readFile({
 						storageUnit: this.internalStorageUnit,
 						filePath: file.filePath,
@@ -141,6 +145,9 @@ export class FilesManager implements IFilesManager {
 						},
 						true,
 					);
+
+					// reset number of reports in file due to the bug with repeated connection issues
+					delete this.offlineReportsInfoObject[fileIndex];
 
 					debug('Custom endpoint report file deleted: %s', file.filePath);
 				} catch (err) {
@@ -566,6 +573,7 @@ export class FilesManager implements IFilesManager {
 		}
 		// -1 because its indexed from 0
 		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > CUSTOM_ENDPOINT_REPORT_FILE_LIMIT - 1) {
+			debug('File number of records exceeded ', currentFileIndex);
 			currentFileIndex += 1;
 			this.offlineReportsInfoObject[currentFileIndex] = {
 				numberOfReports: 0,
@@ -573,6 +581,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (await this.fileExists(`${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`)) {
+			debug('appending to a file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.appendFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -582,6 +591,7 @@ export class FilesManager implements IFilesManager {
 			);
 			this.offlineReportsInfoObject[currentFileIndex].numberOfReports += 1;
 		} else {
+			debug('creating new file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.writeFile(
 				{
 					storageUnit: this.internalStorageUnit,
