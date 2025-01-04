@@ -1,6 +1,6 @@
 {
   "name": "@signageos/smil-player",
-  "version": "3.2.3",
+  "version": "3.2.4",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
