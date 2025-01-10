@@ -13,6 +13,22 @@ export enum SMILEnums {
 	metaLog = 'log',
 	onlySmilUpdate = 'onlySmilUpdate',
 	syncServer = 'syncServerUrl',
+	defaultRepeatCount = 'defaultRepeatCount',
+	defaultTransition = 'defaultTransition',
 }
 
-export const parentGenerationRemove = ['promiseFunction', 'media', 'playing', 'player', 'lastModified'];
+export const parentGenerationRemove = [
+	'promiseFunction',
+	'media',
+	'playing',
+	'player',
+	'lastModified',
+	'isFirstInPlaylist',
+	'syncIndex',
+	'timeoutReference',
+	'parent',
+	'syncGroupName',
+	'transitionInfo',
+];
+
+export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;

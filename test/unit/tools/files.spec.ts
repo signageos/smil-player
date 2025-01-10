@@ -70,9 +70,9 @@ describe('Files tools component', () => {
 
 		it('Should return valid path', () => {
 			const validUrls = [
-				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.jpg',
-				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/portrait2.mp4',
-				'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.wgt',
+				'https://demo.signageos.io/smil/samples/assets/landscape2.jpg',
+				'https://demo.signageos.io/smil/samples/assets/portrait2.mp4',
+				'https://demo.signageos.io/smil/samples/assets/landscape1.wgt',
 			];
 
 			for (let i = 0; i < validUrls.length; i += 1) {

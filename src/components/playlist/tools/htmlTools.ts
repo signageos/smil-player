@@ -8,28 +8,61 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { debug, generateElementId, removeDigits } from './generalTools';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum, ObjectFitEnum } from '../../../enums/htmlEnums';
-import { SMILImage, SMILMediaNoVideo, SMILWidget } from '../../../models/mediaModels';
+import { SMILImage, SMILMediaNoVideo, SMILWidget, SosHtmlElement } from '../../../models/mediaModels';
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { ParsedTriggerCondition, TriggerEndless } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
 import { copyQueryParameters, createVersionedUrl } from '../../files/tools';
 import { CssElementsPosition } from '../../../models/htmlModels';
+import { BillboardTransition, BillboardTransitionDirection } from '../../../enums/transitionEnums';
+import { setElementDuration } from './scheduleTools';
 
 export function createHtmlElement(
+	value: SMILImage | SMILWidget,
 	htmlElement: string,
 	filepath: string,
 	regionInfo: RegionAttributes,
 	key: string,
 	elementSrc: string,
-	isTrigger: boolean = false,
+	isSpecial: boolean = false,
 ): HTMLElement {
-	const element: HTMLElement = document.createElement(htmlElement);
+	let element: HTMLElement;
+	// special case when image is represented as <ol><li> object due to billboard transition
+	if (htmlElement === HtmlEnum.img && value.transitionInfo?.type === 'billboard') {
+		const columnCount = value.transitionInfo.columnCount || BillboardTransition.defaultColumnCount;
+		element = document.createElement('ol');
+		element.style.listStyle = 'none';
+		element.style.padding = '0px';
+		element.style.margin = '0px';
+
+		for (let i = 0; i < columnCount; i++) {
+			const liElement = document.createElement('li');
+			const divElement = document.createElement('div');
+			liElement.style.display = 'inline';
+			liElement.style.float = 'left';
+			liElement.style.paddingLeft = '0px';
+
+			divElement.style.height = `${regionInfo.height}px`;
+			divElement.style.width = `${regionInfo.width / columnCount + 2}px`;
+			divElement.style.setProperty('background-position', `-${i * (regionInfo.width / columnCount)}px 0`);
+			divElement.style.setProperty('margin-left', `${i * (regionInfo.width / columnCount)}px`);
+			divElement.style.position = 'absolute';
+			divElement.style.webkitBackfaceVisibility = 'hidden';
+			divElement.style.webkitTransitionProperty = '-webkit-transform';
+
+			liElement.appendChild(divElement);
+			element.appendChild(liElement);
+		}
+	} else {
+		element = document.createElement(htmlElement);
+	}
 
 	element.id = generateElementId(filepath, regionInfo.regionName, key);
 	Object.keys(regionInfo).forEach((attr: string) => {
 		if (XmlTags.cssElementsPosition.includes(attr)) {
-			element.style[attr as keyof CssElementsPosition] = `${regionInfo[attr]}px`;
+			element.style[attr as keyof CssElementsPosition] =
+				element.style[attr as keyof CssElementsPosition] || `${regionInfo[attr]}px`;
 		}
 		if (XmlTags.cssElements.includes(attr)) {
 			element.style[attr as keyof CssElementsPosition] = regionInfo[attr];
@@ -44,7 +77,7 @@ export function createHtmlElement(
 
 	element.style.visibility = 'hidden';
 	// set filePAth for trigger images immediately
-	if (isTrigger) {
+	if (isSpecial) {
 		let src = generateElementSrc(elementSrc, filepath);
 		element.setAttribute('src', src);
 	}
@@ -77,7 +110,7 @@ export function changeZIndex(
 	useValueZIndex: boolean = true,
 ): void {
 	const valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
-	const currentElementZIndex = parseInt(element.style.getPropertyValue(HtmlEnum.zIndex));
+	const currentElementZIndex = parseInt(element?.style.getPropertyValue(HtmlEnum.zIndex));
 	let resultZIndex = useValueZIndex ? valueZIndex : 0;
 	if ('transitionInfo' in value) {
 		resultZIndex = transitionConstant + valueZIndex;
@@ -97,8 +130,8 @@ export function changeZIndex(
 	if (resultZIndex < currentElementZIndex && !('transitionInfo' in value)) {
 		resultZIndex = 0;
 	}
-
-	element.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
+	debug('changing zIndex for element: %O : %s', element, resultZIndex);
+	element?.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 }
 
 /**
@@ -106,13 +139,14 @@ export function changeZIndex(
  * @param value - Smil image or Smil widget
  * @param htmlElement - which htmlElement should be created in DOM ( img or iframe )
  * @param key - tag of media in xml ( img, video etc...)
- * @param isTrigger - determines if element is trigger element or ordinary one ( trigger is played on demand )
+ * @param isSpecial - determines if element is trigger element, dynamic playlist or ordinary one
+ * ( trigger and dynamic playlist is played on demand )
  */
 export function createDomElement(
 	value: SMILImage | SMILWidget,
 	htmlElement: string,
 	key: string,
-	isTrigger: boolean = false,
+	isSpecial: boolean = false,
 ): string {
 	const elementId = generateElementId(value.localFilePath, value.regionInfo.regionName, key);
 	debug('creating element: %s' + elementId);
@@ -121,9 +155,21 @@ export function createDomElement(
 		return elementId;
 	}
 	const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
-	const element = createHtmlElement(htmlElement, localFilePath, value.regionInfo, key, value.src, isTrigger);
+	const element = createHtmlElement(value, htmlElement, localFilePath, value.regionInfo, key, value.src, isSpecial);
 	document.body.appendChild(element);
 	return element.id;
+}
+
+type ObjectWithStringKeys = Record<string, any>;
+
+export function extractAttributesByPrefix<T extends ObjectWithStringKeys>(obj: T, prefix: string): Partial<T> {
+	const result: Partial<T> = {};
+	for (const key in obj) {
+		if (key.startsWith(prefix)) {
+			result[key] = obj[key];
+		}
+	}
+	return result;
 }
 
 export function resetBodyContent() {
@@ -135,20 +181,24 @@ export function resetBodyContent() {
 			}
 		}
 	} catch (err) {
-		debug('Error: %O during removing image: %O', err, document.images[document.images.length]);
+		debug('Error: %O during removing image: %O', err, document.images[document.images?.length]);
 	}
 
 	// reset body content
 	document.body.innerHTML = '';
 	document.body.style.backgroundColor = 'transparent';
-	document.body.style.margin = '0px';
+	resetBodyMargin();
 	// remove background image
 	document.body.style.background = 'none';
 }
 
+export function resetBodyMargin() {
+	document.body.style.margin = '0px';
+}
+
 export function setTransitionsDefinition(smilObject: SMILFileObject) {
 	if (Object.keys(smilObject.transition).length > 0 && isNil(document.getElementById(HtmlEnum.transitionStyleId))) {
-		const css = `@keyframes fadeOut {
+		const cssFadeOut = `@keyframes fadeOut {
 			  0% {
 				opacity:1;
 			  }
@@ -192,33 +242,75 @@ export function setTransitionsDefinition(smilObject: SMILFileObject) {
 				opacity:0;
 			}`;
 
+		const cssBillboard = `@-webkit-keyframes rotate {
+			from {
+					-webkit-transform: rotateY(0deg);
+			}
+			to {
+					-webkit-transform: rotateY(135deg);
+			}
+		}`;
+
 		const style = document.createElement('style') as any;
 		style.id = HtmlEnum.transitionStyleId;
 		if (style.styleSheet) {
-			style.styleSheet.cssText = css;
+			style.styleSheet.cssText = cssBillboard.concat(cssFadeOut);
 		} else {
-			style.appendChild(document.createTextNode(css));
+			style.appendChild(document.createTextNode(cssBillboard.concat(cssFadeOut)));
 		}
 
 		document.getElementsByTagName('head')[0].appendChild(style);
 	}
 }
 
-export function setTransitionCss(element: HTMLElement, id: string, transitionDuration: number) {
-	const nextElement = <HTMLElement>document.getElementById(<string>id);
-	const transitionString = `fadeOut ease ${transitionDuration}ms forwards`;
+export function setTransitionCss(
+	element: SosHtmlElement,
+	htmlElement: HTMLElement,
+	nextElementId: string,
+	transitionDuration: number,
+) {
+	const nextElementHtml = document.getElementById(nextElementId);
+	nextElementHtml?.style.setProperty('visibility', 'visible');
+	// because of seamless update next element sometimes does not have zIndex set to original value
+	nextElementHtml?.style.setProperty(HtmlEnum.zIndex, `${parseInt(htmlElement.style.zIndex) - 1}`);
+	if (element.transitionInfo?.subtype === 'billboard') {
+		htmlElement.childNodes.forEach((child: HTMLElement) => {
+			child.childNodes.forEach((div: HTMLElement) => {
+				div.style.setProperty(
+					'-webkit-animation',
+					`rotate ${Math.min(transitionDuration * 1.5, setElementDuration(element.dur))}ms linear`,
+				);
+				div.style.setProperty('-webkit-animation-iteration-count', '1');
+				div.style.setProperty(
+					'-webkit-transform-origin',
+					BillboardTransitionDirection[element.transitionInfo?.direction!] ||
+						BillboardTransition.defaultDirection,
+				);
+			});
+		});
+	}
 
-	nextElement.style.setProperty('visibility', 'visible');
+	if (element.transitionInfo?.subtype === 'crossfade') {
+		const transitionString = `fadeOut ease ${transitionDuration}ms forwards`;
 
-	element.style.setProperty('animation', transitionString);
-	element.style.setProperty('-webkit-animation', transitionString);
-	element.style.setProperty('-moz-animation', transitionString);
-	element.style.setProperty('-o-animation', transitionString);
-	element.style.setProperty('-ms-animation', transitionString);
-	element.style.setProperty('-webkit-backface-visibility', 'hidden');
+		htmlElement.style.setProperty('animation', transitionString);
+		htmlElement.style.setProperty('-webkit-animation', transitionString);
+		htmlElement.style.setProperty('-moz-animation', transitionString);
+		htmlElement.style.setProperty('-o-animation', transitionString);
+		htmlElement.style.setProperty('-ms-animation', transitionString);
+		htmlElement.style.setProperty('-webkit-backface-visibility', 'hidden');
+	}
 }
 
 export function removeTransitionCss(element: HTMLElement) {
+	element.childNodes.forEach((child: HTMLElement) => {
+		child.childNodes.forEach((div: HTMLElement) => {
+			div.style.removeProperty('-webkit-animation');
+			div.style.removeProperty('-webkit-animation-iteration-count');
+			div.style.removeProperty('-webkit-transform-origin');
+		});
+	});
+
 	element.style.removeProperty('animation');
 	element.style.removeProperty('-webkit-animation');
 	element.style.removeProperty('-moz-animation');

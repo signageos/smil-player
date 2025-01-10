@@ -23,11 +23,11 @@ composes together rest of functions exposed by playlist of by files, so they coo
 
 Component responsible for handling operations with files listed below: \
 
--   download
--   update
--   delete
--   extract archives
--   create folder structure in storage unit
+- download
+- update
+- delete
+- extract archives
+- create folder structure in storage unit
 
 Tools folder contains helper functions such as getting file name of path out of url.
 
@@ -97,10 +97,10 @@ npm run build --production
 
 ## Configuration options
 
--   `smilUrl` is used for passing URL of the smil file
--   `backupImageUrl` is used for defining a failover image that will be shown in case the smil file is corrupted or
-    fatal error occurs during playback
--   `serialPortDevice` is used for defining device address used for serial communication (like Nexmosphere sensors)
+- `smilUrl` is used for passing URL of the smil file
+- `backupImageUrl` is used for defining a failover image that will be shown in case the smil file is corrupted or
+  fatal error occurs during playback
+- `serialPortDevice` is used for defining device address used for serial communication (like Nexmosphere sensors)
 
 ## Debugging
 
@@ -112,20 +112,20 @@ To turn debugging of just delete debug from localStorage: **delete localStorage.
 
 ## Tools used
 
--   @signageos/front-applet
--   @signageos/front-display
--   @signageos/cli https://docs.signageos.io/hc/en-us/articles/4405111438354
--   webpack https://webpack.js.org/
--   tslint
--   debug
--   Istanbul test coverage, reports https://istanbul.js.org/
--   lodash
+- @signageos/front-applet
+- @signageos/front-display
+- @signageos/cli https://docs.signageos.io/hc/en-us/articles/4405111438354
+- webpack https://webpack.js.org/
+- tslint
+- debug
+- Istanbul test coverage, reports https://istanbul.js.org/
+- lodash
 
 ## Useful links
 
-[Hello world](https://docs.signageos.io/hc/en-us/articles/4405240988178-Hello-World-SMIL-Playlist)
-[Basics of SMIL](https://docs.signageos.io/hc/en-us/sections/4405646921746-Basics-of-SMIL-Player)
-[Setting up dev environment](https://docs.signageos.io/hc/en-us/articles/4405070294674-Hello-World-Setup-Developer-Environment)
+[Hello world](https://docs.signageos.io/hc/en-us/articles/4405240988178-Hello-World-SMIL-Playlist)\
+[Basics of SMIL](https://docs.signageos.io/hc/en-us/sections/4405646921746-Basics-of-SMIL-Player)\
+[Setting up dev environment](https://docs.signageos.io/hc/en-us/articles/4405070294674-Hello-World-Setup-Developer-Environment)\
 https://www.w3.org/TR/SMIL3/ \
 http://www.a-smil.org/index.php/Main_Page \
 [signageOS JS SDK](https://sdk.docs.signageos.io)

@@ -1,17 +1,26 @@
 # Backup Image
 
-Smil player has option to setup backup image to avoid black screen if something goes wrong during smil file download ( file does not exists ) or during XML to JSON conversion ( invalid XML ). Default backup image is provided by SignageOs, which is locally stored in SMIL player repository. Currently, only single image is supported.
+The SMIL player has the option to set up a backup image to avoid a black screen if something goes wrong during the SMIL
+file download (e.g., the file does not exist) or during XML to JSON conversion (e.g., invalid XML).
+
+A default backup image is provided by SignageOs, which is locally stored in the SMIL player's repository.
+
+Currently, only a single image is supported.
 
 ## Setup
 
+There are two options for setting up your backup image.
+
 There are two options how you can setup your backup image.
 
-### Option 1 - image stored locally in smil repository
+### Option 1 - Image stored locally in SMIL repository
 
-Store image locally in `public/backupImage/backupImage.jpg file`. Name of the backupImage has to be `backupImage.jpg at the moment`.
+Store the image locally in the `public/backupImage/backupImage.jpg` file. The name of the backup image has to be
+`backupImage.jpg` at the moment.
 
-### Option 2 - provide url to image via timings in Box
+### Option 2 - Provide URL to image via timings in Box
 
-Url has to be stored in `backupImageUrl` variable in timmings in applet definition. Name of the file does not matter in this case.
+The URL has to be stored in the `backupImageUrl` variable in timings in the applet definition. The name of the file does
+not matter in this case.
 
-![Set backup image in applet configuration](./backupImage-timings.png)
+![Set backup image in applet configuration](../extras/backupImage-timings.png)

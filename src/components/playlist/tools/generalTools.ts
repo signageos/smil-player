@@ -3,20 +3,27 @@ import get = require('lodash/get');
 import isNil = require('lodash/isNil');
 import unset = require('lodash/unset');
 import isObject = require('lodash/isObject');
-import { inspect } from 'util';
 import cloneDeep = require('lodash/cloneDeep');
+import { inspect } from 'util';
 import moment from 'moment';
-const hasher = require('node-object-hash');
-
-import { BackupPlaylist, CurrentlyPlayingRegion, PlaylistElement } from '../../../models/playlistModels';
+import {
+	BackupPlaylist,
+	CurrentlyPlayingRegion,
+	PlaylistElement,
+	RandomPlaylist,
+} from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { SMILEnums, parentGenerationRemove } from '../../../enums/generalEnums';
+import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
+import difference from 'lodash/difference';
+import omit from 'lodash/omit';
+
+const hasher = require('node-object-hash');
 
 export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
@@ -44,6 +51,10 @@ export function checkSlowDevice(deviceType: string): boolean {
 
 export function getLastArrayItem(array: any[]): any {
 	return array[array.length - 1];
+}
+
+export function removeLastArrayItem(array: any[]): any[] {
+	return array.slice(0, array.length - 1);
 }
 
 /**
@@ -163,12 +174,35 @@ export function extractAdditionalInfo(
 	return value;
 }
 
+/**
+ * There are two ways of computing sync index for elements in playlist: For dynamic playlists
+ * it takes local localRegionSyncIndex meaning that it is increment
+ * for each seq tag separately. For generic playlists it takes globalRegionSyncIndex which is incremented for each region separately.
+ * @param regionSyncIndex
+ * @param regionName
+ */
+export function computeSyncIndex(
+	regionSyncIndex: { [key: string]: number },
+	regionName: string,
+): { [key: string]: number } {
+	if (isNil(regionSyncIndex[regionName])) {
+		regionSyncIndex[regionName] = 0;
+	}
+
+	regionSyncIndex[regionName]++;
+	return regionSyncIndex;
+}
+
 // seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
 export function generateParentId(tagName: string, value: PlaylistElement): string {
 	try {
+		debug('Generating parent id for: %s', tagName, value);
 		let clone = cloneDeep(value);
+		clone = orderJsonObject(clone);
 		removeNestedProperties(clone, parentGenerationRemove);
-		return `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
+		const parent = `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
+		debug('Generated parent id: %s', parent);
+		return parent;
 	} catch (err) {
 		debug('Error during parent generation: %O', err);
 		return `${tagName}-undefined`;
@@ -216,7 +250,8 @@ export function getDefaultVideoParams(): VideoParams {
 }
 
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
-	// no element was played before ( trigger case )
+	debug('getting index of currently playing priority: %O ', currentlyPlaying);
+	// no element was played before ( trigger/dynamic playlist case )
 	if (isNil(currentlyPlaying)) {
 		return 0;
 	}
@@ -236,8 +271,84 @@ export function removeDigits(expr: string): string {
 	return expr.replace(/[0-9]/g, '');
 }
 
-export async function sleep(ms: number): Promise<object> {
-	return new Promise((resolve) => {
-		setTimeout(resolve, ms);
+export async function sleep(ms: number): Promise<void> {
+	let timeoutId;
+	await new Promise((resolve) => {
+		timeoutId = setTimeout(resolve, ms);
 	});
+
+	clearTimeout(timeoutId);
+}
+
+export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
+	return Object.keys(jsonObject)
+		.sort()
+		.reduce((obj: { [objKey in string]: unknown }, key) => {
+			obj[key] = jsonObject[key];
+			return obj;
+		},      {});
+}
+
+export function shuffleObject(playlist: { [key in string]: unknown }): { [key in string]: unknown } {
+	let shuffledPlaylist: {
+		[key in string]: unknown;
+	} = {};
+	let keys = Object.keys(playlist);
+	keys.sort(() => Math.random() - 0.5);
+	keys.forEach((key) => {
+		shuffledPlaylist[key] = playlist[key];
+	});
+	return shuffledPlaylist;
+}
+
+export function pickRandomOne(playlist: { [key in string]: unknown }) {
+	const localPlaylist = cloneDeep(playlist);
+	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
+	let picked = playableParts[Math.floor(Math.random() * playableParts.length)];
+	// case playmode is set seq/par containing other seq/par tags and not directly img, video etc...
+	if (Array.isArray(localPlaylist[picked])) {
+		const pickedWithIndex = `${picked}[${Math.floor(
+			Math.random() * (localPlaylist[picked] as Array<{ [key in string]: unknown }>).length,
+		)}]`;
+		const finalObject: { [key in string]: unknown } = omit(localPlaylist, pickedWithIndex);
+		finalObject[picked] = (finalObject[picked] as Array<{ [key in string]: unknown }>).filter((elem) => elem);
+		return finalObject;
+	}
+	const diff = difference(playableParts, [picked]);
+	return omit(localPlaylist, diff);
+}
+
+export function getNextElementToPlay(
+	playlist: { [key in string]: unknown },
+	randomPlaylistInfo: RandomPlaylist,
+	parent: string,
+) {
+	if (!randomPlaylistInfo[parent]) {
+		randomPlaylistInfo[parent] = {
+			previousIndex: 0,
+		};
+	}
+	const localPlaylist = cloneDeep(playlist);
+	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
+	const picked = playableParts[randomPlaylistInfo[parent].previousIndex++ % playableParts.length];
+	const diff = difference(playableParts, [picked]);
+	return omit(localPlaylist, diff);
+}
+
+export function processRandomPlayMode(
+	playlist: { [key in string]: string },
+	randomPlaylistInfo: RandomPlaylist,
+	parent: string,
+) {
+	switch (playlist.playMode.toLowerCase()) {
+		case 'random':
+			return shuffleObject(playlist);
+		case 'random_one':
+			return pickRandomOne(playlist);
+		case 'one':
+			return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
+		default:
+			debug('No valid playMode specified, returning original object, playMode: %s', playlist.playmode);
+			return playlist;
+	}
 }

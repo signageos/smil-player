@@ -1,0 +1,40 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <meta log="true"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0"
+                    backgroundColor="#18182c">
+                <region regionName="fullScreenTrigger" left="0" top="0" width="100%" height="100%" z-index="0"
+                        backgroundColor="#18182c" sync="true"/>
+            </region>
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://demo.signageos.io/smil/samples/assets/loading_min.jpeg"
+                         fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl begin="0" repeatCount="indefinite"/>
+            </par>
+        </par>
+        <par>
+            <seq begin="dynamic176161" end="dynamic2" repeatCount="indefinite">
+                <seq>
+                    <video src="https://v3.netipbox.com/media/2724/resources/320221/320221_1648467017_cdn_circles3_15s_1920x1080.mp4"
+                           region="trigger" dur="15s" fit="meet"/>
+                </seq>
+                <seq>
+                    <video src="https://v3.netipbox.com/media/2724/resources/320221/320221_1648467017_cdn_circles3_15s_1920x1080.mp4"
+                           region="trigger" dur="3s" fit="meet"/>
+                </seq>
+            </seq>
+        </par>
+    </body>
+</smil>

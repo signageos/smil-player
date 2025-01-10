@@ -9,9 +9,11 @@ import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	convertRelativePathToAbsolute,
+	createCustomEndpointMessagePayload,
 	createDownloadPath,
 	createJsonStructureMediaInfo,
 	createLocalFilePath,
+	createPoPMessagePayload,
 	createSourceReportObject,
 	debug,
 	getFileName,
@@ -20,7 +22,13 @@ import {
 	shouldNotDownload,
 	updateJsonObject,
 } from './tools';
-import { FileStructure } from '../../enums/fileEnums';
+import {
+	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
+	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+	FileStructure,
+	MINIMAL_STORAGE_FREE_SPACE,
+	smilLogging,
+} from '../../enums/fileEnums';
 import {
 	CheckETagFunctions,
 	MediaInfoObject,
@@ -37,10 +45,12 @@ import {
 	SMILWidget,
 	SosHtmlElement,
 } from '../../models/mediaModels';
-import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { IFilesManager } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
-import { IFilesManager } from './IFilesManager';
+import { SmilLogger } from '../../models/xmlJsonModels';
+import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 
 declare global {
 	interface Window {
@@ -51,7 +61,15 @@ declare global {
 export class FilesManager implements IFilesManager {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
-	private smilLogging: boolean = false;
+	private internalStorageUnit: IStorageUnit;
+	private offlineReportsInfoObject: {
+		[key: number]: {
+			numberOfReports: number;
+		};
+	} = {};
+	private smilLogging: SmilLogger = {
+		enabled: false,
+	};
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -61,13 +79,116 @@ export class FilesManager implements IFilesManager {
 		this.smilFileUrl = url;
 	};
 
-	public setSmiLogging = (smilLogging: boolean) => {
-		this.smilLogging = smilLogging;
+	public setLocalStorageUnit = (internalStorageUnit: IStorageUnit) => {
+		this.internalStorageUnit = internalStorageUnit;
+	};
+
+	public setSmiLogging = (_smilLogging: SmilLogger) => {
+		this.smilLogging = _smilLogging;
 	};
 
 	public sendReport = async (message: Report) => {
-		if (this.smilLogging) {
+		if (this.smilLogging.enabled) {
+			debug('Sending report: %O', message);
 			await this.sos.command.dispatch(message);
+		}
+	};
+
+	public sendPoPReport = async (message: IRecordItemOptions) => {
+		if (this.smilLogging.enabled) {
+			debug('Sending PoP report: %O', message);
+			await this.sos.proofOfPlay.recordItemPlayed(message);
+		}
+	};
+
+	public watchCustomEndpointReports = async () => {
+		const arrayOfReportFiles = await this.sos.fileSystem.listFiles({
+			storageUnit: this.internalStorageUnit,
+			filePath: FileStructure.offlineReports,
+		});
+
+		debug('Number of custom endpoint report files', arrayOfReportFiles.length);
+
+		if (arrayOfReportFiles.length > 0) {
+			for (const file of arrayOfReportFiles) {
+				try {
+					// get fileIndex of the current file
+					const fileIndex = parseInt(file.filePath.split('.csv')[0].replace(/\D/g, ''), 10);
+
+					debug('getting file index for offline reports', fileIndex);
+					const fileContent = await this.sos.fileSystem.readFile({
+						storageUnit: this.internalStorageUnit,
+						filePath: file.filePath,
+					});
+
+					const arrayOfReports = fileContent
+						.split('\n')
+						.map((jsonString) => {
+							// no empty strings
+							if (jsonString.length > 0) {
+								return JSON.parse(jsonString);
+							}
+						})
+						.filter((item): item is CustomEndpointReport => item !== undefined);
+
+					debug('Sending custom endpoint report file: %s', file.filePath);
+					const start = Date.now();
+
+					await this.sendCustomEndpointReport(arrayOfReports, true);
+
+					debug('Custom endpoint report file: %s, request took: %s ms', file.filePath, Date.now() - start);
+
+					await this.sos.fileSystem.deleteFile(
+						{
+							storageUnit: this.internalStorageUnit,
+							filePath: file.filePath,
+						},
+						true,
+					);
+
+					// reset number of reports in file due to the bug with repeated connection issues
+					delete this.offlineReportsInfoObject[fileIndex];
+
+					debug('Custom endpoint report file deleted: %s', file.filePath);
+				} catch (err) {
+					debug(
+						'Unexpected error occurred during sending custom endpoint report file: %s, error: %O',
+						file.filePath,
+						err,
+					);
+				}
+			}
+		}
+		await sleep(CUSTOM_ENDPOINT_OFFLINE_INTERVAL);
+	};
+
+	public sendCustomEndpointReport = async (
+		message: CustomEndpointReport | CustomEndpointReport[],
+		offlineUpload: boolean = false,
+	) => {
+		try {
+			const payload = Array.isArray(message) ? message : [message];
+
+			debug('Sending custom endpoint report: %s. %O', new Date().toISOString(), payload);
+			const response = await fetch(this.smilLogging.endpoint!, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			});
+
+			debug('Custom endpoint report send: %O', payload);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+		} catch (error) {
+			debug('Unexpected error occurred during custom endpoint report:', error);
+			if (offlineUpload) {
+				throw new Error('Error during offline custom endpoint report upload');
+			}
+			await this.saveCustomEndpointInfo(message as CustomEndpointReport);
 		}
 	};
 
@@ -82,15 +203,19 @@ export class FilesManager implements IFilesManager {
 	public sendDownloadReport = async (
 		fileType: ItemType,
 		localFilePath: string,
-		internalStorageUnit: IStorageUnit,
-		fileSrc: string,
+		value: MergedDownloadList,
 		taskStartDate: Date,
 		errMessage: string | null = null,
 	) => {
+		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+			// to create difference between download and media played
+			value.popName = 'media-download';
+			await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
+		}
 		await this.sendReport({
 			type: 'SMIL.FileDownloaded',
 			itemType: fileType,
-			source: createSourceReportObject(localFilePath, fileSrc, internalStorageUnit.type),
+			source: createSourceReportObject(localFilePath, value.src, this.internalStorageUnit.type),
 			startedAt: taskStartDate,
 			succeededAt: isNil(errMessage) ? moment().toDate() : null,
 			failedAt: isNil(errMessage) ? null : moment().toDate(),
@@ -102,12 +227,24 @@ export class FilesManager implements IFilesManager {
 		value: SMILVideo | SMILMediaNoVideo | SMILTicker | SosHtmlElement,
 		taskStartDate: Date,
 		itemType: MediaItemType,
+		isMediaSynced: boolean,
 		errMessage: string | null = null,
 	) => {
+		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+			// to create difference between download and media played
+			value.popName = 'media-playback';
+			await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
+			if (this.smilLogging.endpoint) {
+				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				await this.sendCustomEndpointReport(
+					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage)),
+				);
+			}
+		}
 		await this.sendReport({
-			type: 'SMIL.MediaPlayed',
+			type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 			itemType: itemType,
-			source: "src" in value ? createSourceReportObject(value.localFilePath, value.src) : {} as any,
+			source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
 			startedAt: taskStartDate,
 			endedAt: isNil(errMessage) ? moment().toDate() : null,
 			failedAt: isNil(errMessage) ? null : moment().toDate(),
@@ -116,7 +253,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
-		await this.sendReport(<Report>{
+		await this.sendReport({
 			type: 'SMIL.PlaybackStarted',
 			source: createSourceReportObject(localFilePath, src),
 			succeededAt: isNil(errMessage) ? moment().toDate() : null,
@@ -125,16 +262,11 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	public currentFilesSetup = async (
-		widgets: SMILWidget[],
-		internalStorageUnit: IStorageUnit,
-		smilObject: SMILFileObject,
-		smilUrl: string,
-	) => {
-		await this.deleteUnusedFiles(internalStorageUnit, smilObject, smilUrl);
+	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
+		await this.deleteUnusedFiles(smilObject, smilUrl);
 		debug('Unused files deleted');
 
-		await this.extractWidgets(widgets, internalStorageUnit);
+		await this.extractWidgets(widgets);
 		debug('Widgets extracted');
 	};
 
@@ -151,7 +283,6 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public shouldUpdateLocalFile = async (
-		internalStorageUnit: IStorageUnit,
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
@@ -166,7 +297,7 @@ export class FilesManager implements IFilesManager {
 			return false;
 		}
 
-		if (!(await this.fileExists(internalStorageUnit, createLocalFilePath(localFilePath, media.src)))) {
+		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
 			debug(`File does not exist: %s  downloading`, media.src);
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
@@ -189,23 +320,24 @@ export class FilesManager implements IFilesManager {
 		return false;
 	};
 
-	public writeMediaInfoFile = async (internalStorageUnit: IStorageUnit, mediaInfoObject: object) => {
+	public writeMediaInfoFile = async (mediaInfoObject: object) => {
 		debug('Writing to mediaInfo file in persistent storage: %O', mediaInfoObject);
 		await this.sos.fileSystem.writeFile(
 			{
-				storageUnit: internalStorageUnit,
+				storageUnit: this.internalStorageUnit,
 				filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 			},
 			JSON.stringify(mediaInfoObject),
 		);
+		debug('Writing to mediaInfo file in persistent storage done: %O', mediaInfoObject);
 	};
 
-	public deleteFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+	public deleteFile = async (filePath: string) => {
 		try {
 			debug('Deleting file from persistent storage: %s', filePath);
 			await this.sos.fileSystem.deleteFile(
 				{
-					storageUnit: internalStorageUnit,
+					storageUnit: this.internalStorageUnit,
 					filePath: filePath,
 				},
 				true,
@@ -216,22 +348,21 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public readFile = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+	public readFile = async (filePath: string) => {
 		return this.sos.fileSystem.readFile({
-			storageUnit: internalStorageUnit,
+			storageUnit: this.internalStorageUnit,
 			filePath: filePath,
 		});
 	};
 
-	public fileExists = async (internalStorageUnit: IStorageUnit, filePath: string) => {
+	public fileExists = async (filePath: string) => {
 		return this.sos.fileSystem.exists({
-			storageUnit: internalStorageUnit,
+			storageUnit: this.internalStorageUnit,
 			filePath: filePath,
 		});
 	};
 
 	public parallelDownloadAllFiles = async (
-		internalStorageUnit: IStorageUnit,
 		filesList: MergedDownloadList[],
 		localFilePath: string,
 		forceDownload: boolean = false,
@@ -239,7 +370,7 @@ export class FilesManager implements IFilesManager {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
-		const mediaInfoObject = await this.getOrCreateMediaInfoFile(internalStorageUnit, filesList);
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
 
 		for (let i = 0; i < filesList.length; i += 1) {
@@ -254,12 +385,7 @@ export class FilesManager implements IFilesManager {
 			// check for local urls to files (media/file.mp4)
 			file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-			const shouldUpdate = await this.shouldUpdateLocalFile(
-				internalStorageUnit,
-				localFilePath,
-				file,
-				mediaInfoObject,
-			);
+			const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
 
 			// check if file is already downloaded or is forcedDownload to update existing file with new version
 			if (forceDownload || shouldUpdate) {
@@ -275,27 +401,20 @@ export class FilesManager implements IFilesManager {
 							} else {
 								await this.sos.fileSystem.downloadFile(
 									{
-										storageUnit: internalStorageUnit,
+										storageUnit: this.internalStorageUnit,
 										filePath: createLocalFilePath(localFilePath, file.src),
 									},
 									downloadUrl,
 									authHeaders,
 								);
 							}
-							await this.sendDownloadReport(
-								fileType,
-								fullLocalFilePath,
-								internalStorageUnit,
-								file.src,
-								taskStartDate,
-							);
+							await this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
 						} catch (err) {
 							debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 							await this.sendDownloadReport(
 								fileType,
 								fullLocalFilePath,
-								internalStorageUnit,
-								file.src,
+								file,
 								taskStartDate,
 								err.message,
 							);
@@ -305,51 +424,46 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 		// save/update mediaInfoObject to persistent storage
-		await this.writeMediaInfoFile(internalStorageUnit, mediaInfoObject);
+		await this.writeMediaInfoFile(mediaInfoObject);
 		return promises;
 	};
 
 	/**
 	 * prepare folder structure for media files, does not support recursive create
-	 * @param internalStorageUnit - persistent storage unit
 	 */
-	public createFileStructure = async (internalStorageUnit: IStorageUnit) => {
+	public createFileStructure = async () => {
 		for (const structPath of Object.values(FileStructure)) {
-			if (await this.fileExists(internalStorageUnit, structPath)) {
+			if (await this.fileExists(structPath)) {
 				debug(`Filepath already exists: %O`, structPath);
 				continue;
 			}
 			debug(`Create directory structure: %O`, structPath);
 			await this.sos.fileSystem.createDirectory({
-				storageUnit: internalStorageUnit,
+				storageUnit: this.internalStorageUnit,
 				filePath: structPath,
 			});
 		}
 	};
 
-	public prepareDownloadMediaSetup = async (
-		internalStorageUnit: IStorageUnit,
-		smilObject: SMILFileObject,
-	): Promise<Promise<void>[]> => {
+	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<Promise<void>[]> => {
 		let downloadPromises: Promise<void>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.video, FileStructure.videos),
+			await this.parallelDownloadAllFiles(smilObject.video, FileStructure.videos),
 		);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.audio, FileStructure.audios),
+			await this.parallelDownloadAllFiles(smilObject.audio, FileStructure.audios),
 		);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.img, FileStructure.images),
+			await this.parallelDownloadAllFiles(smilObject.img, FileStructure.images),
 		);
 		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(internalStorageUnit, smilObject.ref, FileStructure.widgets),
+			await this.parallelDownloadAllFiles(smilObject.ref, FileStructure.widgets),
 		);
 		return downloadPromises;
 	};
 
 	public prepareLastModifiedSetup = async (
-		internalStorageUnit: IStorageUnit,
 		smilObject: SMILFileObject,
 		smilFile: SMILFile,
 	): Promise<CheckETagFunctions> => {
@@ -360,21 +474,21 @@ export class FilesManager implements IFilesManager {
 		// check for media updates only if its not switched off in the smil file
 		if (!smilObject.onlySmilFileUpdate) {
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(internalStorageUnit, smilObject.video, FileStructure.videos),
+				await this.checkLastModified(smilObject.video, FileStructure.videos),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(internalStorageUnit, smilObject.audio, FileStructure.audios),
+				await this.checkLastModified(smilObject.audio, FileStructure.audios),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(internalStorageUnit, smilObject.img, FileStructure.images),
+				await this.checkLastModified(smilObject.img, FileStructure.images),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(internalStorageUnit, smilObject.ref, FileStructure.widgets),
+				await this.checkLastModified(smilObject.ref, FileStructure.widgets),
 			);
 		}
 
 		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
-			await this.checkLastModified(internalStorageUnit, [smilFile], FileStructure.rootFolder),
+			await this.checkLastModified([smilFile], FileStructure.rootFolder),
 		);
 
 		return {
@@ -405,18 +519,14 @@ export class FilesManager implements IFilesManager {
 			const newLastModified = await response.headers.get('last-modified');
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
-			debug('Unexpected error occured during lastModified fetch: %O', err);
+			debug('Unexpected error occurred during lastModified fetch: %O', err);
 			return null;
 		}
 	};
 
-	private getOrCreateMediaInfoFile = async (
-		internalStorageUnit: IStorageUnit,
-		filesList: MergedDownloadList[],
-	): Promise<MediaInfoObject> => {
+	private getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
 		if (
 			!(await this.fileExists(
-				internalStorageUnit,
 				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 			))
 		) {
@@ -425,7 +535,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		const response = await this.sos.fileSystem.readFile({
-			storageUnit: internalStorageUnit,
+			storageUnit: this.internalStorageUnit,
 			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 		});
 		try {
@@ -436,7 +546,64 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	private extractWidgets = async (widgets: SMILWidget[], internalStorageUnit: IStorageUnit) => {
+	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
+		if (this.internalStorageUnit.freeSpace <= MINIMAL_STORAGE_FREE_SPACE) {
+			debug(
+				'Not enough space on device to save custom endpoint report, free space: %s',
+				this.internalStorageUnit.freeSpace,
+			);
+			return;
+		}
+
+		const arrayOfReportFiles = await this.sos.fileSystem.listFiles({
+			storageUnit: this.internalStorageUnit,
+			filePath: FileStructure.offlineReports,
+		});
+
+		debug('Number of custom endpoint report files', arrayOfReportFiles.length);
+
+		let currentFileIndex = arrayOfReportFiles.length === 0 ? 0 : arrayOfReportFiles.length - 1;
+
+		debug('Number of custom endpoint report files custom index', currentFileIndex);
+
+		if (!this.offlineReportsInfoObject[currentFileIndex]) {
+			this.offlineReportsInfoObject[currentFileIndex] = {
+				numberOfReports: 0,
+			};
+		}
+		// -1 because its indexed from 0
+		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > CUSTOM_ENDPOINT_REPORT_FILE_LIMIT - 1) {
+			debug('File number of records exceeded ', currentFileIndex);
+			currentFileIndex += 1;
+			this.offlineReportsInfoObject[currentFileIndex] = {
+				numberOfReports: 0,
+			};
+		}
+
+		if (await this.fileExists(`${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`)) {
+			debug('appending to a file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			await this.sos.fileSystem.appendFile(
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`,
+				},
+				`${JSON.stringify(customEndpointInfo)}\n`,
+			);
+			this.offlineReportsInfoObject[currentFileIndex].numberOfReports += 1;
+		} else {
+			debug('creating new file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			await this.sos.fileSystem.writeFile(
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`,
+				},
+				`${JSON.stringify(customEndpointInfo)}\n`,
+			);
+			this.offlineReportsInfoObject[currentFileIndex].numberOfReports = 1;
+		}
+	};
+
+	private extractWidgets = async (widgets: SMILWidget[]) => {
 		for (let i = 0; i < widgets.length; i++) {
 			try {
 				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
@@ -447,11 +614,11 @@ export class FilesManager implements IFilesManager {
 					);
 					await this.sos.fileSystem.extractFile(
 						{
-							storageUnit: internalStorageUnit,
+							storageUnit: this.internalStorageUnit,
 							filePath: `${FileStructure.widgets}/${getFileName(widgets[i].src)}`,
 						},
 						{
-							storageUnit: internalStorageUnit,
+							storageUnit: this.internalStorageUnit,
 							filePath: `${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
 						},
 						'zip',
@@ -465,21 +632,16 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
-	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param smilUrl -  url to smil file from input
 	 */
-	private deleteUnusedFiles = async (
-		internalStorageUnit: IStorageUnit,
-		smilObject: SMILFileObject,
-		smilUrl: string,
-	): Promise<void> => {
+	private deleteUnusedFiles = async (smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
 
 		for (let structPath in FileStructure) {
 			const downloadedFiles = await this.sos.fileSystem.listFiles({
 				filePath: get(FileStructure, structPath),
-				storageUnit: internalStorageUnit,
+				storageUnit: this.internalStorageUnit,
 			});
 
 			for (let storedFile of downloadedFiles) {
@@ -498,14 +660,16 @@ export class FilesManager implements IFilesManager {
 					!storedFileName.includes(FileStructure.smilMediaInfoFileName)
 				) {
 					// delete only path with files, not just folders
-					if (!await this.sos.fileSystem.isDirectory({
-						storageUnit: internalStorageUnit,
-						filePath: storedFile.filePath,
-					})) {
+					if (
+						!(await this.sos.fileSystem.isDirectory({
+							storageUnit: this.internalStorageUnit,
+							filePath: storedFile.filePath,
+						}))
+					) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
 						await this.sos.fileSystem.deleteFile(
 							{
-								storageUnit: internalStorageUnit,
+								storageUnit: this.internalStorageUnit,
 								filePath: storedFile.filePath,
 							},
 							true,
@@ -518,12 +682,10 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
-	 * @param internalStorageUnit - persistent storage unit
 	 * @param filesList - list of files for update checks
 	 * @param localFilePath - folder structure specifying path to file
 	 */
 	private checkLastModified = async (
-		internalStorageUnit: IStorageUnit,
 		filesList: MergedDownloadList[],
 		localFilePath: string,
 	): Promise<Promise<void>[]> => {
@@ -551,11 +713,9 @@ export class FilesManager implements IFilesManager {
 					file.lastModified = moment(newLastModified).valueOf();
 				}
 
-				if (<number>file.lastModified < moment(newLastModified).valueOf()) {
+				if (file.lastModified < moment(newLastModified).valueOf()) {
 					debug(`New version of file detected: %O`, file.src);
-					promises = promises.concat(
-						await this.parallelDownloadAllFiles(internalStorageUnit, [file], localFilePath, true),
-					);
+					promises = promises.concat(await this.parallelDownloadAllFiles([file], localFilePath, true));
 				}
 			} catch (err) {
 				debug('Error occurred: %O during checking file version: %O', err, file);

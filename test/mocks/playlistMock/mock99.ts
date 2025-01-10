@@ -59,7 +59,10 @@ export const mockSMILFileParsed99 = {
 		left: '0',
 		regionName: 'rootLayout',
 	},
-	log: false,
+	logger: {
+		enabled: false,
+		type: 'standard',
+	},
 	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: 'http://www.w3.org/1999/xhtml',
@@ -244,6 +247,7 @@ export const mockSMILFileParsed99 = {
 		{ dur: 'indefinite', src: 'adapi:blankScreen' },
 	],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',
