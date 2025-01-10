@@ -53,7 +53,7 @@
                        id="annons0" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </video>
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>
@@ -66,7 +66,7 @@
                        id="annons1" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </video>
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_2.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>
@@ -79,7 +79,7 @@
                        id="annons1" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </video>
-                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_4.jpg" id="annons1"
+                <img src="https://demo.signageos.io/smil/zones/files/img_4.jpg" id="annons1"
                      dur="5s" fit="hidden" region="video">
                     <param name="cacheControl" value="auto"/>
                 </img>

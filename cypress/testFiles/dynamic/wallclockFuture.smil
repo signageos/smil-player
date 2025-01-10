@@ -1,9 +1,10 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="444" />
+        <meta http-equiv="Refresh" content="444"/>
         <layout>
-            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF" />
-            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF" mediaAlign="topLeft" />
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft"/>
         </layout>
 
         <metadata>
@@ -13,7 +14,7 @@
 
                     <subscription>
                         <type>SystemReport</type>
-                        <action>https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/play/report/?player=99</action>
+                        <action>https://demo.signageos.io/smil/zones/play/report/?player=99</action>
                         <method>put</method>
                     </subscription>
 
@@ -33,7 +34,7 @@
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
                     <!-- Play waiting prompt -->
-                    <video src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/loader.mp4" />
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
@@ -48,11 +49,13 @@
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
                                         <par begin="PRIORITY_1_BEGIN" end="PRIORITY_1_END">
                                             <seq repeatCount="indefinite">
-                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" id="annons0" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto" />
+                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                                       id="annons0" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
                                                 </video>
-                                                <img src="https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/img_1.jpg" id="annons1" dur="3s" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto" />
+                                                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                                                     id="annons1" dur="3s" fit="hidden" region="video">
+                                                    <param name="cacheControl" value="auto"/>
                                                 </img>
                                             </seq>
                                         </par>

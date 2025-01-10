@@ -7,7 +7,7 @@ import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 const expect = chai.expect;
 
 // TODO: vyresit posun casu
-describe.skip('Playlist tools component parseSmilSchedule tests', () => {
+describe('Playlist tools component parseSmilSchedule tests', () => {
 	it('Should return correct times for how long to wait and how long to play', async () => {
 		let testStartString = moment().format('YYYY-MM-DD');
 		let testEndString = moment().add(1, 'days').format('YYYY-MM-DD');
@@ -33,13 +33,13 @@ describe.skip('Playlist tools component parseSmilSchedule tests', () => {
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
 
 		testStartString = `wallclock(R/${formatDate(moment().add(1, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(6, 'hours'))}/P1D)`;
+		testEndString = `wallclock(R/${formatDate(moment().add(2, 'hours'))}/P1D)`;
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		expect(Math.abs(3600000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
 
 		testStartString = `wallclock(R/${formatDate(moment().add(1, 'day'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(6, 'hours'))}/P1D)`;
+		testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(2, 'hours'))}/P1D)`;
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// schedule start for tommorow 24hours
 		expect(Math.abs(86400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
@@ -315,5 +315,76 @@ describe.skip('Playlist tools component parseSmilSchedule tests', () => {
 		expect(
 			Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
 		).to.be.lessThan(1000);
+	});
+
+	it('should return correct times for specific weekdays with repeating logic', async () => {
+		const dayOfWeek = moment().isoWeekday();
+		let testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `-w${dayOfWeek}`);
+		let testEndString = formatWeekDate(
+			`wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+
+		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
+
+		testStartString = formatWeekDate(
+			`wallclock(R/${formatDate(moment().subtract(2, 'days').subtract(1, 'hour'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+		testEndString = formatWeekDate(
+			`wallclock(R/${formatDate(moment().subtract(1, 'days').add(4, 'hours'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.be.eql(SMILScheduleEnum.neverPlay);
+
+		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `-w${dayOfWeek}`);
+		testEndString = formatWeekDate(
+			`wallclock(R/${formatDate(moment().add(10, 'days').add(4, 'hours'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
+	});
+
+	it('should return correct times for specific weekdays with repeating logic and non repeating logic', async () => {
+		const dayOfWeek = moment().isoWeekday();
+		let testStartString = formatWeekDate(
+			`wallclock(${formatDate(moment().subtract(1, 'days').subtract(1, 'hour'))})`,
+			`-w${dayOfWeek}`,
+		);
+		let testEndString = formatWeekDate(
+			`wallclock(${formatDate(moment().subtract(1, 'days').add(4, 'hours'))})`,
+			`-w${dayOfWeek}`,
+		);
+
+		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.be.eql(SMILScheduleEnum.neverPlay);
+
+		testStartString = formatWeekDate(
+			`R/wallclock(${formatDate(moment().subtract(1, 'days').subtract(1, 'hour'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+
+		testEndString = formatWeekDate(
+			`R/wallclock(${formatDate(moment().subtract(1, 'days').add(4, 'hours'))}/P1D)`,
+			`-w${dayOfWeek}`,
+		);
+
+		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
 	});
 });

@@ -1,0 +1,48 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta log="false" type="manual"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
+            />
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <seq>
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                           region="main" soundLevel="0%"
+                           popName="videoEvent" popType="video"
+                           popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"
+                         popName="imageEvent" popType="image"
+                         popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         region="main" fit="fill"
+                         popName="imageEvent" popType="image"
+                         popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
+                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                         id="annons1" dur="3s" fit="hidden" region="main">
+                    </img>
+                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                         id="annons1" dur="3s" fit="hidden" region="main"
+                         popName="imageEvent" popType="image"
+                         popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg">
+                    </img>
+                </seq>
+                <seq>
+                    <img dur="3s"
+                         src="https://files.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2023/09/clmq9epah000k0xnfcel2dlne.jpeg"
+                         region="main" fit="fill"
+                         popName="imageEvent" popType="image"
+                         popTags="cl9wi8ilq4553381xeebt1g5ogr,cm1ks8rsy006ojvhc7dynxl04,cm1kqnqah01rhbm5p53pqbgpa,cm1kqnzny02f6vb9v4c1kkqmg"/>
+                </seq>
+            </seq>
+        </par>
+    </body>
+</smil>

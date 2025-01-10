@@ -1,6 +1,14 @@
 import { RegionAttributes, TransitionAttributes } from './xmlJsonModels';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 
+export type PoPAttributes = {
+	popName?: string;
+	popCustomId?: string;
+	popType?: 'video' | 'image' | 'html' | 'custom';
+	popTags?: string;
+	popFileName?: string;
+};
+
 export type SMILVideo = {
 	id?: string;
 	expr?: string;
@@ -18,7 +26,9 @@ export type SMILVideo = {
 	regionInfo: RegionAttributes;
 	media?: string;
 	triggerValue?: string;
-};
+	dynamicValue?: string;
+	syncGroupName?: string;
+} & PoPAttributes;
 
 export type SMILAudio = {
 	id?: string;
@@ -33,8 +43,10 @@ export type SMILAudio = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILImage = {
 	id?: string;
@@ -51,8 +63,10 @@ export type SMILImage = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILWidget = {
 	id?: string;
@@ -69,8 +83,10 @@ export type SMILWidget = {
 	localFilePath: string;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
-};
+} & PoPAttributes;
 
 export type SMILTicker = {
 	id?: string;
@@ -95,22 +111,28 @@ export type SMILTicker = {
 	transitionInfo?: TransitionAttributes;
 	playing?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
+	syncGroupName?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
-};
+} & PoPAttributes;
 
 export type SosHtmlElement = {
 	expr?: string;
 	src: string;
 	id: string;
+	syncIndex?: number;
 	dur?: string;
 	media?: string;
 	playing?: boolean;
 	isTrigger?: boolean;
 	triggerValue?: string;
+	dynamicValue?: string;
+	syncGroupName?: string;
 	regionInfo: RegionAttributes;
+	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
-};
+} & PoPAttributes;
 
 export type SMILIntro = {
 	expr?: string;

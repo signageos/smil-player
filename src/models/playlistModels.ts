@@ -14,6 +14,16 @@ export type PlaylistOptions = {
 	promiseAwaiting: PromiseAwaiting;
 	currentlyPlayingPriority: CurrentlyPlayingPriority;
 	synchronization: Synchronization;
+	videoPreparing: VideoPreparing;
+	randomPlaylist: RandomPlaylist;
+};
+
+export type RandomPlaylist = {
+	[playlistParentName: string]: IndexRecord;
+};
+
+export type IndexRecord = {
+	previousIndex: number;
 };
 
 export type BackupElement = {
@@ -30,6 +40,7 @@ export type BackupPlaylist = {
 };
 
 export type PlaylistElement = {
+	playMode?: string;
 	expr?: string;
 	begin?: string;
 	end?: string;
@@ -86,8 +97,4 @@ export type VideoPreparing = {
 
 export type SMILPlaylist = {
 	playlist: { [key: string]: PlaylistElement | PlaylistElement[] };
-};
-
-export type InfiniteLoopObject = {
-	[key in 'seq' | 'par']: PrefetchObject[];
 };

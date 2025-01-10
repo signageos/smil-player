@@ -22,6 +22,7 @@ import { SMILMediaSingle } from '../../../models/mediaModels';
 import { SMILPlaylist } from '../../../models/playlistModels';
 import { DownloadsList } from '../../../models/filesModels';
 import {
+	DynamicPlaylistList,
 	ParsedSensor,
 	ParsedTriggerInfo,
 	SMILSensors,
@@ -33,6 +34,8 @@ import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
 import { isRelativePath } from '../../files/tools';
+import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
+import { smilLogging } from '../../../enums/fileEnums';
 import cloneDeep = require('lodash/cloneDeep');
 
 export const debug = Debug('@signageos/smil-player:xmlParser');
@@ -40,7 +43,7 @@ export const debug = Debug('@signageos/smil-player:xmlParser');
 export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean {
 	return (
 		arr.filter(function (elem: SMILMediaSingle) {
-			return "src" in elem && elem.src === fileSrc;
+			return 'src' in elem && elem.src === fileSrc;
 		}).length > 0
 	);
 }
@@ -170,10 +173,16 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 				return node;
 			}
 
+			// delete dynamic playlists from playlist, triggers are played on demand
+			if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
+				return node;
+			}
+
 			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
 			if (
-				(!isUrl(get(node.value, 'src', 'default'))
-					&& !isRelativePath(get(node.value, 'src', 'default')) && get(node.value, 'isStream') !== true) ||
+				(!isUrl(get(node.value, 'src', 'default')) &&
+					!isRelativePath(get(node.value, 'src', 'default')) &&
+					get(node.value, 'isStream') !== true) ||
 				get(node.value, 'src', 'default') === ''
 			) {
 				return node;
@@ -184,7 +193,7 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 	new JefNode(playableMedia.playlist).remove(
 		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
 			// remove all infinite loops from playlist
-			if (!isNil(node.key) && XmlTags.structureTags.includes(node.key)) {
+			if (!isNil(node.key) && XmlTags.structureTags.includes(removeDigits(node.key))) {
 				foundMedia = removeNodes(node);
 				if (!foundMedia) {
 					return node.parent;
@@ -205,16 +214,14 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 		},
 	);
 
-	new JefNode(playableMedia.playlist).remove(
-		(node: { key: string; value: any; }) => {
-			if (node.key === 'ticker') {
-				if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
-					console.warn('Ticker component must have "text" array with one string at least');
-					return node;
-				}
+	new JefNode(playableMedia.playlist).remove((node: { key: string; value: any }) => {
+		if (node.key === 'ticker') {
+			if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
+				console.warn('Ticker component must have "text" array with one string at least');
+				return node;
 			}
-		},
-	);
+		}
+	});
 }
 
 function removeNodes(node: { key: string; value: any; parent: { key: string; value: any } }): boolean {
@@ -223,7 +230,10 @@ function removeNodes(node: { key: string; value: any; parent: { key: string; val
 		(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
 			if (
 				!isNil(introNode.key) &&
-				XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(introNode.key))
+				XmlTags.extractedElements
+					.concat(XmlTags.textElements)
+					.concat(XmlTags.dynamicPlaylist)
+					.includes(removeDigits(introNode.key))
 			) {
 				foundMedia = true;
 			}
@@ -237,11 +247,13 @@ function removeNodes(node: { key: string; value: any; parent: { key: string; val
  * @param playableMedia
  * @param downloads
  * @param triggerList
+ * @param dynamicList
  */
 export function extractDataFromPlaylist(
 	playableMedia: SMILPlaylist,
 	downloads: DownloadsList,
 	triggerList: TriggerList,
+	dynamicList: DynamicPlaylistList,
 ) {
 	new JefNode(playableMedia.playlist).filter(
 		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
@@ -263,7 +275,10 @@ export function extractDataFromPlaylist(
 					node.value = [node.value];
 				}
 				node.value.forEach((element: SMILMediaSingle) => {
-					if ("src" in element && !containsElement(downloads[removeDigits(node.key)], <string>element.src)) {
+					if (
+						'src' in element &&
+						!containsElement(downloads[removeDigits(node.key)], element.src as string)
+					) {
 						// @ts-ignore
 						downloads[removeDigits(node.key)].push(element);
 					}
@@ -271,10 +286,25 @@ export function extractDataFromPlaylist(
 			}
 
 			if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
-				triggerList.triggers![node.value.begin!] = merge(
-					triggerList.triggers![node.value.begin!],
+				triggerList.triggers[node.value.begin] = merge(
+					triggerList.triggers[node.value.begin],
 					node.parent.value,
 				);
+			}
+
+			if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
+				// TODO: find a better way to parse arrays and object of dynamic playlist
+				if (Array.isArray(node.parent.value)) {
+					dynamicList.dynamic[node.value.begin] = {
+						seq: node.value,
+					};
+				} else {
+					// one dynamic playlist in smil file, not grouped in array
+					dynamicList.dynamic[node.value.begin] = merge(
+						dynamicList.dynamic[node.value.begin],
+						node.parent.value,
+					);
+				}
 			}
 		},
 	);
@@ -310,10 +340,20 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
-			regions.log = metaRecord.log === true;
+			regions.logger = {
+				enabled: metaRecord.log === true,
+				type: metaRecord.type === smilLogging.proofOfPlay ? smilLogging.proofOfPlay : smilLogging.standard,
+				endpoint: metaRecord.endpoint,
+			};
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
 			regions.syncServerUrl = metaRecord.syncServerUrl;
+		}
+		if (metaRecord.hasOwnProperty(SMILEnums.defaultRepeatCount)) {
+			regions.defaultRepeatCount = metaRecord.defaultRepeatCount;
+		}
+		if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
+			regions.defaultTransition = metaRecord.defaultTransition;
 		}
 	}
 }
@@ -380,7 +420,10 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 			refreshInterval: 0,
 		},
 		onlySmilFileUpdate: false,
-		log: false,
+		logger: {
+			enabled: false,
+			type: smilLogging.standard,
+		},
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
 		// multiple regions in layout element
@@ -451,12 +494,12 @@ export function extractTransitionsInfo(xmlObject: RegionsObject): TransitionsObj
 	const transitionsObject: TransitionsObject = {
 		transition: {},
 	};
-	Object.keys(xmlObject).forEach((rootKey: any) => {
+	Object.keys(xmlObject).forEach((rootKey: string) => {
 		if (rootKey === SMILEnums.transition) {
 			// multiple regions in layout element
 			if (Array.isArray(xmlObject[rootKey])) {
 				// iterate over array of objects
-				Object.keys(xmlObject[rootKey]).forEach((index: any) => {
+				Object.keys(xmlObject[rootKey]).forEach((index: string) => {
 					if (xmlObject[rootKey][index].hasOwnProperty('transitionName')) {
 						transitionsObject.transition[xmlObject[rootKey][index].transitionName] = <TransitionAttributes>(
 							xmlObject[rootKey][index]

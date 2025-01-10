@@ -1,7 +1,7 @@
 export enum PriorityDefault {
 	lower = 'defer',
-	peer = 'stop',
-	higher = 'pause',
+	peer = 'never',
+	higher = 'stop',
 	pauseDisplay = 'show',
 }
 

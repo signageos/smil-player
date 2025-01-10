@@ -1,27 +1,43 @@
 {
-	"compilerOptions": {
-		"module": "commonjs",
-		"outDir": "dist",
-		"target": "es5",
-		"declaration": false,
-		"sourceMap": true,
-		"inlineSources": true,
-		"moduleResolution": "node",
-		"jsx": "react",
-		"pretty": true,
-		"noImplicitAny": true,
-		"strictFunctionTypes": false,
-		"strictNullChecks": true,
-		"alwaysStrict": true,
-		"noImplicitThis": true,
-		"noUnusedParameters": true,
-		"noUnusedLocals": true,
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
-		"esModuleInterop": true,
-		"lib": ["es2017", "scripthost", "dom"],
-		"typeRoots": ["node_modules/@types/", "node_modules/@signageos/lib/libs/"]
-	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "libs/chrome/chrome-plugin.d.ts"],
-	"exclude": ["src/webWorker.ts", "cypress/**/*.ts"]
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": "dist",
+    "target": "es5",
+    "declaration": false,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "inlineSources": true,
+    "moduleResolution": "node",
+    "jsx": "react",
+    "pretty": true,
+    "noImplicitAny": true,
+    "strictFunctionTypes": false,
+    "strictNullChecks": true,
+    "alwaysStrict": true,
+    "noImplicitThis": true,
+    "noUnusedParameters": true,
+    "noUnusedLocals": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "lib": [
+      "es2017",
+      "scripthost",
+      "dom"
+    ],
+    "typeRoots": [
+      "node_modules/@types/",
+      "node_modules/@signageos/lib/libs/"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "libs/chrome/chrome-plugin.d.ts"
+  ],
+  "exclude": [
+    "src/webWorker.ts",
+    "cypress/**/*.ts"
+  ]
 }

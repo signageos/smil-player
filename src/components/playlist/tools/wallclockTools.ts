@@ -99,7 +99,7 @@ export function parseSmilSchedule(
 			// and time is specified without repeating attributes, so it should be played only once when begin tag <= now <= end tag
 			if (
 				(dateEnd < nowDay || (dateEnd === nowDay && moment(splitStringEnd[1]).valueOf() < Date.now())) &&
-				splitStringEnd[2] !== 'P1D'
+				(dateStart !== dateEnd || splitStringEnd[2] === 'NoRepeat')
 			) {
 				timeToStart = 0;
 				timeToEnd = SMILScheduleEnum.neverPlay;

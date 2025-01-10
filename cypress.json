@@ -1,7 +1,7 @@
 {
-	"baseUrl": "http://localhost:8090?duid=0.4074087366641999",
-	"chromeWebSecurity": false,
-	"viewportHeight": 1080,
-	"viewportWidth": 1920,
-	"projectId": "smil-player"
+  "baseUrl": "http://localhost:8090?duid=218603c29e5e7275a238c43a1422a9b19188752893c12c5128",
+  "chromeWebSecurity": false,
+  "viewportHeight": 1080,
+  "viewportWidth": 1920,
+  "projectId": "smil-player"
 }

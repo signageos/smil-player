@@ -7,6 +7,7 @@ export enum SMILTriggersEnum {
 	nexmoBaudRate = 115200,
 	keyStrokeDelay = 200,
 	keyboardPrefix = 'keyboard',
+	widgetPrefix = 'widget',
 	syncPrefix = 'sync',
 	keyboardEventType = 'keydown',
 	mousePrefix = 'mouse',

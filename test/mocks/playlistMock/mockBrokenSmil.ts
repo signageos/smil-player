@@ -61,7 +61,10 @@ export const mockBrokenSmil = {
 		top: '0',
 		left: '0',
 	},
-	log: false,
+	logger: {
+		enabled: false,
+		type: 'standard',
+	},
 	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: 'http://www.w3.org/1999/xhtml',
@@ -95,7 +98,7 @@ export const mockBrokenSmil = {
 													seq: {
 														repeatCount: '1',
 														video1: {
-															src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: {
@@ -104,7 +107,7 @@ export const mockBrokenSmil = {
 															},
 														},
 														video2: {
-															src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: {
@@ -119,7 +122,7 @@ export const mockBrokenSmil = {
 												{
 													repeatCount: 'indefinite',
 													video3: {
-														src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -128,7 +131,7 @@ export const mockBrokenSmil = {
 														},
 													},
 													video4: {
-														src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -141,7 +144,7 @@ export const mockBrokenSmil = {
 													begin: 'wallclock(R/2011-01-01T07:00:00/P1D)',
 													end: 'wallclock(R/2011-01-01T17:00:00/P1D)',
 													video5: {
-														src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -150,7 +153,7 @@ export const mockBrokenSmil = {
 														},
 													},
 													video6: {
-														src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+														src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 														type: 'application/widget',
 														region: 'video',
 														param: {
@@ -181,7 +184,7 @@ export const mockBrokenSmil = {
 			src: 'http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4',
 		},
 		{
-			src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+			src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 			type: 'application/widget',
 			region: 'video',
 			param: {
@@ -193,6 +196,7 @@ export const mockBrokenSmil = {
 	img: [],
 	ref: [],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',

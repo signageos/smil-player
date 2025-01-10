@@ -61,7 +61,11 @@ export const mockSMILFileTriggers = {
 		left: '0',
 		regionName: 'rootLayout',
 	},
-	log: true,
+	logger: {
+		enabled: true,
+		endpoint: undefined,
+		type: 'standard',
+	},
 	onlySmilFileUpdate: false,
 	playlist: {
 		systemComponent: 'http://www.w3.org/1999/xhtml',
@@ -95,13 +99,13 @@ export const mockSMILFileTriggers = {
 													seq: {
 														repeatCount: '1',
 														video1: {
-															src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: { name: 'cacheControl', value: 'onlyIfCached' },
 														},
 														video2: {
-															src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+															src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 															type: 'application/widget',
 															region: 'video',
 															param: { name: 'cacheControl', value: 'onlyIfCached' },
@@ -125,20 +129,20 @@ export const mockSMILFileTriggers = {
 	video: [
 		{ src: 'http://butikstv.centrumkanalen.com/play/media/ladd/landscape.mp4' },
 		{
-			src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape1.mp4',
+			src: 'https://demo.signageos.io/smil/samples/assets/landscape1.mp4',
 			type: 'application/widget',
 			region: 'video',
 			param: { name: 'cacheControl', value: 'onlyIfCached' },
 		},
 		{
-			src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+			src: 'https://demo.signageos.io/smil/zones/files/video_3.mp4',
 			id: 'annons1',
 			fit: 'hidden',
 			region: 'video',
 			param: { name: 'cacheControl', value: 'auto' },
 		},
 		{
-			src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4',
+			src: 'https://demo.signageos.io/smil/samples/assets/landscape2.mp4',
 			id: 'annons1',
 			fit: 'hidden',
 			region: 'video',
@@ -155,6 +159,7 @@ export const mockSMILFileTriggers = {
 	],
 	ref: [],
 	audio: [],
+	dynamic: {},
 	intro: [
 		{
 			repeatCount: 'indefinite',
@@ -197,14 +202,14 @@ export const mockSMILFileTriggers = {
 			seq: {
 				begin: 'trigger2',
 				video4: {
-					src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+					src: 'https://demo.signageos.io/smil/zones/files/video_3.mp4',
 					id: 'annons1',
 					fit: 'hidden',
 					region: 'video',
 					param: { name: 'cacheControl', value: 'auto' },
 				},
 				video5: {
-					src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+					src: 'https://demo.signageos.io/smil/zones/files/video_3.mp4',
 					id: 'annons1',
 					fit: 'hidden',
 					region: 'video',
@@ -216,14 +221,14 @@ export const mockSMILFileTriggers = {
 			seq: {
 				begin: 'trigger3',
 				video6: {
-					src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/zones/files/video_3.mp4',
+					src: 'https://demo.signageos.io/smil/zones/files/video_3.mp4',
 					id: 'annons1',
 					fit: 'hidden',
 					region: 'video',
 					param: { name: 'cacheControl', value: 'auto' },
 				},
 				video7: {
-					src: 'https://signageos-demo.s3.eu-central-1.amazonaws.com/smil/samples/assets/landscape2.mp4',
+					src: 'https://demo.signageos.io/smil/samples/assets/landscape2.mp4',
 					id: 'annons1',
 					fit: 'hidden',
 					region: 'video',

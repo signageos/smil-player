@@ -1,5 +1,7 @@
 import { SMILSensors, SMILTriggers } from './triggerModels';
+import { smilLogging } from '../enums/fileEnums';
 
+// TODO: fix any
 export type RegionsObject = {
 	region: {
 		[key: string]: RegionAttributes;
@@ -10,9 +12,17 @@ export type RegionsObject = {
 		expr?: string;
 	};
 	onlySmilFileUpdate: boolean;
-	log: boolean;
+	logger: SmilLogger;
 	syncServerUrl?: string;
+	defaultRepeatCount?: '1' | 'indefinite';
+	defaultTransition?: string;
 	[key: string]: any;
+};
+
+export type SmilLogger = {
+	enabled: boolean;
+	type?: smilLogging.standard | smilLogging.proofOfPlay;
+	endpoint?: string;
 };
 
 export type TransitionsObject = {
@@ -57,9 +67,13 @@ export type XmlHeadObject = {
 export type SMILMetaObject = {
 	content: string;
 	log: boolean | string;
+	type?: smilLogging.standard | smilLogging.proofOfPlay;
+	endpoint?: string;
 	onlySmilUpdate: boolean | string;
 	expr?: string;
 	syncServerUrl?: string;
+	defaultRepeatCount?: '1' | 'indefinite';
+	defaultTransition?: string;
 };
 
 export type RegionAttributes = {
@@ -80,6 +94,8 @@ export type RegionAttributes = {
 export type TransitionAttributes = {
 	transitionName: string;
 	type: string;
-	subType: string;
+	subtype: string;
 	dur: string;
+	columnCount?: number;
+	direction?: 'right' | 'left';
 };

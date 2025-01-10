@@ -1,0 +1,105 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <meta log="true"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <region regionName="region_0_0_690_1080" left="0" top="0" width="690" height="1080" z-index="1"
+                    backgroundColor="#18182c"/>
+            <region regionName="region_690_0_1230_1080" left="690" top="0" width="1230" height="1080" z-index="4"
+                    backgroundColor="#18182c"/>
+            <region regionName="trigger" left="0" top="0" width="100%" height="100%" z-index="0"
+                    backgroundColor="#18182c">
+                <region regionName="fullScreenTrigger" left="0" top="0" width="100%" height="100%" z-index="0"
+                        backgroundColor="#18182c" sync="true"/>
+            </region>
+            <transition xml:id="bwt" type="fade" subtype="crossfade" dur="1s"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://demo.signageos.io/smil/samples/assets/loading_min.jpeg"
+                         fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl begin="0" repeatCount="indefinite">
+                    <priorityClass higher="stop" lower="defer" peer="never">
+                        <seq expr="[weekday()=1 or weekday()=2 or weekday()=3 or weekday()=4 or weekday()=5 or weekday()=6 or weekday()=0] and [compare(time(), '00:00:00')&gt;0 and compare(time(), '23:59:59')&lt;0]">
+                            <par repeatCount="1">
+                                <seq repeatCount="1">
+                                    <img src="https://v3.netipbox.com/media/2724/resources/327577/327577_1643627324_cdn_eggs.jpg"
+                                         region="region_0_0_690_1080" dur="5s" fit="meet"/>
+                                    <!--                                    <img src="https://v3.netipbox.com/media/2724/resources/320288/320288_1648480064_cdn_5qqkjn4pfpa.jpg"-->
+                                    <!--                                         region="region_0_0_690_1080" dur="5s" fit="meet"/>-->
+                                </seq>
+                                <!--                                <seq repeatCount="1">-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"-->
+                                <!--                                               region="region_690_0_1230_1080" dur="3s" fit="meet"/>-->
+                                <!--                                        <img src="https://v3.netipbox.com/media/2724/resources/329716/329716_1651077730_cdn_314607_le_graine_poulet.jpg"-->
+                                <!--                                             region="region_690_0_1230_1080" dur="15s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                    <seq repeatCount="1">-->
+                                <!--                                        <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"-->
+                                <!--                                               region="region_690_0_1230_1080" dur="3s" fit="meet"/>-->
+                                <!--                                        <img src="https://v3.netipbox.com/media/2724/resources/329716/329716_1651077730_cdn_314607_le_graine_poulet.jpg"-->
+                                <!--                                             region="region_690_0_1230_1080" dur="9s" fit="meet"/>-->
+                                <!--                                    </seq>-->
+                                <!--                                </seq>-->
+                            </par>
+                            <emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
+                            <emitDynamic data="dynamic176162,dynamic176162" syncId="7274"/>
+                            <par repeatCount="1">
+                                <seq repeatCount="1">
+                                    <img src="https://v3.netipbox.com/media/2724/resources/327577/327577_1643627324_cdn_eggs.jpg"
+                                         region="region_0_0_690_1080" dur="5s" fit="meet"/>
+                                    <img src="https://v3.netipbox.com/media/2724/resources/320288/320288_1648480064_cdn_5qqkjn4pfpa.jpg"
+                                         region="region_0_0_690_1080" dur="5s" fit="meet"/>
+                                </seq>
+                                <seq repeatCount="1">
+                                    <seq repeatCount="1">
+                                        <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"
+                                               region="region_690_0_1230_1080" dur="3s" fit="meet"/>
+                                        <img src="https://v3.netipbox.com/media/2724/resources/329716/329716_1651077730_cdn_314607_le_graine_poulet.jpg"
+                                             region="region_690_0_1230_1080" dur="15s" fit="meet"/>
+                                    </seq>
+                                    <seq repeatCount="1">
+                                        <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"
+                                               region="region_690_0_1230_1080" dur="3s" fit="meet"/>
+                                        <img src="https://v3.netipbox.com/media/2724/resources/329716/329716_1651077730_cdn_314607_le_graine_poulet.jpg"
+                                             region="region_690_0_1230_1080" dur="9s" fit="meet"/>
+                                    </seq>
+                                </seq>
+                            </par>
+                            <emitDynamic data="dynamic176161,dynamic176161" syncId="7275"/>
+                            <emitDynamic data="dynamic158887,dynamic158888,dynamic158890" syncId="5679"/>
+                        </seq>
+                    </priorityClass>
+                </excl>
+            </par>
+        </par>
+        <par>
+            <seq begin="dynamic158887" end="dynamic2">
+                <video src="https://v3.netipbox.com/media/2724/resources/351503/351503_1656501206_cdn_nsignshapes_1.mp4"
+                       region="trigger" dur="10s" fit="meet"/>
+            </seq>
+            <seq begin="dynamic176162" end="dynamic2">
+                <video src="https://v3.netipbox.com/media/2724/resources/320220/320220_1648466971_cdn_layers_3s_1920x1080.mp4"
+                       region="trigger" dur="3s" fit="meet"/>
+                <img src="https://v3.netipbox.com/media/2724/resources/329711/329711_1651077730_cdn_314602_ecran_choix_cafe.jpg"
+                     region="trigger" dur="5s" fit="meet"/>
+            </seq>
+            <seq begin="dynamic176161" end="dynamic2">
+                <video src="https://v3.netipbox.com/media/2724/resources/320221/320221_1648467017_cdn_circles3_15s_1920x1080.mp4"
+                       region="trigger" dur="15s" fit="meet"/>
+            </seq>
+            <seq begin="dynamic158887" end="dynamic2">
+                <video src="https://v3.netipbox.com/media/2724/resources/351503/351503_1656501206_cdn_nsignshapes_1.mp4"
+                       region="trigger" dur="20s" fit="meet"/>
+            </seq>
+        </par>
+    </body>
+</smil>

@@ -4,11 +4,13 @@ import * as querystring from 'querystring';
 import * as URLVar from 'url';
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
-import { ItemType } from '../../../models/reportingModels';
+import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
 import { FileStructure, mapObject, WidgetExtensions, WidgetFullPath } from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
+import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
+import { removeLastArrayItem } from '../../playlist/tools/generalTools';
 
 export const debug = Debug('@signageos/smil-player:filesManager');
 
@@ -159,4 +161,30 @@ export function isWidgetUrl(widgetUrl: string): boolean {
 
 export function isLocalFileWidget(filePath: string): boolean {
 	return filePath.includes(WidgetFullPath);
+}
+
+export function createPoPMessagePayload(
+	value: MergedDownloadList,
+	errMessage: string | null,
+	event: 'download' | undefined = undefined,
+): IRecordItemOptions {
+	return {
+		...{
+			name: value.popName!,
+		},
+		...(event !== 'download' ? { playbackSuccess: !errMessage } : {}),
+		...(errMessage ? { errorMessage: errMessage } : {}),
+		...(value.popCustomId ? { customId: value.popCustomId } : {}),
+		...(value.popType ? { type: value.popType } : {}),
+		...(value.popTags ? { tags: [...value.popTags.split(','), new Date().toISOString()] } : {}),
+		...(value.popFileName ? { fileName: value.popFileName } : {}),
+	};
+}
+
+export function createCustomEndpointMessagePayload(message: IRecordItemOptions): CustomEndpointReport {
+	return {
+		...message,
+		recordedAt: new Date().toISOString(),
+		...(message.tags ? { tags: removeLastArrayItem(message.tags) } : {}),
+	};
 }
