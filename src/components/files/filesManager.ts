@@ -515,8 +515,8 @@ export class FilesManager implements IFilesManager {
 			promiseRaceArray.push(sleep(SMILScheduleEnum.fileCheckTimeout));
 
 			const response = (await Promise.race(promiseRaceArray)) as Response;
-
-			const newLastModified = await response.headers.get('last-modified');
+			debug('Received response when calling HEAD request for url: %s: %O', fileSrc, response);
+			const newLastModified = response.headers.get('last-modified');
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
 			debug('Unexpected error occurred during lastModified fetch: %O', err);
