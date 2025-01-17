@@ -10,6 +10,7 @@ export type RegionsObject = {
 	refresh: {
 		refreshInterval: number;
 		expr?: string;
+		timeOut: number;
 	};
 	onlySmilFileUpdate: boolean;
 	logger: SmilLogger;
@@ -71,6 +72,7 @@ export type SMILMetaObject = {
 	endpoint?: string;
 	onlySmilUpdate: boolean | string;
 	expr?: string;
+	timeOut?: string;
 	syncServerUrl?: string;
 	defaultRepeatCount?: '1' | 'indefinite';
 	defaultTransition?: string;

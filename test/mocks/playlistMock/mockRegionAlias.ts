@@ -14,6 +14,7 @@ export const mockSMILFileParsedRegionAlias = {
 	refresh: {
 		expr: undefined,
 		refreshInterval: 60,
+		timeOut: 2000,
 	},
 	rootLayout: {
 		width: '1080',
