@@ -52,6 +52,7 @@ export const mockBrokenSmil = {
 	refresh: {
 		expr: undefined,
 		refreshInterval: 90,
+		timeOut: 2000,
 	},
 	rootLayout: {
 		width: '1920',

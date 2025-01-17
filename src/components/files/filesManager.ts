@@ -48,9 +48,9 @@ import {
 import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
 import { IFilesManager } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
-import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
+import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 
 declare global {
 	interface Window {
@@ -474,21 +474,21 @@ export class FilesManager implements IFilesManager {
 		// check for media updates only if its not switched off in the smil file
 		if (!smilObject.onlySmilFileUpdate) {
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.video, FileStructure.videos),
+				await this.checkLastModified(smilObject.video, FileStructure.videos, smilObject.refresh.timeOut),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.audio, FileStructure.audios),
+				await this.checkLastModified(smilObject.audio, FileStructure.audios, smilObject.refresh.timeOut),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.img, FileStructure.images),
+				await this.checkLastModified(smilObject.img, FileStructure.images, smilObject.refresh.timeOut),
 			);
 			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.ref, FileStructure.widgets),
+				await this.checkLastModified(smilObject.ref, FileStructure.widgets, smilObject.refresh.timeOut),
 			);
 		}
 
 		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
-			await this.checkLastModified([smilFile], FileStructure.rootFolder),
+			await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
 		);
 
 		return {
@@ -497,7 +497,10 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	public fetchLastModified = async (fileSrc: string): Promise<null | string | number> => {
+	public fetchLastModified = async (
+		fileSrc: string,
+		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
+	): Promise<null | string | number> => {
 		try {
 			const downloadUrl = createDownloadPath(fileSrc);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
@@ -512,7 +515,7 @@ export class FilesManager implements IFilesManager {
 					mode: 'cors',
 				}),
 			);
-			promiseRaceArray.push(sleep(SMILScheduleEnum.fileCheckTimeout));
+			promiseRaceArray.push(sleep(timeOut));
 
 			const response = (await Promise.race(promiseRaceArray)) as Response;
 			debug('Received response when calling HEAD request for url: %s: %O', fileSrc, response);
@@ -684,10 +687,12 @@ export class FilesManager implements IFilesManager {
 	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
 	 * @param filesList - list of files for update checks
 	 * @param localFilePath - folder structure specifying path to file
+	 * @param timeOut - timeout for the last-modified head request
 	 */
 	private checkLastModified = async (
 		filesList: MergedDownloadList[],
 		localFilePath: string,
+		timeOut: number,
 	): Promise<Promise<void>[]> => {
 		let promises: Promise<void>[] = [];
 		for (let i = 0; i < filesList.length; i += 1) {
@@ -701,7 +706,7 @@ export class FilesManager implements IFilesManager {
 				const newLastModified =
 					'fetchLastModified' in file && file.fetchLastModified
 						? await file.fetchLastModified()
-						: await this.fetchLastModified(file.src);
+						: await this.fetchLastModified(file.src, timeOut);
 				if (isNil(newLastModified)) {
 					debug(`File was not found on remote server: %O `, file.src);
 					continue;

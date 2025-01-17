@@ -37,6 +37,7 @@ import { isRelativePath } from '../../files/tools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { smilLogging } from '../../../enums/fileEnums';
 import cloneDeep = require('lodash/cloneDeep');
+import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 
 export const debug = Debug('@signageos/smil-player:xmlParser');
 
@@ -335,6 +336,8 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
 			regions.refresh.refreshInterval = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
 			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
+			// timeout for last-modified header check
+			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
@@ -418,6 +421,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		region: {},
 		refresh: {
 			refreshInterval: 0,
+			timeOut: 0,
 		},
 		onlySmilFileUpdate: false,
 		logger: {

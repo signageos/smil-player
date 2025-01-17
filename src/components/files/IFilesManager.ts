@@ -60,5 +60,5 @@ export interface IFilesManager {
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<CheckETagFunctions>;
-	fetchLastModified: (fileSrc: string) => Promise<null | string | number>;
+	fetchLastModified: (fileSrc: string, timeOut: number) => Promise<null | string | number>;
 }
