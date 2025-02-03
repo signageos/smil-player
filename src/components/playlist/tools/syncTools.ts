@@ -86,6 +86,12 @@ export async function joinAllSyncGroupsOnSmilStart(
 			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-before`);
 			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-after`);
 			initCalled = true;
+
+			debug(
+				'Initializing sync server group regular finished: %s with deviceSyncId: %s',
+				`${synchronization.syncGroupName}-${key}`,
+				synchronization.syncDeviceId,
+			);
 		}
 	}
 	if (!initCalled) {
@@ -108,7 +114,16 @@ export async function joinAllSyncGroupsOnSmilStart(
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
-		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
+		const options = sos.config.syncServerUrl
+			? {
+					engine: SyncEngine.SyncServer,
+					uri: sos.config.syncServerUrl,
+			  }
+			: {
+					engine: SyncEngine.P2PLocal,
+			  };
+		debug('Connecting to sync server with engine: %O', options);
+		await sos.sync.connect(options);
 		resetAppRestartCount();
 	} catch (error) {
 		debug('Error occurred during sync connection: %O', error);
