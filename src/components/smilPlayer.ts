@@ -163,7 +163,7 @@ export class SmilPlayer implements ISmilPlayer {
 		while (smilFileContent === '' || !xmlOkParsed) {
 			try {
 				// download SMIL file if device has internet connection and smil file exists on remote server
-				if (!isNil(await this.files.fetchLastModified(smilFile.src))) {
+				if (!isNil(await this.files.fetchLastModified(smilFile))) {
 					forceDownload = true;
 					downloadPromises = await this.files.parallelDownloadAllFiles(
 						[smilFile],

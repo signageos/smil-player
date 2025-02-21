@@ -20,6 +20,7 @@ export type CheckETagFunctions = {
 export type SMILFile = {
 	src: string;
 	lastModified?: number;
+	expr?: string;
 	/** Optional callback which overrides standard downloadFile process and do it inside the callback instead */
 	download?: () => Promise<void>;
 	/** Optional callback which overrides default checking for last-modified header using HEAD */

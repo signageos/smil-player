@@ -1,115 +1,31 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
-        <meta log="true" type="manual"
-              endpoint="https://my.signagelab.com/api/webhooks/device-proof-of-play/cm1kk7s2200jfbfefbbiy02ch/proof-of-play-event"/>
-        <meta defaultRepeatCount="indefinite"/>
+        <meta http-equiv="Refresh" content="10"/>
+        <meta log="false" type="standard"/>
         <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
-            <region regionName="cm1kk7rmk0005bfefhlh9hqb6" left="0" top="0" width="1080" height="1920" z-index="1"
-                    backgroundColor="#000000"/>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
+            />
         </layout>
     </head>
     <body>
-        <par>
-            <seq end="__prefetchEnd.endEvent">
-                <seq repeatCount="indefinite">
-                    <img src="https://1.signage-cdn.com/global/smil-placeholders/content-downloading-portrait.jpeg"
-                         dur="5s" fit="fill"/>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <seq>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"/>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         region="main" fit="fill"/>
+                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                         dur="3s" fit="hidden" region="main">
+                    </img>
+                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                         dur="3s" fit="hidden" region="main">
+                    </img>
                 </seq>
             </seq>
-            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
-                <!-- Campaign playlist -->
-                <excl>
-                    <par>
-                        <seq repeatCount="indefinite">
-                            <!-- [GalleryModule] Metro volný spot 1 (cm1ks1lnw0000lb6qs6wdjtcd) -->
-                            <seq repeatCount="1" playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/11/cm34jadk300a512o222mbeano.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lnw0000lb6qs6wdjtcd,cm34jaemw001vu5a7lsk4fpnm"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm49wrs2p003z12of2bu4gwg7.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lnw0000lb6qs6wdjtcd,cm49wrszd0000b9woo17mjwlc"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/11/cm41gv9bb001p12mz8lgg80u4.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lnw0000lb6qs6wdjtcd,cm41gva7k00842zcrpel4uciq"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm4clgj87003112ke9m43dq4r.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lnw0000lb6qs6wdjtcd,cm4clgk8o003g14i3awhc0xgn"/>
-                            </seq>
-                            <!-- [GalleryModule] Metro volný spot 2 (cm1ks1lsl0002lb6qvf83hpy0) -->
-                            <seq repeatCount="1" playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm4qz72c2004f12qrfrr789ju.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lsl0002lb6qvf83hpy0,cm4qz7355005sqegcl7ozpd6f"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm56p3ooo006012o5bun5dkvu.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lsl0002lb6qvf83hpy0,cm56p3pr7017sgsynb820zg2h"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm56p3qgy006112o51pyz57md.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lsl0002lb6qvf83hpy0,cm56p3rx001bu1umerxmlkk2f"/>
-                            </seq>
-                            <!-- [GalleryModule] Metro volný spot 3 (cm1ks1lv90004lb6qi0ggq993) -->
-                            <seq repeatCount="1" playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1org8a0002e12qs5zlqhxyj.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lv90004lb6qi0ggq993,cm1org8cb00qka499f0t67lwn"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm4b2hxs1002n12nt8toe6wyt.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lv90004lb6qi0ggq993,cm4b2hyq20000i0u5tdd210of"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm4qz8apv004g12qre1bwanl7.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lv90004lb6qi0ggq993,cm4qz8bke00ti10suphg09pzo"/>
-                            </seq>
-                            <!-- [GalleryModule] Metro volný spot 4 (cm1ks1lxp0006lb6qt7ocdzja) -->
-                            <seq repeatCount="1" playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1orirlj002g12qs156e6i7n.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lxp0006lb6qt7ocdzja,cm1oriroi00qta499wqj12vyn"/>
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/09/cm1oriilg002f12qsdvkk5rdc.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1lxp0006lb6qt7ocdzja,cm1orijlk00tdb7u4j5nuxbtx"/>
-                            </seq>
-                            <!-- [GalleryModule] Metro volný spot 5 (cm1ks1m0d0008lb6qmx49n37l) -->
-                            <seq repeatCount="1" playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/10/cm1z4q96y000f12qtcoskab9k.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm1ks1m0d0008lb6qmx49n37l,cm1z4q9c400639go6ygl25vuy"/>
-                            </seq>
-                            <!-- [GalleryModule] 12410681 1.1.-31.1. č.1/1 op.1/1 Cinestar 2160 x 3520 (cm4mjz53t000bj1uijuu0dkty) -->
-                            <seq repeatCount="1" begin="wallclock(2025-01-01T00:00)" end="wallclock(2025-01-31T23:59)"
-                                 playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2024/12/cm4mjznn7001412mw88w3fw7e.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm4mjz53t000bj1uijuu0dkty,cm4mjzonu00blnhvq05ovun9i"/>
-                            </seq>
-                            <!-- [GalleryModule] 14100188 6.1.-20.1. č.2/2 op.1/1 Já a můj terapeut 2160 x 3520 VID (cm5f9xbrx000lnapdwvg0qtyq) -->
-                            <seq repeatCount="1" begin="wallclock(2025-01-06T00:00)" end="wallclock(2025-01-20T23:59)"
-                                 playMode="one">
-                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/01/cm5f9xn6w001l12lnatzxe9ok.mp4"
-                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
-                                       popType="video"
-                                       popTags="cm1kk5dq70180bm5p1rhd7041,cm1kk7s2200jfbfefbbiy02ch,cm5f9xbrx000lnapdwvg0qtyq,cm5f9xou000zpful0v9s86cgw"/>
-                            </seq>
-                        </seq>
-                    </par>
-                </excl>
-            </par>
         </par>
     </body>
 </smil>
