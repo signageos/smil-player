@@ -304,6 +304,9 @@ export class FilesManager implements IFilesManager {
 		}
 
 		const storedLastModified = mediaInfoObject[getFileName(media.src)];
+
+		console.log('storedLastModified', storedLastModified);
+
 		if (isNil(storedLastModified)) {
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
@@ -408,16 +411,10 @@ export class FilesManager implements IFilesManager {
 									authHeaders,
 								);
 							}
-							await this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
 						} catch (err) {
 							debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
-							await this.sendDownloadReport(
-								fileType,
-								fullLocalFilePath,
-								file,
-								taskStartDate,
-								err.message,
-							);
+							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
 						}
 					})(),
 				);
