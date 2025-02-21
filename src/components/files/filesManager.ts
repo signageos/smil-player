@@ -51,6 +51,7 @@ import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
+import { ConditionalExprFormat } from '../../enums/conditionalEnums';
 
 declare global {
 	interface Window {
@@ -290,7 +291,7 @@ export class FilesManager implements IFilesManager {
 		const currentLastModified =
 			'fetchLastModified' in media && media.fetchLastModified
 				? await media.fetchLastModified()
-				: await this.fetchLastModified(media.src);
+				: await this.fetchLastModified(media);
 		// file was not found
 		if (isNil(currentLastModified)) {
 			debug(`File was not found on remote server: %O `, media.src);
@@ -495,11 +496,14 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public fetchLastModified = async (
-		fileSrc: string,
+		media: MergedDownloadList,
 		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
 	): Promise<null | string | number> => {
 		try {
-			const downloadUrl = createDownloadPath(fileSrc);
+			if (media.expr === 'skipContent') {
+				delete media.expr;
+			}
+			const downloadUrl = createDownloadPath(media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 			const promiseRaceArray = [];
 			promiseRaceArray.push(
@@ -515,7 +519,13 @@ export class FilesManager implements IFilesManager {
 			promiseRaceArray.push(sleep(timeOut));
 
 			const response = (await Promise.race(promiseRaceArray)) as Response;
-			debug('Received response when calling HEAD request for url: %s: %O', fileSrc, response);
+			debug('Received response when calling HEAD request for url: %s: %O', media.src, response);
+			// TODO: remove 250 and replace with proper status code 404
+			if (response && response.status > 399) {
+				debug('File not found on server: %s, setting invalid conditional exp to skip the content', media.src);
+				media.expr = ConditionalExprFormat.skipContent;
+			}
+
 			const newLastModified = response.headers.get('last-modified');
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
@@ -703,7 +713,7 @@ export class FilesManager implements IFilesManager {
 				const newLastModified =
 					'fetchLastModified' in file && file.fetchLastModified
 						? await file.fetchLastModified()
-						: await this.fetchLastModified(file.src, timeOut);
+						: await this.fetchLastModified(file, timeOut);
 				if (isNil(newLastModified)) {
 					debug(`File was not found on remote server: %O `, file.src);
 					continue;

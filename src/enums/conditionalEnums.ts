@@ -19,6 +19,7 @@ export enum ConditionalExprFormat {
 	dateFormat = 'YYYY-MM-DD',
 	timeFormat = 'HH:mm:ss',
 	dateAndTimeFormat = 'YYYY-MM-DDTHH:mm:ss',
+	skipContent = 'skipContent',
 }
 
 export enum BinaryOperatorChar {
