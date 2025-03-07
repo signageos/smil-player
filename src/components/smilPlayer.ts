@@ -13,7 +13,7 @@ import backupImage from '../../public/backupImage/backupImage.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
 import { debug } from './smilPlayerTools';
 import { SMILScheduleEnum } from '../enums/scheduleEnums';
-import { SMILEnums } from '../enums/generalEnums';
+import { SMILEnums, smilUpdate } from '../enums/generalEnums';
 import { FilesManager } from './files/filesManager';
 import { XmlParser } from './xmlParser/xmlParser';
 import { SmilPlayerPlaylist } from './playlist/playlist';
@@ -121,6 +121,8 @@ export class SmilPlayer implements ISmilPlayer {
 		thisSos: FrontApplet,
 		playIntro: boolean = true,
 		firstIteration: boolean = true,
+		ignoreInvalidSmil: boolean = false,
+		invalidSmilLooping: boolean = false,
 	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
@@ -245,7 +247,15 @@ export class SmilPlayer implements ISmilPlayer {
 				xmlOkParsed = true;
 
 				debug('Starting to process parsed smil file');
-				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false);
+				const restart = () =>
+					this.main(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						false,
+						false,
+						smilObject.refresh.fallbackToPreviousPlaylist,
+					);
 				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
 				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
@@ -261,6 +271,16 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
+				if (ignoreInvalidSmil) {
+					debug('fallbackToPreviousPlaylist is on, ignoring new invalid playlist');
+					return await this.fallbackToPreviousPlaylist(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						invalidSmilLooping,
+					);
+				}
+
 				debug('Starting to play backup image');
 				const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
 				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
@@ -272,6 +292,28 @@ export class SmilPlayer implements ISmilPlayer {
 				}
 				await this.processor.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
+			}
+		}
+	};
+
+	private fallbackToPreviousPlaylist = async (
+		internalStorageUnit: IStorageUnit,
+		smilUrl: string,
+		thisSos: FrontApplet,
+		invalidSmilLooping: boolean,
+	) => {
+		if (invalidSmilLooping) {
+			debug('Unexpected error occurred, another checker looping');
+			return smilUpdate.invalid;
+		}
+
+		while (true) {
+			await sleep(SMILEnums.defaultDownloadRetry * 1000);
+			const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true, true);
+			// if valid smil file found, exit invalid smil loop
+			if (response !== smilUpdate.invalid) {
+				debug('Found valid smil file, exiting invalid smil loop');
+				break;
 			}
 		}
 	};
