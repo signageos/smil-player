@@ -32,3 +32,7 @@ export const parentGenerationRemove = [
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
+
+export const smilUpdate = {
+	invalid: 'invalid',
+} as const;

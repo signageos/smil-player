@@ -338,6 +338,7 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
 			// timeout for last-modified header check
 			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
+			regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
@@ -422,6 +423,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		refresh: {
 			refreshInterval: 0,
 			timeOut: 0,
+			fallbackToPreviousPlaylist: false,
 		},
 		onlySmilFileUpdate: false,
 		logger: {

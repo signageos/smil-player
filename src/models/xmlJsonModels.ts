@@ -11,6 +11,7 @@ export type RegionsObject = {
 		refreshInterval: number;
 		expr?: string;
 		timeOut: number;
+		fallbackToPreviousPlaylist: boolean;
 	};
 	onlySmilFileUpdate: boolean;
 	logger: SmilLogger;
@@ -76,6 +77,7 @@ export type SMILMetaObject = {
 	syncServerUrl?: string;
 	defaultRepeatCount?: '1' | 'indefinite';
 	defaultTransition?: string;
+	fallbackToPreviousPlaylist?: boolean;
 };
 
 export type RegionAttributes = {
