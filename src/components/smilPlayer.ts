@@ -121,6 +121,8 @@ export class SmilPlayer implements ISmilPlayer {
 		thisSos: FrontApplet,
 		playIntro: boolean = true,
 		firstIteration: boolean = true,
+		ignoreInvalidSmil: boolean = false,
+		invalidSmilLooping: boolean = false,
 	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
@@ -245,7 +247,8 @@ export class SmilPlayer implements ISmilPlayer {
 				xmlOkParsed = true;
 
 				debug('Starting to process parsed smil file');
-				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false);
+				// TODO: add ignoreInvalidSmil as option to smil header
+				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false, true);
 				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
 				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
@@ -259,6 +262,31 @@ export class SmilPlayer implements ISmilPlayer {
 						smilFile.src,
 						err.message,
 					);
+				}
+
+				if (invalidSmilLooping) {
+					debug('Unexpected error occurred, another checker looping');
+					return 'invalid';
+				}
+
+				if (ignoreInvalidSmil) {
+					while (true) {
+						await sleep(SMILEnums.defaultDownloadRetry * 1000);
+						const response = await this.main(
+							internalStorageUnit,
+							smilUrl,
+							thisSos,
+							false,
+							false,
+							true,
+							true,
+						);
+						if (!response) {
+							debug('Found valid smil file, exiting invalid smil loop');
+							break;
+						}
+					}
+					return;
 				}
 
 				debug('Starting to play backup image');
