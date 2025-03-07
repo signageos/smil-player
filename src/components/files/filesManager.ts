@@ -387,10 +387,12 @@ export class FilesManager implements IFilesManager {
 				// check for local urls to files (media/file.mp4)
 				file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-				const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
+				const shouldUpdate = forceDownload
+					? true
+					: await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
-				if (forceDownload || shouldUpdate) {
+				if (shouldUpdate) {
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 					promises.push(
 						(async () => {
