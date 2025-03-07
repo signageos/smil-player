@@ -207,38 +207,42 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					await sleep(1000);
 				}
 				while (this.getCheckFilesLoop()) {
-					await sleep(this.smilObject.refresh.refreshInterval * 1000);
+					try {
+						await sleep(this.smilObject.refresh.refreshInterval * 1000);
 
-					if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
-						debug('Prepare ETag check for smil media files prepared');
-						const {
-							fileEtagPromisesMedia: fileEtagPromisesMedia,
-							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-						} = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
-						debug('Last modified check for smil media files prepared, checking files for changes');
-						if (
-							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-							this.synchronization.shouldSync
-						) {
-							debug('One of the files changed, restarting loop with sync on');
-							await this.sos.refresh();
-							// because sos.refresh() wait does not work, we need to wait for it to finish
-							await sleep(this.smilObject.refresh.refreshInterval * 1000);
-							break;
+						if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
+							debug('Prepare ETag check for smil media files prepared');
+							const {
+								fileEtagPromisesMedia: fileEtagPromisesMedia,
+								fileEtagPromisesSMIL: fileEtagPromisesSMIL,
+							} = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+							debug('Last modified check for smil media files prepared, checking files for changes');
+							if (
+								(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
+								this.synchronization.shouldSync
+							) {
+								debug('One of the files changed, restarting loop with sync on');
+								await this.sos.refresh();
+								// because sos.refresh() wait does not work, we need to wait for it to finish
+								await sleep(this.smilObject.refresh.refreshInterval * 1000);
+								break;
+							}
+
+							if (
+								(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
+								!this.synchronization.shouldSync
+							) {
+								debug('One of the files changed, restarting loop with sync off');
+								this.setCheckFilesLoop(false);
+								break;
+							}
+
+							debug('File changes checked');
+						} else {
+							debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
 						}
-
-						if (
-							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-							!this.synchronization.shouldSync
-						) {
-							debug('One of the files changed, restarting loop with sync off');
-							this.setCheckFilesLoop(false);
-							break;
-						}
-
-						debug('File changes checked');
-					} else {
-						debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
+					} catch (err) {
+						debug('Unexpected error during file updates checks: %O', err);
 					}
 				}
 				debug('calling restart function');

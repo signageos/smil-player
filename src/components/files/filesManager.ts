@@ -376,50 +376,95 @@ export class FilesManager implements IFilesManager {
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
 
-		for (let i = 0; i < filesList.length; i += 1) {
-			const file = filesList[i];
+		await Promise.all(
+			filesList.map(async (file) => {
+				// do not download website widgets or video streams
+				if (shouldNotDownload(localFilePath, file)) {
+					debug('Will not download file: %O', file);
+					return;
+				}
 
-			// do not download website widgets or video streams
-			if (shouldNotDownload(localFilePath, file)) {
-				debug('Will not download file: %O', file);
-				continue;
-			}
+				// check for local urls to files (media/file.mp4)
+				file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-			// check for local urls to files (media/file.mp4)
-			file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+				const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
 
-			const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
-
-			// check if file is already downloaded or is forcedDownload to update existing file with new version
-			if (forceDownload || shouldUpdate) {
-				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
-				promises.push(
-					(async () => {
-						try {
-							debug(`Downloading file: %s`, file.src);
-							const downloadUrl = createDownloadPath(file.src);
-							const authHeaders = window.getAuthHeaders?.(downloadUrl);
-							if ('download' in file && file.download) {
-								await file.download();
-							} else {
-								await this.sos.fileSystem.downloadFile(
-									{
-										storageUnit: this.internalStorageUnit,
-										filePath: createLocalFilePath(localFilePath, file.src),
-									},
-									downloadUrl,
-									authHeaders,
-								);
+				// check if file is already downloaded or is forcedDownload to update existing file with new version
+				if (forceDownload || shouldUpdate) {
+					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
+					promises.push(
+						(async () => {
+							try {
+								debug(`Downloading file: %s`, file.src);
+								const downloadUrl = createDownloadPath(file.src);
+								const authHeaders = window.getAuthHeaders?.(downloadUrl);
+								if ('download' in file && file.download) {
+									await file.download();
+								} else {
+									await this.sos.fileSystem.downloadFile(
+										{
+											storageUnit: this.internalStorageUnit,
+											filePath: createLocalFilePath(localFilePath, file.src),
+										},
+										downloadUrl,
+										authHeaders,
+									);
+								}
+								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+							} catch (err) {
+								debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
 							}
-							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
-						} catch (err) {
-							debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
-							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
-						}
-					})(),
-				);
-			}
-		}
+						})(),
+					);
+				}
+			}),
+		);
+
+		// for (let i = 0; i < filesList.length; i += 1) {
+		// 	const file = filesList[i];
+		//
+		// 	// do not download website widgets or video streams
+		// 	if (shouldNotDownload(localFilePath, file)) {
+		// 		debug('Will not download file: %O', file);
+		// 		continue;
+		// 	}
+		//
+		// 	// check for local urls to files (media/file.mp4)
+		// 	file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+		//
+		// 	const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
+		//
+		// 	// check if file is already downloaded or is forcedDownload to update existing file with new version
+		// 	if (forceDownload || shouldUpdate) {
+		// 		const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
+		// 		promises.push(
+		// 			(async () => {
+		// 				try {
+		// 					debug(`Downloading file: %s`, file.src);
+		// 					const downloadUrl = createDownloadPath(file.src);
+		// 					const authHeaders = window.getAuthHeaders?.(downloadUrl);
+		// 					if ('download' in file && file.download) {
+		// 						await file.download();
+		// 					} else {
+		// 						await this.sos.fileSystem.downloadFile(
+		// 							{
+		// 								storageUnit: this.internalStorageUnit,
+		// 								filePath: createLocalFilePath(localFilePath, file.src),
+		// 							},
+		// 							downloadUrl,
+		// 							authHeaders,
+		// 						);
+		// 					}
+		// 					this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+		// 				} catch (err) {
+		// 					debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+		// 					this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
+		// 				}
+		// 			})(),
+		// 		);
+		// 	}
+		// }
 		// save/update mediaInfoObject to persistent storage
 		await this.writeMediaInfoFile(mediaInfoObject);
 		return promises;
@@ -467,31 +512,39 @@ export class FilesManager implements IFilesManager {
 		let fileEtagPromisesMedia: Promise<void>[] = [];
 		let fileEtagPromisesSMIL: Promise<void>[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
+		try {
+			// check for media updates only if its not switched off in the smil file
+			if (!smilObject.onlySmilFileUpdate) {
+				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
+					await this.checkLastModified(smilObject.video, FileStructure.videos, smilObject.refresh.timeOut),
+				);
+				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
+					await this.checkLastModified(smilObject.audio, FileStructure.audios, smilObject.refresh.timeOut),
+				);
+				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
+					await this.checkLastModified(smilObject.img, FileStructure.images, smilObject.refresh.timeOut),
+				);
+				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
+					await this.checkLastModified(smilObject.ref, FileStructure.widgets, smilObject.refresh.timeOut),
+				);
+			}
 
-		// check for media updates only if its not switched off in the smil file
-		if (!smilObject.onlySmilFileUpdate) {
-			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.video, FileStructure.videos, smilObject.refresh.timeOut),
+			fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
+				await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
 			);
-			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.audio, FileStructure.audios, smilObject.refresh.timeOut),
-			);
-			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.img, FileStructure.images, smilObject.refresh.timeOut),
-			);
-			fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-				await this.checkLastModified(smilObject.ref, FileStructure.widgets, smilObject.refresh.timeOut),
-			);
+
+			return {
+				fileEtagPromisesMedia,
+				fileEtagPromisesSMIL,
+			};
+		} catch (err) {
+			debug('Unexpected error occurred during lastModified check setup: %O', err);
+			// return empty arrays as if no new versions of files were found
+			return {
+				fileEtagPromisesMedia: [],
+				fileEtagPromisesSMIL: [],
+			};
 		}
-
-		fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
-			await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
-		);
-
-		return {
-			fileEtagPromisesMedia,
-			fileEtagPromisesSMIL,
-		};
 	};
 
 	public fetchLastModified = async (
@@ -525,7 +578,7 @@ export class FilesManager implements IFilesManager {
 				media.expr = 'skipContent';
 			}
 
-			const newLastModified = response.headers.get('last-modified');
+			const newLastModified = response?.headers?.get('last-modified');
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
 			debug('Unexpected error occurred during lastModified fetch: %O', err);
