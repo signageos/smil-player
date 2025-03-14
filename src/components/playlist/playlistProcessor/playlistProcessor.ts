@@ -76,6 +76,8 @@ import {
 	joinAllSyncGroupsOnSmilStart,
 } from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
+// 24 hours
+const SMIL_FILE_CHECK_INTERVAL = 86400;
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -202,6 +204,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		promises.push(
 			(async () => {
+				let mediaUpdate = false;
 				// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
 				while (!this.getCheckFilesLoop()) {
 					await sleep(1000);
@@ -212,15 +215,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
 							debug('Prepare ETag check for smil media files prepared');
-							const {
-								fileEtagPromisesMedia: fileEtagPromisesMedia,
-								fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-							} = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+							const { fileEtagPromisesMedia: fileEtagPromisesMedia } =
+								await this.files.prepareLastModifiedSetup(this.smilObject);
 							debug('Last modified check for smil media files prepared, checking files for changes');
-							if (
-								(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-								this.synchronization.shouldSync
-							) {
+							if (fileEtagPromisesMedia?.length > 0 && this.synchronization.shouldSync) {
 								debug('One of the files changed, restarting loop with sync on');
 								await this.sos.refresh();
 								// because sos.refresh() wait does not work, we need to wait for it to finish
@@ -228,12 +226,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								break;
 							}
 
-							if (
-								(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-								!this.synchronization.shouldSync
-							) {
+							if (fileEtagPromisesMedia?.length > 0 && !this.synchronization.shouldSync) {
 								debug('One of the files changed, restarting loop with sync off');
 								this.setCheckFilesLoop(false);
+								mediaUpdate = true;
 								break;
 							}
 
@@ -245,9 +241,58 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Unexpected error during file updates checks: %O', err);
 					}
 				}
-				debug('calling restart function');
-				// no await
-				restart();
+				if (mediaUpdate) {
+					debug('calling restart function, media files');
+					// no await
+					restart();
+				}
+			})(),
+		);
+
+		promises.push(
+			(async () => {
+				let smilUpdate = false;
+				// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
+				while (!this.getCheckFilesLoop()) {
+					await sleep(1000);
+				}
+				while (this.getCheckFilesLoop()) {
+					try {
+						await sleep(SMIL_FILE_CHECK_INTERVAL * 1000);
+
+						if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
+							debug('Prepare ETag check for smil media files prepared');
+							const { fileEtagPromisesSMIL: fileEtagPromisesSMIL } =
+								await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+							debug('Last modified check for smil media files prepared, checking files for changes');
+							if (fileEtagPromisesSMIL?.length > 0 && this.synchronization.shouldSync) {
+								debug('Smil file changed , restarting loop with sync on');
+								await this.sos.refresh();
+								// because sos.refresh() wait does not work, we need to wait for it to finish
+								await sleep(this.smilObject.refresh.refreshInterval * 1000);
+								break;
+							}
+
+							if (fileEtagPromisesSMIL?.length > 0 && !this.synchronization.shouldSync) {
+								debug('Smil file changed, restarting loop with sync off');
+								this.setCheckFilesLoop(false);
+								smilUpdate = true;
+								break;
+							}
+
+							debug('File changes checked');
+						} else {
+							debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
+						}
+					} catch (err) {
+						debug('Unexpected error during file updates checks: %O', err);
+					}
+				}
+				if (smilUpdate) {
+					debug('calling restart function, smil file');
+					// no await
+					restart();
+				}
 			})(),
 		);
 
