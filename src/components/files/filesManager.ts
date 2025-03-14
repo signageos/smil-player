@@ -509,12 +509,22 @@ export class FilesManager implements IFilesManager {
 
 	public prepareLastModifiedSetup = async (
 		smilObject: SMILFileObject,
-		smilFile: SMILFile,
+		smilFile: SMILFile | undefined = undefined,
 	): Promise<CheckETagFunctions> => {
 		let fileEtagPromisesMedia: Promise<void>[] = [];
 		let fileEtagPromisesSMIL: Promise<void>[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
 		try {
+			if (smilFile) {
+				fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
+					await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
+				);
+
+				return {
+					fileEtagPromisesMedia,
+					fileEtagPromisesSMIL,
+				};
+			}
 			// check for media updates only if its not switched off in the smil file
 			if (!smilObject.onlySmilFileUpdate) {
 				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
@@ -530,10 +540,6 @@ export class FilesManager implements IFilesManager {
 					await this.checkLastModified(smilObject.ref, FileStructure.widgets, smilObject.refresh.timeOut),
 				);
 			}
-
-			fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
-				await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
-			);
 
 			return {
 				fileEtagPromisesMedia,
