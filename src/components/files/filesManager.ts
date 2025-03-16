@@ -305,8 +305,6 @@ export class FilesManager implements IFilesManager {
 
 		const storedLastModified = mediaInfoObject[getFileName(media.src)];
 
-		console.log('storedLastModified', storedLastModified);
-
 		if (isNil(storedLastModified)) {
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
