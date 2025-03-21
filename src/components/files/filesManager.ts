@@ -299,7 +299,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
-			debug(`File does not exist: %s  downloading`, media.src);
+			debug(`File does not exist in local storage: %s  downloading`, media.src);
 			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
 			return true;
 		}
@@ -579,13 +579,14 @@ export class FilesManager implements IFilesManager {
 
 			const response = (await Promise.race(promiseRaceArray)) as Response;
 			debug('Received response when calling HEAD request for url: %s: %O', media.src, response);
-			// TODO: remove 250 and replace with proper status code 404
+			// TODO: add proper 404 code
 			if (response && response.status > 399) {
 				debug('File not found on server: %s, setting invalid conditional exp to skip the content', media.src);
 				media.expr = ConditionalExprFormat.skipContent;
 			}
 
 			const newLastModified = response?.headers?.get('last-modified');
+			debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
 			return newLastModified ? newLastModified : 0;
 		} catch (err) {
 			debug('Unexpected error occurred during lastModified fetch: %O', err);
