@@ -330,6 +330,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						const dateTimeEnd = Date.now();
 						if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
 							await sleep(2000);
+							// in case when updated playlist has no playable content, player need to start file check again from here
+							this.setCheckFilesLoop(true);
 						}
 					} catch (err) {
 						debug('Unexpected error processing during playlist processing: %O', err);
