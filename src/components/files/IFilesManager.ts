@@ -8,14 +8,14 @@ import {
 	SMILWidget,
 	SosHtmlElement,
 } from '../../models/mediaModels';
-import {
-	CheckETagFunctions,
-	MediaInfoObject,
-	MergedDownloadList,
-	SMILFile,
-	SMILFileObject,
-} from '../../models/filesModels';
+import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
+import { Resource } from './resourceChecker/resourceChecker';
+
+export interface UpdateCheckResult {
+	shouldUpdate: boolean;
+	lastModified?: number;
+}
 
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
@@ -47,7 +47,7 @@ export interface IFilesManager {
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
-	) => Promise<boolean>;
+	) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;
 	deleteFile: (filePath: string) => Promise<void>;
 	readFile: (filePath: string) => Promise<string>;
@@ -59,6 +59,6 @@ export interface IFilesManager {
 	) => Promise<Promise<void>[]>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
-	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<CheckETagFunctions>;
+	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
 	fetchLastModified: (media: MergedDownloadList, timeOut: number) => Promise<null | string | number>;
 }

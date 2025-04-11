@@ -4,7 +4,7 @@ import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
-import { isNil } from 'lodash';
+import { isNil, isEmpty } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
 import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
@@ -22,6 +22,7 @@ import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistData
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
 import Debug from 'debug';
+import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
 
 applyFetchPolyfill();
 
@@ -140,7 +141,11 @@ export class SmilPlayer implements ISmilPlayer {
 		try {
 			if (
 				!isNil(sos.config.backupImageUrl) &&
-				!isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))
+				!isNil(
+					await this.files.fetchLastModified({
+						src: sos.config.backupImageUrl,
+					}),
+				)
 			) {
 				forceDownload = true;
 				const backupImageObject = {
@@ -185,6 +190,11 @@ export class SmilPlayer implements ISmilPlayer {
 
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
 				debug('SMIL file parsed: %O', smilObject);
+
+				if (isEmpty(smilObject.playlist)) {
+					debug('Empty SMIL playlist, smil file wont be processed further');
+					throw new EmptyPlaylistError('Empty SMIL playlist');
+				}
 
 				this.processor.setSmilObject(smilObject);
 
@@ -260,6 +270,16 @@ export class SmilPlayer implements ISmilPlayer {
 				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
 			} catch (err) {
+				if (err instanceof EmptyPlaylistError) {
+					debug('Fallback to previous playlist because new SMIL file has empty playlist');
+					return await this.fallbackToPreviousPlaylist(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						invalidSmilLooping,
+						SMILEnums.defaultRefresh * 1000,
+					);
+				}
 				if (smilFileContent === '') {
 					debug('Unexpected error occurred during smil file download : %O', err);
 				} else {
@@ -278,6 +298,7 @@ export class SmilPlayer implements ISmilPlayer {
 						smilUrl,
 						thisSos,
 						invalidSmilLooping,
+						SMILEnums.defaultDownloadRetry * 1000,
 					);
 				}
 
@@ -301,20 +322,19 @@ export class SmilPlayer implements ISmilPlayer {
 		smilUrl: string,
 		thisSos: FrontApplet,
 		invalidSmilLooping: boolean,
+		interval: number,
 	) => {
 		if (invalidSmilLooping) {
 			debug('Unexpected error occurred, another checker looping');
 			return smilUpdate.invalid;
 		}
 
-		while (true) {
-			await sleep(SMILEnums.defaultDownloadRetry * 1000);
+		const intervalId = setInterval(async () => {
 			const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true, true);
-			// if valid smil file found, exit invalid smil loop
 			if (response !== smilUpdate.invalid) {
-				debug('Found valid smil file, exiting invalid smil loop');
-				break;
+				console.debug('Found valid smil file, exiting invalid smil loop');
+				clearInterval(intervalId);
 			}
-		}
+		}, interval);
 	};
 }

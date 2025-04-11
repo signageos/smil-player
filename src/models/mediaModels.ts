@@ -9,6 +9,12 @@ export type PoPAttributes = {
 	popFileName?: string;
 };
 
+export type UpdateChecks = {
+	updateCheckUrl?: string;
+	updateCheckInterval?: number;
+	allowLocalFallback?: boolean;
+};
+
 export type SMILVideo = {
 	id?: string;
 	expr?: string;
@@ -28,7 +34,8 @@ export type SMILVideo = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILAudio = {
 	id?: string;
@@ -46,7 +53,8 @@ export type SMILAudio = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILImage = {
 	id?: string;
@@ -66,7 +74,8 @@ export type SMILImage = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILWidget = {
 	id?: string;
@@ -86,7 +95,8 @@ export type SMILWidget = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILTicker = {
 	id?: string;
@@ -115,8 +125,10 @@ export type SMILTicker = {
 	syncGroupName?: string;
 	'z-index': string;
 	timeoutReference?: ReturnType<typeof setTimeout>;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
+// TODO: check if still necessary
 export type SosHtmlElement = {
 	expr?: string;
 	src: string;
@@ -132,7 +144,8 @@ export type SosHtmlElement = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILIntro = {
 	expr?: string;
