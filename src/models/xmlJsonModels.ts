@@ -9,6 +9,7 @@ export type RegionsObject = {
 	rootLayout?: RootLayout;
 	refresh: {
 		refreshInterval: number;
+		smilFileRefresh: number;
 		expr?: string;
 		timeOut: number;
 		fallbackToPreviousPlaylist: boolean;
@@ -67,7 +68,9 @@ export type XmlHeadObject = {
 };
 
 export type SMILMetaObject = {
-	content: string;
+	content?: string;
+	contentRefresh?: string;
+	smilFileRefresh?: string;
 	log: boolean | string;
 	type?: smilLogging.standard | smilLogging.proofOfPlay;
 	endpoint?: string;

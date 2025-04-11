@@ -6,11 +6,18 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
-import { FileStructure, mapObject, WidgetExtensions, WidgetFullPath } from '../../../enums/fileEnums';
+import {
+	DEFAULT_LAST_MODIFIED,
+	FileStructure,
+	mapObject,
+	WidgetExtensions,
+	WidgetFullPath,
+} from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { removeLastArrayItem } from '../../playlist/tools/generalTools';
+import moment from 'moment';
 
 export const debug = Debug('@signageos/smil-player:filesManager');
 
@@ -120,12 +127,14 @@ export function createLocalFilePath(localFilePath: string, src: string): string 
 export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): MediaInfoObject {
 	let fileLastModifiedObject: MediaInfoObject = {};
 	for (let file of fileList) {
-		fileLastModifiedObject[getFileName(file.src)] = file.lastModified ? file.lastModified : 0;
+		fileLastModifiedObject[getFileName(file.src)] = file.lastModified
+			? file.lastModified
+			: moment(DEFAULT_LAST_MODIFIED).valueOf();
 	}
 	return fileLastModifiedObject;
 }
 
-export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: string | number) {
+export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: number) {
 	jsonObject[attr] = value;
 }
 
