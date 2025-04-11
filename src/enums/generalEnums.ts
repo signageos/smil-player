@@ -10,6 +10,8 @@ export enum SMILEnums {
 	videoDurationOffset = 1000,
 	defaultVideoDuration = 0,
 	metaContent = 'content',
+	metaContentRefresh = 'contentRefresh',
+	metaSmilRefresh = 'smilFileRefresh',
 	metaLog = 'log',
 	onlySmilUpdate = 'onlySmilUpdate',
 	syncServer = 'syncServerUrl',

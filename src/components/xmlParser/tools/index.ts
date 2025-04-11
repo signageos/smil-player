@@ -312,9 +312,6 @@ export function extractDataFromPlaylist(
 }
 
 export function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
-	// use default value at start
-	regions.refresh.refreshInterval = SMILEnums.defaultRefresh;
-
 	if (!isNil(metaObjects.meta)) {
 		parseMetaInfo(metaObjects.meta, regions);
 	}
@@ -333,13 +330,27 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		meta = [meta];
 	}
 	for (const metaRecord of meta) {
-		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
-			regions.refresh.refreshInterval = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+		if (
+			metaRecord.hasOwnProperty(SMILEnums.metaContent) ||
+			metaRecord.hasOwnProperty(SMILEnums.metaContentRefresh)
+		) {
+			// Support both content and contentRefresh parameters
+			const refreshValue = metaRecord.contentRefresh || metaRecord.content;
+			regions.refresh.refreshInterval = refreshValue
+				? (parseInt(refreshValue) || SMILEnums.defaultRefresh) * 1000
+				: SMILEnums.defaultRefresh * 1000;
 			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
 			// timeout for last-modified header check
 			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
 			regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;
 		}
+
+		if (metaRecord.hasOwnProperty(SMILEnums.metaSmilRefresh)) {
+			regions.refresh.smilFileRefresh = metaRecord.smilFileRefresh
+				? (parseInt(metaRecord.smilFileRefresh) || regions.refresh.refreshInterval) * 1000
+				: regions.refresh.refreshInterval;
+		}
+
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 		}
@@ -421,8 +432,9 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
 		refresh: {
-			refreshInterval: 0,
-			timeOut: 0,
+			refreshInterval: SMILEnums.defaultRefresh * 1000,
+			smilFileRefresh: SMILEnums.defaultRefresh * 1000,
+			timeOut: SMILScheduleEnum.fileCheckTimeout as number,
 			fallbackToPreviousPlaylist: false,
 		},
 		onlySmilFileUpdate: false,

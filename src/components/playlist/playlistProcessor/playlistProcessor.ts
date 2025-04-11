@@ -76,8 +76,7 @@ import {
 	joinAllSyncGroupsOnSmilStart,
 } from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
-// 24 hours
-const SMIL_FILE_CHECK_INTERVAL = 86400;
+import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -192,173 +191,78 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return this.playIntroLoop(introMedia, intro);
 	};
 
-	/**
-	 * main processing function of smil player, runs playlist in endless loop and periodically
-	 * checks for smil and media update in parallel
-	 * @param smilFile - representation of actual SMIL file
-	 * @param firstIteration
-	 * @param restart
-	 */
+	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		const resourceChecker = new ResourceChecker(
+			resources,
+			this.synchronization.shouldSync,
+			async () => {
+				await this.sos.refresh();
+				await sleep(this.smilObject.refresh.refreshInterval);
+			},
+			() => this.setCheckFilesLoop(false),
+			restart,
+		);
+		resourceChecker.start();
+	}
+
+	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
+		try {
+			if (firstIteration) {
+				await connectSyncSafe(this.sos);
+			}
+
+			await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+
+			if (firstIteration && hasDynamicContent(this.smilObject)) {
+				await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+			}
+		} catch (error) {
+			debug('Error during playlist processing sync setup: %O', error);
+			console.error(error);
+		}
+	}
+
+	private async handlePlaylistProcessing(version: number): Promise<void> {
+		try {
+			const dateTimeBegin = Date.now();
+			await this.processPlaylist(this.smilObject.playlist, version);
+			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
+			const dateTimeEnd = Date.now();
+			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+				await sleep(2000);
+			}
+		} catch (err) {
+			debug('Unexpected error processing during playlist processing: %O', err);
+			await sleep(SMILScheduleEnum.defaultAwait);
+		}
+	}
+
+	private async handlePlaylistLoop(version: number): Promise<void> {
+		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
+	}
+
 	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
-		const promises = [];
+		const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 
-		promises.push(
-			(async () => {
-				let mediaUpdate = false;
-				// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
-				while (!this.getCheckFilesLoop()) {
-					await sleep(1000);
-				}
-				while (this.getCheckFilesLoop()) {
-					try {
-						await sleep(this.smilObject.refresh.refreshInterval * 1000);
+		const promises = [
+			// File checking process
+			this.handleFileChecking(smilFile, restart),
 
-						if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
-							debug('Prepare ETag check for smil media files prepared');
-							const { fileEtagPromisesMedia: fileEtagPromisesMedia } =
-								await this.files.prepareLastModifiedSetup(this.smilObject);
-							debug('Last modified check for smil media files prepared, checking files for changes');
-							if (fileEtagPromisesMedia?.length > 0 && this.synchronization.shouldSync) {
-								debug('One of the files changed, restarting loop with sync on');
-								await this.sos.refresh();
-								// because sos.refresh() wait does not work, we need to wait for it to finish
-								await sleep(this.smilObject.refresh.refreshInterval * 1000);
-								break;
-							}
+			// Sync setup
+			this.handleSyncSetup(firstIteration),
 
-							if (fileEtagPromisesMedia?.length > 0 && !this.synchronization.shouldSync) {
-								debug('One of the files changed, restarting loop with sync off');
-								this.setCheckFilesLoop(false);
-								mediaUpdate = true;
-								break;
-							}
+			// Playlist processing loop
+			this.handlePlaylistLoop(version),
 
-							debug('File changes checked');
-						} else {
-							debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
-						}
-					} catch (err) {
-						debug('Unexpected error during file updates checks: %O', err);
-					}
-				}
-				if (mediaUpdate) {
-					debug('calling restart function, media files');
-					// no await
-					restart();
-				}
-			})(),
-		);
+			// Trigger watching process
+			this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop),
 
-		promises.push(
-			(async () => {
-				let smilUpdate = false;
-				// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
-				while (!this.getCheckFilesLoop()) {
-					await sleep(1000);
-				}
-				while (this.getCheckFilesLoop()) {
-					try {
-						await sleep(SMIL_FILE_CHECK_INTERVAL * 1000);
-
-						if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
-							debug('Prepare ETag check for smil media files prepared');
-							const { fileEtagPromisesSMIL: fileEtagPromisesSMIL } =
-								await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
-							debug('Last modified check for smil media files prepared, checking files for changes');
-							if (fileEtagPromisesSMIL?.length > 0 && this.synchronization.shouldSync) {
-								debug('Smil file changed , restarting loop with sync on');
-								await this.sos.refresh();
-								// because sos.refresh() wait does not work, we need to wait for it to finish
-								await sleep(this.smilObject.refresh.refreshInterval * 1000);
-								break;
-							}
-
-							if (fileEtagPromisesSMIL?.length > 0 && !this.synchronization.shouldSync) {
-								debug('Smil file changed, restarting loop with sync off');
-								this.setCheckFilesLoop(false);
-								smilUpdate = true;
-								break;
-							}
-
-							debug('File changes checked');
-						} else {
-							debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
-						}
-					} catch (err) {
-						debug('Unexpected error during file updates checks: %O', err);
-					}
-				}
-				if (smilUpdate) {
-					debug('calling restart function, smil file');
-					// no await
-					restart();
-				}
-			})(),
-		);
-
-		promises.push(
-			(async () => {
-				try {
-					// connect to the sync server only on start of smil, not on updates
-					if (firstIteration) {
-						await connectSyncSafe(this.sos);
-					}
-
-					await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
-
-					if (firstIteration && hasDynamicContent(this.smilObject)) {
-						await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
-					}
-				} catch (error) {
-					debug('Error during playlist processing sync setup: %O', error);
-					console.error(error);
-				}
-
-				// check if its first playlist
-				const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
-				// endless processing of smil playlist
-				await this.runEndlessLoop(async () => {
-					try {
-						const dateTimeBegin = Date.now();
-						await this.processPlaylist(this.smilObject.playlist, version);
-						debug(
-							'One smil playlist iteration finished ' +
-								version +
-								' ' +
-								JSON.stringify(this.cancelFunction),
-						);
-						const dateTimeEnd = Date.now();
-						if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
-							await sleep(2000);
-							// in case when updated playlist has no playable content, player need to start file check again from here
-							this.setCheckFilesLoop(true);
-						}
-					} catch (err) {
-						debug('Unexpected error processing during playlist processing: %O', err);
-						await sleep(SMILScheduleEnum.defaultAwait);
-					}
-				}, version);
-			})(),
-		);
-
-		promises.push(
-			(async () => {
-				// triggers processing
-				await this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop);
-			})(),
-		);
-
-		promises.push(
-			(async () => {
-				// worker to process offline custom endpoint reports
-				await this.runEndlessLoop(
-					async () => {
-						await this.files.watchCustomEndpointReports();
-					},
-					firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1,
-				);
-			})(),
-		);
+			// Custom endpoint reports processing
+			this.runEndlessLoop(async () => {
+				await this.files.watchCustomEndpointReports();
+			}, version),
+		];
 
 		await Promise.all(promises);
 	};

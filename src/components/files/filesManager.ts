@@ -25,17 +25,12 @@ import {
 import {
 	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
 	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+	DEFAULT_LAST_MODIFIED,
 	FileStructure,
 	MINIMAL_STORAGE_FREE_SPACE,
 	smilLogging,
 } from '../../enums/fileEnums';
-import {
-	CheckETagFunctions,
-	MediaInfoObject,
-	MergedDownloadList,
-	SMILFile,
-	SMILFileObject,
-} from '../../models/filesModels';
+import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import {
 	SMILAudio,
 	SMILImage,
@@ -46,12 +41,13 @@ import {
 	SosHtmlElement,
 } from '../../models/mediaModels';
 import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
-import { IFilesManager } from './IFilesManager';
+import { IFilesManager, UpdateCheckResult } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { ConditionalExprFormat } from '../../enums/conditionalEnums';
+import { Resource } from './resourceChecker/resourceChecker';
 
 declare global {
 	interface Window {
@@ -139,13 +135,7 @@ export class FilesManager implements IFilesManager {
 
 					debug('Custom endpoint report file: %s, request took: %s ms', file.filePath, Date.now() - start);
 
-					await this.sos.fileSystem.deleteFile(
-						{
-							storageUnit: this.internalStorageUnit,
-							filePath: file.filePath,
-						},
-						true,
-					);
+					await this.deleteFile(file.filePath);
 
 					// reset number of reports in file due to the bug with repeated connection issues
 					delete this.offlineReportsInfoObject[fileIndex];
@@ -287,7 +277,7 @@ export class FilesManager implements IFilesManager {
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
-	): Promise<boolean> => {
+	): Promise<UpdateCheckResult> => {
 		const currentLastModified =
 			'fetchLastModified' in media && media.fetchLastModified
 				? await media.fetchLastModified()
@@ -295,31 +285,36 @@ export class FilesManager implements IFilesManager {
 		// file was not found
 		if (isNil(currentLastModified)) {
 			debug(`File was not found on remote server: %O `, media.src);
-			return false;
+			return { shouldUpdate: false };
 		}
 
 		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
 			debug(`File does not exist in local storage: %s  downloading`, media.src);
-			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
-			return true;
+			return {
+				shouldUpdate: true,
+				lastModified: moment(currentLastModified).valueOf(),
+			};
 		}
 
 		const storedLastModified = mediaInfoObject[getFileName(media.src)];
 
 		if (isNil(storedLastModified)) {
-			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
-			return true;
+			return {
+				shouldUpdate: true,
+				lastModified: moment(currentLastModified).valueOf(),
+			};
 		}
 
 		if (moment(storedLastModified).valueOf() < moment(currentLastModified).valueOf()) {
 			debug(`New file version detected: %O `, media.src);
-			// update mediaInfo object
-			updateJsonObject(mediaInfoObject, getFileName(media.src), currentLastModified);
-			return true;
+			return {
+				shouldUpdate: true,
+				lastModified: moment(currentLastModified).valueOf(),
+			};
 		}
 
 		debug(`File is already downloaded in internal storage: %O `, media.src);
-		return false;
+		return { shouldUpdate: false };
 	};
 
 	public writeMediaInfoFile = async (mediaInfoObject: object) => {
@@ -345,7 +340,7 @@ export class FilesManager implements IFilesManager {
 				true,
 			);
 		} catch (err) {
-			debug('Unexpected error occured during deleting file from persistent storage: %s', filePath);
+			debug('Unexpected error occurred during deleting file from persistent storage: %s', filePath);
 			await this.sendGeneralErrorReport(err.message);
 		}
 	};
@@ -368,6 +363,7 @@ export class FilesManager implements IFilesManager {
 		filesList: MergedDownloadList[],
 		localFilePath: string,
 		forceDownload: boolean = false,
+		lastModified: number | undefined = undefined,
 	): Promise<Promise<void>[]> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -386,12 +382,16 @@ export class FilesManager implements IFilesManager {
 				// check for local urls to files (media/file.mp4)
 				file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-				const shouldUpdate = forceDownload
-					? true
+				const updateCheck = forceDownload
+					? { shouldUpdate: true, lastModified }
 					: await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
-				if (shouldUpdate) {
+				if (updateCheck.shouldUpdate) {
+					if (updateCheck.lastModified) {
+						updateJsonObject(mediaInfoObject, getFileName(file.src), updateCheck.lastModified);
+					}
+
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 					promises.push(
 						(async () => {
@@ -422,50 +422,6 @@ export class FilesManager implements IFilesManager {
 			}),
 		);
 
-		// for (let i = 0; i < filesList.length; i += 1) {
-		// 	const file = filesList[i];
-		//
-		// 	// do not download website widgets or video streams
-		// 	if (shouldNotDownload(localFilePath, file)) {
-		// 		debug('Will not download file: %O', file);
-		// 		continue;
-		// 	}
-		//
-		// 	// check for local urls to files (media/file.mp4)
-		// 	file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
-		//
-		// 	const shouldUpdate = await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
-		//
-		// 	// check if file is already downloaded or is forcedDownload to update existing file with new version
-		// 	if (forceDownload || shouldUpdate) {
-		// 		const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
-		// 		promises.push(
-		// 			(async () => {
-		// 				try {
-		// 					debug(`Downloading file: %s`, file.src);
-		// 					const downloadUrl = createDownloadPath(file.src);
-		// 					const authHeaders = window.getAuthHeaders?.(downloadUrl);
-		// 					if ('download' in file && file.download) {
-		// 						await file.download();
-		// 					} else {
-		// 						await this.sos.fileSystem.downloadFile(
-		// 							{
-		// 								storageUnit: this.internalStorageUnit,
-		// 								filePath: createLocalFilePath(localFilePath, file.src),
-		// 							},
-		// 							downloadUrl,
-		// 							authHeaders,
-		// 						);
-		// 					}
-		// 					this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
-		// 				} catch (err) {
-		// 					debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
-		// 					this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
-		// 				}
-		// 			})(),
-		// 		);
-		// 	}
-		// }
 		// save/update mediaInfoObject to persistent storage
 		await this.writeMediaInfoFile(mediaInfoObject);
 		return promises;
@@ -506,63 +462,74 @@ export class FilesManager implements IFilesManager {
 		return downloadPromises;
 	};
 
-	public prepareLastModifiedSetup = async (
-		smilObject: SMILFileObject,
-		smilFile: SMILFile | undefined = undefined,
-	): Promise<CheckETagFunctions> => {
-		let fileEtagPromisesMedia: Promise<void>[] = [];
-		let fileEtagPromisesSMIL: Promise<void>[] = [];
+	public prepareLastModifiedSetup = async (smilObject: SMILFileObject, smilFile: SMILFile): Promise<Resource[]> => {
+		let resourceCheckers: Resource[] = [];
 		debug(`Starting to check files for updates %O:`, smilObject);
 		try {
-			if (smilFile) {
-				fileEtagPromisesSMIL = fileEtagPromisesSMIL.concat(
-					await this.checkLastModified([smilFile], FileStructure.rootFolder, smilObject.refresh.timeOut),
-				);
-
-				return {
-					fileEtagPromisesMedia,
-					fileEtagPromisesSMIL,
-				};
-			}
+			resourceCheckers = resourceCheckers.concat(
+				this.convertToResourcesCheckerFormat(
+					[smilFile],
+					FileStructure.rootFolder,
+					smilObject.refresh.timeOut,
+					smilObject.refresh.refreshInterval,
+				),
+			);
 			// check for media updates only if its not switched off in the smil file
 			if (!smilObject.onlySmilFileUpdate) {
-				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-					await this.checkLastModified(smilObject.video, FileStructure.videos, smilObject.refresh.timeOut),
+				resourceCheckers = resourceCheckers.concat(
+					this.convertToResourcesCheckerFormat(
+						smilObject.video,
+						FileStructure.videos,
+						smilObject.refresh.timeOut,
+						smilObject.refresh.refreshInterval,
+					),
 				);
-				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-					await this.checkLastModified(smilObject.audio, FileStructure.audios, smilObject.refresh.timeOut),
+
+				resourceCheckers = resourceCheckers.concat(
+					this.convertToResourcesCheckerFormat(
+						smilObject.audio,
+						FileStructure.audios,
+						smilObject.refresh.timeOut,
+						smilObject.refresh.refreshInterval,
+					),
 				);
-				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-					await this.checkLastModified(smilObject.img, FileStructure.images, smilObject.refresh.timeOut),
+
+				resourceCheckers = resourceCheckers.concat(
+					this.convertToResourcesCheckerFormat(
+						smilObject.img,
+						FileStructure.images,
+						smilObject.refresh.timeOut,
+						smilObject.refresh.refreshInterval,
+					),
 				);
-				fileEtagPromisesMedia = fileEtagPromisesMedia.concat(
-					await this.checkLastModified(smilObject.ref, FileStructure.widgets, smilObject.refresh.timeOut),
+
+				resourceCheckers = resourceCheckers.concat(
+					this.convertToResourcesCheckerFormat(
+						smilObject.ref,
+						FileStructure.widgets,
+						smilObject.refresh.timeOut,
+						smilObject.refresh.refreshInterval,
+					),
 				);
 			}
 
-			return {
-				fileEtagPromisesMedia,
-				fileEtagPromisesSMIL,
-			};
+			return resourceCheckers;
 		} catch (err) {
 			debug('Unexpected error occurred during lastModified check setup: %O', err);
 			// return empty arrays as if no new versions of files were found
-			return {
-				fileEtagPromisesMedia: [],
-				fileEtagPromisesSMIL: [],
-			};
 		}
+		return [];
 	};
 
 	public fetchLastModified = async (
 		media: MergedDownloadList,
 		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
-	): Promise<null | string | number> => {
+	): Promise<null | string> => {
 		try {
 			if (media.expr === 'skipContent') {
 				delete media.expr;
 			}
-			const downloadUrl = createDownloadPath(media.src);
+			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 			const promiseRaceArray = [];
 			promiseRaceArray.push(
@@ -575,19 +542,23 @@ export class FilesManager implements IFilesManager {
 					mode: 'cors',
 				}),
 			);
-			promiseRaceArray.push(sleep(timeOut));
+			promiseRaceArray.push(
+				(async (): Promise<string> => {
+					await sleep(timeOut);
+					return 'timeOut';
+				})(),
+			);
 
 			const response = (await Promise.race(promiseRaceArray)) as Response;
-			debug('Received response when calling HEAD request for url: %s: %O', media.src, response);
-			// TODO: add proper 404 code
-			if (response && response.status > 399) {
+			debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
+			if (response && response.status > 404) {
 				debug('File not found on server: %s, setting invalid conditional exp to skip the content', media.src);
 				media.expr = ConditionalExprFormat.skipContent;
 			}
 
 			const newLastModified = response?.headers?.get('last-modified');
 			debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
-			return newLastModified ? newLastModified : 0;
+			return newLastModified ? newLastModified : DEFAULT_LAST_MODIFIED;
 		} catch (err) {
 			debug('Unexpected error occurred during lastModified fetch: %O', err);
 			return null;
@@ -724,6 +695,7 @@ export class FilesManager implements IFilesManager {
 						break;
 					}
 				}
+
 				if (
 					!found &&
 					storedFileName !== getFileName(smilUrl) &&
@@ -738,13 +710,7 @@ export class FilesManager implements IFilesManager {
 						}))
 					) {
 						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
-						await this.sos.fileSystem.deleteFile(
-							{
-								storageUnit: this.internalStorageUnit,
-								filePath: storedFile.filePath,
-							},
-							true,
-						);
+						await this.deleteFile(storedFile.filePath);
 					}
 				}
 			}
@@ -753,47 +719,85 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * 	periodically sends http head request to media url and compare last-modified headers, if its different downloads new version of file
-	 * @param filesList - list of files for update checks
+	 * @param file
 	 * @param localFilePath - folder structure specifying path to file
 	 * @param timeOut - timeout for the last-modified head request
 	 */
 	private checkLastModified = async (
-		filesList: MergedDownloadList[],
+		file: MergedDownloadList,
 		localFilePath: string,
 		timeOut: number,
 	): Promise<Promise<void>[]> => {
-		let promises: Promise<void>[] = [];
-		for (let i = 0; i < filesList.length; i += 1) {
-			const file = filesList[i];
-			// do not check streams for update
-			if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
-				continue;
-			}
-
-			try {
-				const newLastModified =
-					'fetchLastModified' in file && file.fetchLastModified
-						? await file.fetchLastModified()
-						: await this.fetchLastModified(file, timeOut);
-				if (isNil(newLastModified)) {
-					debug(`File was not found on remote server: %O `, file.src);
-					continue;
-				}
-
-				debug(`Fetched new last-modified header: %s for file: %O `, newLastModified, file.src);
-
-				if (isNil(file.lastModified)) {
-					file.lastModified = moment(newLastModified).valueOf();
-				}
-
-				if (file.lastModified < moment(newLastModified).valueOf()) {
-					debug(`New version of file detected: %O`, file.src);
-					promises = promises.concat(await this.parallelDownloadAllFiles([file], localFilePath, true));
-				}
-			} catch (err) {
-				debug('Error occurred: %O during checking file version: %O', err, file);
-			}
+		// do not check streams for update
+		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
+			return [];
 		}
-		return promises;
+
+		try {
+			const newLastModified =
+				'fetchLastModified' in file && file.fetchLastModified
+					? await file.fetchLastModified()
+					: await this.fetchLastModified(file, timeOut);
+
+			if (isNil(newLastModified)) {
+				debug(`File was not found on remote server: %O `, file.src);
+				return [];
+			}
+
+			debug(
+				`Fetched new last-modified header: %s, stored last-modified: %s for file: %O `,
+				newLastModified,
+				moment(file.lastModified).utc(),
+				file.src,
+			);
+
+			if (isNil(file.lastModified)) {
+				file.lastModified = moment(newLastModified).valueOf();
+			}
+
+			if (file.lastModified < moment(newLastModified).valueOf()) {
+				debug(`New version of file detected: %O`, file.src);
+				return this.parallelDownloadAllFiles([file], localFilePath, true, moment(newLastModified).valueOf());
+			}
+		} catch (err) {
+			debug('Error occurred: %O during checking file version: %O', err, file);
+		}
+
+		return [];
+	};
+
+	private convertToResourcesCheckerFormat = (
+		resources: MergedDownloadList[],
+		rootFolder: string,
+		timeOut: number,
+		refreshInterval: number,
+	) => {
+		return resources.map((resource) => {
+			return this.convertToResourceCheckerFormat(
+				resource,
+				async () => this.checkLastModified(resource, rootFolder, timeOut),
+				refreshInterval,
+			);
+		});
+	};
+
+	private convertToResourceCheckerFormat = (
+		resource: MergedDownloadList,
+		checkFunction: () => Promise<Promise<void>[]>,
+		defaultInterval: number,
+	): Resource => {
+		return {
+			url: resource.updateCheckUrl ?? resource.src,
+			interval: resource.updateCheckInterval ? resource.updateCheckInterval * 1000 : defaultInterval,
+			checkFunction: async () => {
+				return checkFunction();
+			},
+			actionOnSuccess: async (data, stopChecker) => {
+				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
+				if (data.length > 0) {
+					await stopChecker();
+				}
+			},
+		};
 	};
 }
