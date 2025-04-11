@@ -17,6 +17,7 @@ export enum SMILEnums {
 	syncServer = 'syncServerUrl',
 	defaultRepeatCount = 'defaultRepeatCount',
 	defaultTransition = 'defaultTransition',
+	skipContentOnHttpStatus = 'skipContentOnHttpStatus',
 }
 
 export const parentGenerationRemove = [

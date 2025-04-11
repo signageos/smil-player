@@ -60,5 +60,9 @@ export interface IFilesManager {
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
-	fetchLastModified: (media: MergedDownloadList, timeOut: number) => Promise<null | string | number>;
+	fetchLastModified: (
+		media: MergedDownloadList,
+		timeOut: number,
+		skipContentHttpStatusCodes: number[],
+	) => Promise<null | string>;
 }
