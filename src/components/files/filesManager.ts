@@ -727,7 +727,8 @@ export class FilesManager implements IFilesManager {
 				if (
 					!found &&
 					storedFileName !== getFileName(smilUrl) &&
-					!storedFileName.includes(FileStructure.smilMediaInfoFileName)
+					!storedFileName.includes(FileStructure.smilMediaInfoFileName) &&
+					!storedFileName.includes(FileStructure.offlineReports)
 				) {
 					// delete only path with files, not just folders
 					if (
