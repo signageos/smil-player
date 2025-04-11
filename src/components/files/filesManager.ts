@@ -482,6 +482,7 @@ export class FilesManager implements IFilesManager {
 						FileStructure.videos,
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
+						smilObject.skipContentOnHttpStatus,
 					),
 				);
 
@@ -491,6 +492,7 @@ export class FilesManager implements IFilesManager {
 						FileStructure.audios,
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
+						smilObject.skipContentOnHttpStatus,
 					),
 				);
 
@@ -500,6 +502,7 @@ export class FilesManager implements IFilesManager {
 						FileStructure.images,
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
+						smilObject.skipContentOnHttpStatus,
 					),
 				);
 
@@ -509,6 +512,7 @@ export class FilesManager implements IFilesManager {
 						FileStructure.widgets,
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
+						smilObject.skipContentOnHttpStatus,
 					),
 				);
 			}
@@ -524,45 +528,77 @@ export class FilesManager implements IFilesManager {
 	public fetchLastModified = async (
 		media: MergedDownloadList,
 		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
+		skipContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), timeOut);
+		let response: Response;
+
 		try {
-			if (media.expr === 'skipContent') {
+			if (media.expr === ConditionalExprFormat.skipContent) {
 				delete media.expr;
 			}
 			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
-			const promiseRaceArray = [];
-			promiseRaceArray.push(
-				fetch(downloadUrl, {
-					method: 'HEAD',
-					headers: {
-						...authHeaders,
-						Accept: 'application/json',
-					},
-					mode: 'cors',
-				}),
-			);
-			promiseRaceArray.push(
-				(async (): Promise<string> => {
-					await sleep(timeOut);
-					return 'timeOut';
-				})(),
-			);
 
-			const response = (await Promise.race(promiseRaceArray)) as Response;
-			debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
-			if (response && response.status > 404) {
-				debug('File not found on server: %s, setting invalid conditional exp to skip the content', media.src);
-				media.expr = ConditionalExprFormat.skipContent;
+			response = await fetch(downloadUrl, {
+				method: 'HEAD',
+				headers: {
+					...authHeaders,
+					Accept: 'application/json',
+				},
+				mode: 'cors',
+				signal: controller.signal,
+			});
+		} catch (err) {
+			clearTimeout(timeoutId);
+			if (err.name === 'AbortError') {
+				debug('Request to %s was aborted due to timeout.', media.src);
+				return DEFAULT_LAST_MODIFIED;
+			} else {
+				debug('HEAD request to %s failed with error: %O', media.src, err);
 			}
 
-			const newLastModified = response?.headers?.get('last-modified');
-			debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
-			return newLastModified ? newLastModified : DEFAULT_LAST_MODIFIED;
-		} catch (err) {
-			debug('Unexpected error occurred during lastModified fetch: %O', err);
+			if (media.allowLocalFallback === false) {
+				debug('allowLocalFallback is false. Skipping content.', media.src);
+				media.expr = ConditionalExprFormat.skipContent;
+			} else {
+				debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
+			}
 			return null;
 		}
+
+		clearTimeout(timeoutId);
+
+		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
+
+		// Server error (5xx)
+		if (response.status >= 500 && response.status < 600) {
+			debug('Server returned error code: %s for media: %s', response.status, media.src);
+
+			if (media.allowLocalFallback === false) {
+				debug('allowLocalFallback is false. Skipping content.');
+				media.expr = ConditionalExprFormat.skipContent;
+			} else {
+				debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
+			}
+
+			return DEFAULT_LAST_MODIFIED;
+		}
+
+		if (response && skipContentHttpStatusCodes.includes(response.status)) {
+			debug(
+				'Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
+				response.status,
+				media.src,
+				skipContentHttpStatusCodes,
+			);
+			media.expr = ConditionalExprFormat.skipContent;
+		}
+
+		const newLastModified = response?.headers?.get('last-modified');
+		debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
+		return newLastModified ? newLastModified : DEFAULT_LAST_MODIFIED;
 	};
 
 	private getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
@@ -722,11 +758,13 @@ export class FilesManager implements IFilesManager {
 	 * @param file
 	 * @param localFilePath - folder structure specifying path to file
 	 * @param timeOut - timeout for the last-modified head request
+	 * @param skipContentHttpStatusCodes
 	 */
 	private checkLastModified = async (
 		file: MergedDownloadList,
 		localFilePath: string,
 		timeOut: number,
+		skipContentHttpStatusCodes: number[],
 	): Promise<Promise<void>[]> => {
 		// do not check streams for update
 		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
@@ -737,7 +775,7 @@ export class FilesManager implements IFilesManager {
 			const newLastModified =
 				'fetchLastModified' in file && file.fetchLastModified
 					? await file.fetchLastModified()
-					: await this.fetchLastModified(file, timeOut);
+					: await this.fetchLastModified(file, timeOut, skipContentHttpStatusCodes);
 
 			if (isNil(newLastModified)) {
 				debug(`File was not found on remote server: %O `, file.src);
@@ -771,11 +809,12 @@ export class FilesManager implements IFilesManager {
 		rootFolder: string,
 		timeOut: number,
 		refreshInterval: number,
+		skipContentHttpStatusCodes: number[] = [],
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
 				resource,
-				async () => this.checkLastModified(resource, rootFolder, timeOut),
+				async () => this.checkLastModified(resource, rootFolder, timeOut, skipContentHttpStatusCodes),
 				refreshInterval,
 			);
 		});
