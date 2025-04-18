@@ -47,6 +47,7 @@ export interface IFilesManager {
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
+		timeOut: number,
 	) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;
 	deleteFile: (filePath: string) => Promise<void>;
@@ -55,8 +56,10 @@ export interface IFilesManager {
 	parallelDownloadAllFiles: (
 		filesList: MergedDownloadList[],
 		localFilePath: string,
-		forceDownload: boolean,
-	) => Promise<Promise<void>[]>;
+		timeOut?: number,
+		forceDownload?: boolean,
+		lastModified?: number,
+	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
@@ -64,5 +67,6 @@ export interface IFilesManager {
 		media: MergedDownloadList,
 		timeOut: number,
 		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
 	) => Promise<null | string>;
 }

@@ -151,12 +151,20 @@ export class SmilPlayer implements ISmilPlayer {
 				const backupImageObject = {
 					src: sos.config.backupImageUrl,
 				};
-				downloadPromises = await this.files.parallelDownloadAllFiles(
+				// default timeout because at this stage, we dont have info about custom one
+				const result = await this.files.parallelDownloadAllFiles(
 					[backupImageObject],
 					FileStructure.images,
+					SMILScheduleEnum.fileCheckTimeout,
 					forceDownload,
 				);
-				await Promise.all(downloadPromises);
+				await Promise.all(result.promises);
+
+				// Get the mediaInfoObject for this file
+				const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
+
+				// Update the mediaInfoObject after download completes
+				await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 			}
 		} catch (err) {
 			debug('Unexpected error occurred during backup image download : %O', err);
@@ -172,12 +180,20 @@ export class SmilPlayer implements ISmilPlayer {
 				// download SMIL file if device has internet connection and smil file exists on remote server
 				if (!isNil(await this.files.fetchLastModified(smilFile))) {
 					forceDownload = true;
-					downloadPromises = await this.files.parallelDownloadAllFiles(
+					// default timeout because at this stage, we dont have info about custom one
+					const result = await this.files.parallelDownloadAllFiles(
 						[smilFile],
 						FileStructure.rootFolder,
+						SMILScheduleEnum.fileCheckTimeout,
 						forceDownload,
 					);
-					await Promise.all(downloadPromises);
+					await Promise.all(result.promises);
+
+					// Get the mediaInfoObject for this file
+					const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
+
+					// Update the mediaInfoObject after download completes
+					await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 				}
 
 				smilFileContent = await thisSos.fileSystem.readFile({
