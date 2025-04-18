@@ -196,10 +196,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const resourceChecker = new ResourceChecker(
 			resources,
 			this.synchronization.shouldSync,
-			async () => {
-				await this.sos.refresh();
-				await sleep(this.smilObject.refresh.refreshInterval);
-			},
+			// async () => {
+			// 	await this.sos.refresh();
+			// 	await sleep(this.smilObject.refresh.refreshInterval);
+			// },
 			() => this.setCheckFilesLoop(false),
 			restart,
 		);
