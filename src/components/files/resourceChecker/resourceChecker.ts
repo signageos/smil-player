@@ -19,7 +19,6 @@ export class ResourceChecker implements IResourceChecker {
 	constructor(
 		private resources: Resource[],
 		private shouldSync: boolean,
-		private playlistSyncStopFunction: () => Promise<void>,
 		private playlistNonSyncStopFunction: () => void,
 		private restartPlaylist: () => void,
 	) {
@@ -97,7 +96,9 @@ export class ResourceChecker implements IResourceChecker {
 
 				if (this.shouldSync) {
 					debug('Updating content with sync on');
-					await this.playlistSyncStopFunction();
+					// await this.playlistSyncStopFunction();
+					this.playlistNonSyncStopFunction();
+					this.restartPlaylist();
 				} else {
 					debug('Updating content with sync off');
 					this.playlistNonSyncStopFunction();
