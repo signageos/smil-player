@@ -206,7 +206,11 @@ export class FilesManager implements IFilesManager {
 		await this.sendReport({
 			type: 'SMIL.FileDownloaded',
 			itemType: fileType,
-			source: createSourceReportObject(localFilePath, value.src, this.internalStorageUnit.type),
+			source: createSourceReportObject(
+				localFilePath,
+				value.useInReportUrl || value.src,
+				this.internalStorageUnit.type,
+			),
 			startedAt: taskStartDate,
 			succeededAt: isNil(errMessage) ? moment().toDate() : null,
 			failedAt: isNil(errMessage) ? null : moment().toDate(),
@@ -277,11 +281,12 @@ export class FilesManager implements IFilesManager {
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
+		timeOut: number,
 	): Promise<UpdateCheckResult> => {
 		const currentLastModified =
 			'fetchLastModified' in media && media.fetchLastModified
 				? await media.fetchLastModified()
-				: await this.fetchLastModified(media);
+				: await this.fetchLastModified(media, timeOut);
 		// file was not found
 		if (isNil(currentLastModified)) {
 			debug(`File was not found on remote server: %O `, media.src);
@@ -362,14 +367,18 @@ export class FilesManager implements IFilesManager {
 	public parallelDownloadAllFiles = async (
 		filesList: MergedDownloadList[],
 		localFilePath: string,
+		timeOut: number,
 		forceDownload: boolean = false,
 		lastModified: number | undefined = undefined,
-	): Promise<Promise<void>[]> => {
+	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
+
+		// Create a map to track which files need to be updated in mediaInfoObject
+		const filesToUpdate: Map<string, number> = new Map();
 
 		await Promise.all(
 			filesList.map(async (file) => {
@@ -384,12 +393,13 @@ export class FilesManager implements IFilesManager {
 
 				const updateCheck = forceDownload
 					? { shouldUpdate: true, lastModified }
-					: await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject);
+					: await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject, timeOut);
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
 				if (updateCheck.shouldUpdate) {
 					if (updateCheck.lastModified) {
-						updateJsonObject(mediaInfoObject, getFileName(file.src), updateCheck.lastModified);
+						// Store the lastModified value for later update after successful download
+						filesToUpdate.set(getFileName(file.src), updateCheck.lastModified);
 					}
 
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
@@ -415,6 +425,8 @@ export class FilesManager implements IFilesManager {
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
+								// Remove from filesToUpdate if download failed
+								filesToUpdate.delete(getFileName(file.src));
 							}
 						})(),
 					);
@@ -422,9 +434,22 @@ export class FilesManager implements IFilesManager {
 			}),
 		);
 
-		// save/update mediaInfoObject to persistent storage
+		// Return both the promises array and the filesToUpdate map
+		return { promises, filesToUpdate };
+	};
+
+	// New method to update mediaInfoObject after downloads complete
+	public updateMediaInfoAfterDownloads = async (
+		mediaInfoObject: MediaInfoObject,
+		filesToUpdate: Map<string, number>,
+	): Promise<void> => {
+		// Update mediaInfoObject with successful downloads
+		filesToUpdate.forEach((lastModified, fileName) => {
+			updateJsonObject(mediaInfoObject, fileName, lastModified);
+		});
+
+		// Save/update mediaInfoObject to persistent storage
 		await this.writeMediaInfoFile(mediaInfoObject);
-		return promises;
 	};
 
 	/**
@@ -447,18 +472,58 @@ export class FilesManager implements IFilesManager {
 	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<Promise<void>[]> => {
 		let downloadPromises: Promise<void>[] = [];
 		debug(`Starting to download files %O:`, smilObject);
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(smilObject.video, FileStructure.videos),
+
+		// Create a map to track all files that need to be updated in mediaInfoObject
+		const allFilesToUpdate: Map<string, number> = new Map();
+
+		// Get the mediaInfoObject once for all operations
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile([
+			...smilObject.video,
+			...smilObject.audio,
+			...smilObject.img,
+			...smilObject.ref,
+		]);
+
+		// Process each media type and collect promises and files to update
+		const videoResult = await this.parallelDownloadAllFiles(
+			smilObject.video,
+			FileStructure.videos,
+			smilObject.refresh.timeOut,
 		);
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(smilObject.audio, FileStructure.audios),
+		downloadPromises = downloadPromises.concat(videoResult.promises);
+		// Merge the filesToUpdate maps
+		videoResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+
+		const audioResult = await this.parallelDownloadAllFiles(
+			smilObject.audio,
+			FileStructure.audios,
+			smilObject.refresh.timeOut,
 		);
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(smilObject.img, FileStructure.images),
+		downloadPromises = downloadPromises.concat(audioResult.promises);
+		audioResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+
+		const imgResult = await this.parallelDownloadAllFiles(
+			smilObject.img,
+			FileStructure.images,
+			smilObject.refresh.timeOut,
 		);
-		downloadPromises = downloadPromises.concat(
-			await this.parallelDownloadAllFiles(smilObject.ref, FileStructure.widgets),
+		downloadPromises = downloadPromises.concat(imgResult.promises);
+		imgResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+
+		const refResult = await this.parallelDownloadAllFiles(
+			smilObject.ref,
+			FileStructure.widgets,
+			smilObject.refresh.timeOut,
 		);
+		downloadPromises = downloadPromises.concat(refResult.promises);
+		refResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+
+		// Wait for all downloads to complete
+		await Promise.all(downloadPromises);
+
+		// Update mediaInfoObject and save to storage after all downloads are complete
+		await this.updateMediaInfoAfterDownloads(mediaInfoObject, allFilesToUpdate);
+
 		return downloadPromises;
 	};
 
@@ -483,6 +548,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
+						smilObject.updateContentOnHttpStatus,
 					),
 				);
 
@@ -493,6 +559,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
+						smilObject.updateContentOnHttpStatus,
 					),
 				);
 
@@ -503,6 +570,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
+						smilObject.updateContentOnHttpStatus,
 					),
 				);
 
@@ -513,6 +581,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.timeOut,
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
+						smilObject.updateContentOnHttpStatus,
 					),
 				);
 			}
@@ -529,15 +598,18 @@ export class FilesManager implements IFilesManager {
 		media: MergedDownloadList,
 		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
 		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), timeOut);
 		let response: Response;
 
 		try {
+			// Reset skipContent expression if it exists
 			if (media.expr === ConditionalExprFormat.skipContent) {
 				delete media.expr;
 			}
+
 			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
@@ -552,13 +624,17 @@ export class FilesManager implements IFilesManager {
 			});
 		} catch (err) {
 			clearTimeout(timeoutId);
+
+			// Handle timeout specifically
 			if (err.name === 'AbortError') {
 				debug('Request to %s was aborted due to timeout.', media.src);
 				return DEFAULT_LAST_MODIFIED;
-			} else {
-				debug('HEAD request to %s failed with error: %O', media.src, err);
 			}
 
+			// Log other errors
+			debug('HEAD request to %s failed with error: %O', media.src, err);
+
+			// Handle local fallback based on configuration
 			if (media.allowLocalFallback === false) {
 				debug('allowLocalFallback is false. Skipping content.', media.src);
 				media.expr = ConditionalExprFormat.skipContent;
@@ -566,13 +642,14 @@ export class FilesManager implements IFilesManager {
 				debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
 			}
 			return null;
+		} finally {
+			// Ensure timeout is always cleared
+			clearTimeout(timeoutId);
 		}
-
-		clearTimeout(timeoutId);
 
 		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
 
-		// Server error (5xx)
+		// Handle server errors (5xx)
 		if (response.status >= 500 && response.status < 600) {
 			debug('Server returned error code: %s for media: %s', response.status, media.src);
 
@@ -586,6 +663,7 @@ export class FilesManager implements IFilesManager {
 			return DEFAULT_LAST_MODIFIED;
 		}
 
+		// Handle skip content status codes
 		if (response && skipContentHttpStatusCodes.includes(response.status)) {
 			debug(
 				'Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
@@ -596,12 +674,37 @@ export class FilesManager implements IFilesManager {
 			media.expr = ConditionalExprFormat.skipContent;
 		}
 
+		// Handle update content status codes
+		if (response && updateContentHttpStatusCodes.includes(response.status)) {
+			debug(
+				'Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
+				response.status,
+				media.src,
+				updateContentHttpStatusCodes,
+			);
+
+			// Create a future date in the same format as DEFAULT_LAST_MODIFIED
+			// Using a more reliable method to ensure consistent format
+			const futureDate = new Date();
+			futureDate.setFullYear(futureDate.getFullYear() + 1);
+			const futureDateString = futureDate.toUTCString();
+
+			debug('Forcing update by returning future date: %s', futureDateString);
+			return futureDateString;
+		}
+
+		// Get last-modified header or use default
 		const newLastModified = response?.headers?.get('last-modified');
 		debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
-		return newLastModified ? newLastModified : DEFAULT_LAST_MODIFIED;
+		return newLastModified || DEFAULT_LAST_MODIFIED;
 	};
 
-	private getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
+	/**
+	 * Get or create media info file
+	 * @param filesList - Files to get or create media info for
+	 * @returns Media info object
+	 */
+	public getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
 		if (
 			!(await this.fileExists(
 				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
@@ -759,12 +862,14 @@ export class FilesManager implements IFilesManager {
 	 * @param localFilePath - folder structure specifying path to file
 	 * @param timeOut - timeout for the last-modified head request
 	 * @param skipContentHttpStatusCodes
+	 * @param updateContentHttpStatusCodes
 	 */
 	private checkLastModified = async (
 		file: MergedDownloadList,
 		localFilePath: string,
 		timeOut: number,
 		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[] = [],
 	): Promise<Promise<void>[]> => {
 		// do not check streams for update
 		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
@@ -775,7 +880,12 @@ export class FilesManager implements IFilesManager {
 			const newLastModified =
 				'fetchLastModified' in file && file.fetchLastModified
 					? await file.fetchLastModified()
-					: await this.fetchLastModified(file, timeOut, skipContentHttpStatusCodes);
+					: await this.fetchLastModified(
+							file,
+							timeOut,
+							skipContentHttpStatusCodes,
+							updateContentHttpStatusCodes,
+					  );
 
 			if (isNil(newLastModified)) {
 				debug(`File was not found on remote server: %O `, file.src);
@@ -793,9 +903,29 @@ export class FilesManager implements IFilesManager {
 				file.lastModified = moment(newLastModified).valueOf();
 			}
 
+			// download file if new last-modified is different newer than stored one
 			if (file.lastModified < moment(newLastModified).valueOf()) {
 				debug(`New version of file detected: %O`, file.src);
-				return this.parallelDownloadAllFiles([file], localFilePath, true, moment(newLastModified).valueOf());
+
+				// Get the mediaInfoObject for this file
+				const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
+
+				// when there is forceDownload true, we dont care about timeout so use default one
+				const result = await this.parallelDownloadAllFiles(
+					[file],
+					localFilePath,
+					SMILScheduleEnum.fileCheckTimeout,
+					true,
+					moment(newLastModified).valueOf(),
+				);
+
+				// Wait for the download to complete
+				await Promise.all(result.promises);
+
+				// Update the mediaInfoObject after download completes
+				await this.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+
+				return result.promises;
 			}
 		} catch (err) {
 			debug('Error occurred: %O during checking file version: %O', err, file);
@@ -810,11 +940,19 @@ export class FilesManager implements IFilesManager {
 		timeOut: number,
 		refreshInterval: number,
 		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
 				resource,
-				async () => this.checkLastModified(resource, rootFolder, timeOut, skipContentHttpStatusCodes),
+				async () =>
+					this.checkLastModified(
+						resource,
+						rootFolder,
+						timeOut,
+						skipContentHttpStatusCodes,
+						updateContentHttpStatusCodes,
+					),
 				refreshInterval,
 			);
 		});

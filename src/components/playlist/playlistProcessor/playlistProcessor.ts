@@ -152,12 +152,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
-		downloadPromises = downloadPromises.concat(
-			await this.files.parallelDownloadAllFiles(
-				[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
-				fileStructure,
-			),
+		const result = await this.files.parallelDownloadAllFiles(
+			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
+			fileStructure,
+			this.smilObject.refresh.timeOut,
 		);
+		downloadPromises = downloadPromises.concat(result.promises);
+
+		// Get the mediaInfoObject for this file
+		const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([
+			this.smilObject.intro[0][introMedia],
+		] as MergedDownloadList[]);
+
+		// Update the mediaInfoObject after download completes
+		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 
 		await Promise.all(downloadPromises);
 		debug('Intro media downloaded: %O', this.smilObject.intro[0]);
