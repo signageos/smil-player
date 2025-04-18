@@ -20,6 +20,7 @@ export type RegionsObject = {
 	defaultRepeatCount?: '1' | 'indefinite';
 	defaultTransition?: string;
 	skipContentOnHttpStatus: number[];
+	updateContentOnHttpStatus: number[];
 	[key: string]: any;
 };
 
@@ -82,6 +83,7 @@ export type SMILMetaObject = {
 	defaultRepeatCount?: '1' | 'indefinite';
 	defaultTransition?: string;
 	skipContentOnHttpStatus?: string;
+	updateContentOnHttpStatus?: string;
 	fallbackToPreviousPlaylist?: boolean;
 };
 
