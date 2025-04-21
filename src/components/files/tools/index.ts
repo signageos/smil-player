@@ -187,7 +187,9 @@ export function createPoPMessagePayload(
 		...(errMessage ? { errorMessage: errMessage } : {}),
 		...(value.popCustomId ? { customId: value.popCustomId } : {}),
 		...(value.popType ? { type: value.popType } : {}),
-		...(value.popTags ? { tags: [...value.popTags.split(','), new Date().toISOString()] } : {}),
+		...(value.popTags
+			? { tags: [...value.popTags.split(','), value.useInReportUrl!, new Date().toISOString()] }
+			: {}),
 		...(value.popFileName ? { fileName: value.popFileName } : {}),
 	};
 }
