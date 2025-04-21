@@ -28,6 +28,7 @@ export type SMILVideo = {
 	region: string;
 	lastModified?: number;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	regionInfo: RegionAttributes;
 	media?: string;
@@ -48,6 +49,7 @@ export type SMILAudio = {
 	lastModified?: number;
 	regionInfo: RegionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
@@ -69,6 +71,7 @@ export type SMILImage = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
@@ -90,6 +93,7 @@ export type SMILWidget = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
@@ -102,6 +106,7 @@ export type SMILTicker = {
 	id?: string;
 	expr?: string;
 	src: string;
+	useInReportUrl: string;
 	text: string[] | string;
 	fontName?: string;
 	fontSize?: string;
@@ -144,6 +149,7 @@ export type SosHtmlElement = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
+	useInReportUrl?: string;
 } & PoPAttributes &
 	UpdateChecks;
 
