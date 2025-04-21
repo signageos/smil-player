@@ -649,6 +649,16 @@ export class FilesManager implements IFilesManager {
 
 		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
 
+		// Extract URL from response if it exists, otherwise use media.src. This is used for reporting purposes when there are redirects
+		// in response.url is the final url after all redirects from CDN for example
+		if (response && response.url) {
+			media.useInReportUrl = response.url || media.src;
+			debug('Using response URL for reporting: %s', response.url);
+		} else {
+			media.useInReportUrl = media.src;
+			debug('Using original source URL for reporting: %s', media.src);
+		}
+
 		// Handle server errors (5xx)
 		if (response.status >= 500 && response.status < 600) {
 			debug('Server returned error code: %s for media: %s', response.status, media.src);
