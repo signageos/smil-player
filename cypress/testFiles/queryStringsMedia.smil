@@ -6,11 +6,9 @@
                     backgroundColor="#000000" sync="true"/>
         </layout>
         <meta http-equiv="Refresh" content="20" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
-              timeOut="5000"/>
+              timeOut="5000" skipContentOnHttpStatus="404" updateContentOnHttpStatus="200"/>
         <meta log="true" type="manual" endpoint="https://run.hygh.io/webhook/signageos-log2?adunit=OM46N"/>
         <meta defaultRepeatCount="indefinite"/>
-        <meta defaultRepeatCount="indefinite"/>
-        <meta skipContentOnHttpStatus="404,405"/>
     </head>
     <body>
         <seq>
