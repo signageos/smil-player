@@ -48,6 +48,7 @@ import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfP
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { ConditionalExprFormat } from '../../enums/conditionalEnums';
 import { Resource } from './resourceChecker/resourceChecker';
+import { SMILEnums } from '../../enums/generalEnums';
 
 declare global {
 	interface Window {
@@ -282,13 +283,24 @@ export class FilesManager implements IFilesManager {
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
 		timeOut: number,
+		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
+		useLocationHeader: boolean = true,
 	): Promise<UpdateCheckResult> => {
-		const currentLastModified =
-			'fetchLastModified' in media && media.fetchLastModified
-				? await media.fetchLastModified()
-				: await this.fetchLastModified(media, timeOut);
+		// TODO: find better way in next version, for downloading smil file we always use last modified
+		if (localFilePath === 'smil') {
+			useLocationHeader = false;
+		}
+		const fetchFunction = useLocationHeader ? this.fetchLocationOrUrl : this.fetchLastModified;
+
+		const currentValue = await fetchFunction(
+			media,
+			timeOut,
+			skipContentHttpStatusCodes,
+			updateContentHttpStatusCodes,
+		);
 		// file was not found
-		if (isNil(currentLastModified)) {
+		if (isNil(currentValue)) {
 			debug(`File was not found on remote server: %O `, media.src);
 			return { shouldUpdate: false };
 		}
@@ -297,24 +309,31 @@ export class FilesManager implements IFilesManager {
 			debug(`File does not exist in local storage: %s  downloading`, media.src);
 			return {
 				shouldUpdate: true,
-				lastModified: moment(currentLastModified).valueOf(),
+				lastModified: useLocationHeader ? undefined : moment(currentValue).valueOf(),
+				downloadUrl: useLocationHeader ? currentValue : undefined,
 			};
 		}
 
-		const storedLastModified = mediaInfoObject[getFileName(media.src)];
+		const storedValue = mediaInfoObject[getFileName(media.src)];
+		debug(`Stored value for file %s: %O`, media.src, storedValue);
 
-		if (isNil(storedLastModified)) {
+		if (isNil(storedValue)) {
 			return {
 				shouldUpdate: true,
-				lastModified: moment(currentLastModified).valueOf(),
+				lastModified: useLocationHeader ? undefined : moment(currentValue).valueOf(),
+				downloadUrl: useLocationHeader ? currentValue : undefined,
 			};
 		}
 
-		if (moment(storedLastModified).valueOf() < moment(currentLastModified).valueOf()) {
+		if (
+			(useLocationHeader && currentValue !== storedValue) ||
+			moment(storedValue).valueOf() < moment(currentValue).valueOf()
+		) {
 			debug(`New file version detected: %O `, media.src);
 			return {
 				shouldUpdate: true,
-				lastModified: moment(currentLastModified).valueOf(),
+				lastModified: useLocationHeader ? undefined : moment(currentValue).valueOf(),
+				downloadUrl: useLocationHeader ? currentValue : undefined,
 			};
 		}
 
@@ -368,9 +387,12 @@ export class FilesManager implements IFilesManager {
 		filesList: MergedDownloadList[],
 		localFilePath: string,
 		timeOut: number,
+		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
+		useLocationHeader: boolean,
 		forceDownload: boolean = false,
-		lastModified: number | undefined = undefined,
-	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number> }> => {
+		latestRemoteValue: number | string = '',
+	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
@@ -378,7 +400,7 @@ export class FilesManager implements IFilesManager {
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
 
 		// Create a map to track which files need to be updated in mediaInfoObject
-		const filesToUpdate: Map<string, number> = new Map();
+		const filesToUpdate: Map<string, number | string> = new Map();
 
 		await Promise.all(
 			filesList.map(async (file) => {
@@ -392,35 +414,48 @@ export class FilesManager implements IFilesManager {
 				file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
 				const updateCheck = forceDownload
-					? { shouldUpdate: true, lastModified }
-					: await this.shouldUpdateLocalFile(localFilePath, file, mediaInfoObject, timeOut);
+					? {
+							shouldUpdate: true,
+							lastModified: useLocationHeader ? undefined : latestRemoteValue,
+							downloadUrl: useLocationHeader ? (latestRemoteValue as string) : undefined,
+					  }
+					: await this.shouldUpdateLocalFile(
+							localFilePath,
+							file,
+							mediaInfoObject,
+							timeOut,
+							skipContentHttpStatusCodes,
+							updateContentHttpStatusCodes,
+							useLocationHeader,
+					  );
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
 				if (updateCheck.shouldUpdate) {
-					if (updateCheck.lastModified) {
+					if (updateCheck.lastModified || updateCheck.downloadUrl) {
+						const updateValue = updateCheck.lastModified ?? updateCheck.downloadUrl;
 						// Store the lastModified value for later update after successful download
-						filesToUpdate.set(getFileName(file.src), updateCheck.lastModified);
+						filesToUpdate.set(getFileName(file.src), updateValue!);
 					}
 
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 					promises.push(
 						(async () => {
 							try {
-								debug(`Downloading file: %s`, file.src);
-								const downloadUrl = createDownloadPath(file.src);
+								debug(`Downloading file: %O`, updateCheck ?? file.src);
+								const downloadUrl = createDownloadPath(updateCheck.downloadUrl ?? file.src);
 								const authHeaders = window.getAuthHeaders?.(downloadUrl);
-								if ('download' in file && file.download) {
-									await file.download();
-								} else {
-									await this.sos.fileSystem.downloadFile(
-										{
-											storageUnit: this.internalStorageUnit,
-											filePath: createLocalFilePath(localFilePath, file.src),
-										},
-										downloadUrl,
-										authHeaders,
-									);
-								}
+
+								await this.sos.fileSystem.downloadFile(
+									{
+										storageUnit: this.internalStorageUnit,
+										filePath: createLocalFilePath(localFilePath, file.src),
+									},
+									downloadUrl,
+									authHeaders,
+								);
+
+								debug(`File downloaded: %s`, updateCheck.downloadUrl ?? file.src);
+
 								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
@@ -441,10 +476,11 @@ export class FilesManager implements IFilesManager {
 	// New method to update mediaInfoObject after downloads complete
 	public updateMediaInfoAfterDownloads = async (
 		mediaInfoObject: MediaInfoObject,
-		filesToUpdate: Map<string, number>,
+		filesToUpdate: Map<string, number | string>,
 	): Promise<void> => {
 		// Update mediaInfoObject with successful downloads
 		filesToUpdate.forEach((lastModified, fileName) => {
+			debug(`Updating mediaInfoObject for file: %s with lastModified: %O`, fileName, lastModified);
 			updateJsonObject(mediaInfoObject, fileName, lastModified);
 		});
 
@@ -474,7 +510,7 @@ export class FilesManager implements IFilesManager {
 		debug(`Starting to download files %O:`, smilObject);
 
 		// Create a map to track all files that need to be updated in mediaInfoObject
-		const allFilesToUpdate: Map<string, number> = new Map();
+		const allFilesToUpdate: Map<string, number | string> = new Map();
 
 		// Get the mediaInfoObject once for all operations
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile([
@@ -489,6 +525,9 @@ export class FilesManager implements IFilesManager {
 			smilObject.video,
 			FileStructure.videos,
 			smilObject.refresh.timeOut,
+			smilObject.skipContentOnHttpStatus,
+			smilObject.updateContentOnHttpStatus,
+			smilObject.updateMechanism === SMILEnums.location,
 		);
 		downloadPromises = downloadPromises.concat(videoResult.promises);
 		// Merge the filesToUpdate maps
@@ -498,6 +537,9 @@ export class FilesManager implements IFilesManager {
 			smilObject.audio,
 			FileStructure.audios,
 			smilObject.refresh.timeOut,
+			smilObject.skipContentOnHttpStatus,
+			smilObject.updateContentOnHttpStatus,
+			smilObject.updateMechanism === SMILEnums.location,
 		);
 		downloadPromises = downloadPromises.concat(audioResult.promises);
 		audioResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
@@ -506,6 +548,9 @@ export class FilesManager implements IFilesManager {
 			smilObject.img,
 			FileStructure.images,
 			smilObject.refresh.timeOut,
+			smilObject.skipContentOnHttpStatus,
+			smilObject.updateContentOnHttpStatus,
+			smilObject.updateMechanism === SMILEnums.location,
 		);
 		downloadPromises = downloadPromises.concat(imgResult.promises);
 		imgResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
@@ -514,6 +559,9 @@ export class FilesManager implements IFilesManager {
 			smilObject.ref,
 			FileStructure.widgets,
 			smilObject.refresh.timeOut,
+			smilObject.skipContentOnHttpStatus,
+			smilObject.updateContentOnHttpStatus,
+			smilObject.updateMechanism === SMILEnums.location,
 		);
 		downloadPromises = downloadPromises.concat(refResult.promises);
 		refResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
@@ -537,6 +585,10 @@ export class FilesManager implements IFilesManager {
 					FileStructure.rootFolder,
 					smilObject.refresh.timeOut,
 					smilObject.refresh.refreshInterval,
+					[],
+					[],
+					false,
+					true,
 				),
 			);
 			// check for media updates only if its not switched off in the smil file
@@ -549,6 +601,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
+						smilObject.updateMechanism === SMILEnums.location,
 					),
 				);
 
@@ -560,6 +613,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
+						smilObject.updateMechanism === SMILEnums.location,
 					),
 				);
 
@@ -571,6 +625,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
+						smilObject.updateMechanism === SMILEnums.location,
 					),
 				);
 
@@ -582,6 +637,7 @@ export class FilesManager implements IFilesManager {
 						smilObject.refresh.refreshInterval,
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
+						smilObject.updateMechanism === SMILEnums.location,
 					),
 				);
 			}
@@ -707,6 +763,121 @@ export class FilesManager implements IFilesManager {
 		const newLastModified = response?.headers?.get('last-modified');
 		debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
 		return newLastModified || DEFAULT_LAST_MODIFIED;
+	};
+
+	/**
+	 * Fetches the final URL after any redirects for a media file
+	 * @param media - The media file to check
+	 * @param timeOut - Timeout for the request
+	 * @param skipContentHttpStatusCodes - HTTP status codes that should skip content
+	 * @param updateContentHttpStatusCodes - HTTP status codes that should force update
+	 * @returns The final URL after redirects or null if there was an error
+	 */
+	public fetchLocationOrUrl = async (
+		media: MergedDownloadList,
+		timeOut: number = SMILScheduleEnum.fileCheckTimeout,
+		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
+	): Promise<null | string> => {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), timeOut);
+		let response: Response;
+
+		try {
+			// Reset skipContent expression if it exists
+			if (media.expr === ConditionalExprFormat.skipContent) {
+				delete media.expr;
+			}
+
+			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
+			const authHeaders = window.getAuthHeaders?.(downloadUrl);
+
+			response = await fetch(downloadUrl, {
+				method: 'HEAD',
+				headers: {
+					...authHeaders,
+					Accept: 'application/json',
+				},
+				mode: 'cors',
+				signal: controller.signal,
+			});
+		} catch (err) {
+			clearTimeout(timeoutId);
+
+			// Handle timeout specifically
+			if (err.name === 'AbortError') {
+				debug('Request to %s was aborted due to timeout.', media.src, timeOut);
+				return media.src; // Return original URL on timeout
+			}
+
+			// Log other errors
+			debug('HEAD request to %s failed with error: %O', media.src, err);
+			// Handle local fallback based on configuration
+			if (media.allowLocalFallback === false) {
+				debug('allowLocalFallback is false. Skipping content.', media.src);
+				media.expr = ConditionalExprFormat.skipContent;
+			} else {
+				debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
+			}
+			return null;
+		} finally {
+			// Ensure timeout is always cleared
+			clearTimeout(timeoutId);
+		}
+
+		const resourceLocation = response?.headers?.get('location') ?? response.url;
+
+		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
+
+		// Use Location header if it exists, otherwise use media.src. This is used for reporting purposes when there are redirects
+		if (response && resourceLocation) {
+			media.useInReportUrl = resourceLocation || media.src;
+			debug('Using Location header for reporting: %s', resourceLocation);
+		} else {
+			media.useInReportUrl = media.src;
+			debug('Using original source URL for reporting: %s', media.src);
+		}
+
+		// Handle server errors (5xx)
+		if (response.status >= 500 && response.status < 600) {
+			debug('Server returned error code: %s for media: %s', response.status, media.src);
+
+			if (media.allowLocalFallback === false) {
+				debug('allowLocalFallback is false. Skipping content.');
+				media.expr = ConditionalExprFormat.skipContent;
+			} else {
+				debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
+			}
+
+			return media.src; // Return original URL on server error
+		}
+
+		// Handle skip content status codes
+		if (response && skipContentHttpStatusCodes.includes(response.status)) {
+			debug(
+				'Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
+				response.status,
+				media.src,
+				skipContentHttpStatusCodes,
+			);
+			media.expr = ConditionalExprFormat.skipContent;
+		}
+
+		// Handle update content status codes
+		if (response && updateContentHttpStatusCodes.includes(response.status)) {
+			debug(
+				'Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
+				response.status,
+				media.src,
+				updateContentHttpStatusCodes,
+			);
+			// if there is no location return url
+			return resourceLocation ?? response.url;
+		}
+
+		// Return the Location header after redirects or original URL if not available
+		debug('Final Location header for media: %s, location: %s', media.src, resourceLocation);
+		return resourceLocation || media.src;
 	};
 
 	/**
@@ -873,13 +1044,15 @@ export class FilesManager implements IFilesManager {
 	 * @param timeOut - timeout for the last-modified head request
 	 * @param skipContentHttpStatusCodes
 	 * @param updateContentHttpStatusCodes
+	 * @param useLocationHeader
 	 */
 	private checkLastModified = async (
 		file: MergedDownloadList,
 		localFilePath: string,
 		timeOut: number,
-		skipContentHttpStatusCodes: number[],
+		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
+		useLocationHeader: boolean,
 	): Promise<Promise<void>[]> => {
 		// do not check streams for update
 		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
@@ -887,46 +1060,29 @@ export class FilesManager implements IFilesManager {
 		}
 
 		try {
-			const newLastModified =
-				'fetchLastModified' in file && file.fetchLastModified
-					? await file.fetchLastModified()
-					: await this.fetchLastModified(
-							file,
-							timeOut,
-							skipContentHttpStatusCodes,
-							updateContentHttpStatusCodes,
-					  );
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
 
-			if (isNil(newLastModified)) {
-				debug(`File was not found on remote server: %O `, file.src);
-				return [];
-			}
-
-			debug(
-				`Fetched new last-modified header: %s, stored last-modified: %s for file: %O `,
-				newLastModified,
-				moment(file.lastModified).utc(),
-				file.src,
+			const updateCheck = await this.shouldUpdateLocalFile(
+				localFilePath,
+				file,
+				mediaInfoObject,
+				timeOut,
+				skipContentHttpStatusCodes,
+				updateContentHttpStatusCodes,
+				useLocationHeader,
 			);
 
-			if (isNil(file.lastModified)) {
-				file.lastModified = moment(newLastModified).valueOf();
-			}
-
-			// download file if new last-modified is different newer than stored one
-			if (file.lastModified < moment(newLastModified).valueOf()) {
-				debug(`New version of file detected: %O`, file.src);
-
-				// Get the mediaInfoObject for this file
-				const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
-
+			if (updateCheck.shouldUpdate) {
 				// when there is forceDownload true, we dont care about timeout so use default one
 				const result = await this.parallelDownloadAllFiles(
 					[file],
 					localFilePath,
 					SMILScheduleEnum.fileCheckTimeout,
+					[],
+					[],
+					useLocationHeader,
 					true,
-					moment(newLastModified).valueOf(),
+					useLocationHeader ? updateCheck.downloadUrl : updateCheck.lastModified,
 				);
 
 				// Wait for the download to complete
@@ -934,6 +1090,26 @@ export class FilesManager implements IFilesManager {
 
 				// Update the mediaInfoObject after download completes
 				await this.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+
+				// Update file metadata to ensure it's properly tracked
+				const filePath = `${localFilePath}/${getFileName(file.src)}`;
+				const fileDetails = await this.sos.fileSystem.getFile({
+					storageUnit: this.internalStorageUnit,
+					filePath: filePath,
+				});
+
+				// TODO: fix typing, change filepath only for media not for smil file itself
+				// mark file as updated to force reload in browser cache
+				if ('localFilePath' in file) {
+					file.localFilePath = fileDetails ? fileDetails.localUri : '';
+					file.wasUpdated = true;
+				}
+
+				// Update the file's last modified time in the media info object
+				if (fileDetails && fileDetails.lastModifiedAt) {
+					mediaInfoObject[getFileName(file.src)] = fileDetails.lastModifiedAt;
+					await this.writeMediaInfoFile(mediaInfoObject);
+				}
 
 				return result.promises;
 			}
@@ -951,6 +1127,8 @@ export class FilesManager implements IFilesManager {
 		refreshInterval: number,
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
+		useLocationHeader: boolean = false,
+		reloadPlayerOnUpdate: boolean = false,
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
@@ -962,8 +1140,10 @@ export class FilesManager implements IFilesManager {
 						timeOut,
 						skipContentHttpStatusCodes,
 						updateContentHttpStatusCodes,
+						useLocationHeader,
 					),
 				refreshInterval,
+				reloadPlayerOnUpdate,
 			);
 		});
 	};
@@ -972,6 +1152,7 @@ export class FilesManager implements IFilesManager {
 		resource: MergedDownloadList,
 		checkFunction: () => Promise<Promise<void>[]>,
 		defaultInterval: number,
+		reloadPlayerOnUpdate: boolean = false,
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
@@ -981,7 +1162,7 @@ export class FilesManager implements IFilesManager {
 			},
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
-				if (data.length > 0) {
+				if (data.length > 0 && reloadPlayerOnUpdate) {
 					await stopChecker();
 				}
 			},

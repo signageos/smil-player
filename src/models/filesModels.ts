@@ -29,7 +29,7 @@ export type SMILFile = {
 } & PoPAttributes &
 	UpdateChecks;
 export type MediaInfoObject = {
-	[fileName: string]: number | null;
+	[fileName: string]: string | number | null;
 };
 
 export type SMILFileObject = SMILPlaylist &

@@ -156,6 +156,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
 			fileStructure,
 			this.smilObject.refresh.timeOut,
+			[],
+			[],
+			false,
 		);
 		downloadPromises = downloadPromises.concat(result.promises);
 
@@ -774,12 +777,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								isNil(this.synchronization.syncValue)
 							) {
 								await sleep(SMILScheduleEnum.defaultAwait);
-								console.log('start waiting for idle priority sync', Date.now());
 								await this.sos.sync.wait(
 									'idle',
 									`${this.synchronization.syncGroupName}-idlePrioritySync`,
 								);
-								console.log('finished waiting for idle priority sync', Date.now());
 							} else {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
@@ -797,9 +798,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
-							console.log('start waiting for priority sync', Date.now());
 							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
-							console.log('finished waiting for priority sync', Date.now());
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -2381,8 +2380,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		changeZIndex(value, element, +1);
 		debug(`[${debugId}] Changed z-index for element`);
 
+		// value.wasUpdated is there for a case when file updates in localstorage under same url, player needs to regenerate src to update it in browser cache
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
-		let src = generateElementSrc(value.src, value.localFilePath, version, smilUrlVersion, isWidget);
+		let src = generateElementSrc(
+			value.src,
+			value.localFilePath,
+			version,
+			smilUrlVersion,
+			isWidget,
+			value.wasUpdated,
+		);
 		debug(`[${debugId}] Generated source URL: %s`, src);
 
 		if (value.transitionInfo?.type === 'billboard' && !element.style.backgroundImage) {
@@ -2395,7 +2402,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 		// add query parameter to invalidate cache on devices
 		if ((element.getAttribute('src') === null || element.getAttribute('src') !== src) && value.preload !== false) {
-			debug(`[${debugId}] Updating element source attribute`);
+			// src after file update was already regenerated, set to false so
+			value.wasUpdated = false;
+			debug(`[${debugId}] Updating element source attribute`, element.getAttribute('src'), src);
 			element.setAttribute('src', src);
 		}
 		debug(`[${debugId}] HTML element preparation completed`);

@@ -21,7 +21,7 @@ import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcesso
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
-import Debug from 'debug';
+// import Debug from 'debug';
 import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
 
 applyFetchPolyfill();
@@ -46,7 +46,7 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
-		Debug.enable('@signageos/smil-player:*');
+		// Debug.enable('@signageos/smil-player:*');
 		// Debug.disable();
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
@@ -133,7 +133,6 @@ export class SmilPlayer implements ISmilPlayer {
 			src: smilUrl,
 		};
 		let downloadPromises: Promise<void>[] = [];
-		let forceDownload = false;
 
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
@@ -147,7 +146,6 @@ export class SmilPlayer implements ISmilPlayer {
 					}),
 				)
 			) {
-				forceDownload = true;
 				const backupImageObject = {
 					src: sos.config.backupImageUrl,
 				};
@@ -156,7 +154,9 @@ export class SmilPlayer implements ISmilPlayer {
 					[backupImageObject],
 					FileStructure.images,
 					SMILScheduleEnum.fileCheckTimeout,
-					forceDownload,
+					[],
+					[],
+					true,
 				);
 				await Promise.all(result.promises);
 
@@ -178,23 +178,25 @@ export class SmilPlayer implements ISmilPlayer {
 		while (smilFileContent === '' || !xmlOkParsed) {
 			try {
 				// download SMIL file if device has internet connection and smil file exists on remote server
-				if (!isNil(await this.files.fetchLastModified(smilFile))) {
-					forceDownload = true;
-					// default timeout because at this stage, we dont have info about custom one
-					const result = await this.files.parallelDownloadAllFiles(
-						[smilFile],
-						FileStructure.rootFolder,
-						SMILScheduleEnum.fileCheckTimeout,
-						forceDownload,
-					);
-					await Promise.all(result.promises);
+				// if (!isNil(await this.files.fetchLastModified(smilFile))) {
+				// default timeout because at this stage, we dont have info about custom one
+				const result = await this.files.parallelDownloadAllFiles(
+					[smilFile],
+					FileStructure.rootFolder,
+					SMILScheduleEnum.fileCheckTimeout,
+					[],
+					[],
+					false,
+					false,
+				);
+				await Promise.all(result.promises);
 
-					// Get the mediaInfoObject for this file
-					const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
+				// Get the mediaInfoObject for this file
+				const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
 
-					// Update the mediaInfoObject after download completes
-					await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
-				}
+				// Update the mediaInfoObject after download completes
+				await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+				// }
 
 				smilFileContent = await thisSos.fileSystem.readFile({
 					storageUnit: internalStorageUnit,
