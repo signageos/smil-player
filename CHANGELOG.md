@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
   previous playlist
+- add option to check for media updates using location header or url instead of last-modified header in the response
+- add option to skip or update content based on the status code from response
 
 ### Fixed
 

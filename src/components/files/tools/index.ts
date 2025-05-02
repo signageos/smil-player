@@ -73,6 +73,7 @@ export function createVersionedUrl(
 	playlistVersion: number = 0,
 	smilUrlVersion: string | null = null,
 	isWidget: boolean = false,
+	wasUpdated: boolean = false,
 ): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
@@ -81,14 +82,19 @@ export function createVersionedUrl(
 	if (isWidget && !isLocalFileWidget(sourceUrl)) {
 		return urlWithoutSearch;
 	}
-	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
+	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion, wasUpdated);
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
 }
 
-export function generateSmilUrlVersion(playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
+export function generateSmilUrlVersion(
+	playlistVersion: number = 0,
+	smilUrlVersion: string | null = null,
+	wasUpdated: boolean = false,
+): string {
 	if (
 		!isNil(smilUrlVersion) &&
-		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1))
+		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1)) &&
+		!wasUpdated
 	) {
 		return smilUrlVersion;
 	}
@@ -134,7 +140,7 @@ export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): Me
 	return fileLastModifiedObject;
 }
 
-export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: number) {
+export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: number | string) {
 	jsonObject[attr] = value;
 }
 

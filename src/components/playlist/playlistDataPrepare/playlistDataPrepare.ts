@@ -119,10 +119,10 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
-					const mediaFile = <IVideoFile>await this.sos.fileSystem.getFile({
+					const mediaFile = (await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
-					});
+					})) as IVideoFile;
 					// in case of web page as widget, leave localFilePath blank
 					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 

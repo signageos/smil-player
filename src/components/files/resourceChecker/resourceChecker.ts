@@ -41,31 +41,43 @@ export class ResourceChecker implements IResourceChecker {
 		}
 
 		this.isRunning = true;
-		this.stopPromise = null;
+		this.clearAllTimers();
 
 		debug('ResourceChecker grouped resources: %O', this.groupedResources);
 
 		for (const [interval, resourceGroup] of this.groupedResources.entries()) {
-			const timer = setInterval(async () => {
-				if (!this.isRunning) {
-					clearInterval(timer);
-					return;
-				}
-
-				for (const resource of resourceGroup) {
-					if (!this.isRunning) break;
-					debug('Checking resource: %s at interval: %d', resource.url, interval);
+			const scheduleNext = (): NodeJS.Timeout => {
+				const timeout = setTimeout(async () => {
+					if (!this.isRunning) return;
 
 					try {
-						const response = await resource.checkFunction();
-						await resource.actionOnSuccess(response, async () => this.stop());
-					} catch (error) {
-						debug('Error checking %s: %O', resource.url, error);
-					}
-				}
-			}, interval);
+						for (const resource of resourceGroup) {
+							if (!this.isRunning) break;
+							debug('Checking resource: %O at interval: %d', resource, interval);
 
-			this.intervalTimers.set(interval, timer);
+							try {
+								const response = await resource.checkFunction();
+								await resource.actionOnSuccess(response, async () => this.stop());
+							} catch (error) {
+								debug('Error checking %s: %O', resource.url, error);
+							}
+						}
+					} finally {
+						if (this.isRunning) {
+							scheduleNext();
+						}
+					}
+				}, interval);
+
+				this.intervalTimers.set(interval, timeout);
+				// Safely unref only if available
+				if (typeof timeout.unref === 'function') {
+					timeout.unref();
+				}
+				return timeout;
+			};
+
+			scheduleNext();
 		}
 
 		debug('Grouped resource checks started.');
@@ -86,12 +98,6 @@ export class ResourceChecker implements IResourceChecker {
 			try {
 				this.isRunning = false;
 
-				// Clear all intervals
-				for (const [interval, timer] of this.intervalTimers.entries()) {
-					clearInterval(timer);
-					this.intervalTimers.delete(interval);
-				}
-
 				debug('All grouped resource checks stopped.');
 
 				if (this.shouldSync) {
@@ -107,7 +113,7 @@ export class ResourceChecker implements IResourceChecker {
 
 				// Cleanup all resources
 				this.groupedResources.clear();
-				this.intervalTimers.clear();
+				this.clearAllTimers();
 				debug('ResourceChecker resources cleaned up.');
 			} catch (error) {
 				debug('Error during ResourceChecker stop: %O', error);
@@ -118,5 +124,18 @@ export class ResourceChecker implements IResourceChecker {
 		})();
 
 		return this.stopPromise;
+	}
+
+	private clearAllTimers() {
+		for (const [, timeout] of this.intervalTimers) {
+			if (timeout) {
+				clearTimeout(timeout);
+				// Safely unref only if available
+				if (typeof timeout.unref === 'function') {
+					timeout.unref();
+				}
+			}
+		}
+		this.intervalTimers.clear();
 	}
 }

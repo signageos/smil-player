@@ -361,6 +361,11 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 				: [];
 		}
 
+		if (metaRecord.hasOwnProperty(SMILEnums.updateMechanism)) {
+			regions.updateMechanism =
+				metaRecord.updateMechanism === SMILEnums.location ? SMILEnums.location : SMILEnums.lastModified;
+		}
+
 		if (metaRecord.hasOwnProperty(SMILEnums.updateContentOnHttpStatus)) {
 			regions.updateContentOnHttpStatus = metaRecord.updateContentOnHttpStatus
 				? metaRecord.updateContentOnHttpStatus.split(',').map(Number)
@@ -453,6 +458,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		onlySmilFileUpdate: false,
 		skipContentOnHttpStatus: [],
 		updateContentOnHttpStatus: [],
+		updateMechanism: SMILEnums.lastModified,
 		logger: {
 			enabled: false,
 			type: smilLogging.standard,

@@ -35,6 +35,7 @@ export type SMILVideo = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 } & PoPAttributes &
 	UpdateChecks;
 
@@ -54,6 +55,7 @@ export type SMILAudio = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
 } & PoPAttributes &
 	UpdateChecks;
@@ -76,6 +78,7 @@ export type SMILImage = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
 } & PoPAttributes &
 	UpdateChecks;
@@ -98,6 +101,7 @@ export type SMILWidget = {
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
 } & PoPAttributes &
 	UpdateChecks;
@@ -129,6 +133,7 @@ export type SMILTicker = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
+	wasUpdated?: boolean;
 	timeoutReference?: ReturnType<typeof setTimeout>;
 } & PoPAttributes &
 	UpdateChecks;

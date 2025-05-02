@@ -19,6 +19,9 @@ export enum SMILEnums {
 	defaultTransition = 'defaultTransition',
 	skipContentOnHttpStatus = 'skipContentOnHttpStatus',
 	updateContentOnHttpStatus = 'updateContentOnHttpStatus',
+	updateMechanism = 'updateMechanism',
+	location = 'location',
+	lastModified = 'last-modified',
 }
 
 export const parentGenerationRemove = [
