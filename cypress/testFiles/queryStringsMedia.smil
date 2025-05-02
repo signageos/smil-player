@@ -3,10 +3,10 @@
         <layout>
             <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
             <region regionName="fullscreen" left="0" top="0" width="1080" height="1920" z-index="1"
-                    backgroundColor="#000000" sync="true"/>
+                    backgroundColor="#000000"/>
         </layout>
-        <meta http-equiv="Refresh" content="20" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
-              timeOut="5000" skipContentOnHttpStatus="404" updateContentOnHttpStatus="200"/>
+        <meta http-equiv="Refresh" content="100" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
+              timeOut="5000" skipContentOnHttpStatus="404" updateContentOnHttpStatus="200" updateMechanism="location"/>
         <meta log="true" type="manual" endpoint="https://run.hygh.io/webhook/signageos-log2?adunit=OM46N"/>
         <meta defaultRepeatCount="indefinite"/>
     </head>
