@@ -656,8 +656,6 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), timeOut);
 		let response: Response;
 
 		try {
@@ -669,20 +667,26 @@ export class FilesManager implements IFilesManager {
 			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
-			response = await fetch(downloadUrl, {
+			// Create timeout promise
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => reject(new Error('Request timeout')), timeOut);
+			});
+
+			// Create fetch promise
+			const fetchPromise = fetch(downloadUrl, {
 				method: 'HEAD',
 				headers: {
 					...authHeaders,
 					Accept: 'application/json',
 				},
 				mode: 'cors',
-				signal: controller.signal,
 			});
-		} catch (err) {
-			clearTimeout(timeoutId);
 
+			// Race between fetch and timeout
+			response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+		} catch (err) {
 			// Handle timeout specifically
-			if (err.name === 'AbortError') {
+			if (err.message === 'Request timeout') {
 				debug('Request to %s was aborted due to timeout.', media.src);
 				return DEFAULT_LAST_MODIFIED;
 			}
@@ -698,9 +702,6 @@ export class FilesManager implements IFilesManager {
 				debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
 			}
 			return null;
-		} finally {
-			// Ensure timeout is always cleared
-			clearTimeout(timeoutId);
 		}
 
 		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
@@ -779,8 +780,6 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), timeOut);
 		let response: Response;
 
 		try {
@@ -792,20 +791,26 @@ export class FilesManager implements IFilesManager {
 			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
-			response = await fetch(downloadUrl, {
+			// Create timeout promise
+			const timeoutPromise = new Promise((_, reject) => {
+				setTimeout(() => reject(new Error('Request timeout')), timeOut);
+			});
+
+			// Create fetch promise
+			const fetchPromise = fetch(downloadUrl, {
 				method: 'HEAD',
 				headers: {
 					...authHeaders,
 					Accept: 'application/json',
 				},
 				mode: 'cors',
-				signal: controller.signal,
 			});
-		} catch (err) {
-			clearTimeout(timeoutId);
 
+			// Race between fetch and timeout
+			response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+		} catch (err) {
 			// Handle timeout specifically
-			if (err.name === 'AbortError') {
+			if (err.message === 'Request timeout') {
 				debug('Request to %s was aborted due to timeout.', media.src, timeOut);
 				return media.src; // Return original URL on timeout
 			}
@@ -820,9 +825,6 @@ export class FilesManager implements IFilesManager {
 				debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
 			}
 			return null;
-		} finally {
-			// Ensure timeout is always cleared
-			clearTimeout(timeoutId);
 		}
 
 		const resourceLocation = response?.headers?.get('location') ?? response.url;
