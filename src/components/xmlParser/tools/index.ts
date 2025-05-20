@@ -329,6 +329,8 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 	if (!Array.isArray(meta)) {
 		meta = [meta];
 	}
+	// TODO: find better way
+	let smilFileRefreshSet = false;
 	for (const metaRecord of meta) {
 		if (
 			metaRecord.hasOwnProperty(SMILEnums.metaContent) ||
@@ -349,6 +351,7 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.refresh.smilFileRefresh = metaRecord.smilFileRefresh
 				? (parseInt(metaRecord.smilFileRefresh) || regions.refresh.refreshInterval) * 1000
 				: regions.refresh.refreshInterval;
+			smilFileRefreshSet = true;
 		}
 
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
@@ -388,6 +391,10 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
 			regions.defaultTransition = metaRecord.defaultTransition;
 		}
+	}
+
+	if (!smilFileRefreshSet) {
+		regions.refresh.smilFileRefresh = regions.refresh.refreshInterval;
 	}
 }
 
