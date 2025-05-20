@@ -584,7 +584,7 @@ export class FilesManager implements IFilesManager {
 					[smilFile],
 					FileStructure.rootFolder,
 					smilObject.refresh.timeOut,
-					smilObject.refresh.refreshInterval,
+					smilObject.refresh.smilFileRefresh,
 					[],
 					[],
 					false,
