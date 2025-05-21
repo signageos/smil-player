@@ -683,7 +683,7 @@ export class FilesManager implements IFilesManager {
 			});
 
 			// Race between fetch and timeout
-			response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+			response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
@@ -781,14 +781,13 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
 		let response: Response;
-
+		const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 		try {
 			// Reset skipContent expression if it exists
 			if (media.expr === ConditionalExprFormat.skipContent) {
 				delete media.expr;
 			}
 
-			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
 			// Create timeout promise
@@ -807,7 +806,7 @@ export class FilesManager implements IFilesManager {
 			});
 
 			// Race between fetch and timeout
-			response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+			response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
@@ -815,8 +814,9 @@ export class FilesManager implements IFilesManager {
 				return media.src; // Return original URL on timeout
 			}
 
-			// Log other errors
+			// Log other errors with more detail
 			debug('HEAD request to %s failed with error: %O', media.src, err);
+
 			// Handle local fallback based on configuration
 			if (media.allowLocalFallback === false) {
 				debug('allowLocalFallback is false. Skipping content.', media.src);
@@ -829,11 +829,11 @@ export class FilesManager implements IFilesManager {
 
 		const resourceLocation = response?.headers?.get('location') ?? response.url;
 
-		debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
+		debug('Received response when calling HEAD request for url: %s: %O, %d', downloadUrl, response, timeOut);
 
 		// Use Location header if it exists, otherwise use media.src. This is used for reporting purposes when there are redirects
 		if (response && resourceLocation) {
-			media.useInReportUrl = resourceLocation || media.src;
+			media.useInReportUrl = resourceLocation;
 			debug('Using Location header for reporting: %s', resourceLocation);
 		} else {
 			media.useInReportUrl = media.src;
@@ -874,7 +874,7 @@ export class FilesManager implements IFilesManager {
 				updateContentHttpStatusCodes,
 			);
 			// if there is no location return url
-			return resourceLocation ?? response.url;
+			return resourceLocation ?? media.src;
 		}
 
 		// Return the Location header after redirects or original URL if not available

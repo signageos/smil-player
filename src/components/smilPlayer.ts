@@ -1,8 +1,3 @@
-/* tslint:disable:Unnecessary semicolon missing whitespace */
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
-import { defaults as config } from '../../config/parameters';
-import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
@@ -21,8 +16,12 @@ import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcesso
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
-// import Debug from 'debug';
 import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { defaults as config } from '../../config/parameters';
+import sos from '@signageos/front-applet';
+import Debug from 'debug';
 
 applyFetchPolyfill();
 
@@ -46,7 +45,7 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
-		// Debug.enable('@signageos/smil-player:*');
+		Debug.enable('@signageos/smil-player:*');
 		// Debug.disable();
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
