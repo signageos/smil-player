@@ -1,3 +1,7 @@
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { defaults as config } from '../../config/parameters';
+import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
@@ -17,10 +21,6 @@ import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistData
 import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
 import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
-import { defaults as config } from '../../config/parameters';
-import sos from '@signageos/front-applet';
 import Debug from 'debug';
 
 applyFetchPolyfill();

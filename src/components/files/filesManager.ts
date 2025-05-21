@@ -656,8 +656,8 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
+		console.log('fetchLastModified');
 		let response: Response;
-
 		try {
 			// Reset skipContent expression if it exists
 			if (media.expr === ConditionalExprFormat.skipContent) {
@@ -780,6 +780,7 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
+		console.log('fetchLocationOrUrl');
 		let response: Response;
 		const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 		try {
@@ -807,6 +808,11 @@ export class FilesManager implements IFilesManager {
 
 			// Race between fetch and timeout
 			response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
+			console.log('-----------------------');
+			response.headers.forEach((value, key) => {
+				console.log(`${key}: ${value}`);
+			});
+			console.log('-----------------------');
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
