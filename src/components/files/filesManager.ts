@@ -667,23 +667,13 @@ export class FilesManager implements IFilesManager {
 			const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
-			// Create timeout promise
-			const timeoutPromise = new Promise((_, reject) => {
-				setTimeout(() => reject(new Error('Request timeout')), timeOut);
-			});
+			response = await this.makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
 
-			// Create fetch promise
-			const fetchPromise = fetch(downloadUrl, {
-				method: 'HEAD',
-				headers: {
-					...authHeaders,
-					Accept: 'application/json',
-				},
-				mode: 'cors',
+			console.log('-----------------------');
+			response.headers.forEach((value, key) => {
+				console.log(`${key}: ${value}`);
 			});
-
-			// Race between fetch and timeout
-			response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
+			console.log('-----------------------');
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
@@ -791,23 +781,8 @@ export class FilesManager implements IFilesManager {
 
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
-			// Create timeout promise
-			const timeoutPromise = new Promise((_, reject) => {
-				setTimeout(() => reject(new Error('Request timeout')), timeOut);
-			});
+			response = await this.makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
 
-			// Create fetch promise
-			const fetchPromise = fetch(downloadUrl, {
-				method: 'HEAD',
-				headers: {
-					...authHeaders,
-					Accept: 'application/json',
-				},
-				mode: 'cors',
-			});
-
-			// Race between fetch and timeout
-			response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
 			console.log('-----------------------');
 			response.headers.forEach((value, key) => {
 				console.log(`${key}: ${value}`);
@@ -1176,4 +1151,44 @@ export class FilesManager implements IFilesManager {
 			},
 		};
 	};
+
+	private async makeXhrRequest(method: string, downloadUrl: string, timeout: number, authHeaders?: Record<string, string>): Promise<Response> {
+		return new Promise<Response>((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.open(method, downloadUrl, true);
+			xhr.timeout = timeout;
+			xhr.setRequestHeader('Accept', 'application/json');
+			if (authHeaders) {
+				Object.entries(authHeaders).forEach(([key, value]) => {
+					xhr.setRequestHeader(key, value);
+				});
+			}
+			xhr.onload = () => {
+				const response = {
+					status: xhr.status,
+					headers: {
+						get: (name: string) => xhr.getResponseHeader(name),
+						forEach: (callback: (value: string, key: string) => void) => {
+							const headers = xhr.getAllResponseHeaders().split('\r\n');
+							headers.forEach(header => {
+								const [key, value] = header.split(': ');
+								if (key && value) {
+									callback(value, key);
+								}
+							});
+						}
+					},
+					url: xhr.responseURL || downloadUrl
+				} as Response;
+				resolve(response);
+			};
+			xhr.onerror = () => {
+				reject(new Error('Network Error'));
+			};
+			xhr.ontimeout = () => {
+				reject(new Error('Request timeout'));
+			};
+			xhr.send();
+		});
+	}
 }
