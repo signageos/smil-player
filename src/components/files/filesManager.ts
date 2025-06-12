@@ -668,12 +668,6 @@ export class FilesManager implements IFilesManager {
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
 			response = await this.makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
-
-			console.log('-----------------------');
-			response.headers.forEach((value, key) => {
-				console.log(`${key}: ${value}`);
-			});
-			console.log('-----------------------');
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
@@ -770,7 +764,6 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
-		console.log('fetchLocationOrUrl');
 		let response: Response;
 		const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 		try {
@@ -782,12 +775,6 @@ export class FilesManager implements IFilesManager {
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
 			response = await this.makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
-
-			console.log('-----------------------');
-			response.headers.forEach((value, key) => {
-				console.log(`${key}: ${value}`);
-			});
-			console.log('-----------------------');
 		} catch (err) {
 			// Handle timeout specifically
 			if (err.message === 'Request timeout') {
@@ -1152,7 +1139,12 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	private async makeXhrRequest(method: string, downloadUrl: string, timeout: number, authHeaders?: Record<string, string>): Promise<Response> {
+	private async makeXhrRequest(
+		method: string,
+		downloadUrl: string,
+		timeout: number,
+		authHeaders?: Record<string, string>,
+	): Promise<Response> {
 		return new Promise<Response>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.open(method, downloadUrl, true);
@@ -1170,15 +1162,15 @@ export class FilesManager implements IFilesManager {
 						get: (name: string) => xhr.getResponseHeader(name),
 						forEach: (callback: (value: string, key: string) => void) => {
 							const headers = xhr.getAllResponseHeaders().split('\r\n');
-							headers.forEach(header => {
+							headers.forEach((header) => {
 								const [key, value] = header.split(': ');
 								if (key && value) {
 									callback(value, key);
 								}
 							});
-						}
+						},
 					},
-					url: xhr.responseURL || downloadUrl
+					url: xhr.responseURL || downloadUrl,
 				} as Response;
 				resolve(response);
 			};

@@ -207,10 +207,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const resourceChecker = new ResourceChecker(
 			resources,
 			this.synchronization.shouldSync,
-			// async () => {
-			// 	await this.sos.refresh();
-			// 	await sleep(this.smilObject.refresh.refreshInterval);
-			// },
 			() => this.setCheckFilesLoop(false),
 			restart,
 		);
@@ -219,14 +215,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
 		try {
-			if (firstIteration) {
-				await connectSyncSafe(this.sos);
-			}
+			if (this.sos.config.syncGroupName) {
+				debug('Sync groupName is defined, starting sync setup');
+				if (firstIteration) {
+					await connectSyncSafe(this.sos);
+				}
 
-			await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
 
-			if (firstIteration && hasDynamicContent(this.smilObject)) {
-				await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				if (firstIteration && hasDynamicContent(this.smilObject)) {
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				}
+			} else {
+				debug('No sync groupName is defined, skipping sync setup');
 			}
 		} catch (error) {
 			debug('Error during playlist processing sync setup: %O', error);
@@ -1432,21 +1433,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
 
-		if (this.syncContentPrepared?.fullScreenTrigger && !element.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(
-			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-			// 	Date.now(),
-			// );
-			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
-			// console.log(
-			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-			// 	Date.now(),
-			// );
-			// delete this.syncContentPrepared?.fullScreenTrigger;
-		}
-
 		// rare case during seamless update with only one widget in playlist.
 		if (elementHtml.style.visibility !== 'visible') {
 			elementHtml.style.visibility = 'visible';
@@ -1902,21 +1888,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			);
 			await this.cancelPreviousMedia(currentRegionInfo);
 			return;
-		}
-
-		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(
-			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-			// 	Date.now(),
-			// );
-			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1000);
-			// console.log(
-			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-			// 	Date.now(),
-			// );
-			// delete this.syncContentPrepared?.fullScreenTrigger;
 		}
 
 		try {
