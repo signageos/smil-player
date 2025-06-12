@@ -50,7 +50,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ): Promise<void> {
-	synchronization.syncGroupName = sos.config.syncGroupName ?? 'testingSmilGroup';
+	synchronization.syncGroupName = sos.config.syncGroupName;
 	synchronization.syncGroupIds = sos.config.syncGroupIds?.split(',') ?? [];
 	synchronization.syncDeviceId = sos.config.syncDeviceId;
 	synchronization.syncGroupIds.sort();
