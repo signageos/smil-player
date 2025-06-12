@@ -150,6 +150,12 @@
         "valueType": "string",
         "description": "If videos should be played on background or not",
         "placeholder": "true"
+      },
+      {
+        "name": "debugEnabled",
+        "valueType": "string",
+        "description": "If player should log debug messages to console or not",
+        "placeholder": "true"
       }
     ]
   }
