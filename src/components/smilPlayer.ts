@@ -45,8 +45,13 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
-		Debug.enable('@signageos/smil-player:*');
-		// Debug.disable();
+		// debug disabled by default, enabled only if debugEnabled is set to true in config
+		Debug.disable();
+
+		if (sos.config.debugEnabled === true || sos.config.debugEnabled === 'true') {
+			debug('Debug enabled in config, enabling debug logs');
+			Debug.enable('@signageos/smil-player:*');
+		}
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
 
