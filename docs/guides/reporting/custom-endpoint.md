@@ -34,6 +34,13 @@ To turn logs on, you have to specify `<meta>` tag with log value in smil header.
 <meta log="true" type="manual" endpoint="customUrlEndpoint"/>
 ```
 
+its also possible to specify multiple logging types at the same time:
+
+```xml
+
+<meta log="false" type="manual,standard" endpoint="testingEndpoint"/>
+```
+
 ### PoP attributes for each element you want reports for in smil playlist
 
 The PopName attribute is mandatory. If it's not present, the report will not be sent. For other attributes, you can
