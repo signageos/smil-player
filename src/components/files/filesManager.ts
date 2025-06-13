@@ -161,7 +161,12 @@ export class FilesManager implements IFilesManager {
 		try {
 			const payload = Array.isArray(message) ? message : [message];
 
-			debug('Sending custom endpoint report: %s. %O', new Date().toISOString(), payload);
+			debug(
+				'Sending custom endpoint report: %s. %O',
+				new Date().toISOString(),
+				this.smilLogging.endpoint!,
+				payload,
+			);
 			const response = await fetch(this.smilLogging.endpoint!, {
 				method: 'POST',
 				headers: {
@@ -199,24 +204,26 @@ export class FilesManager implements IFilesManager {
 		taskStartDate: Date,
 		errMessage: string | null = null,
 	) => {
-		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
 			// to create difference between download and media played
 			value.popName = 'media-download';
 			await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
 		}
-		await this.sendReport({
-			type: 'SMIL.FileDownloaded',
-			itemType: fileType,
-			source: createSourceReportObject(
-				localFilePath,
-				value.useInReportUrl || value.src,
-				this.internalStorageUnit.type,
-			),
-			startedAt: taskStartDate,
-			succeededAt: isNil(errMessage) ? moment().toDate() : null,
-			failedAt: isNil(errMessage) ? null : moment().toDate(),
-			errorMessage: errMessage,
-		});
+		if (this.smilLogging.type?.includes(smilLogging.standard)) {
+			await this.sendReport({
+				type: 'SMIL.FileDownloaded',
+				itemType: fileType,
+				source: createSourceReportObject(
+					localFilePath,
+					value.useInReportUrl || value.src,
+					this.internalStorageUnit.type,
+				),
+				startedAt: taskStartDate,
+				succeededAt: isNil(errMessage) ? moment().toDate() : null,
+				failedAt: isNil(errMessage) ? null : moment().toDate(),
+				errorMessage: errMessage,
+			});
+		}
 	};
 
 	public sendMediaReport = async (
@@ -226,26 +233,29 @@ export class FilesManager implements IFilesManager {
 		isMediaSynced: boolean,
 		errMessage: string | null = null,
 	) => {
-		if (this.smilLogging.type === smilLogging.proofOfPlay && value.popName) {
+		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
 			// to create difference between download and media played
 			value.popName = 'media-playback';
-			await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
 				await this.sendCustomEndpointReport(
 					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage)),
 				);
+			} else {
+				await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
 			}
 		}
-		await this.sendReport({
-			type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
-			itemType: itemType,
-			source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
-			startedAt: taskStartDate,
-			endedAt: isNil(errMessage) ? moment().toDate() : null,
-			failedAt: isNil(errMessage) ? null : moment().toDate(),
-			errorMessage: errMessage,
-		});
+		if (this.smilLogging.type?.includes(smilLogging.standard)) {
+			await this.sendReport({
+				type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
+				itemType: itemType,
+				source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
+				startedAt: taskStartDate,
+				endedAt: isNil(errMessage) ? moment().toDate() : null,
+				failedAt: isNil(errMessage) ? null : moment().toDate(),
+				errorMessage: errMessage,
+			});
+		}
 	};
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
@@ -656,7 +666,6 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[] = [],
 		updateContentHttpStatusCodes: number[] = [],
 	): Promise<null | string> => {
-		console.log('fetchLastModified');
 		let response: Response;
 		try {
 			// Reset skipContent expression if it exists

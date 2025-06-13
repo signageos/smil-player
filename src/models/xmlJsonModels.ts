@@ -27,7 +27,7 @@ export type RegionsObject = {
 
 export type SmilLogger = {
 	enabled: boolean;
-	type?: smilLogging.standard | smilLogging.proofOfPlay;
+	type?: (smilLogging.standard | smilLogging.proofOfPlay)[];
 	endpoint?: string;
 };
 

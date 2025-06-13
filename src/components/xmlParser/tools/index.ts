@@ -376,9 +376,13 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		}
 
 		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
+			const filteredLoggingType = metaRecord.type?.split(',').filter(isAllowedSmilLogging) || [];
+			const result: (smilLogging.standard | smilLogging.proofOfPlay)[] =
+				filteredLoggingType.length > 0 ? filteredLoggingType : [smilLogging.standard];
+
 			regions.logger = {
 				enabled: metaRecord.log === true,
-				type: metaRecord.type === smilLogging.proofOfPlay ? smilLogging.proofOfPlay : smilLogging.standard,
+				type: result,
 				endpoint: metaRecord.endpoint,
 			};
 		}
@@ -396,6 +400,10 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 	if (!smilFileRefreshSet) {
 		regions.refresh.smilFileRefresh = regions.refresh.refreshInterval;
 	}
+}
+
+function isAllowedSmilLogging(item: string): item is smilLogging.standard | smilLogging.proofOfPlay {
+	return item === smilLogging.standard || item === smilLogging.proofOfPlay;
 }
 
 function parseSensorsInfo(sensors: SMILSensors): ParsedSensor[] {
@@ -468,7 +476,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		updateMechanism: SMILEnums.lastModified,
 		logger: {
 			enabled: false,
-			type: smilLogging.standard,
+			type: [smilLogging.standard],
 		},
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {

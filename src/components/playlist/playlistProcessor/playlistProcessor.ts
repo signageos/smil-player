@@ -216,7 +216,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
 		try {
 			if (this.sos.config.syncGroupName) {
-				debug('Sync groupName is defined, starting sync setup');
+				debug('SyncGroupName is defined, starting sync setup');
 				if (firstIteration) {
 					await connectSyncSafe(this.sos);
 				}
@@ -227,7 +227,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
 				}
 			} else {
-				debug('No sync groupName is defined, skipping sync setup');
+				debug('No syncGroupName is defined, skipping sync setup');
 			}
 		} catch (error) {
 			debug('Error during playlist processing sync setup: %O', error);
