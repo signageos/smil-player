@@ -10,6 +10,13 @@ To turn logs on, you have to specify `<meta>` tag with log value in the SMIL hea
 </head>
 ```
 
+its also possible to specify multiple logging types at the same time:
+
+```xml
+
+<meta log="false" type="manual,standard" endpoint="testingEndpoint"/>
+```
+
 ## Logged events
 
 - each file download successful or unsuccessful
