@@ -77,6 +77,7 @@ import {
 } from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
+import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -158,7 +159,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.smilObject.refresh.timeOut,
 			[],
 			[],
-			false,
+			getStrategy(SMILEnums.lastModified),
 		);
 		downloadPromises = downloadPromises.concat(result.promises);
 
