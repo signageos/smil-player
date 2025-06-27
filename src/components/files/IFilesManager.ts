@@ -11,11 +11,13 @@ import {
 import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import { Resource } from './resourceChecker/resourceChecker';
+import { FetchStrategy } from './fetchingStrategies/fetchingStrategies';
+
+export type { FetchStrategy };
 
 export interface UpdateCheckResult {
 	shouldUpdate: boolean;
-	lastModified?: number;
-	downloadUrl?: string;
+	value?: string;
 }
 
 export interface IFilesManager {
@@ -51,6 +53,7 @@ export interface IFilesManager {
 		timeOut: number,
 		skipContentHttpStatusCodes: number[],
 		updateContentHttpStatusCodes: number[],
+		fetchStrategy: FetchStrategy,
 	) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;
 	deleteFile: (filePath: string) => Promise<void>;
@@ -62,17 +65,11 @@ export interface IFilesManager {
 		timeOut: number,
 		skipContentHttpStatusCodes: number[],
 		updateContentHttpStatusCodes: number[],
-		useLocationHeader: boolean,
+		fetchStrategy: FetchStrategy,
 		forceDownload?: boolean,
-		lastModified?: number,
+		latestRemoteValue?: number | string,
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
-	fetchLastModified: (
-		media: MergedDownloadList,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[],
-		updateContentHttpStatusCodes: number[],
-	) => Promise<null | string>;
 }

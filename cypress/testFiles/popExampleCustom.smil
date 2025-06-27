@@ -1,7 +1,7 @@
 <smil>
     <head>
         <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
-        <meta log="false" type="manual,standard" endpoint="testingEndpoint"/>
+        <meta log="true" type="manual,standard" endpoint="yourEndpoint"/>
         <layout>
             <root-layout width="1080" height="1920"/>
             <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
