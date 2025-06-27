@@ -18,12 +18,10 @@ import { XmlParser } from './xmlParser/xmlParser';
 import { SmilPlayerPlaylist } from './playlist/playlist';
 import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcessor';
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
-import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
 import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
 import Debug from 'debug';
-
-applyFetchPolyfill();
+import { getStrategy } from './files/fetchingStrategies/fetchingStrategies';
 
 export class SmilPlayer implements ISmilPlayer {
 	private readonly files: FilesManager;
@@ -75,33 +73,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 		debug('File structure created');
 
-		if (
-			await this.files.fileExists(
-				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-			)
-		) {
-			try {
-				const fileContent = JSON.parse(
-					await this.files.readFile(
-						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-					),
-				);
-
-				// delete mediaInfo file only in case that currently played smil is different from previous
-				if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
-					// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
-					await this.files.deleteFile(
-						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-					);
-				}
-			} catch (err) {
-				debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
-				// file is malformed, delete from internal storage
-				await this.files.deleteFile(
-					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-				);
-			}
-		}
+		await this.checkAndManageSmilMediaInfo(smilUrl);
 
 		while (true) {
 			try {
@@ -119,6 +91,80 @@ export class SmilPlayer implements ISmilPlayer {
 			}
 		}
 	};
+
+	private async checkAndManageSmilMediaInfo(smilUrl: string): Promise<void> {
+		try {
+			if (
+				await this.files.fileExists(
+					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				)
+			) {
+				try {
+					const fileContent = JSON.parse(
+						await this.files.readFile(
+							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+						),
+					);
+
+					// delete mediaInfo file only in case that currently played smil is different from previous
+					if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
+						// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+						await this.files.deleteFile(
+							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+						);
+					}
+				} catch (err) {
+					debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
+					// file is malformed, delete from internal storage
+					await this.files.deleteFile(
+						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+					);
+				}
+			}
+		} catch (err) {
+			// Handle any errors that might occur during file operations
+			debug('Error during SMIL media info file management: %O', err);
+			if (err instanceof Error) {
+				debug('Error details: %s', err.message);
+			}
+		}
+	}
+
+	private async downloadBackupImage(): Promise<void> {
+		if (isNil(sos.config.backupImageUrl)) {
+			return;
+		}
+
+		const backupImageObject: SMILFile = {
+			src: sos.config.backupImageUrl,
+		};
+
+		try {
+			// default timeout because at this stage, we dont have info about custom one
+			const result = await this.files.parallelDownloadAllFiles(
+				[backupImageObject],
+				FileStructure.images,
+				SMILScheduleEnum.fileCheckTimeout,
+				[],
+				[],
+				getStrategy(SMILEnums.lastModified),
+			);
+
+			await Promise.all(result.promises);
+
+			// Get the mediaInfoObject for this file
+			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
+
+			// Update the mediaInfoObject after download completes
+			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+		} catch (err) {
+			debug('Failed to download backup image: %O', err);
+			// Log additional error details if available
+			if (err instanceof Error) {
+				debug('Error details: %s', err.message);
+			}
+		}
+	}
 
 	private main = async (
 		internalStorageUnit: IStorageUnit,
@@ -141,38 +187,8 @@ export class SmilPlayer implements ISmilPlayer {
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
 
-		try {
-			if (
-				!isNil(sos.config.backupImageUrl) &&
-				!isNil(
-					await this.files.fetchLastModified({
-						src: sos.config.backupImageUrl,
-					}),
-				)
-			) {
-				const backupImageObject = {
-					src: sos.config.backupImageUrl,
-				};
-				// default timeout because at this stage, we dont have info about custom one
-				const result = await this.files.parallelDownloadAllFiles(
-					[backupImageObject],
-					FileStructure.images,
-					SMILScheduleEnum.fileCheckTimeout,
-					[],
-					[],
-					true,
-				);
-				await Promise.all(result.promises);
-
-				// Get the mediaInfoObject for this file
-				const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
-
-				// Update the mediaInfoObject after download completes
-				await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
-			}
-		} catch (err) {
-			debug('Unexpected error occurred during backup image download : %O', err);
-		}
+		// Download backup image if configured
+		await this.downloadBackupImage();
 
 		let smilFileContent: string = '';
 		let xmlOkParsed: boolean = false;
@@ -190,7 +206,7 @@ export class SmilPlayer implements ISmilPlayer {
 					SMILScheduleEnum.fileCheckTimeout,
 					[],
 					[],
-					false,
+					getStrategy(SMILEnums.lastModified),
 					false,
 				);
 				await Promise.all(result.promises);

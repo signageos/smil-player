@@ -112,7 +112,7 @@ export function setElementDuration(dur: string | undefined): number {
 export function findDuration(elem: PlaylistElement): string | undefined {
 	for (let [key, value] of Object.entries(elem)) {
 		if (key === 'dur') {
-			return <string>value;
+			return value as string;
 		}
 		if (
 			isObject(value) &&
