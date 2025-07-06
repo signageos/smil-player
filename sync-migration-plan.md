@@ -528,7 +528,7 @@ all existing functionality and improving performance characteristics.
 - [x] **1.1b** Port `IMasterStatusProvider.ts` interface to `src/components/playlist/tools/`
 - [x] **1.1c** Update `src/models/syncModels.ts` with event-based models
 - [x] **1.2a** Rewrite `joinAllSyncGroupsOnSmilStart()` in `src/components/playlist/tools/syncTools.ts`
-- [ ] **1.2b** Update `connectSyncSafe()` for event-based groups
+- [x] **1.2b** Update `connectSyncSafe()` for event-based groups
 - [ ] **1.2c** Remove all `sync.wait()` infrastructure from syncTools.ts
 - [ ] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
 - [ ] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
