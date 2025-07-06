@@ -530,9 +530,9 @@ all existing functionality and improving performance characteristics.
 - [x] **1.2a** Rewrite `joinAllSyncGroupsOnSmilStart()` in `src/components/playlist/tools/syncTools.ts`
 - [x] **1.2b** Update `connectSyncSafe()` for event-based groups
 - [x] **1.2c** Remove all `sync.wait()` infrastructure from syncTools.ts
-- [ ] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
-- [ ] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
-- [ ] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
+- [x] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
+- [x] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
+- [x] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
 - [ ] **1.4b** Add `ElementRegistryEntry` interface to `src/models/playlistModels.ts`
 - [ ] **1.4c** Enhance `getAllInfo()` in `playlistDataPrepare.ts` to build Element Registry
 - [ ] **1.4d** Implement `getElementBySyncIndex()` and navigation methods
