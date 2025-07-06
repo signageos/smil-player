@@ -535,7 +535,7 @@ all existing functionality and improving performance characteristics.
 - [x] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
 - [x] **1.4b** Keep `ElementRegistryEntry` interface in ElementRegistry.ts (better cohesion)
 - [x] **1.4c** Enhance `getAllInfo()` in `playlistDataPrepare.ts` to build Element Registry
-- [ ] **1.4d** Implement `getElementBySyncIndex()` and navigation methods
+- [x] **1.4d** Implement `getElementBySyncIndex()` and navigation methods
 
 ### Phase 2: SMIL Element State Machine
 
