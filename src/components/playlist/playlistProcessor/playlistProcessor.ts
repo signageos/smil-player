@@ -80,6 +80,7 @@ import {
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
+import { SMILElementController } from './SMILElementController';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -98,6 +99,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	} = {};
 	private internalStorageUnit: IStorageUnit;
 	private smilObject: SMILFileObject;
+	private elementController: SMILElementController;
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
@@ -105,6 +107,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.priority = new PlaylistPriority(sos, files, options);
 		this.playerName = this.sos.config?.playerName ?? '';
 		this.playerId = this.sos.config?.playerId ?? '';
+		this.elementController = new SMILElementController(sos, this.synchronization, this.elementRegistry);
 	}
 
 	public setCheckFilesLoop = (checkFilesLoop: boolean) => {
@@ -2356,13 +2359,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (
 			!(await this.handleElementSynchronization(
 				value,
-				currentRegionInfo,
-				parentRegionInfo,
-				currentIndex,
-				debugId,
-			))
-		) {
-			return;
+				currentRegionInfo.regionName,
+				value.syncIndex,
+			);
+			if (!shouldPlay) {
+				debug(`[${debugId}] Element sync coordination indicates skip`);
+				return;
+			}
 		}
 
 		if (!isNil(value.triggerValue)) {
@@ -2537,169 +2540,169 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		debug(`[${debugId}] HTML element preparation completed`);
 	};
 
-	private handleElementSynchronization = async (
-		value: SMILMedia,
-		currentRegionInfo: RegionAttributes,
-		parentRegionInfo: RegionAttributes,
-		currentIndex: number,
-		debugId: string,
-		suffix: 'after' | 'before' = 'before',
-	): Promise<boolean> => {
-		debug(`[${debugId}] Starting element synchronization for: %O`, value);
-
-		// do not sync at the end of the element playback if syncing with another device is in progress
-		if (suffix === 'after' && (this.synchronization.syncingInAction || this.synchronization.movingForward)) {
-			debug(`[${debugId}] Synchronization in action, skipping after sync`);
-			return false;
-		}
-		let regionInfo = value.regionInfo;
-		// sync of nested regions ( dynamic playlist )
-		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-			debug(
-				`[${debugId}] Region changed from %s to %s`,
-				parentRegionInfo.regionName,
-				currentRegionInfo.regionName,
-			);
-			regionInfo = currentRegionInfo;
-		}
-		if (regionInfo.sync && this.synchronization.shouldSync) {
-			debug(`[${debugId}] Starting synchronization for region %s`, regionInfo.regionName);
-			let desiredSyncIndex = this.synchronization.syncValue;
-			if (
-				isNil(this.synchronization.syncValue) ||
-				isEqual(value.syncIndex, this.synchronization.syncValue) ||
-				this.synchronization.movingForward
-			) {
-				debug(
-					`[${debugId}] Entering ${suffix} sync handling in region %s with syncIndex %d with syncValue %s with movingForward`,
-					regionInfo.regionName,
-					value.syncIndex,
-					this.synchronization.syncValue,
-					this.synchronization.movingForward,
-				);
-
-				if (
-					!isNil(this.synchronization.syncValue) &&
-					isEqual(value.syncIndex, this.synchronization.syncValue) &&
-					this.synchronization.syncingInAction
-				) {
-					//move one forward
-					debug(`[${debugId}] Moving forward in region %s`, regionInfo.regionName);
-					this.synchronization.syncingInAction = false;
-					this.synchronization.movingForward = true;
-					this.synchronization.syncValue = undefined;
-					return false;
-				}
-
-				// content synced in dynamic region has syncId in group name extra
-				const groupName = value.dynamicValue
-					? `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${
-							this.triggers.dynamicPlaylist[value.dynamicValue].syncId
-					  }`
-					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${suffix}`;
-
-				value.syncGroupName = groupName;
-
-				this.syncContentPrepared.fullScreenTrigger = {
-					syncGroupName: groupName,
-					numberOfNonSync: 0,
-				};
-				debug(
-					`[${debugId}] Synchronization ${suffix} starting in region %s with syncIndex %d with dynamicValue %s with groupName %s with timestamp: %d`,
-					regionInfo.regionName,
-					value.syncIndex,
-					value.dynamicValue,
-					groupName,
-					Date.now(),
-				);
-				try {
-					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
-						debug(`[${debugId}] Sending sync wait started report for master dynamic playlist`);
-						this.files.sendReport({
-							type: 'SMIL.SyncWait-Started',
-							source: createSourceReportObject(
-								value.localFilePath,
-								value.src,
-								this.internalStorageUnit.type,
-							),
-							startedAt: moment().toDate(),
-							groupName,
-						});
-					}
-
-					// ( another playlist can jump in during the process, this is to prevent it )
-					if (suffix === 'before') {
-						debug(`[${debugId}] Setting player as playing for current priority`);
-						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
-						ensurePlayingDeferred(this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player);
-					}
-
-					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());
-					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					debug(`[${debugId}] Finished sync wait for playing element, timestamp: %d`, Date.now());
-
-					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
-						debug(`[${debugId}] Sending sync wait ended report for master dynamic playlist`);
-						this.files.sendReport({
-							type: 'SMIL.SyncWait-Ended',
-							source: createSourceReportObject(
-								value.localFilePath,
-								value.src,
-								this.internalStorageUnit.type,
-							),
-							startedAt: moment().toDate(),
-							groupName,
-						});
-					}
-				} catch (err) {
-					debug(`[${debugId}] Error occurred during sync.wait: %O`, err);
-					this.synchronization.syncingInAction = false;
-					this.synchronization.movingForward = false;
-				}
-
-				debug(
-					`[${debugId}] Synchronization ${suffix} finished in region %s with syncIndex %d with timestamp: %d`,
-					regionInfo.regionName,
-					value.syncIndex,
-					Date.now(),
-				);
-
-				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
-					debug(`[${debugId}] Dynamic playlist was stopped during sync.wait: %O`, value);
-					return false;
-				}
-
-				if (value.syncIndex !== desiredSyncIndex) {
-					debug(`[${debugId}] Updating sync value to: %d`, desiredSyncIndex);
-					this.synchronization.syncValue = desiredSyncIndex;
-				}
-
-				this.synchronization.syncingInAction = false;
-				this.synchronization.movingForward = false;
-			}
-
-			if (!isEqual(value.syncIndex, desiredSyncIndex) && !isNil(desiredSyncIndex)) {
-				debug(
-					`[${debugId}] Starting synchronization process desired syncIndex %d, current syncIndex %d`,
-					desiredSyncIndex,
-					value.syncIndex,
-				);
-				this.synchronization.syncingInAction = true;
-				return false;
-			}
-		} else {
-			if (this.syncContentPrepared?.fullScreenTrigger) {
-				debug(`[${debugId}] Incrementing non-sync counter`);
-				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
-
-				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {
-					debug(`[${debugId}] Removing fullScreenTrigger due to multiple non-sync elements`);
-					delete this.syncContentPrepared.fullScreenTrigger;
-				}
-			}
-		}
-
-		debug(`[${debugId}] Element synchronization completed successfully`);
+	// COMMENTED OUT: Old wait-based sync function - kept for fallback if needed
+	// 	// private handleElementSynchronization = async (
+	// 		value: SMILMedia,
+	// 		currentRegionInfo: RegionAttributes,
+	// 		parentRegionInfo: RegionAttributes,
+	// 		currentIndex: number,
+	// 		debugId: string,
+	// 		suffix: 'after' | 'before' = 'before',
+	// 	): Promise<boolean> => {
+	// 		debug(`[${debugId}] Starting element synchronization for: %O`, value);
+	//
+	// 		// do not sync at the end of the element playback if syncing with another device is in progress
+	// 		if (suffix === 'after' && (this.synchronization.syncingInAction || this.synchronization.movingForward)) {
+	// 			debug(`[${debugId}] Synchronization in action, skipping after sync`);
+	// 			return false;
+	// 		}
+	// 		let regionInfo = value.regionInfo;
+	// 		// sync of nested regions ( dynamic playlist )
+	// 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
+	// 			debug(
+	// 				`[${debugId}] Region changed from %s to %s`,
+	// 				parentRegionInfo.regionName,
+	// 				currentRegionInfo.regionName,
+	// 			);
+	// 			regionInfo = currentRegionInfo;
+	// 		}
+	// 		if (regionInfo.sync && this.synchronization.shouldSync) {
+	// 			debug(`[${debugId}] Starting synchronization for region %s`, regionInfo.regionName);
+	// 			let desiredSyncIndex = this.synchronization.syncValue;
+	// 			if (
+	// 				isNil(this.synchronization.syncValue) ||
+	// 				isEqual(value.syncIndex, this.synchronization.syncValue) ||
+	// 				this.synchronization.movingForward
+	// 			) {
+	// 				debug(
+	// 					`[${debugId}] Entering ${suffix} sync handling in region %s with syncIndex %d with syncValue %s with movingForward`,
+	// 					regionInfo.regionName,
+	// 					value.syncIndex,
+	// 					this.synchronization.syncValue,
+	// 					this.synchronization.movingForward,
+	// 				);
+	//
+	// 				if (
+	// 					!isNil(this.synchronization.syncValue) &&
+	// 					isEqual(value.syncIndex, this.synchronization.syncValue) &&
+	// 					this.synchronization.syncingInAction
+	// 				) {
+	// 					//move one forward
+	// 					debug(`[${debugId}] Moving forward in region %s`, regionInfo.regionName);
+	// 					this.synchronization.syncingInAction = false;
+	// 					this.synchronization.movingForward = true;
+	// 					this.synchronization.syncValue = undefined;
+	// 					return false;
+	// 				}
+	//
+	// 				// content synced in dynamic region has syncId in group name extra
+	// 				const groupName = value.dynamicValue
+	// 					? `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${
+	// 							this.triggers.dynamicPlaylist[value.dynamicValue].syncId
+	// 					  }`
+	// 					: `${this.synchronization.syncGroupName}-${regionInfo.regionName}-${suffix}`;
+	//
+	// 				value.syncGroupName = groupName;
+	//
+	// 				this.syncContentPrepared.fullScreenTrigger = {
+	// 					syncGroupName: groupName,
+	// 					numberOfNonSync: 0,
+	// 				};
+	// 				debug(
+	// 					`[${debugId}] Synchronization ${suffix} starting in region %s with syncIndex %d with dynamicValue %s with groupName %s with timestamp: %d`,
+	// 					regionInfo.regionName,
+	// 					value.syncIndex,
+	// 					value.dynamicValue,
+	// 					groupName,
+	// 					Date.now(),
+	// 				);
+	// 				try {
+	// 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+	// 						debug(`[${debugId}] Sending sync wait started report for master dynamic playlist`);
+	// 						this.files.sendReport({
+	// 							type: 'SMIL.SyncWait-Started',
+	// 							source: createSourceReportObject(
+	// 								value.localFilePath,
+	// 								value.src,
+	// 								this.internalStorageUnit.type,
+	// 							),
+	// 							startedAt: moment().toDate(),
+	// 							groupName,
+	// 						});
+	// 					}
+	//
+	// 					// ( another playlist can jump in during the process, this is to prevent it )
+	// 					if (suffix === 'before') {
+	// 						debug(`[${debugId}] Setting player as playing for current priority`);
+	// 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
+	// 					}
+	//
+	// 					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());
+	// 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+	// 					debug(`[${debugId}] Finished sync wait for playing element, timestamp: %d`, Date.now());
+	//
+	// 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+	// 						debug(`[${debugId}] Sending sync wait ended report for master dynamic playlist`);
+	// 						this.files.sendReport({
+	// 							type: 'SMIL.SyncWait-Ended',
+	// 							source: createSourceReportObject(
+	// 								value.localFilePath,
+	// 								value.src,
+	// 								this.internalStorageUnit.type,
+	// 							),
+	// 							startedAt: moment().toDate(),
+	// 							groupName,
+	// 						});
+	// 					}
+	// 				} catch (err) {
+	// 					debug(`[${debugId}] Error occurred during sync.wait: %O`, err);
+	// 					this.synchronization.syncingInAction = false;
+	// 					this.synchronization.movingForward = false;
+	// 				}
+	//
+	// 				debug(
+	// 					`[${debugId}] Synchronization ${suffix} finished in region %s with syncIndex %d with timestamp: %d`,
+	// 					regionInfo.regionName,
+	// 					value.syncIndex,
+	// 					Date.now(),
+	// 				);
+	//
+	// 				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
+	// 					debug(`[${debugId}] Dynamic playlist was stopped during sync.wait: %O`, value);
+	// 					return false;
+	// 				}
+	//
+	// 				if (value.syncIndex !== desiredSyncIndex) {
+	// 					debug(`[${debugId}] Updating sync value to: %d`, desiredSyncIndex);
+	// 					this.synchronization.syncValue = desiredSyncIndex;
+	// 				}
+	//
+	// 				this.synchronization.syncingInAction = false;
+	// 				this.synchronization.movingForward = false;
+	// 			}
+	//
+	// 			if (!isEqual(value.syncIndex, desiredSyncIndex) && !isNil(desiredSyncIndex)) {
+	// 				debug(
+	// 					`[${debugId}] Starting synchronization process desired syncIndex %d, current syncIndex %d`,
+	// 					desiredSyncIndex,
+	// 					value.syncIndex,
+	// 				);
+	// 				this.synchronization.syncingInAction = true;
+	// 				return false;
+	// 			}
+	// 		} else {
+	// 			if (this.syncContentPrepared?.fullScreenTrigger) {
+	// 				debug(`[${debugId}] Incrementing non-sync counter`);
+	// 				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
+	//
+	// 				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {
+	// 					debug(`[${debugId}] Removing fullScreenTrigger due to multiple non-sync elements`);
+	// 					delete this.syncContentPrepared.fullScreenTrigger;
+	// 				}
+	// 			}
+	// 		}
+	//
+	// 		debug(`[${debugId}] Element synchronization completed successfully`);
 		return true;
 	};
 
