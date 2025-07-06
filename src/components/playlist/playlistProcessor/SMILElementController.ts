@@ -50,7 +50,7 @@ export class SMILElementController {
 
 		debug('Checking if should start playback: region=%s, syncIndex=%d', regionName, syncIndex);
 
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-after`);
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
 			debug('No sync group found for region: %s', regionName);
 			return true;
