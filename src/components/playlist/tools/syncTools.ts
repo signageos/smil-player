@@ -3,7 +3,7 @@ import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
 import { debug, sleep } from './generalTools';
 import { isArray, isNil } from 'lodash';
-import { broadcastSyncValue, joinSyncGroup } from './dynamicTools';
+import { broadcastSyncValue } from './dynamicTools';
 import { SMILFileObject } from '../../../models/filesModels';
 import { getDynamicTagsFromPlaylist } from './dynamicPlaylistTools';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
