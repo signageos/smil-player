@@ -1,5 +1,19 @@
 import { debug } from '../tools/generalTools';
-import { ElementRegistryEntry } from '../../../models/playlistModels';
+import { PlaylistElement } from '../../../models/playlistModels';
+
+export interface ElementRegistryEntry {
+	element: PlaylistElement;
+	regionName: string;
+	syncIndex: number;
+	parentRef: WeakRef<any>;
+	parentKey: string;
+	navigationPath: string[];
+	contextInfo: {
+		currentIndex?: number;
+		siblingCount?: number;
+		depth: number;
+	};
+}
 
 export class ElementRegistry {
 	private registry = new Map<string, ElementRegistryEntry>();

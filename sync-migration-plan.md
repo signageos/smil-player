@@ -533,7 +533,7 @@ all existing functionality and improving performance characteristics.
 - [x] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
 - [x] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
 - [x] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
-- [x] **1.4b** Add `ElementRegistryEntry` interface to `src/models/playlistModels.ts`
+- [x] **1.4b** Keep `ElementRegistryEntry` interface in ElementRegistry.ts (better cohesion)
 - [ ] **1.4c** Enhance `getAllInfo()` in `playlistDataPrepare.ts` to build Element Registry
 - [ ] **1.4d** Implement `getElementBySyncIndex()` and navigation methods
 
