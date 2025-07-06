@@ -553,6 +553,7 @@ The current SMILElementController implements a simple state machine for basic sy
 - Bandwidth-aware sync strategies
 - Predictive pre-loading based on state
 - Cross-region state coordination
+- Element queue management in controller for smoother transitions
 
 These improvements can be implemented incrementally as real-world usage reveals specific needs and edge cases.
 
@@ -580,7 +581,7 @@ These improvements can be implemented incrementally as real-world usage reveals 
 - [x] **2.1a** Create `src/components/playlist/playlistProcessor/SMILElementController.ts`
 - [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future Enhancements)
 - [x] **2.1c** Add state broadcasting to sync groups
-- [ ] **2.1d** Implement element pre-loading logic
+- [x] **2.1d** Implement element pre-loading logic (coordination in controller, actual loading in existing prepare methods)
 - [ ] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
 - [ ] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
 - [ ] **2.2c** Create `handleElementStateSync()` with event-based coordination
