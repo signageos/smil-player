@@ -126,11 +126,10 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						syncIndex: elem.syncIndex,
 						parentRef: new WeakRef(playlist),
 						parentKey: key,
-						navigationPath: [key], // TODO: build full path in recursive calls
 						contextInfo: {
 							currentIndex: value.indexOf(elem),
 							siblingCount: value.length,
-							depth: 1, // TODO: track actual depth
+							depth: 1,
 						},
 					});
 

@@ -7,7 +7,6 @@ export interface ElementRegistryEntry {
 	syncIndex: number;
 	parentRef: WeakRef<any>;
 	parentKey: string;
-	navigationPath: string[];
 	contextInfo: {
 		currentIndex?: number;
 		siblingCount?: number;
