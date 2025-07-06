@@ -80,7 +80,6 @@ operations while maintaining frame-perfect synchronization through content prepa
 **Add to `Synchronization` type:**
 
 - `targetSyncIndex?: number` - target element to navigate to
-- `targetRegionName?: string` - target region for navigation
 - Element state tracking for event-based coordination
 - Master status monitoring
 - Region-specific group mapping
@@ -200,7 +199,7 @@ Idle → Prepared → Playing → Finished
 - When slaves receive sync events with `{regionName, syncIndex}`
 - Use Element Registry for O(1) lookup: `getElementBySyncIndex(regionName, syncIndex)`
 - Direct navigation to target element instead of tree traversal
-- Set `targetSyncIndex` and `targetRegionName` in synchronization state
+- Set `targetSyncIndex` in synchronization state for the specific region
 - Existing navigation logic adapted to seek target during traversal
 
 **Integration points:**
@@ -531,7 +530,7 @@ all existing functionality and improving performance characteristics.
 - [ ] **1.2a** Rewrite `joinAllSyncGroupsOnSmilStart()` in `src/components/playlist/tools/syncTools.ts`
 - [ ] **1.2b** Update `connectSyncSafe()` for event-based groups
 - [ ] **1.2c** Remove all `sync.wait()` infrastructure from syncTools.ts
-- [ ] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`/`targetRegionName`
+- [ ] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
 - [ ] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
 - [ ] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
 - [ ] **1.4b** Add `ElementRegistryEntry` interface to `src/models/playlistModels.ts`
