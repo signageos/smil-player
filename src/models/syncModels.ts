@@ -33,5 +33,4 @@ export type Synchronization = {
 	movingForward: boolean;
 	shouldCancelAll: boolean;
 	targetSyncIndex?: number;
-	targetRegionName?: string;
 };
