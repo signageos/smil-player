@@ -102,3 +102,17 @@ export type VideoPreparing = {
 export type SMILPlaylist = {
 	playlist: { [key: string]: PlaylistElement | PlaylistElement[] };
 };
+
+export interface ElementRegistryEntry {
+	element: PlaylistElement;
+	regionName: string;
+	syncIndex: number;
+	parentRef: WeakRef<any>;
+	parentKey: string;
+	navigationPath: string[];
+	contextInfo: {
+		currentIndex?: number;
+		siblingCount?: number;
+		depth: number;
+	};
+}
