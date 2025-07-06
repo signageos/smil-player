@@ -520,6 +520,17 @@ all existing functionality and improving performance characteristics.
 
 ---
 
+## Migration Notes & Fixes
+
+### Sync Group Consistency Fix (2.2a.1)
+During implementation, discovered that SMILElementController had inconsistent sync group usage:
+- `shouldStartPlayback()` was using `-after` sync group
+- All other methods were using `-before` sync group
+
+Fixed to ensure all methods consistently use `-before` sync group for coordinating element transitions before playback starts. The `-after` sync groups remain available for future post-playback coordination needs.
+
+---
+
 ## Future Enhancements
 
 ### State Machine Improvements
@@ -582,7 +593,8 @@ These improvements can be implemented incrementally as real-world usage reveals 
 - [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future Enhancements)
 - [x] **2.1c** Add state broadcasting to sync groups
 - [x] **2.1d** Implement element pre-loading logic (coordination in controller, actual loading in existing prepare methods)
-- [ ] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
+- [x] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
+- [x] **2.2a.1** Fix sync group consistency - all methods use `-before` group
 - [ ] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
 - [ ] **2.2c** Create `handleElementStateSync()` with event-based coordination
 - [ ] **2.2d** Implement target-seeking navigation using Element Registry
