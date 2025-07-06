@@ -579,7 +579,7 @@ These improvements can be implemented incrementally as real-world usage reveals 
 
 - [x] **2.1a** Create `src/components/playlist/playlistProcessor/SMILElementController.ts`
 - [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future Enhancements)
-- [ ] **2.1c** Add state broadcasting to sync groups
+- [x] **2.1c** Add state broadcasting to sync groups
 - [ ] **2.1d** Implement element pre-loading logic
 - [ ] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
 - [ ] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
