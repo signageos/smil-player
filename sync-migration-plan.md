@@ -520,6 +520,44 @@ all existing functionality and improving performance characteristics.
 
 ---
 
+## Future Enhancements
+
+### State Machine Improvements
+
+The current SMILElementController implements a simple state machine for basic sync coordination. Future enhancements to consider:
+
+**State Tracking:**
+- Add explicit state tracking with `Map<regionName, currentState>`
+- Track state history for debugging and diagnostics
+- Implement state persistence across app restarts
+
+**Enhanced State Machine:**
+- More granular states: `preparing → prepared → starting → playing → finished`
+- State validation to prevent invalid transitions
+- Detect and handle state mismatches between devices
+
+**Error Handling:**
+- Improve master disconnection scenarios
+- Add timeout recovery strategies
+- Implement fallback mechanisms for stuck states
+- Handle partial device failures gracefully
+
+**Debugging & Monitoring:**
+- State transition logging and visualization
+- Performance metrics for sync timing
+- Network partition detection and recovery
+- Comprehensive error reporting
+
+**Advanced Features:**
+- Dynamic master election during playback
+- Bandwidth-aware sync strategies
+- Predictive pre-loading based on state
+- Cross-region state coordination
+
+These improvements can be implemented incrementally as real-world usage reveals specific needs and edge cases.
+
+---
+
 ## Implementation TODO List
 
 ### Phase 1: Foundation & Core Components
@@ -540,7 +578,7 @@ all existing functionality and improving performance characteristics.
 ### Phase 2: SMIL Element State Machine
 
 - [x] **2.1a** Create `src/components/playlist/playlistProcessor/SMILElementController.ts`
-- [ ] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished
+- [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future Enhancements)
 - [ ] **2.1c** Add state broadcasting to sync groups
 - [ ] **2.1d** Implement element pre-loading logic
 - [ ] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
