@@ -759,20 +759,22 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								'No active sequence find in wallclock schedule, setting default await: %s',
 								SMILScheduleEnum.defaultAwait,
 							);
-							if (
-								this.synchronization.shouldSync &&
-								!this.synchronization.syncingInAction &&
-								!this.synchronization.movingForward &&
-								isNil(this.synchronization.syncValue)
-							) {
-								await sleep(SMILScheduleEnum.defaultAwait);
-								await this.sos.sync.wait(
-									'idle',
-									`${this.synchronization.syncGroupName}-idlePrioritySync`,
-								);
-							} else {
-								await sleep(SMILScheduleEnum.defaultAwait);
-							}
+							await sleep(SMILScheduleEnum.defaultAwait);
+
+							// if (
+							// 	this.synchronization.shouldSync &&
+							// 	!this.synchronization.syncingInAction &&
+							// 	!this.synchronization.movingForward &&
+							// 	isNil(this.synchronization.syncValue)
+							// ) {
+							// 	await sleep(SMILScheduleEnum.defaultAwait);
+							// 	await this.sos.sync.wait(
+							// 		'idle',
+							// 		`${this.synchronization.syncGroupName}-idlePrioritySync`,
+							// 	);
+							// } else {
+							// 	await sleep(SMILScheduleEnum.defaultAwait);
+							// }
 						}
 
 						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
@@ -780,15 +782,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							continue;
 						}
 
-						if (
-							(timeToStart <= 0 || value?.length === 1) &&
-							this.synchronization.shouldSync &&
-							!this.synchronization.syncingInAction &&
-							!this.synchronization.movingForward &&
-							isNil(this.synchronization.syncValue)
-						) {
-							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
-						}
+						// if (
+						// 	(timeToStart <= 0 || value?.length === 1) &&
+						// 	this.synchronization.shouldSync &&
+						// 	!this.synchronization.syncingInAction &&
+						// 	!this.synchronization.movingForward &&
+						// 	isNil(this.synchronization.syncValue)
+						// ) {
+						// 	await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
+						// }
 
 						// wallclock has higher priority than conditional expression
 						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
@@ -2703,8 +2705,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	// 		}
 	//
 	// 		debug(`[${debugId}] Element synchronization completed successfully`);
-		return true;
-	};
+	// 	return true;
+	// };
 
 	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
 		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
