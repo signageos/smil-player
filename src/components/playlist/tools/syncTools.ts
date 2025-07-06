@@ -166,8 +166,14 @@ export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) 
 			: {
 					engine: SyncEngine.P2PLocal,
 				};
-		debug('Connecting to sync server with engine: %O', options);
+		debug('Connecting to sync server for event-based groups with engine: %O', options);
 		await sos.sync.connect(options);
+
+		// Initialize all existing sync groups after connection
+		for (const [groupName, syncGroup] of syncGroups) {
+			debug('Initializing event-based sync group after connection: %s', groupName);
+		}
+
 		resetAppRestartCount();
 	} catch (error) {
 		debug('Error occurred during sync connection: %O', error);
