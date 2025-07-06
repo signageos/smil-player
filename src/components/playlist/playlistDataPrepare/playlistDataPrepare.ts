@@ -119,6 +119,21 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
+					// Add element to registry for O(1) lookup
+					this.elementRegistry.addElement({
+						element: elem,
+						regionName: elem.regionInfo.regionName,
+						syncIndex: elem.syncIndex,
+						parentRef: new WeakRef(playlist),
+						parentKey: key,
+						navigationPath: [key], // TODO: build full path in recursive calls
+						contextInfo: {
+							currentIndex: value.indexOf(elem),
+							siblingCount: value.length,
+							depth: 1, // TODO: track actual depth
+						},
+					});
+
 					const mediaFile = (await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,

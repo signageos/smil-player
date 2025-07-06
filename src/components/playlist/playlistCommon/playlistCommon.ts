@@ -21,6 +21,7 @@ import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { ElementRegistry } from '../playlistDataPrepare/ElementRegistry';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: FrontApplet;
@@ -32,6 +33,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected synchronization: Synchronization;
 	protected videoPreparing: VideoPreparing = {};
 	protected randomPlaylist: RandomPlaylist = {};
+	protected elementRegistry: ElementRegistry;
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		this.sos = sos;
@@ -43,6 +45,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 		this.synchronization = options.synchronization;
 		this.videoPreparing = options.videoPreparing;
 		this.randomPlaylist = options.randomPlaylist;
+		this.elementRegistry = new ElementRegistry();
 	}
 
 	// disables endless loop for media playing
