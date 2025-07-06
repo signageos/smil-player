@@ -8,11 +8,11 @@ import { SMILFileObject } from '../../../models/filesModels';
 import { getDynamicTagsFromPlaylist } from './dynamicPlaylistTools';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { ParsedTriggerInfo } from '../../../models/triggerModels';
+import { SyncGroup } from './SyncGroup';
 
 // sets synchronization object to its starting values
 export function initSyncObject(): Synchronization {
 	return {
-		syncValue: undefined,
 		shouldSync: false,
 		syncGroupIds: [],
 		syncGroupName: '',
@@ -45,6 +45,9 @@ export async function broadcastEndActionToAllDynamics(
 	}
 }
 
+// Global registry for sync groups
+const syncGroups = new Map<string, SyncGroup>();
+
 export async function joinAllSyncGroupsOnSmilStart(
 	sos: FrontApplet,
 	synchronization: Synchronization,
@@ -55,23 +58,39 @@ export async function joinAllSyncGroupsOnSmilStart(
 	synchronization.syncDeviceId = sos.config.syncDeviceId;
 	synchronization.syncGroupIds.sort();
 
-	const triggerSync = await joinTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
-	const regionSync = await joinRegionSyncGroups(sos, synchronization, smilObject);
+	const triggerSync = await createTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
+	const regionSync = await createRegionSyncGroups(sos, synchronization, smilObject);
 
 	if (triggerSync || regionSync) {
 		// smil has some sync region, turn on sync
-		debug('Sync groups joined, turning sync on');
+		debug('Event-based sync groups created, turning sync on');
 		synchronization.shouldSync = true;
 		debug('sync object: %O', synchronization);
 
-		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-prioritySync`);
-		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-idlePrioritySync`);
+		// Create priority sync groups using event-based approach
+		await createSyncGroup(sos, `${synchronization.syncGroupName}-prioritySync`);
+		await createSyncGroup(sos, `${synchronization.syncGroupName}-idlePrioritySync`);
 	} else {
 		debug('No sync groups found, turning sync off');
 	}
 }
 
-async function joinTriggerSyncGroups(
+export function getSyncGroup(groupName: string): SyncGroup | undefined {
+	return syncGroups.get(groupName);
+}
+
+async function createSyncGroup(sos: FrontApplet, groupName: string): Promise<SyncGroup> {
+	if (syncGroups.has(groupName)) {
+		return syncGroups.get(groupName)!;
+	}
+
+	debug('Creating event-based sync group: %s', groupName);
+	const syncGroup = new SyncGroup(sos, groupName);
+	syncGroups.set(groupName, syncGroup);
+	return syncGroup;
+}
+
+async function createTriggerSyncGroups(
 	sos: FrontApplet,
 	synchronization: Synchronization,
 	triggerInfo: ParsedTriggerInfo,
@@ -79,20 +98,20 @@ async function joinTriggerSyncGroups(
 	for (let [key] of Object.entries(triggerInfo)) {
 		if (key.startsWith('sync-')) {
 			debug(
-				'Initializing sync server group for failover triggers: %s with deviceSyncId: %s',
+				'Creating event-based sync group for sync triggers: %s with deviceSyncId: %s',
 				`${synchronization.syncGroupName}`,
 				synchronization.syncDeviceId,
 			);
 
-			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
-			// join just once is enough for sync triggers since all share same sync group
+			await createSyncGroup(sos, `${synchronization.syncGroupName}`);
+			// create just once is enough for sync triggers since all share same sync group
 			return true;
 		}
 	}
 	return false;
 }
 
-async function joinRegionSyncGroups(sos: FrontApplet, synchronization: Synchronization, smilObject: SMILFileObject) {
+async function createRegionSyncGroups(sos: FrontApplet, synchronization: Synchronization, smilObject: SMILFileObject) {
 	let result = false;
 	for (let [key, value] of Object.entries(smilObject.region)) {
 		if (!isNil(value.region)) {
@@ -101,16 +120,18 @@ async function joinRegionSyncGroups(sos: FrontApplet, synchronization: Synchroni
 			}
 			for (let [, nestedValue] of Object.entries(value.region)) {
 				if (nestedValue.sync) {
-					// has to be initialized by value because it iterates over array
 					debug(
-						'Initializing sync server group on start dynamic: %s with deviceSyncId: %s',
+						'Creating event-based sync group for nested region: %s with deviceSyncId: %s',
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 						synchronization.syncDeviceId,
 					);
-					await joinSyncGroup(
+					await createSyncGroup(
 						sos,
-						synchronization,
-						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
+						`${synchronization.syncGroupName}-${nestedValue.regionName}-before`,
+					);
+					await createSyncGroup(
+						sos,
+						`${synchronization.syncGroupName}-${nestedValue.regionName}-after`,
 					);
 					result = true;
 				}
@@ -118,18 +139,17 @@ async function joinRegionSyncGroups(sos: FrontApplet, synchronization: Synchroni
 		}
 		if (value.sync) {
 			debug(
-				'Initializing sync server group regular: %s with deviceSyncId: %s',
+				'Creating event-based sync groups for region: %s with deviceSyncId: %s',
 				`${synchronization.syncGroupName}-${key}`,
 				synchronization.syncDeviceId,
 			);
-			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-before`);
-			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-after`);
+			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-before`);
+			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-after`);
 			result = true;
 
 			debug(
-				'Initializing sync server group regular finished: %s with deviceSyncId: %s',
+				'Event-based sync groups created for region: %s',
 				`${synchronization.syncGroupName}-${key}`,
-				synchronization.syncDeviceId,
 			);
 		}
 	}
