@@ -1,7 +1,6 @@
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { debug } from '../tools/generalTools';
 import { Synchronization, SyncElementState } from '../../../models/syncModels';
-import { ElementRegistry } from '../playlistDataPrepare/ElementRegistry';
 import { getSyncGroup } from '../tools/syncTools';
 import { SMILMedia } from '../../../models/mediaModels';
 
@@ -9,7 +8,6 @@ export class SMILElementController {
 	constructor(
 		private sos: FrontApplet,
 		private synchronization: Synchronization,
-		private elementRegistry: ElementRegistry,
 	) {}
 
 	/**

@@ -119,19 +119,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
-					// Add element to registry for O(1) lookup
-					this.elementRegistry.addElement({
-						element: elem,
-						regionName: elem.regionInfo.regionName,
-						syncIndex: elem.syncIndex,
-						parentRef: new WeakRef(playlist),
-						parentKey: key,
-						contextInfo: {
-							currentIndex: value.indexOf(elem),
-							siblingCount: value.length,
-							depth: 1,
-						},
-					});
 
 					const mediaFile = (await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
