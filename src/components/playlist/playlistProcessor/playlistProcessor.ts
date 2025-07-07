@@ -2357,9 +2357,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return 'RETRY'; // Signal to processPlaylist that retry is needed
 		}
 
-		// should sync mechanism skip current element
-		if (
-			!(await this.handleElementSynchronization(
+		// NEW: Event-based sync coordination
+		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			const shouldPlay = await this.elementController.handleElementStateSync(
 				value,
 				currentRegionInfo.regionName,
 				value.syncIndex,
