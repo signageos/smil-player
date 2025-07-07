@@ -37,6 +37,36 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Handle element state synchronization with resync support
+	 */
+	public async handleElementStateSync(
+		element: SMILMedia,
+		regionName: string,
+		syncIndex: number,
+	): Promise<boolean> {
+		if (!this.synchronization.shouldSync) {
+			return true; // No sync needed
+		}
+
+		// Check if we're in resync mode
+		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
+			if (syncIndex < this.synchronization.targetSyncIndex) {
+				debug('Skipping element during resync: syncIndex=%d, target=%d', syncIndex, this.synchronization.targetSyncIndex);
+				return false; // Skip this element
+			} else if (syncIndex === this.synchronization.targetSyncIndex) {
+				debug('Reached resync target: syncIndex=%d', syncIndex);
+				// Clear resync flags
+				this.synchronization.syncingInAction = false;
+				this.synchronization.targetSyncIndex = undefined;
+				// Continue with normal sync
+			}
+		}
+
+		// Normal sync flow
+		return await this.shouldStartPlayback(element, regionName, syncIndex);
+	}
+
+	/**
 	 * Check if element should start playback - replaces handleElementSynchronization
 	 */
 	public async shouldStartPlayback(
@@ -139,15 +169,20 @@ export class SMILElementController {
 			}, 10000); // 10 second timeout
 
 			syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
-				if (
-					key === 'elementState' &&
-					value?.state === expectedState &&
-					value?.regionName === regionName &&
-					value?.syncIndex === syncIndex
-				) {
-					clearTimeout(timeout);
-					debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
-					resolve();
+				if (key === 'elementState' && value?.regionName === regionName) {
+					if (value.state === expectedState && value.syncIndex === syncIndex) {
+						// Normal case: exact match
+						clearTimeout(timeout);
+						debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
+						resolve();
+					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
+						// Resync case: master is ahead
+						clearTimeout(timeout);
+						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
+						this.synchronization.targetSyncIndex = value.syncIndex + 1;
+						this.synchronization.syncingInAction = true;
+						resolve();
+					}
 				}
 			});
 		});
