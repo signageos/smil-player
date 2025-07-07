@@ -107,7 +107,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.priority = new PlaylistPriority(sos, files, options);
 		this.playerName = this.sos.config?.playerName ?? '';
 		this.playerId = this.sos.config?.playerId ?? '';
-		this.elementController = new SMILElementController(sos, this.synchronization, this.elementRegistry);
+		this.elementController = new SMILElementController(sos, this.synchronization);
 	}
 
 	public setCheckFilesLoop = (checkFilesLoop: boolean) => {

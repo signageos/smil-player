@@ -529,6 +529,27 @@ During implementation, discovered that SMILElementController had inconsistent sy
 
 Fixed to ensure all methods consistently use `-before` sync group for coordinating element transitions before playback starts. The `-after` sync groups remain available for future post-playback coordination needs.
 
+### Resync Architecture Decision (2.2c)
+After deep analysis, decided to keep `syncingInAction` and add `targetSyncIndex` because:
+- `syncingInAction` prevents priority content from interrupting during resync (critical requirement)
+- The priority system checks this flag to skip priority behavior during sync operations
+- Removing it would break priority handling in files like `priorityStop.smil`
+
+The resync flow will work as follows:
+1. Slave detects master is ahead (e.g., master at syncIndex 10, slave at 5)
+2. Set `targetSyncIndex = 11` (next element after master) and `syncingInAction = true`
+3. Priority system sees `syncingInAction` and doesn't interrupt
+4. Playlist processor skips elements until reaching targetSyncIndex
+5. At target, clear flags and wait for master to announce syncIndex 11
+6. Both devices continue in sync
+
+### ElementRegistry Removal Decision
+After implementing resync with `targetSyncIndex`, realized ElementRegistry is not needed:
+- Tree traversal with skip logic is simpler and maintains playlist integrity
+- O(1) lookup benefit not worth the complexity for rare resync scenarios
+- Avoids memory overhead and synchronization issues with dynamic playlists
+- Existing recursive processing handles all playlist features correctly
+
 ---
 
 ## Future Enhancements
@@ -566,6 +587,11 @@ The current SMILElementController implements a simple state machine for basic sy
 - Cross-region state coordination
 - Element queue management in controller for smoother transitions
 
+**Architecture Refinements:**
+- Explore removing `syncingInAction` flag in favor of state machine approach
+- Currently needed for priority system, but could be replaced with explicit sync states
+- Would require updating priority system to check sync state instead of boolean flag
+
 These improvements can be implemented incrementally as real-world usage reveals specific needs and edge cases.
 
 ---
@@ -582,10 +608,10 @@ These improvements can be implemented incrementally as real-world usage reveals 
 - [x] **1.2c** Remove all `sync.wait()` infrastructure from syncTools.ts
 - [x] **1.3a** Update `Synchronization` type - remove `syncValue`, add `targetSyncIndex`
 - [x] **1.3b** Keep `syncingInAction` and `movingForward` for tree navigation
-- [x] **1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`
-- [x] **1.4b** Keep `ElementRegistryEntry` interface in ElementRegistry.ts (better cohesion)
-- [x] **1.4c** Enhance `getAllInfo()` in `playlistDataPrepare.ts` to build Element Registry
-- [x] **1.4d** Implement `getElementBySyncIndex()` and navigation methods
+- [x] ~~**1.4a** Create `src/components/playlist/playlistDataPrepare/ElementRegistry.ts`~~ (Removed - not needed)
+- [x] ~~**1.4b** Keep `ElementRegistryEntry` interface in ElementRegistry.ts (better cohesion)~~ (Removed)
+- [x] ~~**1.4c** Enhance `getAllInfo()` in `playlistDataPrepare.ts` to build Element Registry~~ (Removed)
+- [x] ~~**1.4d** Implement `getElementBySyncIndex()` and navigation methods~~ (Removed)
 
 ### Phase 2: SMIL Element State Machine
 
@@ -595,9 +621,27 @@ These improvements can be implemented incrementally as real-world usage reveals 
 - [x] **2.1d** Implement element pre-loading logic (coordination in controller, actual loading in existing prepare methods)
 - [x] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
 - [x] **2.2a.1** Fix sync group consistency - all methods use `-before` group
-- [ ] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
-- [ ] **2.2c** Create `handleElementStateSync()` with event-based coordination
-- [ ] **2.2d** Implement target-seeking navigation using Element Registry
+- [x] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
+- [x] **2.2c** Create `handleElementStateSync()` with event-based coordination
+  - [x] **2.2c.1** Enhance `waitForMasterState()` to detect resync scenarios:
+    - Listen for any elementState broadcast (not just matching syncIndex)
+    - When master broadcasts syncIndex > current, set `targetSyncIndex = broadcast + 1`
+    - Set `syncingInAction = true` to prevent priority interruptions
+    - Resolve promise to let playlist continue seeking
+  - [x] **2.2c.2** Add `handleElementStateSync()` method to SMILElementController:
+    - Check if in resync mode (`syncingInAction && targetSyncIndex`)
+    - Return false to skip elements until reaching targetSyncIndex
+    - At target: clear flags, call normal `shouldStartPlayback()`
+    - For non-resync: delegate to `shouldStartPlayback()`
+  - [x] **2.2c.3** Update playlistProcessor to call `handleElementStateSync()`:
+    - Replace current `shouldStartPlayback()` call with `handleElementStateSync()`
+    - Pass element, regionName, and syncIndex
+    - Handle return value (true = play, false = skip)
+  - [x] **2.2c.4** Test resync behavior with priority content: (skipped - will test after full implementation)
+    - Verify priority doesn't interrupt during resync
+    - Test late-joining devices can catch up
+    - Ensure smooth transition when reaching target
+- [x] ~~**2.2d** Implement target-seeking navigation using Element Registry~~ (Not needed - using tree traversal)
 - [ ] **2.3a** Implement content preparation strategy
 - [ ] **2.3b** Add resource preloading for videos, images, widgets
 - [ ] **2.3c** Implement DOM preparation for HTML elements
