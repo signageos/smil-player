@@ -1,12 +1,9 @@
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { debug } from '../tools/generalTools';
 import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
-import { SMILMedia } from '../../../models/mediaModels';
 
 export class SMILElementController {
 	constructor(
-		private sos: FrontApplet,
 		private synchronization: Synchronization,
 	) {}
 
@@ -14,7 +11,6 @@ export class SMILElementController {
 	 * Prepare element for playback - coordinates sync at element boundaries
 	 */
 	public async prepareElement(
-		element: SMILMedia,
 		regionName: string,
 		syncIndex: number,
 	): Promise<void> {
@@ -38,7 +34,6 @@ export class SMILElementController {
 	 * Handle element state synchronization with resync support
 	 */
 	public async handleElementStateSync(
-		element: SMILMedia,
 		regionName: string,
 		syncIndex: number,
 	): Promise<boolean> {
@@ -61,14 +56,13 @@ export class SMILElementController {
 		}
 
 		// Normal sync flow
-		return await this.shouldStartPlayback(element, regionName, syncIndex);
+		return await this.shouldStartPlayback(regionName, syncIndex);
 	}
 
 	/**
 	 * Check if element should start playback - replaces handleElementSynchronization
 	 */
 	public async shouldStartPlayback(
-		element: SMILMedia,
 		regionName: string,
 		syncIndex: number,
 	): Promise<boolean> {
@@ -93,7 +87,6 @@ export class SMILElementController {
 	 * Mark element as finished - clean up sync state
 	 */
 	public async markElementFinished(
-		element: SMILMedia,
 		regionName: string,
 		syncIndex: number,
 	): Promise<void> {
