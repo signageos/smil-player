@@ -62,8 +62,7 @@ import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
-import { createLocalFilePath, createSourceReportObject, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
-import { isEqual } from 'lodash';
+import { createLocalFilePath, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
 import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamicModels';
@@ -91,12 +90,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private priority: PlaylistPriority;
 	private foundNewPlaylist: boolean = false;
 	private playlistVersion: number = 0;
-	private syncContentPrepared: {
-		[key: string]: {
-			syncGroupName: string;
-			numberOfNonSync: number;
-		};
-	} = {};
 	private internalStorageUnit: IStorageUnit;
 	private smilObject: SMILFileObject;
 	private elementController: SMILElementController;
@@ -107,7 +100,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.priority = new PlaylistPriority(sos, files, options);
 		this.playerName = this.sos.config?.playerName ?? '';
 		this.playerId = this.sos.config?.playerId ?? '';
-		this.elementController = new SMILElementController(sos, this.synchronization);
+		this.elementController = new SMILElementController(this.synchronization);
 	}
 
 	public setCheckFilesLoop = (checkFilesLoop: boolean) => {
@@ -2360,7 +2353,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// NEW: Event-based sync coordination
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
 			const shouldPlay = await this.elementController.handleElementStateSync(
-				value,
 				currentRegionInfo.regionName,
 				value.syncIndex,
 			);
