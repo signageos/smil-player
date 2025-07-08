@@ -3,21 +3,12 @@ import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 
 export class SMILElementController {
-	constructor(
-		private synchronization: Synchronization,
-	) {}
+	constructor(private synchronization: Synchronization) {}
 
 	/**
 	 * Prepare element for playback - coordinates sync at element boundaries
 	 */
-	public async prepareElement(
-		regionName: string,
-		syncIndex: number,
-	): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No-op for non-sync playlists
-		}
-
+	public async prepareElement(regionName: string, syncIndex: number): Promise<void> {
 		debug('Preparing element for sync: region=%s, syncIndex=%d', regionName, syncIndex);
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
@@ -31,12 +22,37 @@ export class SMILElementController {
 	}
 
 	/**
-	 * Handle element state synchronization with resync support
+	 * Check if element should be prepared - handles resync logic for preparation phase
 	 */
-	public async handleElementStateSync(
-		regionName: string,
-		syncIndex: number,
-	): Promise<boolean> {
+	public async shouldPrepareElement(regionName: string, syncIndex: number): Promise<boolean> {
+		if (!this.synchronization.shouldSync) {
+			return true; // No sync, always prepare
+		}
+		
+		// Check if we're in resync mode
+		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
+			if (syncIndex < this.synchronization.targetSyncIndex) {
+				debug('Skipping element preparation during resync: syncIndex=%d, target=%d', 
+					syncIndex, this.synchronization.targetSyncIndex);
+				return false; // Skip preparation
+			} else if (syncIndex === this.synchronization.targetSyncIndex) {
+				debug('Reached resync target during preparation: syncIndex=%d', syncIndex);
+				// Clear resync flags
+				this.synchronization.syncingInAction = false;
+				this.synchronization.targetSyncIndex = undefined;
+				// Continue with normal preparation
+			}
+		}
+		
+		// Coordinate preparation with other devices
+		await this.prepareElement(regionName, syncIndex);
+		return true;
+	}
+
+	/**
+	 * Check if element should be played - handles resync logic for playback phase
+	 */
+	public async shouldPlayElement(regionName: string, syncIndex: number): Promise<boolean> {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync needed
 		}
@@ -44,7 +60,11 @@ export class SMILElementController {
 		// Check if we're in resync mode
 		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
 			if (syncIndex < this.synchronization.targetSyncIndex) {
-				debug('Skipping element during resync: syncIndex=%d, target=%d', syncIndex, this.synchronization.targetSyncIndex);
+				debug(
+					'Skipping element during resync: syncIndex=%d, target=%d',
+					syncIndex,
+					this.synchronization.targetSyncIndex,
+				);
 				return false; // Skip this element
 			} else if (syncIndex === this.synchronization.targetSyncIndex) {
 				debug('Reached resync target: syncIndex=%d', syncIndex);
@@ -62,14 +82,7 @@ export class SMILElementController {
 	/**
 	 * Check if element should start playback - replaces handleElementSynchronization
 	 */
-	public async shouldStartPlayback(
-		regionName: string,
-		syncIndex: number,
-	): Promise<boolean> {
-		if (!this.synchronization.shouldSync) {
-			return true; // Always play immediately in non-sync mode
-		}
-
+	public async shouldStartPlayback(regionName: string, syncIndex: number): Promise<boolean> {
 		debug('Checking if should start playback: region=%s, syncIndex=%d', regionName, syncIndex);
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
@@ -86,10 +99,7 @@ export class SMILElementController {
 	/**
 	 * Mark element as finished - clean up sync state
 	 */
-	public async markElementFinished(
-		regionName: string,
-		syncIndex: number,
-	): Promise<void> {
+	public async markElementFinished(regionName: string, syncIndex: number): Promise<void> {
 		if (!this.synchronization.shouldSync) {
 			return; // No-op for non-sync playlists
 		}
@@ -126,11 +136,7 @@ export class SMILElementController {
 	/**
 	 * Broadcast state to sync group (master only)
 	 */
-	private async broadcastState(
-		state: SyncElementState,
-		regionName: string,
-		syncIndex: number,
-	): Promise<void> {
+	private async broadcastState(state: SyncElementState, regionName: string, syncIndex: number): Promise<void> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) return;
 
@@ -164,7 +170,12 @@ export class SMILElementController {
 					if (value.state === expectedState && value.syncIndex === syncIndex) {
 						// Normal case: exact match
 						clearTimeout(timeout);
-						debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
+						debug(
+							'Received expected state: %s for region=%s, syncIndex=%d',
+							expectedState,
+							regionName,
+							syncIndex,
+						);
 						resolve();
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 						// Resync case: master is ahead
@@ -185,7 +196,7 @@ export class SMILElementController {
 	private async isMaster(regionName: string): Promise<boolean> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) return false;
-		
+
 		return await syncGroup.isMaster();
 	}
 }
