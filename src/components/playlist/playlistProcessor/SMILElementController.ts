@@ -178,11 +178,34 @@ export class SMILElementController {
 						);
 						resolve();
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
-						// Resync case: master is ahead
+						// Master ahead with same state
 						clearTimeout(timeout);
 						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
 						this.synchronization.targetSyncIndex = value.syncIndex + 1;
 						this.synchronization.syncingInAction = true;
+						resolve();
+					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
+						// Same element but different state
+						clearTimeout(timeout);
+						
+						// Determine if we're ahead or behind based on state progression
+						const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
+						const expectedIndex = stateOrder.indexOf(expectedState);
+						const receivedIndex = stateOrder.indexOf(value.state);
+						
+						if (receivedIndex > expectedIndex) {
+							// We're behind (e.g., we expect 'prepared' but master is at 'playing')
+							debug('Behind in state progression - expected %s but master at %s for syncIndex=%d', 
+								expectedState, value.state, syncIndex);
+							// Skip to next element
+							this.synchronization.targetSyncIndex = syncIndex + 1;
+							this.synchronization.syncingInAction = true;
+						} else {
+							// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
+							debug('Ahead in state progression - expected %s but master at %s for syncIndex=%d', 
+								expectedState, value.state, syncIndex);
+							// Wait for master to catch up - don't set resync flags
+						}
 						resolve();
 					}
 				}
