@@ -2306,6 +2306,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
 
+		// Check if we should prepare this element (handles resync)
+		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			const shouldPrepare = await this.elementController.shouldPrepareElement(
+				currentRegionInfo.regionName,
+				value.syncIndex,
+			);
+			if (!shouldPrepare) {
+				debug(`[${debugId}] Skipping element preparation during resync`);
+				return;
+			}
+		}
+
 		switch (removeDigits(key)) {
 			case 'video':
 				const result = await this.handleVideoPrepare(value as SMILVideo, currentRegionInfo, debugId);
@@ -2352,7 +2364,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// NEW: Event-based sync coordination
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			const shouldPlay = await this.elementController.handleElementStateSync(
+			const shouldPlay = await this.elementController.shouldPlayElement(
 				currentRegionInfo.regionName,
 				value.syncIndex,
 			);
