@@ -32,6 +32,9 @@ export type Synchronization = {
 	syncingInAction: boolean;
 	movingForward: boolean;
 	shouldCancelAll: boolean;
-	targetSyncIndex?: number;
+	resyncTargets?: {
+		prepare?: number;  // Target syncIndex for preparation phase
+		play?: number;     // Target syncIndex for playing phase
+	};
 	maxSyncIndexPerRegion?: { [regionName: string]: number };
 };
