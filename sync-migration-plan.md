@@ -550,6 +550,47 @@ After implementing resync with `targetSyncIndex`, realized ElementRegistry is no
 - Avoids memory overhead and synchronization issues with dynamic playlists
 - Existing recursive processing handles all playlist features correctly
 
+### Content Preparation Strategy (2.3)
+Analyzed existing preparation logic and found it's already optimal:
+- Elements prepare just-in-time while previous element plays
+- During resync, we skip elements before preparation (efficient)
+- `shouldWaitAndContinue()` manages the timing for gapless playback
+- No changes needed - existing implementation works perfectly
+
+### TypeScript Error Fixes (Post Phase 2)
+After implementing sync migration, cleaned up unused code:
+- Removed unused `sos` parameter from SMILElementController constructor
+- Removed unused `element` parameters from SMILElementController methods
+- Removed unused imports (`createSourceReportObject`, `isEqual`, `SMILMedia`)
+- Removed unused `syncContentPrepared` property from playlistProcessor
+- Updated all method calls to match new signatures
+
+### Sync Element Preparation Optimization
+Improved efficiency during resync by checking sync state before element preparation:
+- Added `shouldPrepareElement()` method to handle resync logic during preparation phase
+- Renamed `handleElementStateSync` to `shouldPlayElement` for naming consistency
+- Removed duplicate `shouldSync` checks in `prepareElement` and `shouldStartPlayback`
+- Moved resync check before element preparation (before switch statement in `playMedia`)
+- Prevents unnecessary downloads/preparation of elements that will be skipped during resync
+
+### State Mismatch Edge Case Handling
+Enhanced `waitForMasterState()` to handle state progression mismatches:
+- Added handling for same syncIndex but different state scenarios
+- Detects if slave is behind (e.g., expects 'prepared' but master at 'playing')
+- Detects if slave is ahead (e.g., expects 'playing' but master at 'prepared')
+- Uses state progression order ('prepared' → 'playing' → 'finished') to determine relative position
+- Triggers resync only when slave is behind, not when ahead
+- Ensures proper sync recovery when slaves miss state transitions
+
+### SyncIndex Wraparound for Playlist Looping
+Fixed bug where resync would create non-existent syncIndex at playlist end:
+- Added `maxSyncIndexPerRegion` to Synchronization type to track region-specific maximums
+- Set `maxSyncIndexPerRegion` in `playlistDataPrepare` after processing all elements
+- Implemented wraparound logic in `waitForMasterState()` for playlist looping
+- When at last element, next syncIndex wraps to 1 (not 0, as syncIndex is 1-based)
+- Handles both resync scenarios: master ahead and state mismatch at same index
+- Ensures slaves can properly resync when playlists loop infinitely
+
 ---
 
 ## Future Enhancements
@@ -642,17 +683,21 @@ These improvements can be implemented incrementally as real-world usage reveals 
     - Test late-joining devices can catch up
     - Ensure smooth transition when reaching target
 - [x] ~~**2.2d** Implement target-seeking navigation using Element Registry~~ (Not needed - using tree traversal)
-- [ ] **2.3a** Implement content preparation strategy
-- [ ] **2.3b** Add resource preloading for videos, images, widgets
-- [ ] **2.3c** Implement DOM preparation for HTML elements
+- [x] **2.3a** Implement content preparation strategy (already optimal - no changes needed)
+- [x] **2.3b** Add resource preloading for videos, images, widgets (existing implementation sufficient)
+- [x] **2.3c** Implement DOM preparation for HTML elements (existing implementation sufficient)
+- [x] **2.3d** Add shouldPrepareElement to prevent unnecessary downloads during resync
+- [x] **2.3e** Fix TypeScript errors after sync migration
+- [x] **2.3f** Handle state mismatch edge cases in waitForMasterState
+- [x] **2.3g** Fix syncIndex wraparound for playlist looping with maxSyncIndexPerRegion
 
 ### Phase 3: SMIL Integration
 
-- [ ] **3.1a** Modify `playHtmlContent()` in playlistProcessor.ts
-- [ ] **3.1b** Modify `playVideo()` in playlistProcessor.ts
-- [ ] **3.1c** Update `processPlaylist()` method
-- [ ] **3.1d** Integrate SMILElementController into processing loop
-- [ ] **3.1e** Replace blocking sync with state machine coordination
+- [x] **3.1a** Modify `playHtmlContent()` in playlistProcessor.ts (no changes needed)
+- [x] **3.1b** Modify `playVideo()` in playlistProcessor.ts (no changes needed)
+- [x] **3.1c** Update `processPlaylist()` method (no changes needed)
+- [x] **3.1d** Integrate SMILElementController into processing loop (done in Phase 2)
+- [x] **3.1e** Replace blocking sync with state machine coordination (done in Phase 2)
 - [ ] **3.2a** Update dynamic playlist integration
 - [ ] **3.2b** Update priority content handling
 - [ ] **3.2c** Update wallclock scheduling
