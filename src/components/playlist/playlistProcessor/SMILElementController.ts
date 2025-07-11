@@ -28,12 +28,15 @@ export class SMILElementController {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync, always prepare
 		}
-		
+
 		// Check if we're in resync mode
 		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
 			if (syncIndex < this.synchronization.targetSyncIndex) {
-				debug('Skipping element preparation during resync: syncIndex=%d, target=%d', 
-					syncIndex, this.synchronization.targetSyncIndex);
+				debug(
+					'Skipping element preparation during resync: syncIndex=%d, target=%d',
+					syncIndex,
+					this.synchronization.targetSyncIndex,
+				);
 				return false; // Skip preparation
 			} else if (syncIndex === this.synchronization.targetSyncIndex) {
 				debug('Reached resync target during preparation: syncIndex=%d', syncIndex);
@@ -43,7 +46,7 @@ export class SMILElementController {
 				// Continue with normal preparation
 			}
 		}
-		
+
 		// Coordinate preparation with other devices
 		await this.prepareElement(regionName, syncIndex);
 		return true;
@@ -159,11 +162,12 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 	): Promise<void> {
+		console.log('waiting for master state with syncIndex', syncIndex);
 		return new Promise((resolve) => {
 			const timeout = setTimeout(() => {
 				debug('Timeout waiting for state: %s', expectedState);
 				resolve();
-			}, 10000); // 10 second timeout
+			}, 1000000); // 1000 second timeout
 
 			syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
 				if (key === 'elementState' && value?.regionName === regionName) {
@@ -181,29 +185,62 @@ export class SMILElementController {
 						// Master ahead with same state
 						clearTimeout(timeout);
 						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
-						this.synchronization.targetSyncIndex = value.syncIndex + 1;
+						
+						// Handle wraparound for playlist looping
+						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+						let nextIndex: number;
+						
+						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+							// Master is at last element, wrap to beginning (1)
+							nextIndex = 1;
+						} else {
+							// Normal case: increment
+							nextIndex = value.syncIndex + 1;
+						}
+						
+						this.synchronization.targetSyncIndex = nextIndex;
 						this.synchronization.syncingInAction = true;
 						resolve();
 					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 						// Same element but different state
 						clearTimeout(timeout);
-						
+
 						// Determine if we're ahead or behind based on state progression
 						const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
 						const expectedIndex = stateOrder.indexOf(expectedState);
 						const receivedIndex = stateOrder.indexOf(value.state);
-						
+
 						if (receivedIndex > expectedIndex) {
 							// We're behind (e.g., we expect 'prepared' but master is at 'playing')
-							debug('Behind in state progression - expected %s but master at %s for syncIndex=%d', 
-								expectedState, value.state, syncIndex);
-							// Skip to next element
-							this.synchronization.targetSyncIndex = syncIndex + 1;
+							debug(
+								'Behind in state progression - expected %s but master at %s for syncIndex=%d',
+								expectedState,
+								value.state,
+								syncIndex,
+							);
+							
+							// Handle wraparound for playlist looping
+							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+							let nextIndex: number;
+							
+							if (maxIndex !== undefined && syncIndex >= maxIndex) {
+								// At last element, wrap to beginning (1)
+								nextIndex = 1;
+							} else {
+								// Normal case: increment
+								nextIndex = syncIndex + 1;
+							}
+							
+							this.synchronization.targetSyncIndex = nextIndex;
 							this.synchronization.syncingInAction = true;
 						} else {
 							// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
-							debug('Ahead in state progression - expected %s but master at %s for syncIndex=%d', 
-								expectedState, value.state, syncIndex);
+							debug(
+								'Ahead in state progression - expected %s but master at %s for syncIndex=%d',
+								expectedState,
+								value.state,
+								syncIndex,
+							);
 							// Wait for master to catch up - don't set resync flags
 						}
 						resolve();

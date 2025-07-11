@@ -33,4 +33,5 @@ export type Synchronization = {
 	movingForward: boolean;
 	shouldCancelAll: boolean;
 	targetSyncIndex?: number;
+	maxSyncIndexPerRegion?: { [regionName: string]: number };
 };

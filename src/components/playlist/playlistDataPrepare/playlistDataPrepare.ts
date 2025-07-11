@@ -199,5 +199,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
 		debug('All elements info extracted');
+		
+		// Set max sync indices for each region in synchronization object
+		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
+			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
+			debug('Set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+		}
 	};
 }
