@@ -171,6 +171,15 @@ export class SMILElementController {
 
 			syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
 				if (key === 'elementState' && value?.regionName === regionName) {
+					// Debug all state broadcasts to understand flow
+					debug(
+						'Received state broadcast: state=%s, syncIndex=%d (waiting for state=%s, syncIndex=%d)',
+						value.state,
+						value.syncIndex,
+						expectedState,
+						syncIndex,
+					);
+					
 					if (value.state === expectedState && value.syncIndex === syncIndex) {
 						// Normal case: exact match
 						clearTimeout(timeout);
@@ -244,7 +253,36 @@ export class SMILElementController {
 							// Wait for master to catch up - don't set resync flags
 						}
 						resolve();
+					} else if (value.state === 'playing' && value.syncIndex > syncIndex) {
+						// Special case: Master is playing a future element, we need to catch up
+						// This handles the case where we're waiting for 'prepared' of syncIndex N
+						// but master is already playing syncIndex N+1 or higher
+						clearTimeout(timeout);
+						debug(
+							'Master playing future element - need resync. Master playing %d, we waiting at %d',
+							value.syncIndex,
+							syncIndex,
+						);
+						
+						// Set target to prepare for the NEXT element after what master is playing
+						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+						let nextIndex: number;
+						
+						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+							// Master playing last element, we'll prepare first element
+							nextIndex = 1;
+						} else {
+							// Prepare next element after what master is playing
+							nextIndex = value.syncIndex + 1;
+						}
+						
+						this.synchronization.targetSyncIndex = nextIndex;
+						this.synchronization.syncingInAction = true;
+						debug('Setting resync target to prepare syncIndex=%d', nextIndex);
+						resolve();
 					}
+					// Continue listening for other state broadcasts
+					// Don't resolve for unrelated broadcasts - just keep waiting
 				}
 			});
 		});
