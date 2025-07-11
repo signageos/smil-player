@@ -190,6 +190,32 @@ export class SMILElementController {
 							syncIndex,
 						);
 						resolve();
+					} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
+						// Special case: We're waiting for 'prepared' but master is already playing a future element
+						// This means we missed our chance to prepare and need to catch up
+						clearTimeout(timeout);
+						debug(
+							'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
+							value.syncIndex,
+							syncIndex,
+						);
+						
+						// Set target to prepare for the NEXT element after what master is playing
+						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+						let nextIndex: number;
+						
+						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+							// Master playing last element, we'll prepare first element
+							nextIndex = 1;
+						} else {
+							// Prepare next element after what master is playing
+							nextIndex = value.syncIndex + 1;
+						}
+						
+						this.synchronization.targetSyncIndex = nextIndex;
+						this.synchronization.syncingInAction = true;
+						debug('Setting resync target to prepare syncIndex=%d', nextIndex);
+						resolve();
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 						// Master ahead with same state
 						clearTimeout(timeout);
@@ -252,33 +278,6 @@ export class SMILElementController {
 							);
 							// Wait for master to catch up - don't set resync flags
 						}
-						resolve();
-					} else if (value.state === 'playing' && value.syncIndex > syncIndex) {
-						// Special case: Master is playing a future element, we need to catch up
-						// This handles the case where we're waiting for 'prepared' of syncIndex N
-						// but master is already playing syncIndex N+1 or higher
-						clearTimeout(timeout);
-						debug(
-							'Master playing future element - need resync. Master playing %d, we waiting at %d',
-							value.syncIndex,
-							syncIndex,
-						);
-						
-						// Set target to prepare for the NEXT element after what master is playing
-						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-						let nextIndex: number;
-						
-						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
-							// Master playing last element, we'll prepare first element
-							nextIndex = 1;
-						} else {
-							// Prepare next element after what master is playing
-							nextIndex = value.syncIndex + 1;
-						}
-						
-						this.synchronization.targetSyncIndex = nextIndex;
-						this.synchronization.syncingInAction = true;
-						debug('Setting resync target to prepare syncIndex=%d', nextIndex);
 						resolve();
 					}
 					// Continue listening for other state broadcasts
