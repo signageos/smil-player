@@ -29,20 +29,23 @@ export class SMILElementController {
 			return true; // No sync, always prepare
 		}
 
-		// Check if we're in resync mode
-		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
-			if (syncIndex < this.synchronization.targetSyncIndex) {
+		// Check if we're in resync mode for preparation
+		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.prepare) {
+			if (syncIndex < this.synchronization.resyncTargets.prepare) {
 				debug(
 					'Skipping element preparation during resync: syncIndex=%d, target=%d',
 					syncIndex,
-					this.synchronization.targetSyncIndex,
+					this.synchronization.resyncTargets.prepare,
 				);
 				return false; // Skip preparation
-			} else if (syncIndex === this.synchronization.targetSyncIndex) {
+			} else if (syncIndex === this.synchronization.resyncTargets.prepare) {
 				debug('Reached resync target during preparation: syncIndex=%d', syncIndex);
-				// Clear resync flags
-				this.synchronization.syncingInAction = false;
-				this.synchronization.targetSyncIndex = undefined;
+				// Clear prepare target
+				delete this.synchronization.resyncTargets.prepare;
+				// Clear syncingInAction only if no other targets remain
+				if (!this.synchronization.resyncTargets?.play) {
+					this.synchronization.syncingInAction = false;
+				}
 				// Continue with normal preparation
 			}
 		}
@@ -60,20 +63,23 @@ export class SMILElementController {
 			return true; // No sync needed
 		}
 
-		// Check if we're in resync mode
-		if (this.synchronization.syncingInAction && this.synchronization.targetSyncIndex) {
-			if (syncIndex < this.synchronization.targetSyncIndex) {
+		// Check if we're in resync mode for playing
+		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
+			if (syncIndex < this.synchronization.resyncTargets.play) {
 				debug(
-					'Skipping element during resync: syncIndex=%d, target=%d',
+					'Skipping element playback during resync: syncIndex=%d, target=%d',
 					syncIndex,
-					this.synchronization.targetSyncIndex,
+					this.synchronization.resyncTargets.play,
 				);
 				return false; // Skip this element
-			} else if (syncIndex === this.synchronization.targetSyncIndex) {
-				debug('Reached resync target: syncIndex=%d', syncIndex);
-				// Clear resync flags
-				this.synchronization.syncingInAction = false;
-				this.synchronization.targetSyncIndex = undefined;
+			} else if (syncIndex === this.synchronization.resyncTargets.play) {
+				debug('Reached resync target during playback: syncIndex=%d', syncIndex);
+				// Clear play target
+				delete this.synchronization.resyncTargets.play;
+				// Clear syncingInAction only if no other targets remain
+				if (!this.synchronization.resyncTargets?.prepare) {
+					this.synchronization.syncingInAction = false;
+				}
 				// Continue with normal sync
 			}
 		}
@@ -212,7 +218,11 @@ export class SMILElementController {
 							nextIndex = value.syncIndex + 1;
 						}
 						
-						this.synchronization.targetSyncIndex = nextIndex;
+						// Set state-specific resync target for preparation
+						if (!this.synchronization.resyncTargets) {
+							this.synchronization.resyncTargets = {};
+						}
+						this.synchronization.resyncTargets.prepare = nextIndex;
 						this.synchronization.syncingInAction = true;
 						debug('Setting resync target to prepare syncIndex=%d', nextIndex);
 						resolve();
@@ -233,8 +243,20 @@ export class SMILElementController {
 							nextIndex = value.syncIndex + 1;
 						}
 						
-						this.synchronization.targetSyncIndex = nextIndex;
+						// Set state-specific resync target based on expected state
+						if (!this.synchronization.resyncTargets) {
+							this.synchronization.resyncTargets = {};
+						}
+						
+						// Determine which target to set based on what state we're waiting for
+						if (expectedState === 'prepared') {
+							this.synchronization.resyncTargets.prepare = nextIndex;
+						} else if (expectedState === 'playing') {
+							this.synchronization.resyncTargets.play = nextIndex;
+						}
+						
 						this.synchronization.syncingInAction = true;
+						debug('Setting resync target for %s state to syncIndex=%d', expectedState, nextIndex);
 						resolve();
 					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 						// Same element but different state
@@ -266,7 +288,12 @@ export class SMILElementController {
 								nextIndex = syncIndex + 1;
 							}
 							
-							this.synchronization.targetSyncIndex = nextIndex;
+							// Set state-specific resync target for preparation
+							if (!this.synchronization.resyncTargets) {
+								this.synchronization.resyncTargets = {};
+							}
+							// When behind in state progression, we need to prepare the next element
+							this.synchronization.resyncTargets.prepare = nextIndex;
 							this.synchronization.syncingInAction = true;
 						} else {
 							// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
