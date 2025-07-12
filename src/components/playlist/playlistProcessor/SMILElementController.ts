@@ -151,8 +151,9 @@ export class SMILElementController {
 			await this.broadcastState(state, regionName, syncIndex);
 		} else {
 			debug('Slave waiting for %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
+			console.log('master state resolve', Date.now());
 			await this.waitForMasterState(syncGroup, state, regionName, syncIndex);
-			console.log('master state resolved');
+			console.log('master state resolved', Date.now());
 		}
 	}
 
@@ -184,12 +185,28 @@ export class SMILElementController {
 	): Promise<void> {
 		console.log('waiting for master state with syncIndex', syncIndex);
 		return new Promise((resolve) => {
+			let resolved = false;
+			let unsubscribe: (() => void) | null = null;
+
+			const cleanup = () => {
+				if (resolved) return;
+				resolved = true;
+				clearTimeout(timeout);
+				if (unsubscribe) {
+					debug('Cleaning up event listener for region=%s', regionName);
+					unsubscribe();
+					unsubscribe = null;
+				}
+			};
+
 			const timeout = setTimeout(() => {
 				debug('Timeout waiting for state: %s', expectedState);
+				cleanup();
 				resolve();
 			}, 1000000); // 1000 second timeout
 
-			syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+				if (resolved) return; // Prevent processing after resolution
 				console.log('Received value in syncGroup', value);
 				console.log('---------------------------------------------------');
 				if (key === 'elementState' && value?.regionName === regionName) {
@@ -231,13 +248,13 @@ export class SMILElementController {
 
 					if (value.state === expectedState && value.syncIndex === syncIndex) {
 						// Normal case: exact match
-						clearTimeout(timeout);
 						debug(
 							'Received expected state: %s for region=%s, syncIndex=%d',
 							expectedState,
 							regionName,
 							syncIndex,
 						);
+						cleanup();
 						resolve();
 					} else if (
 						expectedState === 'prepared' &&
@@ -246,7 +263,6 @@ export class SMILElementController {
 					) {
 						// Special case: We're waiting for 'prepared' but master is already playing a future element
 						// This means we missed our chance to prepare and need to catch up
-						clearTimeout(timeout);
 						debug(
 							'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
 							value.syncIndex,
@@ -280,10 +296,10 @@ export class SMILElementController {
 							value.syncIndex,
 						);
 						console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
+						cleanup();
 						resolve();
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 						// Master ahead with same state
-						clearTimeout(timeout);
 						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
 
 						// Handle wraparound for playlist looping
@@ -326,11 +342,10 @@ export class SMILElementController {
 
 						this.synchronization.syncingInAction = true;
 						console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
+						cleanup();
 						resolve();
 					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 						// Same element but different state
-						clearTimeout(timeout);
-
 						// Determine if we're ahead or behind based on state progression
 						const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
 						const expectedIndex = stateOrder.indexOf(expectedState);
@@ -382,6 +397,7 @@ export class SMILElementController {
 							);
 							// Wait for master to catch up - don't set resync flags
 						}
+						cleanup();
 						resolve();
 					}
 					// Continue listening for other state broadcasts
