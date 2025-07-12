@@ -27,8 +27,7 @@ export class SMILElementController {
 		}
 
 		// Coordinate element transition - late joiners will sync here
-		const shouldContinue = await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex);
-		return shouldContinue;
+		return await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex);
 	}
 
 	/**
@@ -120,8 +119,7 @@ export class SMILElementController {
 		}
 
 		// Coordinate playback start
-		const shouldContinue = await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex);
-		return shouldContinue;
+		return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex);
 	}
 
 	/**
@@ -407,7 +405,7 @@ export class SMILElementController {
 							// Wait for master to catch up - don't set resync flags
 						}
 						cleanup();
-						resolve(receivedIndex > expectedIndex ? false : true); // Skip if behind, continue if ahead
+						resolve(receivedIndex <= expectedIndex); // Skip if behind, continue if ahead
 					}
 					// Continue listening for other state broadcasts
 					// Don't resolve for unrelated broadcasts - just keep waiting
