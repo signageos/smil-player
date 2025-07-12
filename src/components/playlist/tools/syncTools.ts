@@ -68,8 +68,8 @@ export async function joinAllSyncGroupsOnSmilStart(
 		debug('sync object: %O', synchronization);
 
 		// Create priority sync groups using event-based approach
-		await createSyncGroup(sos, `${synchronization.syncGroupName}-prioritySync`);
-		await createSyncGroup(sos, `${synchronization.syncGroupName}-idlePrioritySync`);
+		// await createSyncGroup(sos, `${synchronization.syncGroupName}-prioritySync`);
+		// await createSyncGroup(sos, `${synchronization.syncGroupName}-idlePrioritySync`);
 	} else {
 		debug('No sync groups found, turning sync off');
 	}
@@ -126,14 +126,11 @@ async function createRegionSyncGroups(sos: FrontApplet, synchronization: Synchro
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 						synchronization.syncDeviceId,
 					);
-					await createSyncGroup(
-						sos,
-						`${synchronization.syncGroupName}-${nestedValue.regionName}-before`,
-					);
-					await createSyncGroup(
-						sos,
-						`${synchronization.syncGroupName}-${nestedValue.regionName}-after`,
-					);
+					await createSyncGroup(sos, `${synchronization.syncGroupName}-${nestedValue.regionName}-before`);
+					// await createSyncGroup(
+					// 	sos,
+					// 	`${synchronization.syncGroupName}-${nestedValue.regionName}-after`,
+					// );
 					result = true;
 				}
 			}
@@ -145,13 +142,10 @@ async function createRegionSyncGroups(sos: FrontApplet, synchronization: Synchro
 				synchronization.syncDeviceId,
 			);
 			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-before`);
-			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-after`);
+			// await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-after`);
 			result = true;
 
-			debug(
-				'Event-based sync groups created for region: %s',
-				`${synchronization.syncGroupName}-${key}`,
-			);
+			debug('Event-based sync groups created for region: %s', `${synchronization.syncGroupName}-${key}`);
 		}
 	}
 	return result;

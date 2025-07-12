@@ -515,6 +515,14 @@ Idle → Prepared → Playing → Finished
 - Better separation of concerns
 - Enhanced test coverage
 
+### Development Best Practices:
+
+- **Always include debug logging in crucial sections** - Especially for sync state changes, resync decisions, and error conditions
+- Use `debug()` from the debug library for development-level logging
+- Use `console.log('[SYNC] ...')` for critical sync events that should always be visible
+- Log with full context (region, syncIndex, state, reason for decision)
+- Include both the action being taken and why it's being taken
+
 This plan provides a structured approach to migrating from wait-based to event-based synchronization while maintaining
 all existing functionality and improving performance characteristics.
 
@@ -590,6 +598,17 @@ Fixed bug where resync would create non-existent syncIndex at playlist end:
 - When at last element, next syncIndex wraps to 1 (not 0, as syncIndex is 1-based)
 - Handles both resync scenarios: master ahead and state mismatch at same index
 - Ensures slaves can properly resync when playlists loop infinitely
+
+### Idempotent Slave Logic Implementation
+Implemented duplicate broadcast detection to handle master sending same state multiple times:
+- Added `lastProcessedBroadcast` tracking per region in SMILElementController
+- Tracks syncIndex, state, and timestamp to detect exact duplicates
+- Prevents duplicate broadcasts from triggering incorrect resync target increments
+- Comprehensive logging added for debugging sync state changes:
+  - `debug()` for development-level sync decisions
+  - `console.log('[SYNC] ...')` for critical sync events
+  - Logs when setting/clearing resync targets with full context
+- Development best practice: Always include debug logging in crucial sync/state management code
 
 ---
 
