@@ -206,8 +206,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// setup sync before everything else
 		await this.handleSyncSetup(firstIteration);
-		// give some time for master selection
-		await sleep(500);
 
 		const promises = [
 			// File checking process
