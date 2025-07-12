@@ -204,13 +204,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
 		const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 
+		// setup sync before everything else
+		await this.handleSyncSetup(firstIteration);
+		// give some time for master selection
+		await sleep(500);
+
 		const promises = [
 			// File checking process
 			this.handleFileChecking(smilFile, restart),
-
-			// Sync setup
-			this.handleSyncSetup(firstIteration),
-
 			// Playlist processing loop
 			this.handlePlaylistLoop(version),
 

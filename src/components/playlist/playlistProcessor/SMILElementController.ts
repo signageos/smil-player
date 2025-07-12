@@ -3,6 +3,15 @@ import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 
 export class SMILElementController {
+	// Track last processed broadcast per region to prevent duplicate processing
+	private lastProcessedBroadcast: {
+		[regionName: string]: {
+			syncIndex: number;
+			state: SyncElementState;
+			timestamp: number;
+		};
+	} = {};
+
 	constructor(private synchronization: Synchronization) {}
 
 	/**
@@ -39,12 +48,14 @@ export class SMILElementController {
 				);
 				return false; // Skip preparation
 			} else if (syncIndex === this.synchronization.resyncTargets.prepare) {
-				debug('Reached resync target during preparation: syncIndex=%d', syncIndex);
+				debug('Reached resync target during preparation: region=%s, syncIndex=%d', regionName, syncIndex);
+				console.log(`[SYNC] Reached prepare target at index ${syncIndex} - resuming normal sync`);
 				// Clear prepare target
 				delete this.synchronization.resyncTargets.prepare;
 				// Clear syncingInAction only if no other targets remain
 				if (!this.synchronization.resyncTargets?.play) {
 					this.synchronization.syncingInAction = false;
+					debug('All resync targets cleared - exiting resync mode');
 				}
 				// Continue with normal preparation
 			}
@@ -73,12 +84,14 @@ export class SMILElementController {
 				);
 				return false; // Skip this element
 			} else if (syncIndex === this.synchronization.resyncTargets.play) {
-				debug('Reached resync target during playback: syncIndex=%d', syncIndex);
+				debug('Reached resync target during playback: region=%s, syncIndex=%d', regionName, syncIndex);
+				console.log(`[SYNC] Reached play target at index ${syncIndex} - resuming normal sync`);
 				// Clear play target
 				delete this.synchronization.resyncTargets.play;
 				// Clear syncingInAction only if no other targets remain
 				if (!this.synchronization.resyncTargets?.prepare) {
 					this.synchronization.syncingInAction = false;
+					debug('All resync targets cleared - exiting resync mode');
 				}
 				// Continue with normal sync
 			}
@@ -139,6 +152,7 @@ export class SMILElementController {
 		} else {
 			debug('Slave waiting for %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
 			await this.waitForMasterState(syncGroup, state, regionName, syncIndex);
+			console.log('master state resolved');
 		}
 	}
 
@@ -176,16 +190,45 @@ export class SMILElementController {
 			}, 1000000); // 1000 second timeout
 
 			syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+				console.log('Received value in syncGroup', value);
+				console.log('---------------------------------------------------');
 				if (key === 'elementState' && value?.regionName === regionName) {
-					// Debug all state broadcasts to understand flow
+					// Check for duplicate broadcast
+					const lastBroadcast = this.lastProcessedBroadcast[regionName];
+					if (
+						lastBroadcast &&
+						lastBroadcast.syncIndex === value.syncIndex &&
+						lastBroadcast.state === value.state &&
+						lastBroadcast.timestamp === value.timestamp
+					) {
+						debug(
+							'Duplicate broadcast detected, ignoring: state=%s, syncIndex=%d, timestamp=%d for region=%s',
+							value.state,
+							value.syncIndex,
+							value.timestamp,
+							regionName,
+						);
+						return; // Ignore duplicate
+					}
+
+					// Log new broadcast being processed
 					debug(
-						'Received state broadcast: state=%s, syncIndex=%d (waiting for state=%s, syncIndex=%d)',
+						'Processing new broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
 						value.state,
 						value.syncIndex,
+						value.timestamp,
+						regionName,
 						expectedState,
 						syncIndex,
 					);
-					
+
+					// Update last processed broadcast
+					this.lastProcessedBroadcast[regionName] = {
+						syncIndex: value.syncIndex,
+						state: value.state,
+						timestamp: value.timestamp,
+					};
+
 					if (value.state === expectedState && value.syncIndex === syncIndex) {
 						// Normal case: exact match
 						clearTimeout(timeout);
@@ -196,7 +239,11 @@ export class SMILElementController {
 							syncIndex,
 						);
 						resolve();
-					} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
+					} else if (
+						expectedState === 'prepared' &&
+						value.state === 'playing' &&
+						value.syncIndex > syncIndex
+					) {
 						// Special case: We're waiting for 'prepared' but master is already playing a future element
 						// This means we missed our chance to prepare and need to catch up
 						clearTimeout(timeout);
@@ -205,58 +252,80 @@ export class SMILElementController {
 							value.syncIndex,
 							syncIndex,
 						);
-						
+
 						// Set target to prepare for the NEXT element after what master is playing
 						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 						let nextIndex: number;
-						
+
 						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+							console.log('reseting index');
 							// Master playing last element, we'll prepare first element
 							nextIndex = 1;
 						} else {
+							console.log('increasing index');
 							// Prepare next element after what master is playing
 							nextIndex = value.syncIndex + 1;
 						}
-						
+
 						// Set state-specific resync target for preparation
 						if (!this.synchronization.resyncTargets) {
 							this.synchronization.resyncTargets = {};
 						}
 						this.synchronization.resyncTargets.prepare = nextIndex;
 						this.synchronization.syncingInAction = true;
-						debug('Setting resync target to prepare syncIndex=%d', nextIndex);
+						debug(
+							'Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
+							regionName,
+							nextIndex,
+							value.syncIndex,
+						);
+						console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
 						resolve();
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 						// Master ahead with same state
 						clearTimeout(timeout);
 						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
-						
+
 						// Handle wraparound for playlist looping
 						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 						let nextIndex: number;
-						
+
 						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+							console.log('reseting index');
 							// Master is at last element, wrap to beginning (1)
 							nextIndex = 1;
 						} else {
 							// Normal case: increment
+							console.log('increasing index');
 							nextIndex = value.syncIndex + 1;
 						}
-						
+
 						// Set state-specific resync target based on expected state
 						if (!this.synchronization.resyncTargets) {
 							this.synchronization.resyncTargets = {};
 						}
-						
+
 						// Determine which target to set based on what state we're waiting for
 						if (expectedState === 'prepared') {
 							this.synchronization.resyncTargets.prepare = nextIndex;
+							debug(
+								'Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
+								regionName,
+								nextIndex,
+								value.syncIndex,
+							);
 						} else if (expectedState === 'playing') {
 							this.synchronization.resyncTargets.play = nextIndex;
+							debug(
+								'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
+								regionName,
+								nextIndex,
+								value.syncIndex,
+							);
 						}
-						
+
 						this.synchronization.syncingInAction = true;
-						debug('Setting resync target for %s state to syncIndex=%d', expectedState, nextIndex);
+						console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
 						resolve();
 					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 						// Same element but different state
@@ -275,19 +344,21 @@ export class SMILElementController {
 								value.state,
 								syncIndex,
 							);
-							
+
 							// Handle wraparound for playlist looping
 							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 							let nextIndex: number;
-							
+
 							if (maxIndex !== undefined && syncIndex >= maxIndex) {
+								console.log('reseting index');
 								// At last element, wrap to beginning (1)
 								nextIndex = 1;
 							} else {
+								console.log('increasing index');
 								// Normal case: increment
 								nextIndex = syncIndex + 1;
 							}
-							
+
 							// Set state-specific resync target for preparation
 							if (!this.synchronization.resyncTargets) {
 								this.synchronization.resyncTargets = {};
@@ -295,6 +366,12 @@ export class SMILElementController {
 							// When behind in state progression, we need to prepare the next element
 							this.synchronization.resyncTargets.prepare = nextIndex;
 							this.synchronization.syncingInAction = true;
+							debug(
+								'Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
+								regionName,
+								nextIndex,
+							);
+							console.log(`[SYNC] Behind in state - resync to prepare at index ${nextIndex}`);
 						} else {
 							// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
 							debug(
