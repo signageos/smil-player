@@ -522,6 +522,7 @@ Idle → Prepared → Playing → Finished
 - Use `console.log('[SYNC] ...')` for critical sync events that should always be visible
 - Log with full context (region, syncIndex, state, reason for decision)
 - Include both the action being taken and why it's being taken
+- **Avoid unnecessary intermediate variables** - Return function results directly when possible (e.g., `return await someFunction()` instead of `const result = await someFunction(); return result;`)
 
 This plan provides a structured approach to migrating from wait-based to event-based synchronization while maintaining
 all existing functionality and improving performance characteristics.
@@ -621,6 +622,18 @@ Fixed critical issue where event listeners were not cleaned up in `waitForMaster
 - Call `cleanup()` before every `resolve()` to ensure proper cleanup
 - Added safety check to prevent processing events after resolution
 - This fixes the issue where Promise would resolve but `await` wouldn't complete, blocking execution
+
+### Resync Signal Propagation Fix
+Fixed issue where resync detection didn't cause elements to be skipped:
+- Changed `waitForMasterState` to return `Promise<boolean>` (false = skip, true = continue)
+- Updated `coordinateElementTransition` to propagate the boolean result
+- Fixed `shouldStartPlayback` to return the coordination result
+- Updated `prepareElement` and `shouldPrepareElement` to handle boolean returns
+- When slave detects it's behind master:
+  - Sets resync targets (existing behavior)
+  - Returns false to trigger element skipping (new)
+  - False propagates through the call chain
+  - Elements are skipped until reaching resync target
 
 ---
 
