@@ -27,10 +27,10 @@ import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels
 import { BinaryOperatorChar } from '../../../enums/conditionalEnums';
 import { IPlaylistTriggers } from './IPlaylistTriggers';
 import { PriorityObject } from '../../../models/priorityModels';
-import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { DynamicPlaylist, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-import { joinSyncGroup } from '../tools/dynamicTools';
+// import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
+// import { joinSyncGroup } from '../tools/dynamicTools';
 import { resolvePlayingDeferred } from '../tools/deferredTools';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 
