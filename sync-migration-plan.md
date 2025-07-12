@@ -610,6 +610,18 @@ Implemented duplicate broadcast detection to handle master sending same state mu
   - Logs when setting/clearing resync targets with full context
 - Development best practice: Always include debug logging in crucial sync/state management code
 
+### Event Listener Cleanup Fix
+Fixed critical issue where event listeners were not cleaned up in `waitForMasterState`:
+- Added `resolved` flag to prevent multiple promise resolutions
+- Store `unsubscribe` function from `syncGroup.onValue()` for cleanup
+- Created `cleanup()` function that:
+  - Clears the timeout
+  - Removes the event listener
+  - Prevents duplicate cleanup attempts
+- Call `cleanup()` before every `resolve()` to ensure proper cleanup
+- Added safety check to prevent processing events after resolution
+- This fixes the issue where Promise would resolve but `await` wouldn't complete, blocking execution
+
 ---
 
 ## Future Enhancements
