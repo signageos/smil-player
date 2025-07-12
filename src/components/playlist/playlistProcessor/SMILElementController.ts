@@ -17,17 +17,18 @@ export class SMILElementController {
 	/**
 	 * Prepare element for playback - coordinates sync at element boundaries
 	 */
-	public async prepareElement(regionName: string, syncIndex: number): Promise<void> {
+	public async prepareElement(regionName: string, syncIndex: number): Promise<boolean> {
 		debug('Preparing element for sync: region=%s, syncIndex=%d', regionName, syncIndex);
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
 			debug('No sync group found for region: %s', regionName);
-			return;
+			return true; // No sync, continue
 		}
 
 		// Coordinate element transition - late joiners will sync here
-		await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex);
+		const shouldContinue = await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex);
+		return shouldContinue;
 	}
 
 	/**
@@ -62,7 +63,12 @@ export class SMILElementController {
 		}
 
 		// Coordinate preparation with other devices
-		await this.prepareElement(regionName, syncIndex);
+		const shouldContinue = await this.prepareElement(regionName, syncIndex);
+		// If preparation triggered resync, we should skip
+		if (!shouldContinue) {
+			debug('Preparation coordination triggered resync - skip element');
+			return false;
+		}
 		return true;
 	}
 
@@ -114,8 +120,8 @@ export class SMILElementController {
 		}
 
 		// Coordinate playback start
-		await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex);
-		return true;
+		const shouldContinue = await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex);
+		return shouldContinue;
 	}
 
 	/**
@@ -143,17 +149,19 @@ export class SMILElementController {
 		state: SyncElementState,
 		regionName: string,
 		syncIndex: number,
-	): Promise<void> {
+	): Promise<boolean> {
 		const isMaster = await syncGroup.isMaster();
 
 		if (isMaster) {
 			debug('Master coordinating %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
 			await this.broadcastState(state, regionName, syncIndex);
+			return true; // Master always continues
 		} else {
 			debug('Slave waiting for %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
 			console.log('master state resolve', Date.now());
-			await this.waitForMasterState(syncGroup, state, regionName, syncIndex);
+			const shouldContinue = await this.waitForMasterState(syncGroup, state, regionName, syncIndex);
 			console.log('master state resolved', Date.now());
+			return shouldContinue;
 		}
 	}
 
@@ -182,8 +190,8 @@ export class SMILElementController {
 		expectedState: SyncElementState,
 		regionName: string,
 		syncIndex: number,
-	): Promise<void> {
-		console.log('waiting for master state with syncIndex', syncIndex);
+	): Promise<boolean> {
+		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
 		return new Promise((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | null = null;
@@ -202,7 +210,7 @@ export class SMILElementController {
 			const timeout = setTimeout(() => {
 				debug('Timeout waiting for state: %s', expectedState);
 				cleanup();
-				resolve();
+				resolve(true); // Continue on timeout to avoid blocking
 			}, 1000000); // 1000 second timeout
 
 			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
@@ -255,7 +263,7 @@ export class SMILElementController {
 							syncIndex,
 						);
 						cleanup();
-						resolve();
+						resolve(true); // In sync, continue normally
 					} else if (
 						expectedState === 'prepared' &&
 						value.state === 'playing' &&
@@ -296,8 +304,9 @@ export class SMILElementController {
 							value.syncIndex,
 						);
 						console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
+						debug('Returning false from waitForMasterState to trigger element skip');
 						cleanup();
-						resolve();
+						resolve(false); // Trigger resync - skip current element
 					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 						// Master ahead with same state
 						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
@@ -343,7 +352,7 @@ export class SMILElementController {
 						this.synchronization.syncingInAction = true;
 						console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
 						cleanup();
-						resolve();
+						resolve(false); // Trigger resync - skip current element
 					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 						// Same element but different state
 						// Determine if we're ahead or behind based on state progression
@@ -398,7 +407,7 @@ export class SMILElementController {
 							// Wait for master to catch up - don't set resync flags
 						}
 						cleanup();
-						resolve();
+						resolve(receivedIndex > expectedIndex ? false : true); // Skip if behind, continue if ahead
 					}
 					// Continue listening for other state broadcasts
 					// Don't resolve for unrelated broadcasts - just keep waiting
