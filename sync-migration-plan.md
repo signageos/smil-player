@@ -635,6 +635,26 @@ Fixed issue where resync detection didn't cause elements to be skipped:
   - False propagates through the call chain
   - Elements are skipped until reaching resync target
 
+### Race Condition Fix - Master Broadcasts Before Slave Listener
+Fixed critical race condition where master broadcasts state before slave registers listener:
+- **Problem**: Master could broadcast elementState before slave reaches waitForMasterState, causing infinite wait
+- **Solution**: Store broadcast states in SyncGroup with duplicate prevention
+- **Implementation**:
+  - Added `lastValues` Map to SyncGroup to store received broadcasts
+  - Implemented duplicate detection with 200ms timestamp window
+  - Check stored state first in waitForMasterState before registering listener
+  - Apply 2-second freshness check to prevent using stale states
+  - Clear consumed states after processing to prevent memory buildup
+- **Key methods**:
+  - `SyncGroup.getLastValue()`: Retrieve stored state by key
+  - `SyncGroup.clearLastValue()`: Clear consumed state
+  - `processElementState()`: Extracted reusable state processing logic
+- **Benefits**:
+  - Eliminates race condition for late-joining slaves
+  - Prevents duplicate state processing
+  - Maintains idempotent behavior
+  - Improves sync reliability
+
 ---
 
 ## Future Enhancements

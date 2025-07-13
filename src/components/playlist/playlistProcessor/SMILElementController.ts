@@ -181,6 +181,207 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Process element state value and determine action
+	 */
+	private processElementState(
+		value: any,
+		expectedState: SyncElementState,
+		syncIndex: number,
+		regionName: string,
+	): { shouldContinue: boolean; shouldCleanup: boolean } {
+		// Check for duplicate broadcast
+		const lastBroadcast = this.lastProcessedBroadcast[regionName];
+		if (
+			lastBroadcast &&
+			lastBroadcast.syncIndex === value.syncIndex &&
+			lastBroadcast.state === value.state &&
+			lastBroadcast.timestamp === value.timestamp
+		) {
+			debug(
+				'Duplicate broadcast detected, ignoring: state=%s, syncIndex=%d, timestamp=%d for region=%s',
+				value.state,
+				value.syncIndex,
+				value.timestamp,
+				regionName,
+			);
+			return { shouldContinue: true, shouldCleanup: false }; // Ignore duplicate
+		}
+
+		// Log new broadcast being processed
+		debug(
+			'Processing new broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
+			value.state,
+			value.syncIndex,
+			value.timestamp,
+			regionName,
+			expectedState,
+			syncIndex,
+		);
+
+		// Update last processed broadcast
+		this.lastProcessedBroadcast[regionName] = {
+			syncIndex: value.syncIndex,
+			state: value.state,
+			timestamp: value.timestamp,
+		};
+
+		if (value.state === expectedState && value.syncIndex === syncIndex) {
+			// Normal case: exact match
+			debug(
+				'Received expected state: %s for region=%s, syncIndex=%d',
+				expectedState,
+				regionName,
+				syncIndex,
+			);
+			return { shouldContinue: true, shouldCleanup: true }; // In sync, continue normally
+		} else if (
+			expectedState === 'prepared' &&
+			value.state === 'playing' &&
+			value.syncIndex > syncIndex
+		) {
+			// Special case: We're waiting for 'prepared' but master is already playing a future element
+			// This means we missed our chance to prepare and need to catch up
+			debug(
+				'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
+				value.syncIndex,
+				syncIndex,
+			);
+
+			// Set target to prepare for the NEXT element after what master is playing
+			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+			let nextIndex: number;
+
+			if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+				console.log('reseting index');
+				// Master playing last element, we'll prepare first element
+				nextIndex = 1;
+			} else {
+				console.log('increasing index');
+				// Prepare next element after what master is playing
+				nextIndex = value.syncIndex + 1;
+			}
+
+			// Set state-specific resync target for preparation
+			if (!this.synchronization.resyncTargets) {
+				this.synchronization.resyncTargets = {};
+			}
+			this.synchronization.resyncTargets.prepare = nextIndex;
+			this.synchronization.syncingInAction = true;
+			debug(
+				'Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
+				regionName,
+				nextIndex,
+				value.syncIndex,
+			);
+			console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
+			debug('Returning false from waitForMasterState to trigger element skip');
+			return { shouldContinue: false, shouldCleanup: false }; // Trigger resync - skip current element
+		} else if (value.state === expectedState && value.syncIndex > syncIndex) {
+			// Master ahead with same state
+			debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
+
+			// Handle wraparound for playlist looping
+			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+			let nextIndex: number;
+
+			if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+				console.log('reseting index');
+				// Master is at last element, wrap to beginning (1)
+				nextIndex = 1;
+			} else {
+				// Normal case: increment
+				console.log('increasing index');
+				nextIndex = value.syncIndex + 1;
+			}
+
+			// Set state-specific resync target based on expected state
+			if (!this.synchronization.resyncTargets) {
+				this.synchronization.resyncTargets = {};
+			}
+
+			// Determine which target to set based on what state we're waiting for
+			if (expectedState === 'prepared') {
+				this.synchronization.resyncTargets.prepare = nextIndex;
+				debug(
+					'Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
+					regionName,
+					nextIndex,
+					value.syncIndex,
+				);
+			} else if (expectedState === 'playing') {
+				this.synchronization.resyncTargets.play = nextIndex;
+				debug(
+					'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
+					regionName,
+					nextIndex,
+					value.syncIndex,
+				);
+			}
+
+			this.synchronization.syncingInAction = true;
+			console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
+			return { shouldContinue: false, shouldCleanup: false }; // Trigger resync - skip current element
+		} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
+			// Same element but different state
+			// Determine if we're ahead or behind based on state progression
+			const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
+			const expectedIndex = stateOrder.indexOf(expectedState);
+			const receivedIndex = stateOrder.indexOf(value.state);
+
+			if (receivedIndex > expectedIndex) {
+				// We're behind (e.g., we expect 'prepared' but master is at 'playing')
+				debug(
+					'Behind in state progression - expected %s but master at %s for syncIndex=%d',
+					expectedState,
+					value.state,
+					syncIndex,
+				);
+
+				// Handle wraparound for playlist looping
+				const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+				let nextIndex: number;
+
+				if (maxIndex !== undefined && syncIndex >= maxIndex) {
+					console.log('reseting index');
+					// At last element, wrap to beginning (1)
+					nextIndex = 1;
+				} else {
+					console.log('increasing index');
+					// Normal case: increment
+					nextIndex = syncIndex + 1;
+				}
+
+				// Set state-specific resync target for preparation
+				if (!this.synchronization.resyncTargets) {
+					this.synchronization.resyncTargets = {};
+				}
+				// When behind in state progression, we need to prepare the next element
+				this.synchronization.resyncTargets.prepare = nextIndex;
+				this.synchronization.syncingInAction = true;
+				debug(
+					'Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
+					regionName,
+					nextIndex,
+				);
+				console.log(`[SYNC] Behind in state - resync to prepare at index ${nextIndex}`);
+			} else {
+				// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
+				debug(
+					'Ahead in state progression - expected %s but master at %s for syncIndex=%d',
+					expectedState,
+					value.state,
+					syncIndex,
+				);
+				// Wait for master to catch up - don't set resync flags
+			}
+			return { shouldContinue: receivedIndex <= expectedIndex, shouldCleanup: false };
+		}
+
+		// State doesn't match any condition - keep waiting
+		return { shouldContinue: true, shouldCleanup: false };
+	}
+
+	/**
 	 * Wait for master state broadcast (slave only)
 	 */
 	private async waitForMasterState(
@@ -190,6 +391,36 @@ export class SMILElementController {
 		syncIndex: number,
 	): Promise<boolean> {
 		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
+		
+		// Check for stored state first
+		const storedValue = syncGroup.getLastValue('elementState');
+		if (storedValue && storedValue.regionName === regionName) {
+			const age = Date.now() - storedValue.timestamp;
+			
+			// Check freshness (2 seconds)
+			if (age < 2000) {
+				debug('Found fresh stored state for region=%s, age=%dms', regionName, age);
+				
+				const result = this.processElementState(
+					storedValue, 
+					expectedState, 
+					syncIndex, 
+					regionName
+				);
+				
+				// Clear only if exact match (not resync trigger)
+				if (result.shouldCleanup) {
+					syncGroup.clearLastValue('elementState');
+					debug('Cleared consumed elementState');
+				}
+				
+				return result.shouldContinue;
+			} else {
+				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
+			}
+		}
+		
+		// No valid stored state, set up listener
 		return new Promise((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | null = null;
@@ -216,199 +447,25 @@ export class SMILElementController {
 				console.log('Received value in syncGroup', value);
 				console.log('---------------------------------------------------');
 				if (key === 'elementState' && value?.regionName === regionName) {
-					// Check for duplicate broadcast
-					const lastBroadcast = this.lastProcessedBroadcast[regionName];
-					if (
-						lastBroadcast &&
-						lastBroadcast.syncIndex === value.syncIndex &&
-						lastBroadcast.state === value.state &&
-						lastBroadcast.timestamp === value.timestamp
-					) {
-						debug(
-							'Duplicate broadcast detected, ignoring: state=%s, syncIndex=%d, timestamp=%d for region=%s',
-							value.state,
-							value.syncIndex,
-							value.timestamp,
-							regionName,
-						);
-						return; // Ignore duplicate
-					}
-
-					// Log new broadcast being processed
-					debug(
-						'Processing new broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
-						value.state,
-						value.syncIndex,
-						value.timestamp,
-						regionName,
+					const result = this.processElementState(
+						value,
 						expectedState,
 						syncIndex,
+						regionName
 					);
-
-					// Update last processed broadcast
-					this.lastProcessedBroadcast[regionName] = {
-						syncIndex: value.syncIndex,
-						state: value.state,
-						timestamp: value.timestamp,
-					};
-
-					if (value.state === expectedState && value.syncIndex === syncIndex) {
-						// Normal case: exact match
-						debug(
-							'Received expected state: %s for region=%s, syncIndex=%d',
-							expectedState,
-							regionName,
-							syncIndex,
-						);
+					
+					// Only resolve if we processed a matching or resync-triggering state
+					if (result.shouldContinue !== undefined) {
+						// Clear stored value only if exact match
+						if (result.shouldCleanup) {
+							syncGroup.clearLastValue('elementState');
+							debug('Cleared consumed elementState from listener');
+						}
+						
 						cleanup();
-						resolve(true); // In sync, continue normally
-					} else if (
-						expectedState === 'prepared' &&
-						value.state === 'playing' &&
-						value.syncIndex > syncIndex
-					) {
-						// Special case: We're waiting for 'prepared' but master is already playing a future element
-						// This means we missed our chance to prepare and need to catch up
-						debug(
-							'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
-							value.syncIndex,
-							syncIndex,
-						);
-
-						// Set target to prepare for the NEXT element after what master is playing
-						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-						let nextIndex: number;
-
-						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
-							console.log('reseting index');
-							// Master playing last element, we'll prepare first element
-							nextIndex = 1;
-						} else {
-							console.log('increasing index');
-							// Prepare next element after what master is playing
-							nextIndex = value.syncIndex + 1;
-						}
-
-						// Set state-specific resync target for preparation
-						if (!this.synchronization.resyncTargets) {
-							this.synchronization.resyncTargets = {};
-						}
-						this.synchronization.resyncTargets.prepare = nextIndex;
-						this.synchronization.syncingInAction = true;
-						debug(
-							'Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
-							regionName,
-							nextIndex,
-							value.syncIndex,
-						);
-						console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
-						debug('Returning false from waitForMasterState to trigger element skip');
-						cleanup();
-						resolve(false); // Trigger resync - skip current element
-					} else if (value.state === expectedState && value.syncIndex > syncIndex) {
-						// Master ahead with same state
-						debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
-
-						// Handle wraparound for playlist looping
-						const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-						let nextIndex: number;
-
-						if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
-							console.log('reseting index');
-							// Master is at last element, wrap to beginning (1)
-							nextIndex = 1;
-						} else {
-							// Normal case: increment
-							console.log('increasing index');
-							nextIndex = value.syncIndex + 1;
-						}
-
-						// Set state-specific resync target based on expected state
-						if (!this.synchronization.resyncTargets) {
-							this.synchronization.resyncTargets = {};
-						}
-
-						// Determine which target to set based on what state we're waiting for
-						if (expectedState === 'prepared') {
-							this.synchronization.resyncTargets.prepare = nextIndex;
-							debug(
-								'Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
-								regionName,
-								nextIndex,
-								value.syncIndex,
-							);
-						} else if (expectedState === 'playing') {
-							this.synchronization.resyncTargets.play = nextIndex;
-							debug(
-								'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
-								regionName,
-								nextIndex,
-								value.syncIndex,
-							);
-						}
-
-						this.synchronization.syncingInAction = true;
-						console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
-						cleanup();
-						resolve(false); // Trigger resync - skip current element
-					} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
-						// Same element but different state
-						// Determine if we're ahead or behind based on state progression
-						const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
-						const expectedIndex = stateOrder.indexOf(expectedState);
-						const receivedIndex = stateOrder.indexOf(value.state);
-
-						if (receivedIndex > expectedIndex) {
-							// We're behind (e.g., we expect 'prepared' but master is at 'playing')
-							debug(
-								'Behind in state progression - expected %s but master at %s for syncIndex=%d',
-								expectedState,
-								value.state,
-								syncIndex,
-							);
-
-							// Handle wraparound for playlist looping
-							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-							let nextIndex: number;
-
-							if (maxIndex !== undefined && syncIndex >= maxIndex) {
-								console.log('reseting index');
-								// At last element, wrap to beginning (1)
-								nextIndex = 1;
-							} else {
-								console.log('increasing index');
-								// Normal case: increment
-								nextIndex = syncIndex + 1;
-							}
-
-							// Set state-specific resync target for preparation
-							if (!this.synchronization.resyncTargets) {
-								this.synchronization.resyncTargets = {};
-							}
-							// When behind in state progression, we need to prepare the next element
-							this.synchronization.resyncTargets.prepare = nextIndex;
-							this.synchronization.syncingInAction = true;
-							debug(
-								'Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
-								regionName,
-								nextIndex,
-							);
-							console.log(`[SYNC] Behind in state - resync to prepare at index ${nextIndex}`);
-						} else {
-							// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
-							debug(
-								'Ahead in state progression - expected %s but master at %s for syncIndex=%d',
-								expectedState,
-								value.state,
-								syncIndex,
-							);
-							// Wait for master to catch up - don't set resync flags
-						}
-						cleanup();
-						resolve(receivedIndex <= expectedIndex); // Skip if behind, continue if ahead
+						resolve(result.shouldContinue);
 					}
-					// Continue listening for other state broadcasts
-					// Don't resolve for unrelated broadcasts - just keep waiting
+					// Otherwise continue listening
 				}
 			});
 		});

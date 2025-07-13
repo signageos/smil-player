@@ -19,6 +19,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	
 	private masterStatus: boolean | null = null;
 	private emitter: EventEmitter = new EventEmitter();
+	private lastValues = new Map<string, any>();
 	
 	constructor(
 		private sos: FrontApplet,
@@ -87,8 +88,35 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		this.sos.sync.onValue(async (key, value, groupName) => {
 			if (groupName === this.groupName) {
 				debug('Received value for %s - key: %s, value: %O', this.groupName, key, value);
+				
+				// Prevent storing duplicate elementState
+				if (key === 'elementState') {
+					const existing = this.lastValues.get(key);
+					if (existing && 
+						existing.state === value.state && 
+						existing.syncIndex === value.syncIndex &&
+						existing.regionName === value.regionName &&
+						Math.abs(value.timestamp - existing.timestamp) <= 200) { // Within 200ms
+						debug('Duplicate elementState detected (same values, timestamps within 200ms), skipping');
+						return; // Don't store or emit duplicate
+					}
+				}
+				
+				// Store the value
+				this.lastValues.set(key, value);
+				
+				// Emit to listeners
 				this.emitter.emit('value', { key, value });
 			}
 		});
+	}
+	
+	getLastValue(key: string): any {
+		return this.lastValues.get(key);
+	}
+	
+	clearLastValue(key: string): void {
+		this.lastValues.delete(key);
+		debug('Cleared last value for key: %s', key);
 	}
 }
