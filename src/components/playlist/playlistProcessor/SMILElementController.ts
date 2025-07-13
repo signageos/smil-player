@@ -3,14 +3,6 @@ import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 
 export class SMILElementController {
-	// Track last processed broadcast per region to prevent duplicate processing
-	private lastProcessedBroadcast: {
-		[regionName: string]: {
-			syncIndex: number;
-			state: SyncElementState;
-			timestamp: number;
-		};
-	} = {};
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -189,27 +181,9 @@ export class SMILElementController {
 		syncIndex: number,
 		regionName: string,
 	): { shouldContinue: boolean; shouldCleanup: boolean } {
-		// Check for duplicate broadcast
-		const lastBroadcast = this.lastProcessedBroadcast[regionName];
-		if (
-			lastBroadcast &&
-			lastBroadcast.syncIndex === value.syncIndex &&
-			lastBroadcast.state === value.state &&
-			lastBroadcast.timestamp === value.timestamp
-		) {
-			debug(
-				'Duplicate broadcast detected, ignoring: state=%s, syncIndex=%d, timestamp=%d for region=%s',
-				value.state,
-				value.syncIndex,
-				value.timestamp,
-				regionName,
-			);
-			return { shouldContinue: true, shouldCleanup: false }; // Ignore duplicate
-		}
-
-		// Log new broadcast being processed
+		// Log broadcast being processed
 		debug(
-			'Processing new broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
+			'Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
 			value.state,
 			value.syncIndex,
 			value.timestamp,
@@ -218,12 +192,6 @@ export class SMILElementController {
 			syncIndex,
 		);
 
-		// Update last processed broadcast
-		this.lastProcessedBroadcast[regionName] = {
-			syncIndex: value.syncIndex,
-			state: value.state,
-			timestamp: value.timestamp,
-		};
 
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
