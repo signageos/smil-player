@@ -602,9 +602,9 @@ Fixed bug where resync would create non-existent syncIndex at playlist end:
 
 ### Idempotent Slave Logic Implementation
 Implemented duplicate broadcast detection to handle master sending same state multiple times:
-- Added `lastProcessedBroadcast` tracking per region in SMILElementController
-- Tracks syncIndex, state, and timestamp to detect exact duplicates
-- Prevents duplicate broadcasts from triggering incorrect resync target increments
+- Added duplicate detection in SyncGroup's `monitorValues()` method
+- Prevents storing and emitting duplicate elementState events (200ms timestamp window)
+- This ensures SMILElementController never receives duplicate broadcasts
 - Comprehensive logging added for debugging sync state changes:
   - `debug()` for development-level sync decisions
   - `console.log('[SYNC] ...')` for critical sync events
