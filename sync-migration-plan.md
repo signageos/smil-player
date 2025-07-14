@@ -655,6 +655,22 @@ Fixed critical race condition where master broadcasts state before slave registe
   - Maintains idempotent behavior
   - Improves sync reliability
 
+### Master Change Handling During Wait
+Implemented proper handling of master changes while slave is waiting for state:
+- **Problem**: Slave could get stuck waiting if it becomes master while in waitForMasterState
+- **Solution**: Monitor master changes and react appropriately
+- **Implementation**:
+  - Modified SyncGroup event methods to return unsubscribe functions
+  - Added master change monitoring in waitForMasterState
+  - When slave becomes master: cleanup and resolve to continue playback
+  - When another device becomes master: continue waiting for new master
+  - Reduced timeout from 1000s to 90s with improved logging
+- **Benefits**:
+  - Prevents deadlock when waiting slave becomes master
+  - Ensures new masters can fulfill their broadcasting duties
+  - Devices continue independently after reasonable timeout
+  - Better debugging with detailed timeout messages
+
 ---
 
 ## Future Enhancements
