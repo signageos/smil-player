@@ -9,9 +9,9 @@ export interface ISyncGroup {
 	id: string;
 	isMaster(): Promise<boolean>;
 	broadcastValue(key: string, value: any): Promise<void>;
-	onMasterChange(callback: (isMaster: boolean) => void): void;
-	onStatus(callback: (peers: string[]) => void): void;
-	onValue(callback: (args: { key: string, value?: any }) => void): void;
+	onMasterChange(callback: (isMaster: boolean) => void): () => void;
+	onStatus(callback: (peers: string[]) => void): () => void;
+	onValue(callback: (args: { key: string, value?: any }) => void): () => void;
 }
 
 export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
@@ -57,16 +57,19 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		await this.sos.sync.broadcastValue({ groupName: this.groupName, key, value });
 	}
 	
-	public onMasterChange(callback: (isMaster: boolean) => void): void {
+	public onMasterChange(callback: (isMaster: boolean) => void): () => void {
 		this.emitter.on('master_changed', callback);
+		return () => this.emitter.removeListener('master_changed', callback);
 	}
 	
-	public onStatus(callback: (peers: string[]) => void): void {
+	public onStatus(callback: (peers: string[]) => void): () => void {
 		this.emitter.on('status', callback);
+		return () => this.emitter.removeListener('status', callback);
 	}
 	
-	public onValue(callback: (args: { key: string, value?: any }) => void): void {
+	public onValue(callback: (args: { key: string, value?: any }) => void): () => void {
 		this.emitter.on('value', callback);
+		return () => this.emitter.removeListener('value', callback);
 	}
 	
 	private monitorStatus() {

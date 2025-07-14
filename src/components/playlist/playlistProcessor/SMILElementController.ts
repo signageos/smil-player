@@ -392,6 +392,7 @@ export class SMILElementController {
 		return new Promise((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | null = null;
+			let unsubscribeMasterChange: (() => void) | null = null;
 
 			const cleanup = () => {
 				if (resolved) return;
@@ -402,13 +403,36 @@ export class SMILElementController {
 					unsubscribe();
 					unsubscribe = null;
 				}
+				if (unsubscribeMasterChange) {
+					debug('Cleaning up master change listener for region=%s', regionName);
+					unsubscribeMasterChange();
+					unsubscribeMasterChange = null;
+				}
 			};
 
 			const timeout = setTimeout(() => {
-				debug('Timeout waiting for state: %s', expectedState);
+				debug('Timeout waiting for state: %s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+				console.log(`[SYNC] Timeout waiting for ${expectedState} state at syncIndex ${syncIndex} for region ${regionName} - continuing independently`);
 				cleanup();
 				resolve(true); // Continue on timeout to avoid blocking
-			}, 1000000); // 1000 second timeout
+			}, 90000); // 90 second timeout
+
+			// Monitor master changes
+			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
+				if (resolved) return; // Prevent processing after resolution
+				
+				if (isMaster) {
+					// This device became master while waiting
+					debug('Slave became master while waiting for state=%s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+					console.log(`[SYNC] Device became master while waiting - continuing playback`);
+					cleanup();
+					resolve(true); // Continue playback as new master
+				} else {
+					// Another device became master
+					debug('Master changed to another device while waiting for state=%s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+					// Continue waiting for new master's broadcast
+				}
+			});
 
 			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
 				if (resolved) return; // Prevent processing after resolution
