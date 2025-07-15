@@ -92,9 +92,13 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 			if (groupName === this.groupName) {
 				debug('Received value for %s - key: %s, value: %O', this.groupName, key, value);
 				
-				// Prevent storing duplicate elementState
-				if (key === 'elementState') {
-					const existing = this.lastValues.get(key);
+				// Handle elementState with composite keys
+				if (key === 'elementState' && value) {
+					// Build composite key for state-specific storage
+					const stateKey = this.buildElementStateKey(value.regionName, value.syncIndex, value.state);
+					
+					// Check for duplicates using composite key
+					const existing = this.lastValues.get(stateKey);
 					if (existing && 
 						existing.state === value.state && 
 						existing.syncIndex === value.syncIndex &&
@@ -103,10 +107,14 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 						debug('Duplicate elementState detected (same values, timestamps within 200ms), skipping');
 						return; // Don't store or emit duplicate
 					}
+					
+					// Store with composite key to prevent overwrites
+					this.lastValues.set(stateKey, value);
+					debug('Stored elementState with key: %s', stateKey);
+				} else {
+					// Store other values as before
+					this.lastValues.set(key, value);
 				}
-				
-				// Store the value
-				this.lastValues.set(key, value);
 				
 				// Emit to listeners
 				this.emitter.emit('value', { key, value });
@@ -121,5 +129,38 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	clearLastValue(key: string): void {
 		this.lastValues.delete(key);
 		debug('Cleared last value for key: %s', key);
+	}
+	
+	// Build composite key for elementState storage
+	buildElementStateKey(regionName: string, syncIndex: number, state: string): string {
+		return `elementState-${regionName}-${syncIndex}-${state}`;
+	}
+	
+	// Get specific elementState by exact match
+	getElementState(regionName: string, syncIndex: number, state: string): any {
+		const key = this.buildElementStateKey(regionName, syncIndex, state);
+		return this.lastValues.get(key);
+	}
+	
+	// Find any elementState for given region and syncIndex
+	findElementStateByIndex(regionName: string, syncIndex: number): any {
+		// Check all possible states for this syncIndex
+		const states = ['prepared', 'playing', 'finished'];
+		for (const state of states) {
+			const key = this.buildElementStateKey(regionName, syncIndex, state);
+			const value = this.lastValues.get(key);
+			if (value) {
+				debug('Found elementState for region=%s, syncIndex=%d, state=%s', regionName, syncIndex, state);
+				return value;
+			}
+		}
+		return null;
+	}
+	
+	// Clear specific elementState
+	clearElementState(regionName: string, syncIndex: number, state: string): void {
+		const key = this.buildElementStateKey(regionName, syncIndex, state);
+		this.lastValues.delete(key);
+		debug('Cleared elementState: %s', key);
 	}
 }

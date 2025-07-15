@@ -382,42 +382,49 @@ export class SMILElementController {
 	): Promise<boolean> {
 		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
 		
-		// Check for stored state first
-		const storedValue = syncGroup.getLastValue('elementState');
-		if (storedValue && storedValue.regionName === regionName) {
-			const age = Date.now() - storedValue.timestamp;
+		// Check for stored state first - look for exact match
+		const exactMatch = syncGroup.getElementState(regionName, syncIndex, expectedState);
+		if (exactMatch) {
+			const age = Date.now() - exactMatch.timestamp;
 			
 			// Check freshness (2 seconds)
 			if (age < 2000) {
-				debug('Found fresh stored state for region=%s, age=%dms', regionName, age);
+				debug('Found exact match in stored state for region=%s, syncIndex=%d, state=%s, age=%dms', 
+					regionName, syncIndex, expectedState, age);
 				
+				// Clear this specific state and continue
+				syncGroup.clearElementState(regionName, syncIndex, expectedState);
+				debug('Cleared consumed elementState - continuing normally');
+				return true;
+			} else {
+				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
+			}
+		}
+		
+		// No exact match - check if there's another state for this syncIndex
+		const anyStateForIndex = syncGroup.findElementStateByIndex(regionName, syncIndex);
+		if (anyStateForIndex) {
+			const age = Date.now() - anyStateForIndex.timestamp;
+			
+			// Check freshness (2 seconds)
+			if (age < 2000) {
+				debug('Found different state for same syncIndex: expected=%s, found=%s for region=%s, syncIndex=%d', 
+					expectedState, anyStateForIndex.state, regionName, syncIndex);
+				
+				// Process with the found state to determine resync
 				const action = this.processElementState(
-					storedValue, 
+					anyStateForIndex, 
 					expectedState, 
 					syncIndex, 
 					regionName
 				);
 				
-				// Handle action based on type
-				switch (action) {
-					case ProcessAction.CONTINUE:
-						// Clear consumed state and continue normally
-						syncGroup.clearLastValue('elementState');
-						debug('Cleared consumed elementState - continuing normally');
-						return true;
-					case ProcessAction.RESYNC:
-						// Clear consumed state and trigger resync
-						syncGroup.clearLastValue('elementState');
-						debug('Cleared consumed elementState - triggering resync');
-						return false;
-					case ProcessAction.WAIT:
-						// Don't clear state, don't return - wait for correct broadcast
-						debug('Not clearing elementState - waiting for correct broadcast');
-						// Fall through to set up listener
-						break;
+				// For non-exact matches, we expect RESYNC action
+				if (action === ProcessAction.RESYNC) {
+					// Don't clear the found state - it might be needed later
+					debug('Triggering resync - not clearing found state');
+					return false;
 				}
-			} else {
-				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
 			}
 		}
 		
@@ -482,12 +489,17 @@ export class SMILElementController {
 					// Handle action based on type
 					switch (action) {
 						case ProcessAction.CONTINUE:
-						case ProcessAction.RESYNC:
-							// Clear consumed state and resolve
-							syncGroup.clearLastValue('elementState');
-							debug(`Cleared consumed elementState - action: ${action}`);
+							// Clear this specific consumed state and resolve
+							syncGroup.clearElementState(regionName, syncIndex, expectedState);
+							debug(`Cleared consumed elementState - continuing normally`);
 							cleanup();
-							resolve(action === ProcessAction.CONTINUE);
+							resolve(true);
+							break;
+						case ProcessAction.RESYNC:
+							// Don't clear on resync - the state might be needed
+							debug(`Triggering resync - not clearing state`);
+							cleanup();
+							resolve(false);
 							break;
 						case ProcessAction.WAIT:
 							// Don't resolve, keep waiting

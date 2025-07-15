@@ -688,6 +688,27 @@ Fixed critical issue where slaves ahead of master would continue playing instead
   - No premature continuation of playback
 - **Future Optimization**: Consider ignoring old broadcasts for performance (currently logs and waits)
 
+### Composite Key Storage for ElementState
+Fixed critical issue where rapid state transitions caused state overwrites:
+- **Problem**: Master broadcasts `playing(1)` then `prepared(2)`, but `prepared(2)` overwrites stored state
+- **Solution**: Use composite keys to store each state uniquely
+- **Implementation**:
+  - Changed storage key from `'elementState'` to `'elementState-${regionName}-${syncIndex}-${state}'`
+  - Added helper methods to SyncGroup:
+    - `buildElementStateKey()`: Create consistent composite keys
+    - `getElementState()`: Get specific state by exact match
+    - `findElementStateByIndex()`: Find any state for given syncIndex
+    - `clearElementState()`: Clear only the specific consumed state
+  - Updated waitForMasterState logic:
+    - First check for exact match (regionName + syncIndex + state)
+    - If not found, check for any state with same syncIndex to determine resync
+    - Only clear the specific state that was consumed
+- **Benefits**:
+  - Multiple states can coexist without overwrites
+  - Each state is preserved until actually consumed
+  - Late-joining slaves can still find the states they need
+  - More precise state management and cleanup
+
 ---
 
 ## Future Enhancements
