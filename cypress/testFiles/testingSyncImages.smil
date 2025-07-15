@@ -1,0 +1,38 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
+        <meta log="false"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
+            <region regionName="cl1ysr9ct0017b475syryse4k" left="0" top="0" width="1080" height="1920" z-index="1"
+                    backgroundColor="#000000" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <img src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/zones/files/img_4.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                            <img src="https://demo.signageos.io/smil/zones/files/img_5.jpg"
+                                 dur="10s" fit="fill" region="cl1ysr9ct0017b475syryse4k"/>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

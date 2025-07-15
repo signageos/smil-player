@@ -2,6 +2,15 @@ import { debug } from '../tools/generalTools';
 import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 
+// Process actions for element state handling
+const ProcessAction = {
+	CONTINUE: 'CONTINUE',    // Exact match - continue playing normally
+	RESYNC: 'RESYNC',        // Slave behind master - trigger resync to skip elements
+	WAIT: 'WAIT'             // Keep waiting for correct broadcast
+} as const;
+
+type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
+
 export class SMILElementController {
 
 	constructor(private synchronization: Synchronization) {}
@@ -174,15 +183,17 @@ export class SMILElementController {
 
 	/**
 	 * Process element state value and determine action
-	 * Returns true if slave should continue normally, false if it should skip elements (resync)
-	 * Note: Consumed states should always be cleaned up after processing
+	 * Returns action to take based on the broadcast:
+	 * - CONTINUE: Exact match found, continue playing normally
+	 * - RESYNC: Slave is behind master, trigger resync to skip elements
+	 * - WAIT: Keep waiting for the correct broadcast
 	 */
 	private processElementState(
 		value: any,
 		expectedState: SyncElementState,
 		syncIndex: number,
 		regionName: string,
-	): boolean {
+	): ProcessActionType {
 		// Log broadcast being processed
 		debug(
 			'Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
@@ -203,7 +214,7 @@ export class SMILElementController {
 				regionName,
 				syncIndex,
 			);
-			return true; // In sync, continue normally
+			return ProcessAction.CONTINUE; // In sync, continue normally
 		} else if (
 			expectedState === 'prepared' &&
 			value.state === 'playing' &&
@@ -245,7 +256,7 @@ export class SMILElementController {
 			);
 			console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
 			debug('Returning false from waitForMasterState to trigger element skip');
-			return false; // Trigger resync - skip current element
+			return ProcessAction.RESYNC; // Trigger resync - skip current element
 		} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 			// Master ahead with same state
 			debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
@@ -290,7 +301,16 @@ export class SMILElementController {
 
 			this.synchronization.syncingInAction = true;
 			console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
-			return false; // Trigger resync - skip current element
+			return ProcessAction.RESYNC; // Trigger resync - skip current element
+		} else if (value.syncIndex < syncIndex) {
+			// Slave is ahead of master - wait for master to catch up
+			debug(
+				'Slave ahead of master - slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
+				syncIndex,
+				value.syncIndex,
+				regionName,
+			);
+			return ProcessAction.WAIT; // Keep waiting for correct broadcast
 		} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 			// Same element but different state
 			// Determine if we're ahead or behind based on state progression
@@ -344,11 +364,11 @@ export class SMILElementController {
 				);
 				// Wait for master to catch up - don't set resync flags
 			}
-			return receivedIndex <= expectedIndex;
+			return receivedIndex <= expectedIndex ? ProcessAction.WAIT : ProcessAction.RESYNC;
 		}
 
 		// State doesn't match any condition - keep waiting
-		return true;
+		return ProcessAction.WAIT;
 	}
 
 	/**
@@ -371,18 +391,31 @@ export class SMILElementController {
 			if (age < 2000) {
 				debug('Found fresh stored state for region=%s, age=%dms', regionName, age);
 				
-				const shouldContinue = this.processElementState(
+				const action = this.processElementState(
 					storedValue, 
 					expectedState, 
 					syncIndex, 
 					regionName
 				);
 				
-				// Always clear consumed state
-				syncGroup.clearLastValue('elementState');
-				debug('Cleared consumed elementState');
-				
-				return shouldContinue;
+				// Handle action based on type
+				switch (action) {
+					case ProcessAction.CONTINUE:
+						// Clear consumed state and continue normally
+						syncGroup.clearLastValue('elementState');
+						debug('Cleared consumed elementState - continuing normally');
+						return true;
+					case ProcessAction.RESYNC:
+						// Clear consumed state and trigger resync
+						syncGroup.clearLastValue('elementState');
+						debug('Cleared consumed elementState - triggering resync');
+						return false;
+					case ProcessAction.WAIT:
+						// Don't clear state, don't return - wait for correct broadcast
+						debug('Not clearing elementState - waiting for correct broadcast');
+						// Fall through to set up listener
+						break;
+				}
 			} else {
 				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
 			}
@@ -439,19 +472,28 @@ export class SMILElementController {
 				console.log('Received value in syncGroup', value);
 				console.log('---------------------------------------------------');
 				if (key === 'elementState' && value?.regionName === regionName) {
-					const shouldContinue = this.processElementState(
+					const action = this.processElementState(
 						value,
 						expectedState,
 						syncIndex,
 						regionName
 					);
 					
-					// Always clear consumed state and resolve
-					syncGroup.clearLastValue('elementState');
-					debug('Cleared consumed elementState from listener');
-					
-					cleanup();
-					resolve(shouldContinue);
+					// Handle action based on type
+					switch (action) {
+						case ProcessAction.CONTINUE:
+						case ProcessAction.RESYNC:
+							// Clear consumed state and resolve
+							syncGroup.clearLastValue('elementState');
+							debug(`Cleared consumed elementState - action: ${action}`);
+							cleanup();
+							resolve(action === ProcessAction.CONTINUE);
+							break;
+						case ProcessAction.WAIT:
+							// Don't resolve, keep waiting
+							debug('Ignoring broadcast - waiting for correct state/syncIndex');
+							break;
+					}
 				}
 			});
 		});
