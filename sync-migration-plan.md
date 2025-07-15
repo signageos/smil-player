@@ -671,6 +671,23 @@ Implemented proper handling of master changes while slave is waiting for state:
   - Devices continue independently after reasonable timeout
   - Better debugging with detailed timeout messages
 
+### Slave-Ahead Waiting Fix
+Fixed critical issue where slaves ahead of master would continue playing instead of waiting:
+- **Problem**: When slave at syncIndex=5 received broadcast for syncIndex=3, it would continue playing
+- **Solution**: Implement proper action handling with clear state management
+- **Implementation**:
+  - Added ProcessAction const with three clear states: CONTINUE, RESYNC, WAIT
+  - Updated processElementState to return ProcessActionType instead of boolean
+  - Added explicit case for slave ahead (value.syncIndex < syncIndex) returning WAIT
+  - Fixed default case to return WAIT instead of continuing
+  - Modified waitForMasterState to handle three actions properly
+- **Benefits**:
+  - Slaves ahead of master now wait for correct broadcast
+  - Clear action semantics improve code readability
+  - Master can catch up to slaves naturally
+  - No premature continuation of playback
+- **Future Optimization**: Consider ignoring old broadcasts for performance (currently logs and waits)
+
 ---
 
 ## Future Enhancements
