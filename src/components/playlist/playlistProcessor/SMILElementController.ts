@@ -392,10 +392,25 @@ export class SMILElementController {
 				debug('Found exact match in stored state for region=%s, syncIndex=%d, state=%s, age=%dms', 
 					regionName, syncIndex, expectedState, age);
 				
-				// Clear this specific state and continue
-				syncGroup.clearElementState(regionName, syncIndex, expectedState);
-				debug('Cleared consumed elementState - continuing normally');
-				return true;
+				// Process the exact match to determine action (should always be CONTINUE)
+				const action = this.processElementState(
+					exactMatch,
+					expectedState,
+					syncIndex,
+					regionName
+				);
+				
+				// Handle action (for exact match, we expect CONTINUE)
+				if (action === ProcessAction.CONTINUE) {
+					// Clear this specific state and continue
+					syncGroup.clearElementState(regionName, syncIndex, expectedState);
+					debug('Cleared consumed elementState - continuing normally');
+					return true;
+				} else {
+					// Unexpected action for exact match
+					debug('Unexpected action %s for exact match - treating as WAIT', action);
+					// Fall through to check other states or set up listener
+				}
 			} else {
 				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
 			}
