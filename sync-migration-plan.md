@@ -709,6 +709,33 @@ Fixed critical issue where rapid state transitions caused state overwrites:
   - Late-joining slaves can still find the states they need
   - More precise state management and cleanup
 
+### Sync Drift Prevention - Code Path Symmetry
+Fixed critical timing drift issue where slaves gradually fall behind master:
+- **Problem**: Master broadcasts state and continues immediately, while slaves execute additional processing code (~50ms per transition)
+- **Root Cause**: Asymmetric code execution paths between master and slave devices
+  - Master: `isMaster()` → `broadcastState()` → return (minimal time)
+  - Slave: `isMaster()` → `waitForMasterState()` → state lookups → `processElementState()` → event handling → return (50ms+)
+- **Solution**: Make master simulate slave processing time to maintain timing symmetry
+- **Implementation**:
+  - Added `simulateSlaveProcessing()` method to SMILElementController
+  - This is a DUMMY method with NO functional impact on playback
+  - Performs read-only operations similar to slave processing:
+    - State lookups (getElementState, findElementStateByIndex)
+    - Runs processElementState without using result
+    - Adds 20ms fixed delay for network/processing overhead
+  - Master now calls this method after broadcasting state
+- **Key Design Principle**: The simulation must have ZERO side effects
+  - No state mutations
+  - No flag changes
+  - No resync triggers
+  - Purely for timing purposes
+- **Benefits**:
+  - Prevents drift accumulation over time
+  - Maintains frame-perfect sync for extended periods
+  - Simple solution that preserves fire-and-forget model
+  - No protocol complexity needed
+- **Future Enhancement**: If drift persists, implement acknowledgment protocol where master waits for slave confirmations
+
 ---
 
 ## Future Enhancements
