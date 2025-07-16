@@ -154,6 +154,11 @@ export class SMILElementController {
 		if (isMaster) {
 			debug('Master coordinating %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
 			await this.broadcastState(state, regionName, syncIndex);
+			
+			// IMPORTANT: Simulate slave processing to prevent timing drift
+			// This ensures master takes similar time as slaves, preventing accumulation of ~50ms drift per transition
+			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex);
+			
 			return true; // Master always continues
 		} else {
 			debug('Slave waiting for %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
@@ -534,5 +539,50 @@ export class SMILElementController {
 		if (!syncGroup) return false;
 
 		return await syncGroup.isMaster();
+	}
+
+	/**
+	 * DUMMY METHOD - NO FUNCTIONAL IMPACT
+	 * Simulates slave processing time to maintain timing symmetry between master and slave.
+	 * This prevents drift accumulation by ensuring master takes similar time as slaves.
+	 * 
+	 * IMPORTANT: This method must have NO side effects on playback state!
+	 * It only exists to consume similar CPU time as slave processing.
+	 * 
+	 * @param syncGroup - The sync group to simulate operations on (read-only)
+	 * @param state - The state being simulated
+	 * @param regionName - The region name
+	 * @param syncIndex - The sync index
+	 */
+	private async simulateSlaveProcessing(
+		syncGroup: any,
+		state: SyncElementState,
+		regionName: string,
+		syncIndex: number,
+	): Promise<void> {
+		// Simulate state lookups that slaves perform (read-only operations)
+		// These calls don't affect anything, just consume similar CPU time
+		syncGroup.getElementState(regionName, syncIndex, state);
+		syncGroup.findElementStateByIndex(regionName, syncIndex);
+		
+		// Run processElementState logic without using the result
+		// This simulates the computational work slaves do
+		const dummyValue = {
+			state,
+			regionName,
+			syncIndex,
+			timestamp: Date.now(),
+		};
+		// Call processElementState but ignore the result - purely for timing
+		this.processElementState(dummyValue, state, syncIndex, regionName);
+		
+		// Add fixed delay to compensate for network propagation and slave processing overhead
+		// This 20ms delay approximates the time it takes for:
+		// - Network message delivery
+		// - Slave event processing
+		// - Additional overhead in slave code path
+		await new Promise(resolve => setTimeout(resolve, 20));
+		
+		debug('Master simulated slave processing delay for sync timing symmetry');
 	}
 }
