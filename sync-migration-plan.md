@@ -736,6 +736,26 @@ Fixed critical timing drift issue where slaves gradually fall behind master:
   - No protocol complexity needed
 - **Future Enhancement**: If drift persists, implement acknowledgment protocol where master waits for slave confirmations
 
+### TimedDebugger Implementation for Sync Diagnostics
+Enhanced debug logging to track where slaves lag behind master during sync operations:
+- **Problem**: Need better visibility into timing of code execution to identify sync drift sources
+- **Solution**: Created TimedDebugger class that tracks timing between debug logs
+- **Implementation**:
+  - TimedDebugger class tracks start time and time between logs
+  - Format: `[debugId_timestamp +deltams total:totalms] message`
+  - Shows delta from previous log and total elapsed time
+  - Replaced all debug calls in playElement and subfunctions
+  - Updated SMILElementController methods to accept optional timedDebug parameter
+- **Methods Updated**:
+  - playElement and all its subfunctions (handleVideoPrepare, handleVideoPlay, etc.)
+  - SMILElementController sync methods (shouldPrepareElement, shouldPlayElement, etc.)
+  - Supporting methods (checkRegionsForCancellation, setCurrentlyPlaying, waitMediaOnScreen)
+- **Benefits**:
+  - Precise timing visibility for each code section
+  - Easy identification of bottlenecks
+  - Helps diagnose sync drift issues
+  - No functional impact - only affects debug output
+
 ---
 
 ## Future Enhancements
