@@ -1,6 +1,7 @@
 import { debug } from '../tools/generalTools';
 import { Synchronization, SyncElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
+import { TimedDebugger } from './playlistProcessor';
 
 // Process actions for element state handling
 const ProcessAction = {
@@ -18,23 +19,33 @@ export class SMILElementController {
 	/**
 	 * Prepare element for playback - coordinates sync at element boundaries
 	 */
-	public async prepareElement(regionName: string, syncIndex: number): Promise<boolean> {
-		debug('Preparing element for sync: region=%s, syncIndex=%d', regionName, syncIndex);
+	public async prepareElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
+		const msg = 'Preparing element for sync: region=%s, syncIndex=%d';
+		if (timedDebug) {
+			timedDebug.log(msg, regionName, syncIndex);
+		} else {
+			debug(msg, regionName, syncIndex);
+		}
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
-			debug('No sync group found for region: %s', regionName);
+			const noGroupMsg = 'No sync group found for region: %s';
+			if (timedDebug) {
+				timedDebug.log(noGroupMsg, regionName);
+			} else {
+				debug(noGroupMsg, regionName);
+			}
 			return true; // No sync, continue
 		}
 
 		// Coordinate element transition - late joiners will sync here
-		return await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex);
+		return await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex, timedDebug);
 	}
 
 	/**
 	 * Check if element should be prepared - handles resync logic for preparation phase
 	 */
-	public async shouldPrepareElement(regionName: string, syncIndex: number): Promise<boolean> {
+	public async shouldPrepareElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync, always prepare
 		}
@@ -42,31 +53,47 @@ export class SMILElementController {
 		// Check if we're in resync mode for preparation
 		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.prepare) {
 			if (syncIndex < this.synchronization.resyncTargets.prepare) {
-				debug(
-					'Skipping element preparation during resync: syncIndex=%d, target=%d',
-					syncIndex,
-					this.synchronization.resyncTargets.prepare,
-				);
+				const msg = 'Skipping element preparation during resync: syncIndex=%d, target=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.prepare);
+				} else {
+					debug(msg, syncIndex, this.synchronization.resyncTargets.prepare);
+				}
 				return false; // Skip preparation
 			} else if (syncIndex === this.synchronization.resyncTargets.prepare) {
-				debug('Reached resync target during preparation: region=%s, syncIndex=%d', regionName, syncIndex);
+				const msg = 'Reached resync target during preparation: region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex);
+				} else {
+					debug(msg, regionName, syncIndex);
+				}
 				console.log(`[SYNC] Reached prepare target at index ${syncIndex} - resuming normal sync`);
 				// Clear prepare target
 				delete this.synchronization.resyncTargets.prepare;
 				// Clear syncingInAction only if no other targets remain
 				if (!this.synchronization.resyncTargets?.play) {
 					this.synchronization.syncingInAction = false;
-					debug('All resync targets cleared - exiting resync mode');
+					const clearMsg = 'All resync targets cleared - exiting resync mode';
+					if (timedDebug) {
+						timedDebug.log(clearMsg);
+					} else {
+						debug(clearMsg);
+					}
 				}
 				// Continue with normal preparation
 			}
 		}
 
 		// Coordinate preparation with other devices
-		const shouldContinue = await this.prepareElement(regionName, syncIndex);
+		const shouldContinue = await this.prepareElement(regionName, syncIndex, timedDebug);
 		// If preparation triggered resync, we should skip
 		if (!shouldContinue) {
-			debug('Preparation coordination triggered resync - skip element');
+			const skipMsg = 'Preparation coordination triggered resync - skip element';
+			if (timedDebug) {
+				timedDebug.log(skipMsg);
+			} else {
+				debug(skipMsg);
+			}
 			return false;
 		}
 		return true;
@@ -75,7 +102,7 @@ export class SMILElementController {
 	/**
 	 * Check if element should be played - handles resync logic for playback phase
 	 */
-	public async shouldPlayElement(regionName: string, syncIndex: number): Promise<boolean> {
+	public async shouldPlayElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync needed
 		}
@@ -83,60 +110,86 @@ export class SMILElementController {
 		// Check if we're in resync mode for playing
 		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
 			if (syncIndex < this.synchronization.resyncTargets.play) {
-				debug(
-					'Skipping element playback during resync: syncIndex=%d, target=%d',
-					syncIndex,
-					this.synchronization.resyncTargets.play,
-				);
+				const msg = 'Skipping element playback during resync: syncIndex=%d, target=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.play);
+				} else {
+					debug(msg, syncIndex, this.synchronization.resyncTargets.play);
+				}
 				return false; // Skip this element
 			} else if (syncIndex === this.synchronization.resyncTargets.play) {
-				debug('Reached resync target during playback: region=%s, syncIndex=%d', regionName, syncIndex);
+				const msg = 'Reached resync target during playback: region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex);
+				} else {
+					debug(msg, regionName, syncIndex);
+				}
 				console.log(`[SYNC] Reached play target at index ${syncIndex} - resuming normal sync`);
 				// Clear play target
 				delete this.synchronization.resyncTargets.play;
 				// Clear syncingInAction only if no other targets remain
 				if (!this.synchronization.resyncTargets?.prepare) {
 					this.synchronization.syncingInAction = false;
-					debug('All resync targets cleared - exiting resync mode');
+					const clearMsg = 'All resync targets cleared - exiting resync mode';
+					if (timedDebug) {
+						timedDebug.log(clearMsg);
+					} else {
+						debug(clearMsg);
+					}
 				}
 				// Continue with normal sync
 			}
 		}
 
 		// Normal sync flow
-		return await this.shouldStartPlayback(regionName, syncIndex);
+		return await this.shouldStartPlayback(regionName, syncIndex, timedDebug);
 	}
 
 	/**
 	 * Check if element should start playback - replaces handleElementSynchronization
 	 */
-	public async shouldStartPlayback(regionName: string, syncIndex: number): Promise<boolean> {
-		debug('Checking if should start playback: region=%s, syncIndex=%d', regionName, syncIndex);
+	public async shouldStartPlayback(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
+		const msg = 'Checking if should start playback: region=%s, syncIndex=%d';
+		if (timedDebug) {
+			timedDebug.log(msg, regionName, syncIndex);
+		} else {
+			debug(msg, regionName, syncIndex);
+		}
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
-			debug('No sync group found for region: %s', regionName);
+			const noGroupMsg = 'No sync group found for region: %s';
+			if (timedDebug) {
+				timedDebug.log(noGroupMsg, regionName);
+			} else {
+				debug(noGroupMsg, regionName);
+			}
 			return true;
 		}
 
 		// Coordinate playback start
-		return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex);
+		return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex, timedDebug);
 	}
 
 	/**
 	 * Mark element as finished - clean up sync state
 	 */
-	public async markElementFinished(regionName: string, syncIndex: number): Promise<void> {
+	public async markElementFinished(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
 		if (!this.synchronization.shouldSync) {
 			return; // No-op for non-sync playlists
 		}
 
-		debug('Marking element as finished: region=%s, syncIndex=%d', regionName, syncIndex);
+		const msg = 'Marking element as finished: region=%s, syncIndex=%d';
+		if (timedDebug) {
+			timedDebug.log(msg, regionName, syncIndex);
+		} else {
+			debug(msg, regionName, syncIndex);
+		}
 
 		// Broadcast finished state if master
 		const isMaster = await this.isMaster(regionName);
 		if (isMaster) {
-			await this.broadcastState('finished', regionName, syncIndex);
+			await this.broadcastState('finished', regionName, syncIndex, timedDebug);
 		}
 	}
 
@@ -148,22 +201,33 @@ export class SMILElementController {
 		state: SyncElementState,
 		regionName: string,
 		syncIndex: number,
+		timedDebug?: TimedDebugger,
 	): Promise<boolean> {
 		const isMaster = await syncGroup.isMaster();
 
 		if (isMaster) {
-			debug('Master coordinating %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
-			await this.broadcastState(state, regionName, syncIndex);
+			const masterMsg = 'Master coordinating %s state for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(masterMsg, state, regionName, syncIndex);
+			} else {
+				debug(masterMsg, state, regionName, syncIndex);
+			}
+			await this.broadcastState(state, regionName, syncIndex, timedDebug);
 			
 			// IMPORTANT: Simulate slave processing to prevent timing drift
 			// This ensures master takes similar time as slaves, preventing accumulation of ~50ms drift per transition
-			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex);
+			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex, timedDebug);
 			
 			return true; // Master always continues
 		} else {
-			debug('Slave waiting for %s state for region=%s, syncIndex=%d', state, regionName, syncIndex);
+			const slaveMsg = 'Slave waiting for %s state for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(slaveMsg, state, regionName, syncIndex);
+			} else {
+				debug(slaveMsg, state, regionName, syncIndex);
+			}
 			console.log('master state resolve', Date.now());
-			const shouldContinue = await this.waitForMasterState(syncGroup, state, regionName, syncIndex);
+			const shouldContinue = await this.waitForMasterState(syncGroup, state, regionName, syncIndex, timedDebug);
 			console.log('master state resolved', Date.now());
 			return shouldContinue;
 		}
@@ -172,7 +236,7 @@ export class SMILElementController {
 	/**
 	 * Broadcast state to sync group (master only)
 	 */
-	private async broadcastState(state: SyncElementState, regionName: string, syncIndex: number): Promise<void> {
+	private async broadcastState(state: SyncElementState, regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) return;
 
@@ -183,7 +247,12 @@ export class SMILElementController {
 			timestamp: Date.now(),
 		});
 
-		debug('Broadcasted state: %s for region=%s, syncIndex=%d', state, regionName, syncIndex);
+		const msg = 'Broadcasted state: %s for region=%s, syncIndex=%d';
+		if (timedDebug) {
+			timedDebug.log(msg, state, regionName, syncIndex);
+		} else {
+			debug(msg, state, regionName, syncIndex);
+		}
 	}
 
 	/**
@@ -384,6 +453,7 @@ export class SMILElementController {
 		expectedState: SyncElementState,
 		regionName: string,
 		syncIndex: number,
+		timedDebug?: TimedDebugger,
 	): Promise<boolean> {
 		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
 		
@@ -471,7 +541,12 @@ export class SMILElementController {
 			};
 
 			const timeout = setTimeout(() => {
-				debug('Timeout waiting for state: %s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+				const timeoutMsg = 'Timeout waiting for state: %s, syncIndex=%d, region=%s';
+				if (timedDebug) {
+					timedDebug.log(timeoutMsg, expectedState, syncIndex, regionName);
+				} else {
+					debug(timeoutMsg, expectedState, syncIndex, regionName);
+				}
 				console.log(`[SYNC] Timeout waiting for ${expectedState} state at syncIndex ${syncIndex} for region ${regionName} - continuing independently`);
 				cleanup();
 				resolve(true); // Continue on timeout to avoid blocking
@@ -559,6 +634,7 @@ export class SMILElementController {
 		state: SyncElementState,
 		regionName: string,
 		syncIndex: number,
+		timedDebug?: TimedDebugger,
 	): Promise<void> {
 		// Simulate state lookups that slaves perform (read-only operations)
 		// These calls don't affect anything, just consume similar CPU time
@@ -583,6 +659,11 @@ export class SMILElementController {
 		// - Additional overhead in slave code path
 		await new Promise(resolve => setTimeout(resolve, 20));
 		
-		debug('Master simulated slave processing delay for sync timing symmetry');
+		const msg = 'Master simulated slave processing delay for sync timing symmetry';
+		if (timedDebug) {
+			timedDebug.log(msg);
+		} else {
+			debug(msg);
+		}
 	}
 }
