@@ -1315,7 +1315,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param tag - variable which specifies type of element ( video or HtmlElement )
 	 * @param regionName -  name of the region of current media
 	 */
-	private setCurrentlyPlaying = (element: SMILVideo | SosHtmlElement, tag: string, regionName: string, timedDebug?: TimedDebugger) => {
+	private setCurrentlyPlaying = (
+		element: SMILVideo | SosHtmlElement,
+		tag: string,
+		regionName: string,
+		timedDebug?: TimedDebugger,
+	) => {
 		if (timedDebug) {
 			timedDebug.log('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
 		} else {
@@ -1551,7 +1556,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!transitionSet
 			) {
 				transitionSet = true;
-				timedDebug.log('setting transition css for element: %O, duration: %s, transitionDuration: %s', element, duration, transitionDuration);
+				timedDebug.log(
+					'setting transition css for element: %O, duration: %s, transitionDuration: %s',
+					element,
+					duration,
+					transitionDuration,
+				);
 				setTransitionCss(
 					element,
 					elementHtml,
@@ -1618,6 +1628,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param version - smil internal version of current playlist
 	 * @param debugId
 	 * @param priorityCoord - priority information for coordination during version updates
+	 * @param timedDebug
 	 */
 	private shouldWaitAndContinue = async (
 		media: SMILMedia,
@@ -2011,11 +2022,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						await handlePriorityWhenDone();
 					} catch (err) {
-						timedDebug.log(
-							'Unexpected error: %O occurred during single video playback: %O',
-							err,
-							video,
-						);
+						timedDebug.log('Unexpected error: %O occurred during single video playback: %O', err, video);
 
 						await handlePriorityWhenDone();
 
@@ -2335,11 +2342,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let currentRegionInfo = await this.triggers.handleTriggers(value, element);
 
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-			timedDebug.log(
-				'Region changed from %s to %s',
-				parentRegionInfo.regionName,
-				currentRegionInfo.regionName,
-			);
+			timedDebug.log('Region changed from %s to %s', parentRegionInfo.regionName, currentRegionInfo.regionName);
 			this.currentlyPlayingPriority[currentRegionInfo.regionName] = cloneDeep(
 				this.currentlyPlayingPriority[parentRegionInfo.regionName],
 			);

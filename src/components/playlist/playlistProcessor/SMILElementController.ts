@@ -653,11 +653,11 @@ export class SMILElementController {
 		this.processElementState(dummyValue, state, syncIndex, regionName);
 		
 		// Add fixed delay to compensate for network propagation and slave processing overhead
-		// This 20ms delay approximates the time it takes for:
+		// This 200ms delay approximates the time it takes for:
 		// - Network message delivery
 		// - Slave event processing
 		// - Additional overhead in slave code path
-		await new Promise(resolve => setTimeout(resolve, 20));
+		await new Promise(resolve => setTimeout(resolve, 200));
 		
 		const msg = 'Master simulated slave processing delay for sync timing symmetry';
 		if (timedDebug) {
