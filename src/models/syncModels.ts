@@ -24,6 +24,21 @@ export interface SyncNavigationEvent {
 // 	after: number | undefined;
 // };
 
+// Acknowledgment Protocol Types
+export type SyncMessageType = 
+	| 'cmd-prepare'    // Master commands slaves to prepare
+	| 'cmd-play'       // Master commands slaves to play
+	| 'signal-ready'   // Master signals all devices ready to proceed
+	| 'ack-prepared'   // Slave acknowledges preparation complete
+	| 'ack-playing';   // Slave acknowledges playing started
+
+export interface SyncMessage {
+	type: SyncMessageType;
+	regionName: string;
+	syncIndex: number;
+	timestamp: number;
+}
+
 export type Synchronization = {
 	shouldSync: boolean;
 	syncGroupIds: string[];
