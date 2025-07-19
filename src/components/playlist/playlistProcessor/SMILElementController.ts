@@ -95,7 +95,7 @@ class AckTracker {
  * Represents a single round of ACK collection
  */
 class AckRound {
-	public receivedCount = 0;
+	public receivedCount: number = 0;
 	public promise: Promise<boolean>;
 	public resolve: (value: boolean) => void = () => {};
 
@@ -115,7 +115,7 @@ class AckRound {
 }
 
 export class SMILElementController {
-	private ackTracker = new AckTracker();
+	private ackTracker: AckTracker = new AckTracker();
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -345,6 +345,16 @@ export class SMILElementController {
 			console.log('master state resolve', Date.now());
 			const shouldContinue = await this.waitForMasterState(syncGroup, state, regionName, syncIndex, timedDebug);
 			console.log('master state resolved', Date.now());
+
+			// Send ACK after receiving state broadcast (hybrid mode for Step 4)
+			if (shouldContinue && state === 'prepared') {
+				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+				debug('Slave sent ACK after prepared state broadcast: region=%s, syncIndex=%d', regionName, syncIndex);
+			} else if (shouldContinue && state === 'playing') {
+				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+				debug('Slave sent ACK after playing state broadcast: region=%s, syncIndex=%d', regionName, syncIndex);
+			}
+
 			return shouldContinue;
 		}
 	}
@@ -883,5 +893,20 @@ export class SMILElementController {
 		
 		// Command processing will be implemented in Step 4
 		// For now, just log that we received it
+	}
+
+	/**
+	 * Initialize ACK message routing for a region
+	 * NOTE: This must be called once per region before sync operations begin
+	 * TODO: Call this from playlistProcessor when initializing regions
+	 */
+	public initializeAckProtocol(regionName: string): void {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync, no initialization needed
+		}
+
+		// Set up message routing for this region
+		this.setupMessageRouting(regionName);
+		debug('ACK protocol initialized for region: %s', regionName);
 	}
 }
