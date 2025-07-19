@@ -881,4 +881,198 @@ export class SMILElementController {
 		this.setupMessageRouting(regionName);
 		debug('ACK protocol initialized for region: %s', regionName);
 	}
+
+	/**
+	 * Coordinate the start of element preparation
+	 * Master broadcasts cmd-prepare, slaves wait for it
+	 */
+	public async coordinatePrepareStart(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync needed
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('No sync group for prepare start: region=%s', regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master broadcasts prepare command
+			await this.broadcastSyncMessage('cmd-prepare', regionName, syncIndex, syncGroup);
+			const msg = 'Master sent cmd-prepare for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+		} else {
+			// Slaves will receive cmd-prepare through message routing
+			// For now, we don't block here - slaves prepare when they receive the command
+			const msg = 'Slave ready to receive cmd-prepare for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+		}
+	}
+
+	/**
+	 * Coordinate the completion of element preparation
+	 * Slaves send ack-prepared, master waits for all ACKs
+	 */
+	public async coordinatePrepareComplete(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync needed
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('No sync group for prepare complete: region=%s', regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master waits for ACKs
+			const expectedAcks = syncGroup.getConnectedPeersCount();
+			if (expectedAcks > 0) {
+				const ackKey = `${regionName}-${syncIndex}-ack-prepared`;
+				const msg = 'Master waiting for %d prepared ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(msg, expectedAcks, ackKey);
+				} else {
+					debug(msg, expectedAcks, ackKey);
+				}
+
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+				const resultMsg = acksReceived ?
+					'Master received all prepared ACKs for %s' :
+					'Master timeout waiting for prepared ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(resultMsg, ackKey);
+				} else {
+					debug(resultMsg, ackKey);
+				}
+			}
+
+			// Master sends ready signal
+			await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
+		} else {
+			// Slave sends ACK
+			await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+			const msg = 'Slave sent ack-prepared for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+
+			// TODO: Wait for signal-ready from master
+		}
+	}
+
+	/**
+	 * Coordinate the start of element playing
+	 * Master broadcasts cmd-play, slaves wait for it
+	 */
+	public async coordinatePlayStart(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync needed
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('No sync group for play start: region=%s', regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master broadcasts play command
+			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
+			const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+		} else {
+			// Slaves will receive cmd-play through message routing
+			const msg = 'Slave ready to receive cmd-play for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+		}
+	}
+
+	/**
+	 * Coordinate the completion of element play start
+	 * Slaves send ack-playing, master waits for all ACKs
+	 */
+	public async coordinatePlayComplete(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync needed
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('No sync group for play complete: region=%s', regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master waits for ACKs
+			const expectedAcks = syncGroup.getConnectedPeersCount();
+			if (expectedAcks > 0) {
+				const ackKey = `${regionName}-${syncIndex}-ack-playing`;
+				const msg = 'Master waiting for %d playing ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(msg, expectedAcks, ackKey);
+				} else {
+					debug(msg, expectedAcks, ackKey);
+				}
+
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+				const resultMsg = acksReceived ?
+					'Master received all playing ACKs for %s' :
+					'Master timeout waiting for playing ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(resultMsg, ackKey);
+				} else {
+					debug(resultMsg, ackKey);
+				}
+			}
+		} else {
+			// Slave sends ACK
+			await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+			const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+		}
+	}
 }
