@@ -23,9 +23,15 @@ class AckTracker {
 	 * @param key Unique identifier for this ACK round (e.g., "region1-5-prepared")
 	 * @param expectedCount Number of ACKs expected (excluding master)
 	 * @param timeoutMs Timeout in milliseconds (default 500ms)
+	 * @param onPeerDisconnect Optional callback to adjust expected count when peer disconnects
 	 * @returns Promise that resolves to true if all ACKs received, false if timeout
 	 */
-	public async waitForAcks(key: string, expectedCount: number, timeoutMs: number = 500): Promise<boolean> {
+	public async waitForAcks(
+		key: string,
+		expectedCount: number,
+		timeoutMs: number = 500,
+		onPeerDisconnect?: (newCount: number) => void,
+	): Promise<boolean> {
 		debug('Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
 
 		// If no slaves to wait for, return immediately
@@ -38,10 +44,13 @@ class AckTracker {
 		const round = new AckRound(expectedCount);
 		this.activeRounds.set(key, round);
 
-		// Set up timeout
+		// Set up timeout with cleanup
+		let timeoutId: NodeJS.Timeout | undefined;
 		const timeoutPromise = new Promise<boolean>((resolve) => {
-			setTimeout(() => {
-				debug('ACK timeout for %s - received %d of %d ACKs', key, round.receivedCount, expectedCount);
+			timeoutId = setTimeout(() => {
+				const timeoutMsg = 'ACK timeout for %s - received %d of %d ACKs. Continuing without slow devices.';
+				debug(timeoutMsg, key, round.receivedCount, expectedCount);
+				console.log(`[SYNC] ${timeoutMsg}`, key, round.receivedCount, expectedCount);
 				this.cleanupRound(key);
 				resolve(false);
 			}, timeoutMs);
@@ -50,10 +59,43 @@ class AckTracker {
 		// Wait for either all ACKs or timeout
 		const result = await Promise.race([round.promise, timeoutPromise]);
 
+		// Clear timeout if completed before timeout
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
+
+		// Log result
+		if (result) {
+			debug('All ACKs received for %s within timeout', key);
+		}
+
 		// Cleanup
 		this.cleanupRound(key);
 
 		return result;
+	}
+
+	/**
+	 * Adjust expected ACK count for a round (e.g., when peer disconnects)
+	 * @param key The round identifier
+	 * @param newExpectedCount New expected count
+	 */
+	public adjustExpectedCount(key: string, newExpectedCount: number): void {
+		const round = this.activeRounds.get(key);
+		if (!round) {
+			debug('Cannot adjust count for unknown round: %s', key);
+			return;
+		}
+
+		const oldCount = round.expectedCount;
+		round.expectedCount = newExpectedCount;
+		debug('Adjusted expected ACKs for %s from %d to %d', key, oldCount, newExpectedCount);
+
+		// Check if we've now received all ACKs
+		if (round.isComplete()) {
+			debug('All ACKs now received after adjustment for %s', key);
+			round.resolve(true);
+		}
 	}
 
 	/**
@@ -116,6 +158,7 @@ class AckRound {
 
 export class SMILElementController {
 	private ackTracker: AckTracker = new AckTracker();
+	private peerMonitorUnsubscribes: Map<string, () => void> = new Map();
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -331,8 +374,8 @@ export class SMILElementController {
 			// Broadcast state first
 			await this.broadcastState(state, regionName, syncIndex, timedDebug);
 
-			// Wait for ACKs from slaves (Step 5 - hybrid mode)
-			const expectedAcks = syncGroup.getConnectedPeersCount();
+			// Wait for ACKs from slaves
+			let expectedAcks = syncGroup.getConnectedPeersCount();
 			if (expectedAcks > 0 && (state === 'prepared' || state === 'playing')) {
 				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				const ackKey = `${regionName}-${syncIndex}-${ackType}`;
@@ -344,15 +387,32 @@ export class SMILElementController {
 					debug(ackMsg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+				// Monitor peer changes during ACK wait
+				let currentPeerCount = expectedAcks;
+				const unsubscribe = syncGroup.onStatus((peers: string[]) => {
+					const newCount = peers.length;
+					if (newCount < currentPeerCount) {
+						debug('Peer disconnected during ACK wait. Adjusting expected count from %d to %d', 
+							currentPeerCount, newCount);
+						this.ackTracker.adjustExpectedCount(ackKey, newCount);
+						currentPeerCount = newCount;
+					}
+				});
 
-				const ackResultMsg = acksReceived ?
-					'Master received all ACKs for %s' :
-					'Master timeout waiting for ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(ackResultMsg, ackKey);
-				} else {
-					debug(ackResultMsg, ackKey);
+				try {
+					const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+
+					const ackResultMsg = acksReceived ?
+						'Master received all ACKs for %s' :
+						'Master timeout waiting for ACKs for %s';
+					if (timedDebug) {
+						timedDebug.log(ackResultMsg, ackKey);
+					} else {
+						debug(ackResultMsg, ackKey);
+					}
+				} finally {
+					// Always unsubscribe from peer monitoring
+					unsubscribe();
 				}
 			}
 
@@ -376,6 +436,9 @@ export class SMILElementController {
 				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
 				debug('Slave sent ACK after playing state broadcast: region=%s, syncIndex=%d', regionName, syncIndex);
 			}
+			
+			// Note: Late-joining devices will use the existing resync mechanism
+			// They will receive state broadcasts and detect they are behind
 
 			return shouldContinue;
 		}
@@ -850,8 +913,16 @@ export class SMILElementController {
 		debug('Master received ACK: type=%s, region=%s, syncIndex=%d',
 			message.type, message.regionName, message.syncIndex);
 
+		// Validate message
+		if (!message.regionName || message.syncIndex === undefined) {
+			console.error('[SYNC] Invalid ACK message received:', message);
+			return;
+		}
+
 		// Build key for ACK tracking
 		const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
+		
+		// Record ACK - will be ignored if no active round for this key
 		this.ackTracker.recordAck(ackKey);
 	}
 
@@ -877,9 +948,37 @@ export class SMILElementController {
 			return; // No sync, no initialization needed
 		}
 
+		// Clean up any existing routing for this region
+		this.cleanupRegion(regionName);
+
 		// Set up message routing for this region
 		this.setupMessageRouting(regionName);
 		debug('ACK protocol initialized for region: %s', regionName);
+	}
+
+	/**
+	 * Clean up resources for a region
+	 */
+	public cleanupRegion(regionName: string): void {
+		// Unsubscribe from peer monitoring if exists
+		const unsubscribe = this.peerMonitorUnsubscribes.get(regionName);
+		if (unsubscribe) {
+			unsubscribe();
+			this.peerMonitorUnsubscribes.delete(regionName);
+			debug('Cleaned up peer monitoring for region: %s', regionName);
+		}
+	}
+
+	/**
+	 * Clean up all resources
+	 */
+	public cleanup(): void {
+		// Clean up all peer monitors
+		this.peerMonitorUnsubscribes.forEach((unsubscribe, regionName) => {
+			unsubscribe();
+			debug('Cleaned up peer monitoring for region: %s', regionName);
+		});
+		this.peerMonitorUnsubscribes.clear();
 	}
 
 	/**
