@@ -1,5 +1,5 @@
 import { debug } from '../tools/generalTools';
-import { Synchronization, SyncElementState } from '../../../models/syncModels';
+import { Synchronization, SyncElementState, SyncMessage, SyncMessageType } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 import { TimedDebugger } from './playlistProcessor';
 
@@ -16,7 +16,7 @@ type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
  * Tracks acknowledgments from slave devices for synchronized operations
  */
 class AckTracker {
-	private activeRounds = new Map<string, AckRound>();
+	private activeRounds: Map<string, AckRound> = new Map<string, AckRound>();
 
 	/**
 	 * Start tracking acknowledgments for a specific operation
@@ -49,10 +49,10 @@ class AckTracker {
 
 		// Wait for either all ACKs or timeout
 		const result = await Promise.race([round.promise, timeoutPromise]);
-		
+
 		// Cleanup
 		this.cleanupRound(key);
-		
+
 		return result;
 	}
 
@@ -77,17 +77,17 @@ class AckTracker {
 	}
 
 	/**
-	 * Clean up a completed or timed-out round
-	 */
-	private cleanupRound(key: string): void {
-		this.activeRounds.delete(key);
-	}
-
-	/**
 	 * Get the number of active ACK rounds (for debugging/testing)
 	 */
 	public getActiveRoundCount(): number {
 		return this.activeRounds.size;
+	}
+
+	/**
+	 * Clean up a completed or timed-out round
+	 */
+	private cleanupRound(key: string): void {
+		this.activeRounds.delete(key);
 	}
 }
 
@@ -115,6 +115,8 @@ class AckRound {
 }
 
 export class SMILElementController {
+	private ackTracker = new AckTracker();
+
 	constructor(private synchronization: Synchronization) {}
 
 	/**
@@ -781,5 +783,105 @@ export class SMILElementController {
 		} else {
 			debug(msg);
 		}
+	}
+
+	/**
+	 * Broadcast a sync coordination message (commands or ACKs)
+	 */
+	private async broadcastSyncMessage(
+		type: SyncMessageType,
+		regionName: string,
+		syncIndex: number,
+		syncGroup?: any,
+	): Promise<void> {
+		const message: SyncMessage = {
+			type,
+			regionName,
+			syncIndex,
+			timestamp: Date.now(),
+		};
+
+		// Use provided sync group or get it
+		const group = syncGroup || getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!group) {
+			debug('No sync group to broadcast to for region: %s', regionName);
+			return;
+		}
+
+		await group.broadcastValue('sync-coordination', message);
+		debug('Broadcasted sync message: type=%s, region=%s, syncIndex=%d', type, regionName, syncIndex);
+	}
+
+	/**
+	 * Set up message routing based on device role
+	 * This method should be called once during initialization
+	 */
+	public setupMessageRouting(regionName: string): void {
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('No sync group for message routing setup: %s', regionName);
+			return;
+		}
+
+		// Subscribe to sync-coordination messages
+		syncGroup.onValue(async ({ key, value }: { key: string; value: any }) => {
+			if (key !== 'sync-coordination' || !value) return;
+
+			const message = value as SyncMessage;
+			const isMaster = await syncGroup.isMaster();
+
+			// Role-based filtering
+			if (isMaster) {
+				// Master only processes ACK messages from slaves
+				if (this.isAckMessage(message.type)) {
+					this.handleAckMessage(message);
+				}
+			} else {
+				// Slaves only process command messages from master
+				if (this.isCommandMessage(message.type)) {
+					this.handleCommandMessage(message);
+				}
+			}
+		});
+
+		debug('Message routing setup complete for region: %s', regionName);
+	}
+
+	/**
+	 * Check if message type is an ACK (from slaves)
+	 */
+	private isAckMessage(type: SyncMessageType): boolean {
+		return type === 'ack-prepared' || type === 'ack-playing';
+	}
+
+	/**
+	 * Check if message type is a command (from master)
+	 */
+	private isCommandMessage(type: SyncMessageType): boolean {
+		return type === 'cmd-prepare' || type === 'cmd-play' || type === 'signal-ready';
+	}
+
+	/**
+	 * Handle incoming ACK messages (master only)
+	 */
+	private handleAckMessage(message: SyncMessage): void {
+		debug('Master received ACK: type=%s, region=%s, syncIndex=%d',
+			message.type, message.regionName, message.syncIndex);
+
+		// Build key for ACK tracking
+		const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
+		this.ackTracker.recordAck(ackKey);
+	}
+
+	/**
+	 * Handle incoming command messages (slaves only)
+	 * Note: Actual command processing will be implemented in later steps
+	 */
+	private handleCommandMessage(message: SyncMessage): void {
+		debug('Slave received command: type=%s, region=%s, syncIndex=%d',
+			message.type, message.regionName, message.syncIndex);
+		
+		// Command processing will be implemented in Step 4
+		// For now, just log that we received it
 	}
 }

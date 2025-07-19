@@ -92,6 +92,15 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 			if (groupName === this.groupName) {
 				debug('Received value for %s - key: %s, value: %O', this.groupName, key, value);
 				
+				// Handle sync-coordination messages for ACK protocol
+				if (key === 'sync-coordination' && value) {
+					// Store for later retrieval but don't deduplicate
+					this.lastValues.set(key, value);
+					// Emit immediately for ACK protocol handling
+					this.emitter.emit('value', { key, value });
+					return;
+				}
+				
 				// Handle elementState with composite keys
 				if (key === 'elementState' && value) {
 					// Build composite key for state-specific storage
