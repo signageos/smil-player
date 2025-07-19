@@ -356,10 +356,6 @@ export class SMILElementController {
 				}
 			}
 
-			// IMPORTANT: Still simulate slave processing as fallback
-			// This ensures timing consistency even if ACK protocol has issues
-			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex, timedDebug);
-
 			return true; // Master always continues
 		} else {
 			const slaveMsg = 'Slave waiting for %s state for region=%s, syncIndex=%d';
@@ -770,56 +766,6 @@ export class SMILElementController {
 		return await syncGroup.isMaster();
 	}
 
-	/**
-	 * DUMMY METHOD - NO FUNCTIONAL IMPACT
-	 * Simulates slave processing time to maintain timing symmetry between master and slave.
-	 * This prevents drift accumulation by ensuring master takes similar time as slaves.
-	 *
-	 * IMPORTANT: This method must have NO side effects on playback state!
-	 * It only exists to consume similar CPU time as slave processing.
-	 *
-	 * @param syncGroup - The sync group to simulate operations on (read-only)
-	 * @param state - The state being simulated
-	 * @param regionName - The region name
-	 * @param syncIndex - The sync index
-	 */
-	private async simulateSlaveProcessing(
-		syncGroup: any,
-		state: SyncElementState,
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<void> {
-		// Simulate state lookups that slaves perform (read-only operations)
-		// These calls don't affect anything, just consume similar CPU time
-		syncGroup.getElementState(regionName, syncIndex, state);
-		syncGroup.findElementStateByIndex(regionName, syncIndex);
-
-		// Run processElementState logic without using the result
-		// This simulates the computational work slaves do
-		const dummyValue = {
-			state,
-			regionName,
-			syncIndex,
-			timestamp: Date.now(),
-		};
-		// Call processElementState but ignore the result - purely for timing
-		this.processElementState(dummyValue, state, syncIndex, regionName);
-
-		// Add fixed delay to compensate for network propagation and slave processing overhead
-		// This 200ms delay approximates the time it takes for:
-		// - Network message delivery
-		// - Slave event processing
-		// - Additional overhead in slave code path
-		await new Promise((resolve) => setTimeout(resolve, 300));
-
-		const msg = 'Master simulated slave processing delay for sync timing symmetry';
-		if (timedDebug) {
-			timedDebug.log(msg);
-		} else {
-			debug(msg);
-		}
-	}
 
 	/**
 	 * Broadcast a sync coordination message (commands or ACKs)
