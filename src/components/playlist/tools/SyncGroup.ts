@@ -19,7 +19,8 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	
 	private masterStatus: boolean | null = null;
 	private emitter: EventEmitter = new EventEmitter();
-	private lastValues = new Map<string, any>();
+	private lastValues: Map<string, any> = new Map<string, any>();
+	private connectedPeers: string[] = [];
 	
 	constructor(
 		private sos: FrontApplet,
@@ -72,10 +73,15 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		return () => this.emitter.removeListener('value', callback);
 	}
 	
+	public getConnectedPeersCount(): number {
+		return this.connectedPeers.length;
+	}
+	
 	private monitorStatus() {
 		this.sos.sync.onStatus(({ isMaster, groupName, connectedPeers }) => {
 			if (groupName === this.groupName) {
 				debug('Status update for %s - peers: %O', this.groupName, connectedPeers);
+				this.connectedPeers = connectedPeers || [];
 				this.emitter.emit('status', connectedPeers);
 				
 				if (this.masterStatus !== isMaster) {
