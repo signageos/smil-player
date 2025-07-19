@@ -799,6 +799,112 @@ Enhanced debug logging to track where slaves lag behind master during sync opera
 
 ---
 
+## Acknowledgment Protocol Implementation Plan
+
+### Overview
+Replace the current timing simulation approach (`simulateSlaveProcessing`) with a proper acknowledgment protocol where master waits for slave confirmations. This eliminates sync drift by ensuring all devices are ready before proceeding.
+
+### Design Decisions
+
+**Message Structure**: Simple broadcast-only approach
+- All communication via broadcasts (no direct slave-to-master messaging)
+- Message type determines sender role (no explicit sender identification needed)
+- Master processes only slave ACKs, slaves process only master commands
+
+**ACK Tracking**: Count-based approach
+- Track number of ACKs received vs expected
+- No device identification initially (can add later for debugging)
+- Timeout-based continuation without slow devices
+
+### Step-by-Step Implementation
+
+#### Step 1: Define Message Types and Interfaces
+**Goal**: Establish the data structures for ACK communication
+- Add new message types to `syncModels.ts`
+- Define the SyncMessage interface
+- Message types: `cmd-prepare`, `cmd-play`, `signal-ready`, `ack-prepared`, `ack-playing`
+- No functional changes yet, just type definitions
+
+#### Step 2: Create AckTracker Class
+**Goal**: Build the ACK counting infrastructure
+- Create AckTracker class (initially within SMILElementController.ts)
+- Implement ACK counting logic with timeout handling (500ms)
+- Support concurrent tracking (playing element 1 while preparing element 2)
+- Test in isolation before integration
+
+#### Step 3: Add Message Broadcasting Infrastructure
+**Goal**: Enable master to send commands and slaves to send ACKs
+- Add broadcast methods for commands and ACKs
+- Update SyncGroup's onValue handler to route messages based on type
+- Implement role-based filtering (master ignores slave messages, slaves ignore slave messages)
+- Still using simulateSlaveProcessing (no behavior change yet)
+
+#### Step 4: Implement Slave ACK Sending
+**Goal**: Make slaves send ACKs after completing actions
+- Add ACK broadcasting after prepare completes
+- Add ACK broadcasting after play starts
+- Master still using simulateSlaveProcessing (hybrid mode for testing)
+- Verify ACKs are being received and counted correctly
+
+#### Step 5: Implement Master ACK Waiting
+**Goal**: Make master wait for ACKs instead of using fixed delay
+- Add waitForAcks logic in coordinateElementTransition
+- Keep simulateSlaveProcessing as fallback initially
+- Test with both enabled to ensure ACK waiting works correctly
+
+#### Step 6: Remove Timing Simulation
+**Goal**: Complete the transition to ACK-based sync
+- Remove simulateSlaveProcessing method entirely
+- Remove its call from coordinateElementTransition
+- Pure ACK-based synchronization active
+
+#### Step 7: Add Coordination Methods
+**Goal**: Clean API for playlist processor integration
+- Add coordinatePrepareStart/Complete methods
+- Add coordinatePlayStart/Complete methods
+- Integrate with existing prepare/play flow
+- Maintain parallel processing capability
+
+#### Step 8: Error Handling and Edge Cases
+**Goal**: Handle timeouts and disconnections gracefully
+- Implement timeout behavior (continue without slow devices)
+- Handle device disconnection during ACK wait
+- Test resync for devices that miss ACK windows
+- Ensure late-joining devices can catch up
+
+#### Step 9: Testing and Refinement
+**Goal**: Ensure robust operation
+- Test with multiple devices
+- Verify parallel processing still works
+- Performance testing
+- Add comprehensive debug logging
+
+#### Step 10: Documentation
+**Goal**: Document the implementation
+- Update this document with implementation results
+- Add note about device tracking option for future
+- Document the final protocol flow
+
+### Future Considerations
+
+**Device Tracking Option** (not implemented initially):
+If debugging or monitoring requires identifying specific slaves, enhance messages with:
+```typescript
+interface TrackedSyncMessage extends SyncMessage {
+  fromDevice: string;    // Device identifier
+  fromRole: 'master' | 'slave';  // Explicit role
+}
+```
+
+Benefits of device tracking:
+- Debugging: "Device C is consistently slow"
+- Selective exclusion: "Continue without specific device"
+- Health monitoring: "Device B hasn't ACKed in 5 rounds"
+
+The basic counting approach is sufficient for synchronization, but device tracking can be added when needed for diagnostics.
+
+---
+
 ## Future Enhancements
 
 ### State Machine Improvements
