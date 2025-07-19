@@ -12,6 +12,108 @@ const ProcessAction = {
 
 type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
 
+/**
+ * Tracks acknowledgments from slave devices for synchronized operations
+ */
+class AckTracker {
+	private activeRounds = new Map<string, AckRound>();
+
+	/**
+	 * Start tracking acknowledgments for a specific operation
+	 * @param key Unique identifier for this ACK round (e.g., "region1-5-prepared")
+	 * @param expectedCount Number of ACKs expected (excluding master)
+	 * @param timeoutMs Timeout in milliseconds (default 500ms)
+	 * @returns Promise that resolves to true if all ACKs received, false if timeout
+	 */
+	public async waitForAcks(key: string, expectedCount: number, timeoutMs: number = 500): Promise<boolean> {
+		debug('Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
+
+		// If no slaves to wait for, return immediately
+		if (expectedCount === 0) {
+			debug('No ACKs expected for %s, continuing', key);
+			return true;
+		}
+
+		// Create new round
+		const round = new AckRound(expectedCount);
+		this.activeRounds.set(key, round);
+
+		// Set up timeout
+		const timeoutPromise = new Promise<boolean>((resolve) => {
+			setTimeout(() => {
+				debug('ACK timeout for %s - received %d of %d ACKs', key, round.receivedCount, expectedCount);
+				this.cleanupRound(key);
+				resolve(false);
+			}, timeoutMs);
+		});
+
+		// Wait for either all ACKs or timeout
+		const result = await Promise.race([round.promise, timeoutPromise]);
+		
+		// Cleanup
+		this.cleanupRound(key);
+		
+		return result;
+	}
+
+	/**
+	 * Record an acknowledgment for a specific round
+	 * @param key The round identifier
+	 */
+	public recordAck(key: string): void {
+		const round = this.activeRounds.get(key);
+		if (!round) {
+			debug('Received ACK for unknown round: %s', key);
+			return;
+		}
+
+		round.addAck();
+		debug('Recorded ACK for %s - %d of %d received', key, round.receivedCount, round.expectedCount);
+
+		if (round.isComplete()) {
+			debug('All ACKs received for %s', key);
+			round.resolve(true);
+		}
+	}
+
+	/**
+	 * Clean up a completed or timed-out round
+	 */
+	private cleanupRound(key: string): void {
+		this.activeRounds.delete(key);
+	}
+
+	/**
+	 * Get the number of active ACK rounds (for debugging/testing)
+	 */
+	public getActiveRoundCount(): number {
+		return this.activeRounds.size;
+	}
+}
+
+/**
+ * Represents a single round of ACK collection
+ */
+class AckRound {
+	public receivedCount = 0;
+	public promise: Promise<boolean>;
+	public resolve: (value: boolean) => void = () => {};
+
+	constructor(public expectedCount: number) {
+		this.promise = new Promise<boolean>((resolve) => {
+			this.resolve = resolve;
+		});
+	}
+
+	public addAck(): void {
+		this.receivedCount++;
+	}
+
+	public isComplete(): boolean {
+		return this.receivedCount >= this.expectedCount;
+	}
+}
+
 export class SMILElementController {
 	constructor(private synchronization: Synchronization) {}
 
