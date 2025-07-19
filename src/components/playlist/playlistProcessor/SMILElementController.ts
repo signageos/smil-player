@@ -328,11 +328,37 @@ export class SMILElementController {
 				debug(masterMsg, state, regionName, syncIndex);
 			}
 
-			// IMPORTANT: Simulate slave processing to prevent timing drift
-			// This ensures master takes similar time as slaves, preventing accumulation of ~50ms drift per transition
-			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex, timedDebug);
-
+			// Broadcast state first
 			await this.broadcastState(state, regionName, syncIndex, timedDebug);
+
+			// Wait for ACKs from slaves (Step 5 - hybrid mode)
+			const expectedAcks = syncGroup.getConnectedPeersCount();
+			if (expectedAcks > 0 && (state === 'prepared' || state === 'playing')) {
+				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+				const ackKey = `${regionName}-${syncIndex}-${ackType}`;
+				
+				const ackMsg = 'Master waiting for %d ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(ackMsg, expectedAcks, ackKey);
+				} else {
+					debug(ackMsg, expectedAcks, ackKey);
+				}
+
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+
+				const ackResultMsg = acksReceived ?
+					'Master received all ACKs for %s' :
+					'Master timeout waiting for ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(ackResultMsg, ackKey);
+				} else {
+					debug(ackResultMsg, ackKey);
+				}
+			}
+
+			// IMPORTANT: Still simulate slave processing as fallback
+			// This ensures timing consistency even if ACK protocol has issues
+			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex, timedDebug);
 
 			return true; // Master always continues
 		} else {
