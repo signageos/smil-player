@@ -1,0 +1,135 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="60" onlySmilUpdate="true"/>
+        <meta log="true" type="manual"
+              endpoint="https://my.signagelab.com/api/webhooks/device-proof-of-play/cm3rapcxo000dut1xmkz229cm/proof-of-play-event"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
+            <region regionName="cm1kk7rmk0005bfefhlh9hqb6" left="0" top="0" width="1080" height="1920" z-index="1"
+                    backgroundColor="#000000" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://1.signage-cdn.com/global/smil-placeholders/content-downloading-portrait.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <!-- [GalleryModule] Metro volný spot 2 (cm1ks1lsl0002lb6qvf83hpy0) -->
+                            <seq repeatCount="1" playMode="one">
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmd7i1ehc001l0x867u708kz7.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21kN2kxZmhhMDM0YzlwMHhjYnduMWgzaCIsIm5hbWUiOiI4LiBQbGF5T25fdmVyemUxIn0sImNhbXBhaWduIjp7ImlkIjoiY20xa3MxbHNsMDAwMmxiNnF2ZjgzaHB5MCIsIm5hbWUiOiJNZXRybyB2b2xuw70gc3BvdCAyIn0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/05/cmb7tj2dv03t312s4ch3b4b4h.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21iN3RqMzVkMDFuNzdnMHhzOHlsM3hhdiIsIm5hbWUiOiJKVCBCYW5rYSBKYW5qYV8zXzIxNjB4MzUyMCJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMWxzbDAwMDJsYjZxdmY4M2hweTAiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgMiJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/06/cmc8uoub8000f0x6p5xfl8hu7.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21jOHVvdzFlMDBrbzZiMHg4Z3ZzNGF1ZyIsIm5hbWUiOiJQZXRyYV9Eb25pb18yMTYweDM1MjAifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFsc2wwMDAybGI2cXZmODNocHkwIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDIifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmcuolxje000n0xb2hbx67ut9.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21jdW9seXF6MDB3ZmIyMHhzcmFlZ3dkZCIsIm5hbWUiOiJ6YXppal9zcGluZGxfMjE2MHgzNTIwWzFdLW5vdnkifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFsc2wwMDAybGI2cXZmODNocHkwIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDIifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                            </seq>
+                            <!-- [GalleryModule] Metro volný spot 3 (cm1ks1lv90004lb6qi0ggq993) -->
+                            <seq repeatCount="1" playMode="one">
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/01/cm5nyzvda001p12qg9sop13v3.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY201bnl6d2l6MDA1MmRsbXZtaDU5dmtocCIsIm5hbWUiOiJOYWRhY2VfdmFub2NlXzIxNjB4MzUyMCJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMWx2OTAwMDRsYjZxaTBnZ3E5OTMiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgMyJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/05/cmal1srz1018712s4eh2z742t.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21hbDFzc3YxMDFxMm1uMHhmMXd4and0MCIsIm5hbWUiOiJGbG9yYmFsIE1TMjAyNV8yMTYweDM1MjAifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFsdjkwMDA0bGI2cWkwZ2dxOTkzIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDMifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/05/cmav0wzpu026w12s4fbzx76w4.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21hdjB4MGp2MDBkNGlrMHgxZXFlN2hpeSIsIm5hbWUiOiJmbG9yYmFsIC1rZmMtMjE2MCJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMWx2OTAwMDRsYjZxaTBnZ3E5OTMiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgMyJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/06/cmc8upgm0000h0x6bf3tqhlii.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21jOHVwaTFwMDBsaTZiMHhkdzVsMzZiNiIsIm5hbWUiOiJQZXRyYV9Eb25pb18yMTYweDM1MjAifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFsdjkwMDA0bGI2cWkwZ2dxOTkzIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDMifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                            </seq>
+                            <!-- [GalleryModule] Metro volný spot 4 (cm1ks1lxp0006lb6qt7ocdzja) -->
+                            <seq repeatCount="1" playMode="one">
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/04/cm9jz7ke301me12r1ecoq0e7u.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY205ano3bGR3MDBxaW45MHg2d3E1M2phNSIsIm5hbWUiOiJQcmFoYVRWX0RpZ2lDTFZfMjE2MHgzNTIwIn0sImNhbXBhaWduIjp7ImlkIjoiY20xa3MxbHhwMDAwNmxiNnF0N29jZHpqYSIsIm5hbWUiOiJNZXRybyB2b2xuw70gc3BvdCA0In0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmd4iso6x001l0x962kvxbt04.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21kNGlzb2dmMDFvZzk2MHhlOWc0d25jMiIsIm5hbWUiOiJTdW1taXQgbGV0byAxIFZhcmxleV9TU18yMTYweDM1MjAifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFseHAwMDA2bGI2cXQ3b2NkemphIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDQifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/06/cmc91bxva00010xam4r3hbcaj.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21jOTFieWoyMDA0OGFtMHg1YWN0MzZ5MCIsIm5hbWUiOiJNYXhvdmFfMjE2MHgzNTIwIn0sImNhbXBhaWduIjp7ImlkIjoiY20xa3MxbHhwMDAwNmxiNnF0N29jZHpqYSIsIm5hbWUiOiJNZXRybyB2b2xuw70gc3BvdCA0In0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmd4isq6300120x7p1k5a15rn.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21kNGlzeGZsMDFqMDdwMHh4N3NiY2EzMSIsIm5hbWUiOiJTdW1taXQgbGV0byAyIFZhcmxleV9TU18yMTYweDM1MjBfbW90MiJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMWx4cDAwMDZsYjZxdDdvY2R6amEiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgNCJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                            </seq>
+                            <!-- [GalleryModule] Metro volný spot 5 (cm1ks1m0d0008lb6qmx49n37l) -->
+                            <seq repeatCount="1" playMode="one">
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/01/cm5nz5nrk001w12qgg98o5pgp.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY201bno1cDF2MDA1N3Rnb3M0M3gzMm85NiIsIm5hbWUiOiJOYWRhY2VfdmFub2NlXzIxNjB4MzUyMCJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMW0wZDAwMDhsYjZxbXg0OW4zN2wiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgNSJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmd7i274j001m0x866htad2ec.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21kN2kyOG93MDM0aDlwMHg1YTgzMjc4cyIsIm5hbWUiOiI4LVBMQVlPTl9LaW9za192ZXJ6ZXgyIn0sImNhbXBhaWduIjp7ImlkIjoiY20xa3MxbTBkMDAwOGxiNnFteDQ5bjM3bCIsIm5hbWUiOiJNZXRybyB2b2xuw70gc3BvdCA1In0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/04/cm99xaoxx00tz12r1azftc1d1.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY205OXhhcG9yMDBhcGc2MHgzbmJ2MGgzdiIsIm5hbWUiOiJIaV8yMTYweDM1MjBfRGFya3lfWmVuYV92MDEifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFtMGQwMDA4bGI2cW14NDluMzdsIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDUifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmd4ivema001m0x960lix9cqg.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21kNGl2ZjV5MDFqOTdwMHhydnZqdHptOSIsIm5hbWUiOiJBbmFuZGFfc3VtbWVyXzIxNjB4MzUyMF92MiJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMW0wZDAwMDhsYjZxbXg0OW4zN2wiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgNSJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/04/cm99xaq6n00u012r14i9xe4bv.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY205OXhhcjdpMDBiNGlwMHg3ZnpkcHo0diIsIm5hbWUiOiJIaV8yMTYweDM1MjBfRGFya3lfVGVlbmFnZXJfdjAxIn0sImNhbXBhaWduIjp7ImlkIjoiY20xa3MxbTBkMDAwOGxiNnFteDQ5bjM3bCIsIm5hbWUiOiJNZXRybyB2b2xuw70gc3BvdCA1In0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/04/cm99xaruf00u112r10gk5aact.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY205OXhhc21uMDBhc2c2MHhmeTFwbWFnbyIsIm5hbWUiOiJIaV8yMTYweDM1MjBfRGFya3lfTXV6X3YwMSJ9LCJjYW1wYWlnbiI6eyJpZCI6ImNtMWtzMW0wZDAwMDhsYjZxbXg0OW4zN2wiLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgNSJ9LCJkZXZpY2UiOnsiaWQiOiJjbTNyYXBjeG8wMDBkdXQxeG1rejIyOWNtIiwibmFtZSI6IjEyNDE0NDM5IC0gQSAtIE3Fr3N0ZWsgdnN0dXAgc23Em3IgVm9kacSNa292YSJ9LCJhY2NvdW50Ijp7ImlkIjoiY20xa2s1ZHE3MDE4MGJtNXAxcmhkNzA0MSIsIm5hbWUiOiJCaWdCb2FyZCBwcm9kdWtjZSJ9fQ=="/>
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/04/cm99xasz800u212r1eakt1l4t.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY205OXhhdHAzMDBiN2lwMHhpNXZoZ2ZtaSIsIm5hbWUiOiJIaV8yMTYweDM1MjBfRGFya3lfRGl0ZV92MDEifSwiY2FtcGFpZ24iOnsiaWQiOiJjbTFrczFtMGQwMDA4bGI2cW14NDluMzdsIiwibmFtZSI6Ik1ldHJvIHZvbG7DvSBzcG90IDUifSwiZGV2aWNlIjp7ImlkIjoiY20zcmFwY3hvMDAwZHV0MXhta3oyMjljbSIsIm5hbWUiOiIxMjQxNDQzOSAtIEEgLSBNxa9zdGVrIHZzdHVwIHNtxJtyIFZvZGnEjWtvdmEifSwiYWNjb3VudCI6eyJpZCI6ImNtMWtrNWRxNzAxODBibTVwMXJoZDcwNDEiLCJuYW1lIjoiQmlnQm9hcmQgcHJvZHVrY2UifX0="/>
+                            </seq>
+                            <!-- [PrahaInNewsFeedModule] Metro volný spot 1 PrahaIN (cm97385ny02qaig0xuv3ha72w) -->
+                            <seq repeatCount="1">
+                                <ref src="https://1.signage-cdn.com/environment/production/modules/praha-in-news-feed/25fd8165dae3e6e159a0448cb6d3c1be.wgt?appUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fgraphql&amp;campaignId=cm97385ny02qaig0xuv3ha72w&amp;deviceId=cm3rapcxo000dut1xmkz229cm&amp;devicePlatformUrl=https%3A%2F%2Fmy.signagelab.com%2Fapi%2Fdevice-platform&amp;hash=25fd8165dae3e6e159a0448cb6d3c1be&amp;s3Url=https%3A%2F%2F1.signage-cdn.com%2F"
+                                     type="application/widget" dur="10s" region="cm1kk7rmk0005bfefhlh9hqb6"
+                                     popName="signagelab_event" popType="custom"
+                                     popCustomId="eyJjYW1wYWlnbiI6eyJpZCI6ImNtOTczODVueTAycWFpZzB4dXYzaGE3MnciLCJuYW1lIjoiTWV0cm8gdm9sbsO9IHNwb3QgMSBQcmFoYUlOIn0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                            </seq>
+                            <!-- [GalleryModule] 18157950_5 3.7.-31.7. č.1/1 op.1/1 Pražská křižovatka, Již 28 let pomáháme 3.7.-31.7. 2160 x 3520 VID (cmcnfdkz20011dq0xgqdnfnpt) -->
+                            <seq repeatCount="1" begin="wallclock(2025-07-03T15:20)" end="wallclock(2025-07-31T23:59)"
+                                 playMode="one">
+                                <video src="https://1.signage-cdn.com/environment/production/accounts-data/cm1kk5dq70180bm5p1rhd7041/2025/07/cmcnfdyn8003g0x9dcv006s7l.mp4"
+                                       soundLevel="0%" region="cm1kk7rmk0005bfefhlh9hqb6" popName="signagelab_event"
+                                       popType="custom"
+                                       popCustomId="eyJmaWxlIjp7ImlkIjoiY21jbmZkeXgwMDRtYmJhMHhlczF6ajQ0YyIsIm5hbWUiOiIyOC1sZXQtTmFkYWNlIERhZ21hciBhIFbDoWNsYXZhIEhhdmxvdsO9Y2ggVklaRTk3MjE2MHgzNTIwcGN4In0sImNhbXBhaWduIjp7ImlkIjoiY21jbmZka3oyMDAxMWRxMHhncWRuZm5wdCIsIm5hbWUiOiIxODE1Nzk1MF81IDMuNy4tMzEuNy4gxI0uMS8xIG9wLjEvMSBQcmHFvnNrw6Ega8WZacW+b3ZhdGthLCBKacW+IDI4IGxldCBwb23DoWjDoW1lIDMuNy4tMzEuNy4gMjE2MCB4IDM1MjAgVklEIn0sImRldmljZSI6eyJpZCI6ImNtM3JhcGN4bzAwMGR1dDF4bWt6MjI5Y20iLCJuYW1lIjoiMTI0MTQ0MzkgLSBBIC0gTcWvc3RlayB2c3R1cCBzbcSbciBWb2RpxI1rb3ZhIn0sImFjY291bnQiOnsiaWQiOiJjbTFrazVkcTcwMTgwYm01cDFyaGQ3MDQxIiwibmFtZSI6IkJpZ0JvYXJkIHByb2R1a2NlIn19"/>
+                            </seq>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

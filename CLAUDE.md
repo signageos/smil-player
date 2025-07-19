@@ -95,11 +95,13 @@ The player is configured through signageOS timing settings:
 ## Sync Migration Standard Approach
 
 When working on sync migration steps, always follow this methodology:
+
 - Work like a Senior Software Engineer
-- Focus on simplicity and minimal necessary changes  
+- Focus on simplicity and minimal necessary changes
 - Only modify code required for migration
 - Don't touch unrelated repository code
 - Reference sync-noWait.md and sync-refactor.md for guidance
 - Ask if unsure how to proceed
 - Keep responses short
 - Create git commit after completing each step
+- Never assume missing context. Ask questions if uncertain
