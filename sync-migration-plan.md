@@ -517,12 +517,14 @@ Idle → Prepared → Playing → Finished
 
 ### Development Best Practices:
 
-- **Always include debug logging in crucial sections** - Especially for sync state changes, resync decisions, and error conditions
+- **Always include debug logging in crucial sections** - Especially for sync state changes, resync decisions, and error
+  conditions
 - Use `debug()` from the debug library for development-level logging
 - Use `console.log('[SYNC] ...')` for critical sync events that should always be visible
 - Log with full context (region, syncIndex, state, reason for decision)
 - Include both the action being taken and why it's being taken
-- **Avoid unnecessary intermediate variables** - Return function results directly when possible (e.g., `return await someFunction()` instead of `const result = await someFunction(); return result;`)
+- **Avoid unnecessary intermediate variables** - Return function results directly when possible (e.g.,
+  `return await someFunction()` instead of `const result = await someFunction(); return result;`)
 
 This plan provides a structured approach to migrating from wait-based to event-based synchronization while maintaining
 all existing functionality and improving performance characteristics.
@@ -532,19 +534,25 @@ all existing functionality and improving performance characteristics.
 ## Migration Notes & Fixes
 
 ### Sync Group Consistency Fix (2.2a.1)
+
 During implementation, discovered that SMILElementController had inconsistent sync group usage:
+
 - `shouldStartPlayback()` was using `-after` sync group
 - All other methods were using `-before` sync group
 
-Fixed to ensure all methods consistently use `-before` sync group for coordinating element transitions before playback starts. The `-after` sync groups remain available for future post-playback coordination needs.
+Fixed to ensure all methods consistently use `-before` sync group for coordinating element transitions before playback
+starts. The `-after` sync groups remain available for future post-playback coordination needs.
 
 ### Resync Architecture Decision (2.2c)
+
 After deep analysis, decided to keep `syncingInAction` and add `targetSyncIndex` because:
+
 - `syncingInAction` prevents priority content from interrupting during resync (critical requirement)
 - The priority system checks this flag to skip priority behavior during sync operations
 - Removing it would break priority handling in files like `priorityStop.smil`
 
 The resync flow will work as follows:
+
 1. Slave detects master is ahead (e.g., master at syncIndex 10, slave at 5)
 2. Set `targetSyncIndex = 11` (next element after master) and `syncingInAction = true`
 3. Priority system sees `syncingInAction` and doesn't interrupt
@@ -553,21 +561,27 @@ The resync flow will work as follows:
 6. Both devices continue in sync
 
 ### ElementRegistry Removal Decision
+
 After implementing resync with `targetSyncIndex`, realized ElementRegistry is not needed:
+
 - Tree traversal with skip logic is simpler and maintains playlist integrity
 - O(1) lookup benefit not worth the complexity for rare resync scenarios
 - Avoids memory overhead and synchronization issues with dynamic playlists
 - Existing recursive processing handles all playlist features correctly
 
 ### Content Preparation Strategy (2.3)
+
 Analyzed existing preparation logic and found it's already optimal:
+
 - Elements prepare just-in-time while previous element plays
 - During resync, we skip elements before preparation (efficient)
 - `shouldWaitAndContinue()` manages the timing for gapless playback
 - No changes needed - existing implementation works perfectly
 
 ### TypeScript Error Fixes (Post Phase 2)
+
 After implementing sync migration, cleaned up unused code:
+
 - Removed unused `sos` parameter from SMILElementController constructor
 - Removed unused `element` parameters from SMILElementController methods
 - Removed unused imports (`createSourceReportObject`, `isEqual`, `SMILMedia`)
@@ -575,7 +589,9 @@ After implementing sync migration, cleaned up unused code:
 - Updated all method calls to match new signatures
 
 ### Sync Element Preparation Optimization
+
 Improved efficiency during resync by checking sync state before element preparation:
+
 - Added `shouldPrepareElement()` method to handle resync logic during preparation phase
 - Renamed `handleElementStateSync` to `shouldPlayElement` for naming consistency
 - Removed duplicate `shouldSync` checks in `prepareElement` and `shouldStartPlayback`
@@ -583,7 +599,9 @@ Improved efficiency during resync by checking sync state before element preparat
 - Prevents unnecessary downloads/preparation of elements that will be skipped during resync
 
 ### State Mismatch Edge Case Handling
+
 Enhanced `waitForMasterState()` to handle state progression mismatches:
+
 - Added handling for same syncIndex but different state scenarios
 - Detects if slave is behind (e.g., expects 'prepared' but master at 'playing')
 - Detects if slave is ahead (e.g., expects 'playing' but master at 'prepared')
@@ -592,7 +610,9 @@ Enhanced `waitForMasterState()` to handle state progression mismatches:
 - Ensures proper sync recovery when slaves miss state transitions
 
 ### SyncIndex Wraparound for Playlist Looping
+
 Fixed bug where resync would create non-existent syncIndex at playlist end:
+
 - Added `maxSyncIndexPerRegion` to Synchronization type to track region-specific maximums
 - Set `maxSyncIndexPerRegion` in `playlistDataPrepare` after processing all elements
 - Implemented wraparound logic in `waitForMasterState()` for playlist looping
@@ -601,160 +621,181 @@ Fixed bug where resync would create non-existent syncIndex at playlist end:
 - Ensures slaves can properly resync when playlists loop infinitely
 
 ### Idempotent Slave Logic Implementation
+
 Implemented duplicate broadcast detection to handle master sending same state multiple times:
+
 - Added duplicate detection in SyncGroup's `monitorValues()` method
 - Prevents storing and emitting duplicate elementState events (200ms timestamp window)
 - This ensures SMILElementController never receives duplicate broadcasts
 - Comprehensive logging added for debugging sync state changes:
-  - `debug()` for development-level sync decisions
-  - `console.log('[SYNC] ...')` for critical sync events
-  - Logs when setting/clearing resync targets with full context
+    - `debug()` for development-level sync decisions
+    - `console.log('[SYNC] ...')` for critical sync events
+    - Logs when setting/clearing resync targets with full context
 - Development best practice: Always include debug logging in crucial sync/state management code
 
 ### Event Listener Cleanup Fix
+
 Fixed critical issue where event listeners were not cleaned up in `waitForMasterState`:
+
 - Added `resolved` flag to prevent multiple promise resolutions
 - Store `unsubscribe` function from `syncGroup.onValue()` for cleanup
 - Created `cleanup()` function that:
-  - Clears the timeout
-  - Removes the event listener
-  - Prevents duplicate cleanup attempts
+    - Clears the timeout
+    - Removes the event listener
+    - Prevents duplicate cleanup attempts
 - Call `cleanup()` before every `resolve()` to ensure proper cleanup
 - Added safety check to prevent processing events after resolution
 - This fixes the issue where Promise would resolve but `await` wouldn't complete, blocking execution
 
 ### Resync Signal Propagation Fix
+
 Fixed issue where resync detection didn't cause elements to be skipped:
+
 - Changed `waitForMasterState` to return `Promise<boolean>` (false = skip, true = continue)
 - Updated `coordinateElementTransition` to propagate the boolean result
 - Fixed `shouldStartPlayback` to return the coordination result
 - Updated `prepareElement` and `shouldPrepareElement` to handle boolean returns
 - When slave detects it's behind master:
-  - Sets resync targets (existing behavior)
-  - Returns false to trigger element skipping (new)
-  - False propagates through the call chain
-  - Elements are skipped until reaching resync target
+    - Sets resync targets (existing behavior)
+    - Returns false to trigger element skipping (new)
+    - False propagates through the call chain
+    - Elements are skipped until reaching resync target
 
 ### Race Condition Fix - Master Broadcasts Before Slave Listener
+
 Fixed critical race condition where master broadcasts state before slave registers listener:
+
 - **Problem**: Master could broadcast elementState before slave reaches waitForMasterState, causing infinite wait
 - **Solution**: Store broadcast states in SyncGroup with duplicate prevention
 - **Implementation**:
-  - Added `lastValues` Map to SyncGroup to store received broadcasts
-  - Implemented duplicate detection with 200ms timestamp window
-  - Check stored state first in waitForMasterState before registering listener
-  - Apply 2-second freshness check to prevent using stale states
-  - Clear consumed states after processing to prevent memory buildup
+    - Added `lastValues` Map to SyncGroup to store received broadcasts
+    - Implemented duplicate detection with 200ms timestamp window
+    - Check stored state first in waitForMasterState before registering listener
+    - Apply 2-second freshness check to prevent using stale states
+    - Clear consumed states after processing to prevent memory buildup
 - **Key methods**:
-  - `SyncGroup.getLastValue()`: Retrieve stored state by key
-  - `SyncGroup.clearLastValue()`: Clear consumed state
-  - `processElementState()`: Extracted reusable state processing logic
+    - `SyncGroup.getLastValue()`: Retrieve stored state by key
+    - `SyncGroup.clearLastValue()`: Clear consumed state
+    - `processElementState()`: Extracted reusable state processing logic
 - **Benefits**:
-  - Eliminates race condition for late-joining slaves
-  - Prevents duplicate state processing
-  - Maintains idempotent behavior
-  - Improves sync reliability
+    - Eliminates race condition for late-joining slaves
+    - Prevents duplicate state processing
+    - Maintains idempotent behavior
+    - Improves sync reliability
 
 ### Master Change Handling During Wait
+
 Implemented proper handling of master changes while slave is waiting for state:
+
 - **Problem**: Slave could get stuck waiting if it becomes master while in waitForMasterState
 - **Solution**: Monitor master changes and react appropriately
 - **Implementation**:
-  - Modified SyncGroup event methods to return unsubscribe functions
-  - Added master change monitoring in waitForMasterState
-  - When slave becomes master: cleanup and resolve to continue playback
-  - When another device becomes master: continue waiting for new master
-  - Reduced timeout from 1000s to 90s with improved logging
+    - Modified SyncGroup event methods to return unsubscribe functions
+    - Added master change monitoring in waitForMasterState
+    - When slave becomes master: cleanup and resolve to continue playback
+    - When another device becomes master: continue waiting for new master
+    - Reduced timeout from 1000s to 90s with improved logging
 - **Benefits**:
-  - Prevents deadlock when waiting slave becomes master
-  - Ensures new masters can fulfill their broadcasting duties
-  - Devices continue independently after reasonable timeout
-  - Better debugging with detailed timeout messages
+    - Prevents deadlock when waiting slave becomes master
+    - Ensures new masters can fulfill their broadcasting duties
+    - Devices continue independently after reasonable timeout
+    - Better debugging with detailed timeout messages
 
 ### Slave-Ahead Waiting Fix
+
 Fixed critical issue where slaves ahead of master would continue playing instead of waiting:
+
 - **Problem**: When slave at syncIndex=5 received broadcast for syncIndex=3, it would continue playing
 - **Solution**: Implement proper action handling with clear state management
 - **Implementation**:
-  - Added ProcessAction const with three clear states: CONTINUE, RESYNC, WAIT
-  - Updated processElementState to return ProcessActionType instead of boolean
-  - Added explicit case for slave ahead (value.syncIndex < syncIndex) returning WAIT
-  - Fixed default case to return WAIT instead of continuing
-  - Modified waitForMasterState to handle three actions properly
+    - Added ProcessAction const with three clear states: CONTINUE, RESYNC, WAIT
+    - Updated processElementState to return ProcessActionType instead of boolean
+    - Added explicit case for slave ahead (value.syncIndex < syncIndex) returning WAIT
+    - Fixed default case to return WAIT instead of continuing
+    - Modified waitForMasterState to handle three actions properly
 - **Benefits**:
-  - Slaves ahead of master now wait for correct broadcast
-  - Clear action semantics improve code readability
-  - Master can catch up to slaves naturally
-  - No premature continuation of playback
+    - Slaves ahead of master now wait for correct broadcast
+    - Clear action semantics improve code readability
+    - Master can catch up to slaves naturally
+    - No premature continuation of playback
 - **Future Optimization**: Consider ignoring old broadcasts for performance (currently logs and waits)
 
 ### Composite Key Storage for ElementState
+
 Fixed critical issue where rapid state transitions caused state overwrites:
+
 - **Problem**: Master broadcasts `playing(1)` then `prepared(2)`, but `prepared(2)` overwrites stored state
 - **Solution**: Use composite keys to store each state uniquely
 - **Implementation**:
-  - Changed storage key from `'elementState'` to `'elementState-${regionName}-${syncIndex}-${state}'`
-  - Added helper methods to SyncGroup:
-    - `buildElementStateKey()`: Create consistent composite keys
-    - `getElementState()`: Get specific state by exact match
-    - `findElementStateByIndex()`: Find any state for given syncIndex
-    - `clearElementState()`: Clear only the specific consumed state
-  - Updated waitForMasterState logic:
-    - First check for exact match (regionName + syncIndex + state)
-    - If not found, check for any state with same syncIndex to determine resync
-    - Only clear the specific state that was consumed
+    - Changed storage key from `'elementState'` to `'elementState-${regionName}-${syncIndex}-${state}'`
+    - Added helper methods to SyncGroup:
+        - `buildElementStateKey()`: Create consistent composite keys
+        - `getElementState()`: Get specific state by exact match
+        - `findElementStateByIndex()`: Find any state for given syncIndex
+        - `clearElementState()`: Clear only the specific consumed state
+    - Updated waitForMasterState logic:
+        - First check for exact match (regionName + syncIndex + state)
+        - If not found, check for any state with same syncIndex to determine resync
+        - Only clear the specific state that was consumed
 - **Benefits**:
-  - Multiple states can coexist without overwrites
-  - Each state is preserved until actually consumed
-  - Late-joining slaves can still find the states they need
-  - More precise state management and cleanup
+    - Multiple states can coexist without overwrites
+    - Each state is preserved until actually consumed
+    - Late-joining slaves can still find the states they need
+    - More precise state management and cleanup
 
 ### Sync Drift Prevention - Code Path Symmetry
+
 Fixed critical timing drift issue where slaves gradually fall behind master:
-- **Problem**: Master broadcasts state and continues immediately, while slaves execute additional processing code (~50ms per transition)
+
+- **Problem**: Master broadcasts state and continues immediately, while slaves execute additional processing code (~50ms
+  per transition)
 - **Root Cause**: Asymmetric code execution paths between master and slave devices
-  - Master: `isMaster()` → `broadcastState()` → return (minimal time)
-  - Slave: `isMaster()` → `waitForMasterState()` → state lookups → `processElementState()` → event handling → return (50ms+)
+    - Master: `isMaster()` → `broadcastState()` → return (minimal time)
+    - Slave: `isMaster()` → `waitForMasterState()` → state lookups → `processElementState()` → event handling → return (
+      50ms+)
 - **Solution**: Make master simulate slave processing time to maintain timing symmetry
 - **Implementation**:
-  - Added `simulateSlaveProcessing()` method to SMILElementController
-  - This is a DUMMY method with NO functional impact on playback
-  - Performs read-only operations similar to slave processing:
-    - State lookups (getElementState, findElementStateByIndex)
-    - Runs processElementState without using result
-    - Adds 20ms fixed delay for network/processing overhead
-  - Master now calls this method after broadcasting state
+    - Added `simulateSlaveProcessing()` method to SMILElementController
+    - This is a DUMMY method with NO functional impact on playback
+    - Performs read-only operations similar to slave processing:
+        - State lookups (getElementState, findElementStateByIndex)
+        - Runs processElementState without using result
+        - Adds 20ms fixed delay for network/processing overhead
+    - Master now calls this method after broadcasting state
 - **Key Design Principle**: The simulation must have ZERO side effects
-  - No state mutations
-  - No flag changes
-  - No resync triggers
-  - Purely for timing purposes
+    - No state mutations
+    - No flag changes
+    - No resync triggers
+    - Purely for timing purposes
 - **Benefits**:
-  - Prevents drift accumulation over time
-  - Maintains frame-perfect sync for extended periods
-  - Simple solution that preserves fire-and-forget model
-  - No protocol complexity needed
-- **Future Enhancement**: If drift persists, implement acknowledgment protocol where master waits for slave confirmations
+    - Prevents drift accumulation over time
+    - Maintains frame-perfect sync for extended periods
+    - Simple solution that preserves fire-and-forget model
+    - No protocol complexity needed
+- **Future Enhancement**: If drift persists, implement acknowledgment protocol where master waits for slave
+  confirmations
 
 ### TimedDebugger Implementation for Sync Diagnostics
+
 Enhanced debug logging to track where slaves lag behind master during sync operations:
+
 - **Problem**: Need better visibility into timing of code execution to identify sync drift sources
 - **Solution**: Created TimedDebugger class that tracks timing between debug logs
 - **Implementation**:
-  - TimedDebugger class tracks start time and time between logs
-  - Format: `[debugId_timestamp +deltams total:totalms] message`
-  - Shows delta from previous log and total elapsed time
-  - Replaced all debug calls in playElement and subfunctions
-  - Updated SMILElementController methods to accept optional timedDebug parameter
+    - TimedDebugger class tracks start time and time between logs
+    - Format: `[debugId_timestamp +deltams total:totalms] message`
+    - Shows delta from previous log and total elapsed time
+    - Replaced all debug calls in playElement and subfunctions
+    - Updated SMILElementController methods to accept optional timedDebug parameter
 - **Methods Updated**:
-  - playElement and all its subfunctions (handleVideoPrepare, handleVideoPlay, etc.)
-  - SMILElementController sync methods (shouldPrepareElement, shouldPlayElement, etc.)
-  - Supporting methods (checkRegionsForCancellation, setCurrentlyPlaying, waitMediaOnScreen)
+    - playElement and all its subfunctions (handleVideoPrepare, handleVideoPlay, etc.)
+    - SMILElementController sync methods (shouldPrepareElement, shouldPlayElement, etc.)
+    - Supporting methods (checkRegionsForCancellation, setCurrentlyPlaying, waitMediaOnScreen)
 - **Benefits**:
-  - Precise timing visibility for each code section
-  - Easy identification of bottlenecks
-  - Helps diagnose sync drift issues
-  - No functional impact - only affects debug output
+    - Precise timing visibility for each code section
+    - Easy identification of bottlenecks
+    - Helps diagnose sync drift issues
+    - No functional impact - only affects debug output
 
 ---
 
@@ -762,31 +803,37 @@ Enhanced debug logging to track where slaves lag behind master during sync opera
 
 ### State Machine Improvements
 
-The current SMILElementController implements a simple state machine for basic sync coordination. Future enhancements to consider:
+The current SMILElementController implements a simple state machine for basic sync coordination. Future enhancements to
+consider:
 
 **State Tracking:**
+
 - Add explicit state tracking with `Map<regionName, currentState>`
 - Track state history for debugging and diagnostics
 - Implement state persistence across app restarts
 
 **Enhanced State Machine:**
+
 - More granular states: `preparing → prepared → starting → playing → finished`
 - State validation to prevent invalid transitions
 - Detect and handle state mismatches between devices
 
 **Error Handling:**
+
 - Improve master disconnection scenarios
 - Add timeout recovery strategies
 - Implement fallback mechanisms for stuck states
 - Handle partial device failures gracefully
 
 **Debugging & Monitoring:**
+
 - State transition logging and visualization
 - Performance metrics for sync timing
 - Network partition detection and recovery
 - Comprehensive error reporting
 
 **Advanced Features:**
+
 - Dynamic master election during playback
 - Bandwidth-aware sync strategies
 - Predictive pre-loading based on state
@@ -794,6 +841,7 @@ The current SMILElementController implements a simple state machine for basic sy
 - Element queue management in controller for smoother transitions
 
 **Architecture Refinements:**
+
 - Explore removing `syncingInAction` flag in favor of state machine approach
 - Currently needed for priority system, but could be replaced with explicit sync states
 - Would require updating priority system to check sync state instead of boolean flag
@@ -822,31 +870,33 @@ These improvements can be implemented incrementally as real-world usage reveals 
 ### Phase 2: SMIL Element State Machine
 
 - [x] **2.1a** Create `src/components/playlist/playlistProcessor/SMILElementController.ts`
-- [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future Enhancements)
+- [x] **2.1b** Implement state machine: Idle → Prepared → Playing → Finished (basic implementation, see Future
+  Enhancements)
 - [x] **2.1c** Add state broadcasting to sync groups
-- [x] **2.1d** Implement element pre-loading logic (coordination in controller, actual loading in existing prepare methods)
+- [x] **2.1d** Implement element pre-loading logic (coordination in controller, actual loading in existing prepare
+  methods)
 - [x] **2.2a** Remove `handleElementSynchronization()` function (lines 2386-2549)
 - [x] **2.2a.1** Fix sync group consistency - all methods use `-before` group
 - [x] **2.2b** Remove all `await this.sos.sync.wait()` calls (3 locations)
 - [x] **2.2c** Create `handleElementStateSync()` with event-based coordination
-  - [x] **2.2c.1** Enhance `waitForMasterState()` to detect resync scenarios:
-    - Listen for any elementState broadcast (not just matching syncIndex)
-    - When master broadcasts syncIndex > current, set `targetSyncIndex = broadcast + 1`
-    - Set `syncingInAction = true` to prevent priority interruptions
-    - Resolve promise to let playlist continue seeking
-  - [x] **2.2c.2** Add `handleElementStateSync()` method to SMILElementController:
-    - Check if in resync mode (`syncingInAction && targetSyncIndex`)
-    - Return false to skip elements until reaching targetSyncIndex
-    - At target: clear flags, call normal `shouldStartPlayback()`
-    - For non-resync: delegate to `shouldStartPlayback()`
-  - [x] **2.2c.3** Update playlistProcessor to call `handleElementStateSync()`:
-    - Replace current `shouldStartPlayback()` call with `handleElementStateSync()`
-    - Pass element, regionName, and syncIndex
-    - Handle return value (true = play, false = skip)
-  - [x] **2.2c.4** Test resync behavior with priority content: (skipped - will test after full implementation)
-    - Verify priority doesn't interrupt during resync
-    - Test late-joining devices can catch up
-    - Ensure smooth transition when reaching target
+    - [x] **2.2c.1** Enhance `waitForMasterState()` to detect resync scenarios:
+        - Listen for any elementState broadcast (not just matching syncIndex)
+        - When master broadcasts syncIndex > current, set `targetSyncIndex = broadcast + 1`
+        - Set `syncingInAction = true` to prevent priority interruptions
+        - Resolve promise to let playlist continue seeking
+    - [x] **2.2c.2** Add `handleElementStateSync()` method to SMILElementController:
+        - Check if in resync mode (`syncingInAction && targetSyncIndex`)
+        - Return false to skip elements until reaching targetSyncIndex
+        - At target: clear flags, call normal `shouldStartPlayback()`
+        - For non-resync: delegate to `shouldStartPlayback()`
+    - [x] **2.2c.3** Update playlistProcessor to call `handleElementStateSync()`:
+        - Replace current `shouldStartPlayback()` call with `handleElementStateSync()`
+        - Pass element, regionName, and syncIndextestingSyncImages.smil
+        - Handle return value (true = play, false = skip)
+    - [x] **2.2c.4** Test resync behavior with priority content: (skipped - will test after full implementation)
+        - Verify priority doesn't interrupt during resync
+        - Test late-joining devices can catch up
+        - Ensure smooth transition when reaching target
 - [x] ~~**2.2d** Implement target-seeking navigation using Element Registry~~ (Not needed - using tree traversal)
 - [x] **2.3a** Implement content preparation strategy (already optimal - no changes needed)
 - [x] **2.3b** Add resource preloading for videos, images, widgets (existing implementation sufficient)

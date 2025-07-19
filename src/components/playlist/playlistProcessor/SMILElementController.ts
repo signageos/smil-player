@@ -5,15 +5,14 @@ import { TimedDebugger } from './playlistProcessor';
 
 // Process actions for element state handling
 const ProcessAction = {
-	CONTINUE: 'CONTINUE',    // Exact match - continue playing normally
-	RESYNC: 'RESYNC',        // Slave behind master - trigger resync to skip elements
-	WAIT: 'WAIT'             // Keep waiting for correct broadcast
+	CONTINUE: 'CONTINUE', // Exact match - continue playing normally
+	RESYNC: 'RESYNC', // Slave behind master - trigger resync to skip elements
+	WAIT: 'WAIT', // Keep waiting for correct broadcast
 } as const;
 
 type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
 
 export class SMILElementController {
-
 	constructor(private synchronization: Synchronization) {}
 
 	/**
@@ -45,7 +44,11 @@ export class SMILElementController {
 	/**
 	 * Check if element should be prepared - handles resync logic for preparation phase
 	 */
-	public async shouldPrepareElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
+	public async shouldPrepareElement(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<boolean> {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync, always prepare
 		}
@@ -102,7 +105,11 @@ export class SMILElementController {
 	/**
 	 * Check if element should be played - handles resync logic for playback phase
 	 */
-	public async shouldPlayElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
+	public async shouldPlayElement(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<boolean> {
 		if (!this.synchronization.shouldSync) {
 			return true; // No sync needed
 		}
@@ -148,7 +155,11 @@ export class SMILElementController {
 	/**
 	 * Check if element should start playback - replaces handleElementSynchronization
 	 */
-	public async shouldStartPlayback(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
+	public async shouldStartPlayback(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<boolean> {
 		const msg = 'Checking if should start playback: region=%s, syncIndex=%d';
 		if (timedDebug) {
 			timedDebug.log(msg, regionName, syncIndex);
@@ -212,12 +223,13 @@ export class SMILElementController {
 			} else {
 				debug(masterMsg, state, regionName, syncIndex);
 			}
-			await this.broadcastState(state, regionName, syncIndex, timedDebug);
-			
+
 			// IMPORTANT: Simulate slave processing to prevent timing drift
 			// This ensures master takes similar time as slaves, preventing accumulation of ~50ms drift per transition
 			await this.simulateSlaveProcessing(syncGroup, state, regionName, syncIndex, timedDebug);
-			
+
+			await this.broadcastState(state, regionName, syncIndex, timedDebug);
+
 			return true; // Master always continues
 		} else {
 			const slaveMsg = 'Slave waiting for %s state for region=%s, syncIndex=%d';
@@ -236,7 +248,12 @@ export class SMILElementController {
 	/**
 	 * Broadcast state to sync group (master only)
 	 */
-	private async broadcastState(state: SyncElementState, regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
+	private async broadcastState(
+		state: SyncElementState,
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) return;
 
@@ -279,21 +296,11 @@ export class SMILElementController {
 			syncIndex,
 		);
 
-
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
-			debug(
-				'Received expected state: %s for region=%s, syncIndex=%d',
-				expectedState,
-				regionName,
-				syncIndex,
-			);
+			debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
 			return ProcessAction.CONTINUE; // In sync, continue normally
-		} else if (
-			expectedState === 'prepared' &&
-			value.state === 'playing' &&
-			value.syncIndex > syncIndex
-		) {
+		} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
 			// Special case: We're waiting for 'prepared' but master is already playing a future element
 			// This means we missed our chance to prepare and need to catch up
 			debug(
@@ -456,25 +463,25 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): Promise<boolean> {
 		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
-		
+
 		// Check for stored state first - look for exact match
 		const exactMatch = syncGroup.getElementState(regionName, syncIndex, expectedState);
 		if (exactMatch) {
 			const age = Date.now() - exactMatch.timestamp;
-			
+
 			// Check freshness (2 seconds)
 			if (age < 2000) {
-				debug('Found exact match in stored state for region=%s, syncIndex=%d, state=%s, age=%dms', 
-					regionName, syncIndex, expectedState, age);
-				
-				// Process the exact match to determine action (should always be CONTINUE)
-				const action = this.processElementState(
-					exactMatch,
-					expectedState,
+				debug(
+					'Found exact match in stored state for region=%s, syncIndex=%d, state=%s, age=%dms',
+					regionName,
 					syncIndex,
-					regionName
+					expectedState,
+					age,
 				);
-				
+
+				// Process the exact match to determine action (should always be CONTINUE)
+				const action = this.processElementState(exactMatch, expectedState, syncIndex, regionName);
+
 				// Handle action (for exact match, we expect CONTINUE)
 				if (action === ProcessAction.CONTINUE) {
 					// Clear this specific state and continue
@@ -490,25 +497,25 @@ export class SMILElementController {
 				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
 			}
 		}
-		
+
 		// No exact match - check if there's another state for this syncIndex
 		const anyStateForIndex = syncGroup.findElementStateByIndex(regionName, syncIndex);
 		if (anyStateForIndex) {
 			const age = Date.now() - anyStateForIndex.timestamp;
-			
+
 			// Check freshness (2 seconds)
 			if (age < 2000) {
-				debug('Found different state for same syncIndex: expected=%s, found=%s for region=%s, syncIndex=%d', 
-					expectedState, anyStateForIndex.state, regionName, syncIndex);
-				
-				// Process with the found state to determine resync
-				const action = this.processElementState(
-					anyStateForIndex, 
-					expectedState, 
-					syncIndex, 
-					regionName
+				debug(
+					'Found different state for same syncIndex: expected=%s, found=%s for region=%s, syncIndex=%d',
+					expectedState,
+					anyStateForIndex.state,
+					regionName,
+					syncIndex,
 				);
-				
+
+				// Process with the found state to determine resync
+				const action = this.processElementState(anyStateForIndex, expectedState, syncIndex, regionName);
+
 				// For non-exact matches, we expect RESYNC action
 				if (action === ProcessAction.RESYNC) {
 					// Don't clear the found state - it might be needed later
@@ -517,7 +524,7 @@ export class SMILElementController {
 				}
 			}
 		}
-		
+
 		// No valid stored state, set up listener
 		return new Promise((resolve) => {
 			let resolved = false;
@@ -547,7 +554,9 @@ export class SMILElementController {
 				} else {
 					debug(timeoutMsg, expectedState, syncIndex, regionName);
 				}
-				console.log(`[SYNC] Timeout waiting for ${expectedState} state at syncIndex ${syncIndex} for region ${regionName} - continuing independently`);
+				console.log(
+					`[SYNC] Timeout waiting for ${expectedState} state at syncIndex ${syncIndex} for region ${regionName} - continuing independently`,
+				);
 				cleanup();
 				resolve(true); // Continue on timeout to avoid blocking
 			}, 90000); // 90 second timeout
@@ -555,16 +564,26 @@ export class SMILElementController {
 			// Monitor master changes
 			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
 				if (resolved) return; // Prevent processing after resolution
-				
+
 				if (isMaster) {
 					// This device became master while waiting
-					debug('Slave became master while waiting for state=%s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+					debug(
+						'Slave became master while waiting for state=%s, syncIndex=%d, region=%s',
+						expectedState,
+						syncIndex,
+						regionName,
+					);
 					console.log(`[SYNC] Device became master while waiting - continuing playback`);
 					cleanup();
 					resolve(true); // Continue playback as new master
 				} else {
 					// Another device became master
-					debug('Master changed to another device while waiting for state=%s, syncIndex=%d, region=%s', expectedState, syncIndex, regionName);
+					debug(
+						'Master changed to another device while waiting for state=%s, syncIndex=%d, region=%s',
+						expectedState,
+						syncIndex,
+						regionName,
+					);
 					// Continue waiting for new master's broadcast
 				}
 			});
@@ -574,13 +593,8 @@ export class SMILElementController {
 				console.log('Received value in syncGroup', value);
 				console.log('---------------------------------------------------');
 				if (key === 'elementState' && value?.regionName === regionName) {
-					const action = this.processElementState(
-						value,
-						expectedState,
-						syncIndex,
-						regionName
-					);
-					
+					const action = this.processElementState(value, expectedState, syncIndex, regionName);
+
 					// Handle action based on type
 					switch (action) {
 						case ProcessAction.CONTINUE:
@@ -620,10 +634,10 @@ export class SMILElementController {
 	 * DUMMY METHOD - NO FUNCTIONAL IMPACT
 	 * Simulates slave processing time to maintain timing symmetry between master and slave.
 	 * This prevents drift accumulation by ensuring master takes similar time as slaves.
-	 * 
+	 *
 	 * IMPORTANT: This method must have NO side effects on playback state!
 	 * It only exists to consume similar CPU time as slave processing.
-	 * 
+	 *
 	 * @param syncGroup - The sync group to simulate operations on (read-only)
 	 * @param state - The state being simulated
 	 * @param regionName - The region name
@@ -640,7 +654,7 @@ export class SMILElementController {
 		// These calls don't affect anything, just consume similar CPU time
 		syncGroup.getElementState(regionName, syncIndex, state);
 		syncGroup.findElementStateByIndex(regionName, syncIndex);
-		
+
 		// Run processElementState logic without using the result
 		// This simulates the computational work slaves do
 		const dummyValue = {
@@ -651,14 +665,14 @@ export class SMILElementController {
 		};
 		// Call processElementState but ignore the result - purely for timing
 		this.processElementState(dummyValue, state, syncIndex, regionName);
-		
+
 		// Add fixed delay to compensate for network propagation and slave processing overhead
 		// This 200ms delay approximates the time it takes for:
 		// - Network message delivery
 		// - Slave event processing
 		// - Additional overhead in slave code path
-		await new Promise(resolve => setTimeout(resolve, 200));
-		
+		await new Promise((resolve) => setTimeout(resolve, 300));
+
 		const msg = 'Master simulated slave processing delay for sync timing symmetry';
 		if (timedDebug) {
 			timedDebug.log(msg);
