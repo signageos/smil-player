@@ -454,7 +454,7 @@ export class SMILElementController {
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount();
+			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
 			if (expectedAcks > 0) {
 				const ackKey = `${regionName}-${syncIndex}-ack-prepared`;
 				const msg = 'Master waiting for %d prepared ACKs for %s';
@@ -563,7 +563,7 @@ export class SMILElementController {
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount();
+			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
 			if (expectedAcks > 0) {
 				const ackKey = `${regionName}-${syncIndex}-ack-playing`;
 				const msg = 'Master waiting for %d playing ACKs for %s';
@@ -619,7 +619,7 @@ export class SMILElementController {
 			await this.broadcastState(state, regionName, syncIndex, timedDebug);
 
 			// Wait for ACKs from slaves
-			let expectedAcks = syncGroup.getConnectedPeersCount();
+			let expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
 			if (expectedAcks > 0 && (state === 'prepared' || state === 'playing')) {
 				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				const ackKey = `${regionName}-${syncIndex}-${ackType}`;
