@@ -103,7 +103,7 @@ export class TimedDebugger {
 	 * Log a message with timing information
 	 * Shows time elapsed since last log and total time since start
 	 */
-	log(message: string, ...args: any[]) {
+	public log(message: string, ...args: any[]) {
 		const now = Date.now();
 		const totalElapsed = now - this.startTime;
 		const deltaFromLast = now - this.lastLogTime;
@@ -973,6 +973,60 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await Promise.all(promises);
 		}
 	};
+
+	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		const resourceChecker = new ResourceChecker(
+			resources,
+			this.synchronization.shouldSync,
+			() => this.setCheckFilesLoop(false),
+			restart,
+		);
+		resourceChecker.start();
+	}
+
+	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
+		try {
+			if (this.sos.config.syncGroupName) {
+				debug('SyncGroupName is defined, starting sync setup');
+				if (firstIteration) {
+					await connectSyncSafe(this.sos);
+				}
+
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+
+				if (firstIteration && hasDynamicContent(this.smilObject)) {
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				}
+				// give some time for master selection
+				await sleep(500);
+			} else {
+				debug('No syncGroupName is defined, skipping sync setup');
+			}
+		} catch (error) {
+			debug('Error during playlist processing sync setup: %O', error);
+			console.error(error);
+		}
+	}
+
+	private async handlePlaylistProcessing(version: number): Promise<void> {
+		try {
+			const dateTimeBegin = Date.now();
+			await this.processPlaylist(this.smilObject.playlist, version);
+			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
+			const dateTimeEnd = Date.now();
+			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+				await sleep(2000);
+			}
+		} catch (err) {
+			debug('Unexpected error processing during playlist processing: %O', err);
+			await sleep(SMILScheduleEnum.defaultAwait);
+		}
+	}
+
+	private async handlePlaylistLoop(version: number): Promise<void> {
+		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
+	}
 
 	private createDefaultPromise = (
 		value: PlaylistElement,
