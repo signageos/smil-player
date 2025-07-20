@@ -25,7 +25,7 @@ export interface SyncNavigationEvent {
 // };
 
 // Acknowledgment Protocol Types
-export type SyncMessageType = 
+export type SyncMessageType =
 	| 'cmd-prepare'    // Master commands slaves to prepare
 	| 'cmd-play'       // Master commands slaves to play
 	| 'signal-ready'   // Master signals all devices ready to proceed

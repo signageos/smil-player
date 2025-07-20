@@ -159,6 +159,7 @@ class AckRound {
 export class SMILElementController {
 	private ackTracker: AckTracker = new AckTracker();
 	private peerMonitorUnsubscribes: Map<string, () => void> = new Map();
+	private signalReadyPromises: Map<string, { resolve: () => void }> = new Map();
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -934,8 +935,18 @@ export class SMILElementController {
 		debug('Slave received command: type=%s, region=%s, syncIndex=%d',
 			message.type, message.regionName, message.syncIndex);
 		
-		// Command processing will be implemented in Step 4
-		// For now, just log that we received it
+		// Process signal-ready messages
+		if (message.type === 'signal-ready') {
+			// Build key to match waiting slaves
+			const readyKey = `ready-${message.regionName}-${message.syncIndex}`;
+			const promise = this.signalReadyPromises.get(readyKey);
+			if (promise) {
+				debug('Resolving signal-ready wait for %s', readyKey);
+				promise.resolve();
+				this.signalReadyPromises.delete(readyKey);
+			}
+		}
+		// Other command processing will be implemented in later steps
 	}
 
 	/**
@@ -1077,7 +1088,21 @@ export class SMILElementController {
 				debug(msg, regionName, syncIndex);
 			}
 
-			// TODO: Wait for signal-ready from master
+			// Wait for signal-ready from master
+			const waitMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(waitMsg, regionName, syncIndex);
+			} else {
+				debug(waitMsg, regionName, syncIndex);
+			}
+
+			await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+			const readyMsg = 'Slave received signal-ready, continuing for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(readyMsg, regionName, syncIndex);
+			} else {
+				debug(readyMsg, regionName, syncIndex);
+			}
 		}
 	}
 
@@ -1174,4 +1199,44 @@ export class SMILElementController {
 			}
 		}
 	}
+
+	/**
+	 * Wait for signal-ready message from master (slaves only)
+	 */
+	private async waitForSignalReady(
+		regionName: string,
+		syncIndex: number,
+		syncGroup: any,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		const readyKey = `ready-${regionName}-${syncIndex}`;
+		
+		// Create a promise that will be resolved when signal-ready is received
+		const promise = new Promise<void>((resolve) => {
+			this.signalReadyPromises.set(readyKey, { resolve });
+		});
+
+		// Set timeout (500ms consistent with ACK timeout)
+		const timeoutPromise = new Promise<void>((resolve) => {
+			setTimeout(() => {
+				const timeoutMsg = 'Timeout waiting for signal-ready from master for %s';
+				if (timedDebug) {
+					timedDebug.log(timeoutMsg, readyKey);
+				} else {
+					debug(timeoutMsg, readyKey);
+				}
+				
+				// Clean up the promise if still waiting
+				if (this.signalReadyPromises.has(readyKey)) {
+					this.signalReadyPromises.delete(readyKey);
+				}
+
+				resolve();
+			}, 500);
+		});
+
+		// Wait for either signal-ready or timeout
+		await Promise.race([promise, timeoutPromise]);
+	}
 }
+
