@@ -22,15 +22,15 @@ class AckTracker {
 	 * Start tracking acknowledgments for a specific operation
 	 * @param key Unique identifier for this ACK round (e.g., "region1-5-prepared")
 	 * @param expectedCount Number of ACKs expected (excluding master)
+	 * @param syncGroup The sync group to listen for ACK messages
 	 * @param timeoutMs Timeout in milliseconds (default 500ms)
-	 * @param _onPeerDisconnect Optional callback to adjust expected count when peer disconnects
 	 * @returns Promise that resolves to true if all ACKs received, false if timeout
 	 */
 	public async waitForAcks(
 		key: string,
 		expectedCount: number,
+		syncGroup: any,
 		timeoutMs: number = 500,
-		_onPeerDisconnect?: (newCount: number) => void,
 	): Promise<boolean> {
 		debug('Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
 
@@ -44,35 +44,68 @@ class AckTracker {
 		const round = new AckRound(expectedCount);
 		this.activeRounds.set(key, round);
 
-		// Set up timeout with cleanup
-		let timeoutId: NodeJS.Timeout | undefined;
-		const timeoutPromise = new Promise<boolean>((resolve) => {
+		return new Promise<boolean>((resolve) => {
+			let resolved = false;
+			let unsubscribe: (() => void) | undefined;
+			let timeoutId: NodeJS.Timeout | undefined;
+
+			const cleanup = () => {
+				resolved = true;
+				if (unsubscribe) {
+					unsubscribe();
+				}
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
+				this.cleanupRound(key);
+			};
+
+			// Set up timeout
 			timeoutId = setTimeout(() => {
+				if (resolved) { return; }
 				const timeoutMsg = 'ACK timeout for %s - received %d of %d ACKs. Continuing without slow devices.';
 				debug(timeoutMsg, key, round.receivedCount, expectedCount);
 				console.log(`[SYNC] ${timeoutMsg}`, key, round.receivedCount, expectedCount);
-				this.cleanupRound(key);
+				cleanup();
 				resolve(false);
 			},                     timeoutMs);
+
+			// Set up active listener for ACK messages
+			unsubscribe = syncGroup.onValue(({ key: msgKey, value }: { key: string; value?: any }) => {
+				if (resolved) { return; } // Prevent processing after resolution
+
+				if (msgKey === 'sync-coordination' && value) {
+					const message = value as SyncMessage;
+
+					// Check if this is an ACK message
+					if (message.type === 'ack-prepared' || message.type === 'ack-playing') {
+						// Build the ACK key from the message
+						const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
+
+						// Check if this ACK is for our round
+						if (ackKey === key) {
+							debug('Received ACK for %s', key);
+							this.recordAck(key);
+
+							// Check if all ACKs received
+							if (round.isComplete()) {
+								debug('All ACKs received for %s', key);
+								cleanup();
+								resolve(true);
+							}
+						}
+					}
+				}
+			});
+
+			// Also listen to the round's promise in case recordAck is called from elsewhere
+			round.promise.then((result) => {
+				if (!resolved) {
+					cleanup();
+					resolve(result);
+				}
+			});
 		});
-
-		// Wait for either all ACKs or timeout
-		const result = await Promise.race([round.promise, timeoutPromise]);
-
-		// Clear timeout if completed before timeout
-		if (timeoutId) {
-			clearTimeout(timeoutId);
-		}
-
-		// Log result
-		if (result) {
-			debug('All ACKs received for %s within timeout', key);
-		}
-
-		// Cleanup
-		this.cleanupRound(key);
-
-		return result;
 	}
 
 	/**
@@ -158,7 +191,6 @@ class AckRound {
 
 export class SMILElementController {
 	private ackTracker: AckTracker = new AckTracker();
-	private peerMonitorUnsubscribes: Map<string, () => void> = new Map();
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -352,84 +384,6 @@ export class SMILElementController {
 	}
 
 	/**
-	 * Set up message routing based on device role
-	 * This method should be called once during initialization
-	 */
-	public setupMessageRouting(regionName: string): void {
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('No sync group for message routing setup: %s', regionName);
-			return;
-		}
-
-		// Subscribe to sync-coordination messages
-		syncGroup.onValue(async ({ key, value }: { key: string; value: any }) => {
-			if (key !== 'sync-coordination' || !value) { return; }
-
-			const message = value as SyncMessage;
-			const isMaster = await syncGroup.isMaster();
-
-			// Role-based filtering
-			if (isMaster) {
-				// Master only processes ACK messages from slaves
-				if (this.isAckMessage(message.type)) {
-					this.handleAckMessage(message);
-				}
-			} else {
-				// Slaves only process command messages from master
-				if (this.isCommandMessage(message.type)) {
-					this.handleCommandMessage(message);
-				}
-			}
-		});
-
-		debug('Message routing setup complete for region: %s', regionName);
-	}
-
-	/**
-	 * Initialize ACK message routing for a region
-	 * NOTE: This must be called once per region before sync operations begin
-	 * TODO: Call this from playlistProcessor when initializing regions
-	 */
-	public initializeAckProtocol(regionName: string): void {
-		if (!this.synchronization.shouldSync) {
-			return; // No sync, no initialization needed
-		}
-
-		// Clean up any existing routing for this region
-		this.cleanupRegion(regionName);
-
-		// Set up message routing for this region
-		this.setupMessageRouting(regionName);
-		debug('ACK protocol initialized for region: %s', regionName);
-	}
-
-	/**
-	 * Clean up resources for a region
-	 */
-	public cleanupRegion(regionName: string): void {
-		// Unsubscribe from peer monitoring if exists
-		const unsubscribe = this.peerMonitorUnsubscribes.get(regionName);
-		if (unsubscribe) {
-			unsubscribe();
-			this.peerMonitorUnsubscribes.delete(regionName);
-			debug('Cleaned up peer monitoring for region: %s', regionName);
-		}
-	}
-
-	/**
-	 * Clean up all resources
-	 */
-	public cleanup(): void {
-		// Clean up all peer monitors
-		this.peerMonitorUnsubscribes.forEach((unsubscribe, regionName) => {
-			unsubscribe();
-			debug('Cleaned up peer monitoring for region: %s', regionName);
-		});
-		this.peerMonitorUnsubscribes.clear();
-	}
-
-	/**
 	 * Coordinate the start of element preparation
 	 * Master broadcasts cmd-prepare, slaves wait for it
 	 */
@@ -510,7 +464,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
 				const resultMsg = acksReceived
 					? 'Master received all prepared ACKs for %s'
 					: 'Master timeout waiting for prepared ACKs for %s';
@@ -619,7 +573,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
 				const resultMsg = acksReceived
 					? 'Master received all playing ACKs for %s'
 					: 'Master timeout waiting for playing ACKs for %s';
@@ -693,7 +647,7 @@ export class SMILElementController {
 				});
 
 				try {
-					const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, 500);
+					const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
 
 					const ackResultMsg = acksReceived
 						? 'Master received all ACKs for %s'
@@ -1151,62 +1105,6 @@ export class SMILElementController {
 
 		await group.broadcastValue('sync-coordination', message);
 		debug('Broadcasted sync message: type=%s, region=%s, syncIndex=%d', type, regionName, syncIndex);
-	}
-
-	/**
-	 * Check if message type is an ACK (from slaves)
-	 */
-	private isAckMessage(type: SyncMessageType): boolean {
-		return type === 'ack-prepared' || type === 'ack-playing';
-	}
-
-	/**
-	 * Check if message type is a command (from master)
-	 */
-	private isCommandMessage(type: SyncMessageType): boolean {
-		return type === 'cmd-prepare' || type === 'cmd-play' || type === 'signal-ready';
-	}
-
-	/**
-	 * Handle incoming ACK messages (master only)
-	 */
-	private handleAckMessage(message: SyncMessage): void {
-		debug(
-			'Master received ACK: type=%s, region=%s, syncIndex=%d',
-			message.type,
-			message.regionName,
-			message.syncIndex,
-		);
-
-		// Validate message
-		if (!message.regionName || message.syncIndex === undefined) {
-			console.error('[SYNC] Invalid ACK message received:', message);
-			return;
-		}
-
-		// Build key for ACK tracking
-		const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
-
-		// Record ACK - will be ignored if no active round for this key
-		this.ackTracker.recordAck(ackKey);
-	}
-
-	/**
-	 * Handle incoming command messages (slaves only)
-	 * Note: Actual command processing will be implemented in later steps
-	 */
-	private handleCommandMessage(message: SyncMessage): void {
-		debug(
-			'Slave received command: type=%s, region=%s, syncIndex=%d',
-			message.type,
-			message.regionName,
-			message.syncIndex,
-		);
-
-		// Command messages are now handled by active listeners in wait functions
-		// No need for manual promise resolution here
-		// The listeners in waitForPrepareCommand and waitForSignalReady
-		// will receive and process these messages directly
 	}
 
 	/**
