@@ -100,8 +100,24 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 				
 				// Handle sync-coordination messages for ACK protocol
 				if (key === 'sync-coordination' && value) {
-					// Store for later retrieval but don't deduplicate
-					this.lastValues.set(key, value);
+					// Build composite key for sync-coordination storage
+					const coordKey = this.buildSyncCoordinationKey(value.type, value.regionName, value.syncIndex);
+					
+					// Check for duplicates
+					const existing = this.lastValues.get(coordKey);
+					if (existing && 
+						existing.type === value.type &&
+						existing.syncIndex === value.syncIndex &&
+						existing.regionName === value.regionName &&
+						Math.abs(value.timestamp - existing.timestamp) <= 200) { // Within 200ms
+						debug('Duplicate sync-coordination detected, skipping');
+						return;
+					}
+					
+					// Store with composite key
+					this.lastValues.set(coordKey, value);
+					debug('Stored sync-coordination with key: %s', coordKey);
+					
 					// Emit immediately for ACK protocol handling
 					this.emitter.emit('value', { key, value });
 					return;
@@ -137,28 +153,28 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		});
 	}
 	
-	getLastValue(key: string): any {
+	public getLastValue(key: string): any {
 		return this.lastValues.get(key);
 	}
-	
-	clearLastValue(key: string): void {
+
+	public clearLastValue(key: string): void {
 		this.lastValues.delete(key);
 		debug('Cleared last value for key: %s', key);
 	}
-	
+
 	// Build composite key for elementState storage
-	buildElementStateKey(regionName: string, syncIndex: number, state: string): string {
+	public buildElementStateKey(regionName: string, syncIndex: number, state: string): string {
 		return `elementState-${regionName}-${syncIndex}-${state}`;
 	}
-	
+
 	// Get specific elementState by exact match
-	getElementState(regionName: string, syncIndex: number, state: string): any {
+	public getElementState(regionName: string, syncIndex: number, state: string): any {
 		const key = this.buildElementStateKey(regionName, syncIndex, state);
 		return this.lastValues.get(key);
 	}
-	
+
 	// Find any elementState for given region and syncIndex
-	findElementStateByIndex(regionName: string, syncIndex: number): any {
+	public findElementStateByIndex(regionName: string, syncIndex: number): any {
 		// Check all possible states for this syncIndex
 		const states = ['prepared', 'playing', 'finished'];
 		for (const state of states) {
@@ -171,11 +187,29 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		}
 		return null;
 	}
-	
+
 	// Clear specific elementState
-	clearElementState(regionName: string, syncIndex: number, state: string): void {
+	public clearElementState(regionName: string, syncIndex: number, state: string): void {
 		const key = this.buildElementStateKey(regionName, syncIndex, state);
 		this.lastValues.delete(key);
 		debug('Cleared elementState: %s', key);
+	}
+
+	// Build composite key for sync-coordination storage
+	public buildSyncCoordinationKey(type: string, regionName: string, syncIndex: number): string {
+		return `sync-coord-${type}-${regionName}-${syncIndex}`;
+	}
+
+	// Get specific sync-coordination message by exact match
+	public getSyncCoordinationMessage(type: string, regionName: string, syncIndex: number): any {
+		const key = this.buildSyncCoordinationKey(type, regionName, syncIndex);
+		return this.lastValues.get(key);
+	}
+
+	// Clear specific sync-coordination message
+	public clearSyncCoordinationMessage(type: string, regionName: string, syncIndex: number): void {
+		const key = this.buildSyncCoordinationKey(type, regionName, syncIndex);
+		this.lastValues.delete(key);
+		debug('Cleared sync-coordination: %s', key);
 	}
 }
