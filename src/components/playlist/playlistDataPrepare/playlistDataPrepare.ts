@@ -119,7 +119,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
-
 					const mediaFile = (await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
@@ -199,7 +198,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
 		debug('All elements info extracted');
-		
+
 		// Set max sync indices for each region in synchronization object
 		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
 			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
