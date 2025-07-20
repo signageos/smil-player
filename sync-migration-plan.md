@@ -903,6 +903,112 @@ Benefits of device tracking:
 
 The basic counting approach is sufficient for synchronization, but device tracking can be added when needed for diagnostics.
 
+### Implementation Progress (2025-07-20)
+
+#### Completed Steps
+
+**Step 1: Define Message Types and Interfaces** ✅
+- Added new SyncMessage types to `syncModels.ts`
+- Created SyncMessage interface with type, regionName, syncIndex, timestamp
+- Message types: `cmd-prepare`, `cmd-play`, `signal-ready`, `ack-prepared`, `ack-playing`
+
+**Step 2: Create AckTracker Class** ✅
+- Created AckTracker and AckRound classes in SMILElementController.ts
+- Implemented ACK counting with 500ms timeout
+- Support for concurrent tracking of multiple operations
+- Added adjustExpectedCount for peer disconnection handling
+
+**Step 3: Add Message Broadcasting Infrastructure** ✅
+- Added broadcastSyncMessage method for sending typed messages
+- Created isAckMessage and isCommandMessage helper methods
+- Implemented handleAckMessage and handleCommandMessage (basic structure)
+- Added setupMessageRouting for role-based message filtering
+
+**Step 4: Implement Coordination Methods** ✅ (partial)
+- Added coordinatePrepareStart method (master sends cmd-prepare, slaves wait)
+- Added coordinatePrepareComplete method (slaves send ack-prepared, master waits for ACKs, then sends signal-ready)
+- Integrated into playlistProcessor.ts at lines 2200-2208 and 2241-2249
+- Added waitForPrepareCommand and waitForSignalReady for slaves
+
+**Step 5: Race Condition Handling** ✅
+- Added sync-coordination message storage in SyncGroup
+- Implemented composite key storage (buildSyncCoordinationKey, getSyncCoordinationMessage)
+- Check for stored messages before waiting to handle race conditions
+- 2-second freshness check for stored messages
+
+**Step 6: Fix Wait Functions** ✅
+- Fixed waitForPrepareCommand to use active onValue listener
+- Fixed waitForSignalReady to use active onValue listener
+- Removed broken promise maps (prepareCommandPromises, signalReadyPromises)
+- Messages now handled directly by active listeners
+
+**Step 7: Clean Up and Fix waitForAcks** ✅
+- Removed unused methods: initializeAckProtocol, setupMessageRouting, cleanupRegion, cleanup
+- Removed handleCommandMessage and handleAckMessage (redundant with active listeners)
+- Fixed waitForAcks to use active onValue listener for ACK messages
+- Updated waitForAcks signature to accept syncGroup parameter
+
+#### Key Implementation Details
+
+**ACK Protocol Flow**:
+1. Master sends cmd-prepare → Slaves wait and receive it
+2. Slaves prepare content
+3. Slaves send ack-prepared → Master collects ACKs
+4. Master sends signal-ready → Slaves wait and receive it
+5. All devices continue in sync
+
+**Race Condition Solutions**:
+- Messages stored with composite keys: `sync-coord-${type}-${regionName}-${syncIndex}`
+- Slaves check stored messages before setting up listeners
+- 2-second freshness window for stored messages
+- Messages cleared after consumption to prevent memory buildup
+
+**Active Listener Pattern**:
+- All wait functions now use syncGroup.onValue() inside promises
+- Temporary listeners created for specific messages
+- Proper cleanup on resolution or timeout
+- No more manual promise resolution
+
+#### Remaining Work
+
+**coordinatePlayStart/Complete Methods**:
+- Similar pattern to prepare coordination
+- Master sends cmd-play, slaves acknowledge with ack-playing
+- Not yet implemented but structure is in place
+
+**Testing and Validation**:
+- Multi-device testing required
+- Performance validation
+- Edge case handling (timeouts, disconnections)
+
+**Integration Points**:
+- Remove simulateSlaveProcessing completely
+- Update all sync points to use ACK protocol
+- Handle dynamic playlists and priority content
+
+#### Critical Implementation Notes
+
+**Why We Kept setupMessageRouting and Then Removed It**:
+- Initially created setupMessageRouting to handle incoming ACK messages
+- Had handleAckMessage that called ackTracker.recordAck()
+- Without this chain, master's waitForAcks would always timeout
+- However, this followed an outdated pattern of persistent listeners
+- Solution: Moved ACK handling directly into waitForAcks with temporary listener
+
+**The Active Listener Fix**:
+- Original wait functions created promises but had no way to receive messages
+- User identified the issue: "You have to use onValue function like in the original implementation"
+- Fixed by adding syncGroup.onValue() inside each wait promise
+- Pattern: Set up listener → Check for messages → Clean up on resolution
+- This ensures messages are actually received and processed
+
+**Key Lessons Learned**:
+1. Always use active listeners inside wait promises
+2. Check for stored messages first (race condition handling)
+3. Clean up listeners to prevent memory leaks
+4. Temporary listeners are better than persistent ones for wait operations
+5. Test that messages are actually being received, not just sent
+
 ---
 
 ## Future Enhancements
