@@ -2350,18 +2350,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
 
-		// Check if we should prepare this element (handles resync)
+		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			timedDebug.log('Checking if should prepare element for sync');
-			const shouldPrepare = await this.elementController.shouldPrepareElement(
+			timedDebug.log('Coordinating preparation start for sync');
+			await this.elementController.coordinatePrepareStart(
 				currentRegionInfo.regionName,
 				value.syncIndex,
+				timedDebug,
 			);
-			if (!shouldPrepare) {
-				timedDebug.log('Skipping element preparation during resync');
-				return;
-			}
-			timedDebug.log('Element preparation check passed');
+			timedDebug.log('Preparation start coordination completed');
 		}
 
 		timedDebug.log('Preparing element of type: %s', removeDigits(key));
