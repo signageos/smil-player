@@ -2391,6 +2391,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				timedDebug.log('Tag not supported: %s', removeDigits(key));
 		}
 
+		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
+		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			timedDebug.log('Coordinating preparation completion for sync');
+			await this.elementController.coordinatePrepareComplete(
+				currentRegionInfo.regionName,
+				value.syncIndex,
+				timedDebug,
+			);
+			timedDebug.log('Preparation coordination completed');
+		}
+
+		timedDebug.log('Checking if should wait and continue');
+
 		const waitStatus = await this.shouldWaitAndContinue(
 			value,
 			currentRegionInfo,
