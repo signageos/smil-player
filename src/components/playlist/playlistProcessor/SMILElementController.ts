@@ -160,6 +160,7 @@ export class SMILElementController {
 	private ackTracker: AckTracker = new AckTracker();
 	private peerMonitorUnsubscribes: Map<string, () => void> = new Map();
 	private signalReadyPromises: Map<string, { resolve: () => void }> = new Map();
+	private prepareCommandPromises: Map<string, { resolve: () => void }> = new Map();
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -935,6 +936,18 @@ export class SMILElementController {
 		debug('Slave received command: type=%s, region=%s, syncIndex=%d',
 			message.type, message.regionName, message.syncIndex);
 		
+		// Process cmd-prepare messages
+		if (message.type === 'cmd-prepare') {
+			// Build key to match waiting slaves
+			const prepareKey = `prepare-${message.regionName}-${message.syncIndex}`;
+			const promise = this.prepareCommandPromises.get(prepareKey);
+			if (promise) {
+				debug('Resolving cmd-prepare wait for %s', prepareKey);
+				promise.resolve();
+				this.prepareCommandPromises.delete(prepareKey);
+			}
+		}
+		
 		// Process signal-ready messages
 		if (message.type === 'signal-ready') {
 			// Build key to match waiting slaves
@@ -946,7 +959,7 @@ export class SMILElementController {
 				this.signalReadyPromises.delete(readyKey);
 			}
 		}
-		// Other command processing will be implemented in later steps
+		// cmd-play processing will be implemented in later steps
 	}
 
 	/**
@@ -1022,13 +1035,21 @@ export class SMILElementController {
 				debug(msg, regionName, syncIndex);
 			}
 		} else {
-			// Slaves will receive cmd-prepare through message routing
-			// For now, we don't block here - slaves prepare when they receive the command
-			const msg = 'Slave ready to receive cmd-prepare for region=%s, syncIndex=%d';
+			// Slave waits for cmd-prepare from master
+			const waitMsg = 'Slave waiting for cmd-prepare from master for region=%s, syncIndex=%d';
 			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
+				timedDebug.log(waitMsg, regionName, syncIndex);
 			} else {
-				debug(msg, regionName, syncIndex);
+				debug(waitMsg, regionName, syncIndex);
+			}
+			
+			await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug);
+			
+			const readyMsg = 'Slave received cmd-prepare, starting preparation for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(readyMsg, regionName, syncIndex);
+			} else {
+				debug(readyMsg, regionName, syncIndex);
 			}
 		}
 	}
@@ -1201,6 +1222,64 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Wait for cmd-prepare message from master (slaves only)
+	 */
+	private async waitForPrepareCommand(
+		regionName: string,
+		syncIndex: number,
+		syncGroup: any,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		// Check for stored message first
+		const storedMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName, syncIndex);
+		if (storedMsg) {
+			const age = Date.now() - storedMsg.timestamp;
+			if (age < 2000) { // 2 seconds freshness
+				const msg = 'Found stored cmd-prepare for region=%s, syncIndex=%d, age=%dms';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex, age);
+				} else {
+					debug(msg, regionName, syncIndex, age);
+				}
+				// Clear consumed message
+				syncGroup.clearSyncCoordinationMessage('cmd-prepare', regionName, syncIndex);
+				return; // Continue immediately
+			} else {
+				debug('Stored cmd-prepare too old (age=%dms > 2000ms), ignoring', age);
+			}
+		}
+
+		const prepareKey = `prepare-${regionName}-${syncIndex}`;
+		
+		// Create a promise that will be resolved when cmd-prepare is received
+		const promise = new Promise<void>((resolve) => {
+			this.prepareCommandPromises.set(prepareKey, { resolve });
+		});
+
+		// Set timeout (500ms consistent with ACK timeout)
+		const timeoutPromise = new Promise<void>((resolve) => {
+			setTimeout(() => {
+				const timeoutMsg = 'Timeout waiting for cmd-prepare from master for %s';
+				if (timedDebug) {
+					timedDebug.log(timeoutMsg, prepareKey);
+				} else {
+					debug(timeoutMsg, prepareKey);
+				}
+				
+				// Clean up the promise if still waiting
+				if (this.prepareCommandPromises.has(prepareKey)) {
+					this.prepareCommandPromises.delete(prepareKey);
+				}
+
+				resolve();
+			}, 500);
+		});
+
+		// Wait for either cmd-prepare or timeout
+		await Promise.race([promise, timeoutPromise]);
+	}
+
+	/**
 	 * Wait for signal-ready message from master (slaves only)
 	 */
 	private async waitForSignalReady(
@@ -1209,6 +1288,25 @@ export class SMILElementController {
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
 	): Promise<void> {
+		// Check for stored message first
+		const storedMsg = syncGroup.getSyncCoordinationMessage('signal-ready', regionName, syncIndex);
+		if (storedMsg) {
+			const age = Date.now() - storedMsg.timestamp;
+			if (age < 2000) { // 2 seconds freshness
+				const msg = 'Found stored signal-ready for region=%s, syncIndex=%d, age=%dms';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex, age);
+				} else {
+					debug(msg, regionName, syncIndex, age);
+				}
+				// Clear consumed message
+				syncGroup.clearSyncCoordinationMessage('signal-ready', regionName, syncIndex);
+				return; // Continue immediately
+			} else {
+				debug('Stored signal-ready too old (age=%dms > 2000ms), ignoring', age);
+			}
+		}
+
 		const readyKey = `ready-${regionName}-${syncIndex}`;
 		
 		// Create a promise that will be resolved when signal-ready is received
