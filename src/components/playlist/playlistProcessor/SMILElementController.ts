@@ -191,6 +191,19 @@ class AckRound {
 
 export class SMILElementController {
 	private ackTracker: AckTracker = new AckTracker();
+	
+	// State tracking for sync coordination
+	private syncState = {
+		slavePosition: {
+			prepare: new Map<string, number>(),  // regionName -> syncIndex
+			play: new Map<string, number>(),
+		},
+		masterPosition: {
+			prepare: new Map<string, number>(),
+			play: new Map<string, number>(),
+		},
+		pendingAcks: new Set<string>(), // "region-index-state" keys to avoid duplicates
+	};
 
 	constructor(private synchronization: Synchronization) {}
 
@@ -1105,6 +1118,191 @@ export class SMILElementController {
 
 		await group.broadcastValue('sync-coordination', message);
 		debug('Broadcasted sync message: type=%s, region=%s, syncIndex=%d', type, regionName, syncIndex);
+	}
+
+	/**
+	 * Unified method to wait for commands and check sync status
+	 * Handles both cmd-prepare/cmd-play and elementState broadcasts
+	 * Returns action to take: CONTINUE, RESYNC, or keeps waiting if WAIT
+	 */
+	private async waitForCommandAndCheckSync(
+		commandType: 'cmd-prepare' | 'cmd-play',
+		expectedState: 'prepared' | 'playing',
+		regionName: string,
+		syncIndex: number,
+		syncGroup: any,
+		timedDebug?: TimedDebugger,
+	): Promise<ProcessActionType> {
+		// Check for stored command message first
+		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName, syncIndex);
+		if (storedMsg) {
+			const age = Date.now() - storedMsg.timestamp;
+			if (age < 2000) {
+				// Create virtual elementState from stored command
+				const virtualElementState = {
+					state: expectedState,
+					regionName: storedMsg.regionName,
+					syncIndex: storedMsg.syncIndex,
+					timestamp: storedMsg.timestamp,
+				};
+				
+				// Use processElementState to determine action
+				const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
+				
+				if (action !== ProcessAction.WAIT) {
+					// Clear consumed message
+					syncGroup.clearSyncCoordinationMessage(commandType, regionName, syncIndex);
+					return action;
+				}
+			}
+		}
+
+		// Check for stored elementState
+		const storedState = syncGroup.findElementStateByIndex(regionName, syncIndex);
+		if (storedState) {
+			const age = Date.now() - storedState.timestamp;
+			if (age < 2000) {
+				const action = this.processElementState(storedState, expectedState, syncIndex, regionName);
+				if (action === ProcessAction.RESYNC) {
+					return action;
+				}
+			}
+		}
+
+		// Create promise with active listener
+		return new Promise<ProcessActionType>((resolve) => {
+			let resolved = false;
+			let unsubscribe: (() => void) | undefined;
+			let timeoutId: NodeJS.Timeout | undefined;
+
+			const cleanup = () => {
+				resolved = true;
+				if (unsubscribe) {
+					unsubscribe();
+				}
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
+			};
+
+			// Set up timeout
+			timeoutId = setTimeout(() => {
+				if (resolved) { return; }
+				const timeoutMsg = `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
+				if (timedDebug) {
+					timedDebug.log(timeoutMsg);
+				} else {
+					debug(timeoutMsg);
+				}
+				cleanup();
+				resolve(ProcessAction.CONTINUE);
+			}, 500);
+
+			// Set up active listener for both message types
+			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+				if (resolved) { return; }
+
+				// Handle sync-coordination messages (commands and ACKs)
+				if (key === 'sync-coordination' && value) {
+					const message = value as SyncMessage;
+					
+					// Check if this is a command message for our region
+					if (message.type === commandType && message.regionName === regionName) {
+						// Create virtual elementState from command
+						const virtualElementState = {
+							state: expectedState,
+							regionName: message.regionName,
+							syncIndex: message.syncIndex,
+							timestamp: message.timestamp,
+						};
+						
+						// Use processElementState to determine action
+						const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
+						
+						switch (action) {
+							case ProcessAction.CONTINUE:
+								// Exact match - we got our command
+								const msg = `Received ${commandType} for region=${regionName}, syncIndex=${syncIndex}`;
+								if (timedDebug) {
+									timedDebug.log(msg);
+								} else {
+									debug(msg);
+								}
+								// Clear consumed message
+								syncGroup.clearSyncCoordinationMessage(commandType, regionName, syncIndex);
+								cleanup();
+								resolve(ProcessAction.CONTINUE);
+								break;
+								
+							case ProcessAction.RESYNC:
+								// We're behind - resync flags already set by processElementState
+								debug(`Detected resync needed while waiting for ${commandType}`);
+								cleanup();
+								resolve(ProcessAction.RESYNC);
+								break;
+								
+							case ProcessAction.WAIT:
+								// We're ahead - send ACK for master's position but keep waiting
+								debug(`Slave ahead at ${syncIndex}, master at ${message.syncIndex} - sending ACK and waiting`);
+								this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
+								// Don't resolve - keep listening
+								break;
+						}
+					}
+				}
+				
+				// Handle elementState broadcasts
+				else if (key === 'elementState' && value?.regionName === regionName) {
+					// Direct use of processElementState
+					const action = this.processElementState(value, expectedState, syncIndex, regionName);
+					
+					switch (action) {
+						case ProcessAction.CONTINUE:
+							// This would be unusual - we're waiting for command not state
+							debug('Received matching elementState while waiting for command');
+							break;
+							
+						case ProcessAction.RESYNC:
+							// Behind - resync flags set by processElementState
+							debug('Detected resync needed from elementState broadcast');
+							cleanup();
+							resolve(ProcessAction.RESYNC);
+							break;
+							
+						case ProcessAction.WAIT:
+							// Ahead - keep waiting
+							debug('Slave ahead based on elementState - continuing to wait');
+							break;
+					}
+				}
+			});
+		});
+	}
+
+	/**
+	 * Send ACK for a specific position (used when slave is ahead)
+	 */
+	private async sendAckForPosition(
+		regionName: string,
+		syncIndex: number,
+		state: 'prepared' | 'playing',
+		syncGroup: any,
+	): Promise<void> {
+		const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+		const ackKey = `${regionName}-${syncIndex}-${ackType}`;
+		
+		// Avoid duplicate ACKs
+		if (!this.syncState.pendingAcks.has(ackKey)) {
+			this.syncState.pendingAcks.add(ackKey);
+			
+			await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
+			debug('Sent ACK for master position %d while slave at different position', syncIndex);
+			
+			// Clean up after a delay
+			setTimeout(() => {
+				this.syncState.pendingAcks.delete(ackKey);
+			}, 2000);
+		}
 	}
 
 	/**
