@@ -430,13 +430,24 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug);
+			const action = await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug);
 
-			const readyMsg = 'Slave received cmd-prepare, starting preparation for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(readyMsg, regionName, syncIndex);
-			} else {
-				debug(readyMsg, regionName, syncIndex);
+			if (action === ProcessAction.CONTINUE) {
+				const readyMsg = 'Slave received cmd-prepare, starting preparation for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
+			} else if (action === ProcessAction.RESYNC) {
+				// Resync needed - set flags but don't throw error
+				// The resync will be handled by shouldPrepareElement
+				const resyncMsg = 'Slave detected resync needed during prepare start for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(resyncMsg, regionName, syncIndex);
+				} else {
+					debug(resyncMsg, regionName, syncIndex);
+				}
 			}
 		}
 	}
@@ -487,13 +498,33 @@ export class SMILElementController {
 			// Master sends ready signal
 			await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
 		} else {
-			// Slave sends ACK
-			await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
-			const msg = 'Slave sent ack-prepared for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
+			// Slave always sends ACK to not block master
+			// If in resync mode, send ACK for master's position instead
+			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.prepare) {
+				// Get master's current position and send ACK for that
+				const masterPos = this.getPositions(regionName, 'prepared').master;
+				if (masterPos > 0) {
+					await this.sendAckForPosition(regionName, masterPos, 'prepared', syncGroup);
+					const msg = 'Slave in resync mode - sent ack-prepared for master position=%d instead of %d';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos, syncIndex);
+					} else {
+						debug(msg, masterPos, syncIndex);
+					}
+				} else {
+					// No master position known yet, send normal ACK
+					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+					debug('Slave in resync but no master position known - sent normal ack-prepared');
+				}
 			} else {
-				debug(msg, regionName, syncIndex);
+				// Normal case - send ACK for current position
+				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+				const msg = 'Slave sent ack-prepared for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex);
+				} else {
+					debug(msg, regionName, syncIndex);
+				}
 			}
 
 			// Wait for signal-ready from master
@@ -1144,86 +1175,23 @@ export class SMILElementController {
 
 	/**
 	 * Wait for cmd-prepare message from master (slaves only)
+	 * Returns the action to take based on sync state
 	 */
 	private async waitForPrepareCommand(
 		regionName: string,
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
-	): Promise<void> {
-		// Check for stored message first
-		const storedMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName, syncIndex);
-		if (storedMsg) {
-			const age = Date.now() - storedMsg.timestamp;
-			if (age < 2000) {
-				// 2 seconds freshness
-				const msg = 'Found stored cmd-prepare for region=%s, syncIndex=%d, age=%dms';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex, age);
-				} else {
-					debug(msg, regionName, syncIndex, age);
-				}
-				// Clear consumed message
-				syncGroup.clearSyncCoordinationMessage('cmd-prepare', regionName, syncIndex);
-				return; // Continue immediately
-			} else {
-				debug('Stored cmd-prepare too old (age=%dms > 2000ms), ignoring', age);
-			}
-		}
-
-		// Create promise with active listener
-		return new Promise<void>((resolve) => {
-			let resolved = false;
-			let unsubscribe: (() => void) | undefined;
-			let timeoutId: NodeJS.Timeout | undefined;
-
-			const cleanup = () => {
-				resolved = true;
-				if (unsubscribe) {
-					unsubscribe();
-				}
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-				}
-			};
-
-			// Set up timeout
-			timeoutId = setTimeout(() => {
-				if (resolved) { return; }
-				const timeoutMsg = `Timeout waiting for cmd-prepare from master for region=${regionName}, syncIndex=${syncIndex}`;
-				if (timedDebug) {
-					timedDebug.log(timeoutMsg);
-				} else {
-					debug(timeoutMsg);
-				}
-				cleanup();
-				resolve();
-			},                     500);
-
-			// Set up active listener
-			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
-				if (resolved) { return; } // Prevent processing after resolution
-
-				if (key === 'sync-coordination' && value) {
-					const message = value as SyncMessage;
-					// Check if this is the cmd-prepare we're waiting for
-					if (message.type === 'cmd-prepare' &&
-						message.regionName === regionName &&
-						message.syncIndex === syncIndex) {
-						const msg = `Received cmd-prepare for region=${regionName}, syncIndex=${syncIndex}`;
-						if (timedDebug) {
-							timedDebug.log(msg);
-						} else {
-							debug(msg);
-						}
-						// Clear consumed message
-						syncGroup.clearSyncCoordinationMessage('cmd-prepare', regionName, syncIndex);
-						cleanup();
-						resolve();
-					}
-				}
-			});
-		});
+	): Promise<ProcessActionType> {
+		// Use unified method to wait for command and check sync
+		return await this.waitForCommandAndCheckSync(
+			'cmd-prepare',
+			'prepared',
+			regionName,
+			syncIndex,
+			syncGroup,
+			timedDebug,
+		);
 	}
 
 	/**
