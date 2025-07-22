@@ -1133,6 +1133,14 @@ export class SMILElementController {
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
 	): Promise<ProcessActionType> {
+		// Update slave position tracking
+		this.updateSlavePosition(regionName, syncIndex, expectedState);
+		
+		// Log current positions for debugging
+		const positions = this.getPositions(regionName, expectedState);
+		debug('Current sync positions for %s %s: slave=%d, master=%d', 
+			regionName, expectedState, positions.slave, positions.master);
+		
 		// Check for stored command message first
 		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName, syncIndex);
 		if (storedMsg) {
@@ -1208,6 +1216,9 @@ export class SMILElementController {
 					
 					// Check if this is a command message for our region
 					if (message.type === commandType && message.regionName === regionName) {
+						// Update master position tracking
+						this.updateMasterPosition(regionName, message.syncIndex, expectedState);
+						
 						// Create virtual elementState from command
 						const virtualElementState = {
 							state: expectedState,
@@ -1253,6 +1264,9 @@ export class SMILElementController {
 				
 				// Handle elementState broadcasts
 				else if (key === 'elementState' && value?.regionName === regionName) {
+					// Update master position from elementState
+					this.updateMasterPosition(regionName, value.syncIndex, value.state);
+					
 					// Direct use of processElementState
 					const action = this.processElementState(value, expectedState, syncIndex, regionName);
 					
@@ -1303,6 +1317,54 @@ export class SMILElementController {
 				this.syncState.pendingAcks.delete(ackKey);
 			}, 2000);
 		}
+	}
+
+	/**
+	 * Update slave position tracking
+	 */
+	private updateSlavePosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing'): void {
+		if (state === 'prepared') {
+			this.syncState.slavePosition.prepare.set(regionName, syncIndex);
+			debug('Updated slave prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
+		} else if (state === 'playing') {
+			this.syncState.slavePosition.play.set(regionName, syncIndex);
+			debug('Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
+		}
+	}
+
+	/**
+	 * Update master position tracking
+	 */
+	private updateMasterPosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing'): void {
+		const currentPos = state === 'prepared' 
+			? this.syncState.masterPosition.prepare.get(regionName) || 0
+			: this.syncState.masterPosition.play.get(regionName) || 0;
+		
+		// Only update if the new position is higher (master moving forward)
+		if (syncIndex > currentPos) {
+			if (state === 'prepared') {
+				this.syncState.masterPosition.prepare.set(regionName, syncIndex);
+				debug('Updated master prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
+			} else {
+				this.syncState.masterPosition.play.set(regionName, syncIndex);
+				debug('Updated master play position: region=%s, syncIndex=%d', regionName, syncIndex);
+			}
+		}
+	}
+
+	/**
+	 * Get current positions for debugging
+	 */
+	private getPositions(regionName: string, state: 'prepared' | 'playing'): { slave: number; master: number } {
+		const slavePos = state === 'prepared'
+			? this.syncState.slavePosition.prepare.get(regionName) || 0
+			: this.syncState.slavePosition.play.get(regionName) || 0;
+		
+		const masterPos = state === 'prepared'
+			? this.syncState.masterPosition.prepare.get(regionName) || 0
+			: this.syncState.masterPosition.play.get(regionName) || 0;
+			
+		return { slave: slavePos, master: masterPos };
 	}
 
 	/**
