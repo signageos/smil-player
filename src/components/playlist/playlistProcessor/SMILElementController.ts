@@ -389,11 +389,7 @@ export class SMILElementController {
 			debug(msg, regionName, syncIndex);
 		}
 
-		// Broadcast finished state if master
-		const isMaster = await this.isMaster(regionName);
-		if (isMaster) {
-			await this.broadcastState('finished', regionName, syncIndex, timedDebug);
-		}
+		// Finished state is not needed in ACK protocol
 	}
 
 	/**
@@ -628,8 +624,7 @@ export class SMILElementController {
 				debug(masterMsg, state, regionName, syncIndex);
 			}
 
-			// Broadcast state first
-			await this.broadcastState(state, regionName, syncIndex, timedDebug);
+			// In ACK protocol, state broadcasts are replaced by commands
 
 			// Wait for ACKs from slaves
 			let expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
@@ -678,58 +673,46 @@ export class SMILElementController {
 
 			return true; // Master always continues
 		} else {
-			const slaveMsg = 'Slave waiting for %s state for region=%s, syncIndex=%d';
+			// Slave waits for command and sends ACK
+			const commandType = state === 'prepared' ? 'cmd-prepare' : 'cmd-play';
+			const slaveMsg = 'Slave waiting for %s from master for region=%s, syncIndex=%d';
 			if (timedDebug) {
-				timedDebug.log(slaveMsg, state, regionName, syncIndex);
+				timedDebug.log(slaveMsg, commandType, regionName, syncIndex);
 			} else {
-				debug(slaveMsg, state, regionName, syncIndex);
+				debug(slaveMsg, commandType, regionName, syncIndex);
 			}
-			console.log('master state resolve', Date.now());
-			const shouldContinue = await this.waitForMasterState(syncGroup, state, regionName, syncIndex, timedDebug);
-			console.log('master state resolved', Date.now());
-
-			// Send ACK after receiving state broadcast (hybrid mode for Step 4)
-			if (shouldContinue && state === 'prepared') {
-				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
-				debug('Slave sent ACK after prepared state broadcast: region=%s, syncIndex=%d', regionName, syncIndex);
-			} else if (shouldContinue && state === 'playing') {
-				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
-				debug('Slave sent ACK after playing state broadcast: region=%s, syncIndex=%d', regionName, syncIndex);
+			
+			// Use unified method to wait for command and check sync
+			const action = await this.waitForCommandAndCheckSync(
+				commandType as 'cmd-prepare' | 'cmd-play',
+				state as 'prepared' | 'playing',
+				regionName,
+				syncIndex,
+				syncGroup,
+				timedDebug,
+			);
+			
+			// Handle the action returned
+			if (action === ProcessAction.CONTINUE) {
+				// Send ACK after receiving command
+				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
+				debug('Slave sent %s for region=%s, syncIndex=%d', ackType, regionName, syncIndex);
+				return true;
+			} else if (action === ProcessAction.RESYNC) {
+				// Resync needed - still send ACK to not block master
+				const masterPos = this.getPositions(regionName, state as 'prepared' | 'playing').master;
+				await this.sendAckForPosition(regionName, masterPos, state as 'prepared' | 'playing', syncGroup);
+				debug('Slave in resync mode - sent ACK for master position %d', masterPos);
+				return false; // Trigger resync
+			} else {
+				// WAIT should not be returned from waitForCommandAndCheckSync
+				debug('Unexpected WAIT action returned - treating as timeout');
+				return true;
 			}
-
-			// Note: Late-joining devices will use the existing resync mechanism
-			// They will receive state broadcasts and detect they are behind
-
-			return shouldContinue;
 		}
 	}
 
-	/**
-	 * Broadcast state to sync group (master only)
-	 */
-	private async broadcastState(
-		state: SyncElementState,
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<void> {
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) { return; }
-
-		await syncGroup.broadcastValue('elementState', {
-			state,
-			regionName,
-			syncIndex,
-			timestamp: Date.now(),
-		});
-
-		const msg = 'Broadcasted state: %s for region=%s, syncIndex=%d';
-		if (timedDebug) {
-			timedDebug.log(msg, state, regionName, syncIndex);
-		} else {
-			debug(msg, state, regionName, syncIndex);
-		}
-	}
 
 	/**
 	 * Process element state value and determine action
@@ -914,174 +897,6 @@ export class SMILElementController {
 	/**
 	 * Wait for master state broadcast (slave only)
 	 */
-	private async waitForMasterState(
-		syncGroup: any,
-		expectedState: SyncElementState,
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<boolean> {
-		console.log('waiting for master state with syncIndex', syncIndex, expectedState);
-
-		// Check for stored state first - look for exact match
-		const exactMatch = syncGroup.getElementState(regionName, syncIndex, expectedState);
-		if (exactMatch) {
-			const age = Date.now() - exactMatch.timestamp;
-
-			// Check freshness (2 seconds)
-			if (age < 2000) {
-				debug(
-					'Found exact match in stored state for region=%s, syncIndex=%d, state=%s, age=%dms',
-					regionName,
-					syncIndex,
-					expectedState,
-					age,
-				);
-
-				// Process the exact match to determine action (should always be CONTINUE)
-				const action = this.processElementState(exactMatch, expectedState, syncIndex, regionName);
-
-				// Handle action (for exact match, we expect CONTINUE)
-				if (action === ProcessAction.CONTINUE) {
-					// Clear this specific state and continue
-					syncGroup.clearElementState(regionName, syncIndex, expectedState);
-					debug('Cleared consumed elementState - continuing normally');
-					return true;
-				} else {
-					// Unexpected action for exact match
-					debug('Unexpected action %s for exact match - treating as WAIT', action);
-					// Fall through to check other states or set up listener
-				}
-			} else {
-				debug('Stored state too old (age=%dms > 2000ms), ignoring', age);
-			}
-		}
-
-		// No exact match - check if there's another state for this syncIndex
-		const anyStateForIndex = syncGroup.findElementStateByIndex(regionName, syncIndex);
-		if (anyStateForIndex) {
-			const age = Date.now() - anyStateForIndex.timestamp;
-
-			// Check freshness (2 seconds)
-			if (age < 2000) {
-				debug(
-					'Found different state for same syncIndex: expected=%s, found=%s for region=%s, syncIndex=%d',
-					expectedState,
-					anyStateForIndex.state,
-					regionName,
-					syncIndex,
-				);
-
-				// Process with the found state to determine resync
-				const action = this.processElementState(anyStateForIndex, expectedState, syncIndex, regionName);
-
-				// For non-exact matches, we expect RESYNC action
-				if (action === ProcessAction.RESYNC) {
-					// Don't clear the found state - it might be needed later
-					debug('Triggering resync - not clearing found state');
-					return false;
-				}
-			}
-		}
-
-		// No valid stored state, set up listener
-		return new Promise((resolve) => {
-			let resolved = false;
-			let unsubscribe: (() => void) | null = null;
-			let unsubscribeMasterChange: (() => void) | null = null;
-
-			const cleanup = () => {
-				if (resolved) { return; }
-				resolved = true;
-				clearTimeout(timeout);
-				if (unsubscribe) {
-					debug('Cleaning up event listener for region=%s', regionName);
-					unsubscribe();
-					unsubscribe = null;
-				}
-				if (unsubscribeMasterChange) {
-					debug('Cleaning up master change listener for region=%s', regionName);
-					unsubscribeMasterChange();
-					unsubscribeMasterChange = null;
-				}
-			};
-
-			const timeout = setTimeout(() => {
-				const timeoutMsg = 'Timeout waiting for state: %s, syncIndex=%d, region=%s';
-				if (timedDebug) {
-					timedDebug.log(timeoutMsg, expectedState, syncIndex, regionName);
-				} else {
-					debug(timeoutMsg, expectedState, syncIndex, regionName);
-				}
-				console.log(
-					`[SYNC] Timeout waiting for ${expectedState} state at syncIndex ${syncIndex} for region ${regionName} - continuing independently`,
-				);
-				cleanup();
-				resolve(true); // Continue on timeout to avoid blocking
-			},                         90000); // 90 second timeout
-
-			// Monitor master changes
-			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
-				if (resolved) { return; } // Prevent processing after resolution
-
-				if (isMaster) {
-					// This device became master while waiting
-					debug(
-						'Slave became master while waiting for state=%s, syncIndex=%d, region=%s',
-						expectedState,
-						syncIndex,
-						regionName,
-					);
-					console.log(`[SYNC] Device became master while waiting - continuing playback`);
-					cleanup();
-					resolve(true); // Continue playback as new master
-				} else {
-					// Another device became master
-					debug(
-						'Master changed to another device while waiting for state=%s, syncIndex=%d, region=%s',
-						expectedState,
-						syncIndex,
-						regionName,
-					);
-					// Continue waiting for new master's broadcast
-				}
-			});
-
-			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
-				if (resolved) { return; } // Prevent processing after resolution
-				console.log('Received value in syncGroup', value);
-				console.log('---------------------------------------------------');
-				if (key === 'elementState' && value?.regionName === regionName) {
-					const action = this.processElementState(value, expectedState, syncIndex, regionName);
-
-					// Handle action based on type
-					switch (action) {
-						case ProcessAction.CONTINUE:
-							// Clear this specific consumed state and resolve
-							syncGroup.clearElementState(regionName, syncIndex, expectedState);
-							debug(`Cleared consumed elementState - continuing normally`);
-							cleanup();
-							resolve(true);
-							break;
-						case ProcessAction.RESYNC:
-							// Don't clear on resync - the state might be needed
-							debug(`Triggering resync - not clearing state`);
-							cleanup();
-							resolve(false);
-							break;
-						case ProcessAction.WAIT:
-							// Don't resolve, keep waiting
-							debug('Ignoring broadcast - waiting for correct state/syncIndex');
-							break;
-						default:
-							// Should never happen as ProcessAction is exhaustive
-							debug('Unknown process action: %s', action);
-							break;
-					}
-				}
-			});
-		});
-	}
 
 	/**
 	 * Check if this device is master for given region
@@ -1122,7 +937,7 @@ export class SMILElementController {
 
 	/**
 	 * Unified method to wait for commands and check sync status
-	 * Handles both cmd-prepare/cmd-play and elementState broadcasts
+	 * Handles cmd-prepare/cmd-play messages only (ACK protocol)
 	 * Returns action to take: CONTINUE, RESYNC, or keeps waiting if WAIT
 	 */
 	private async waitForCommandAndCheckSync(
@@ -1165,18 +980,6 @@ export class SMILElementController {
 			}
 		}
 
-		// Check for stored elementState
-		const storedState = syncGroup.findElementStateByIndex(regionName, syncIndex);
-		if (storedState) {
-			const age = Date.now() - storedState.timestamp;
-			if (age < 2000) {
-				const action = this.processElementState(storedState, expectedState, syncIndex, regionName);
-				if (action === ProcessAction.RESYNC) {
-					return action;
-				}
-			}
-		}
-
 		// Create promise with active listener
 		return new Promise<ProcessActionType>((resolve) => {
 			let resolved = false;
@@ -1206,7 +1009,7 @@ export class SMILElementController {
 				resolve(ProcessAction.CONTINUE);
 			}, 500);
 
-			// Set up active listener for both message types
+			// Set up active listener for sync-coordination messages only
 			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
 				if (resolved) { return; }
 
@@ -1259,34 +1062,6 @@ export class SMILElementController {
 								// Don't resolve - keep listening
 								break;
 						}
-					}
-				}
-				
-				// Handle elementState broadcasts
-				else if (key === 'elementState' && value?.regionName === regionName) {
-					// Update master position from elementState
-					this.updateMasterPosition(regionName, value.syncIndex, value.state);
-					
-					// Direct use of processElementState
-					const action = this.processElementState(value, expectedState, syncIndex, regionName);
-					
-					switch (action) {
-						case ProcessAction.CONTINUE:
-							// This would be unusual - we're waiting for command not state
-							debug('Received matching elementState while waiting for command');
-							break;
-							
-						case ProcessAction.RESYNC:
-							// Behind - resync flags set by processElementState
-							debug('Detected resync needed from elementState broadcast');
-							cleanup();
-							resolve(ProcessAction.RESYNC);
-							break;
-							
-						case ProcessAction.WAIT:
-							// Ahead - keep waiting
-							debug('Slave ahead based on elementState - continuing to wait');
-							break;
 					}
 				}
 			});
