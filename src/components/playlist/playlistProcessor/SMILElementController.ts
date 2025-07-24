@@ -1067,10 +1067,27 @@ export class SMILElementController {
 				}
 			};
 
+			// Check if we're at resync target - use longer timeout
+			const resyncTarget = commandType === 'cmd-prepare' 
+				? this.synchronization.resyncTargets?.prepare
+				: this.synchronization.resyncTargets?.play;
+			const isAtResyncTarget = this.synchronization.syncingInAction && 
+				resyncTarget !== undefined && syncIndex === resyncTarget;
+			
+			// Use 1 hour timeout if at resync target, otherwise normal 500ms
+			const timeoutMs = isAtResyncTarget ? 3600000 : 500;
+			
+			if (isAtResyncTarget) {
+				debug('At resync target %d for %s - waiting indefinitely for master', syncIndex, expectedState);
+				console.log(`[SYNC] Slave at resync target ${syncIndex} - waiting for master command`);
+			}
+			
 			// Set up timeout
 			timeoutId = setTimeout(() => {
 				if (resolved) { return; }
-				const timeoutMsg = `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
+				const timeoutMsg = isAtResyncTarget 
+					? `Long timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName}`
+					: `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
 				if (timedDebug) {
 					timedDebug.log(timeoutMsg);
 				} else {
@@ -1078,7 +1095,7 @@ export class SMILElementController {
 				}
 				cleanup();
 				resolve(ProcessAction.CONTINUE);
-			}, 500);
+			}, timeoutMs);
 
 			// Monitor master changes - if slave becomes master, continue immediately
 			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
