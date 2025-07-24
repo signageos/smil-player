@@ -1039,12 +1039,16 @@ export class SMILElementController {
 		return new Promise<ProcessActionType>((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | undefined;
+			let unsubscribeMasterChange: (() => void) | undefined;
 			let timeoutId: NodeJS.Timeout | undefined;
 
 			const cleanup = () => {
 				resolved = true;
 				if (unsubscribe) {
 					unsubscribe();
+				}
+				if (unsubscribeMasterChange) {
+					unsubscribeMasterChange();
 				}
 				if (timeoutId) {
 					clearTimeout(timeoutId);
@@ -1063,6 +1067,24 @@ export class SMILElementController {
 				cleanup();
 				resolve(ProcessAction.CONTINUE);
 			}, 500);
+
+			// Monitor master changes - if slave becomes master, continue immediately
+			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
+				if (resolved) { return; } // Prevent processing after resolution
+
+				if (isMaster) {
+					// This device became master while waiting
+					debug(
+						'Slave became master while waiting for %s at syncIndex=%d, region=%s',
+						commandType,
+						syncIndex,
+						regionName,
+					);
+					console.log(`[SYNC] Device became master while waiting - continuing immediately`);
+					cleanup();
+					resolve(ProcessAction.CONTINUE); // Continue as new master
+				}
+			});
 
 			// Set up active listener for sync-coordination messages only
 			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
