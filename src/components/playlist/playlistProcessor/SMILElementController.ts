@@ -1006,6 +1006,18 @@ export class SMILElementController {
 		// Update slave position tracking
 		this.updateSlavePosition(regionName, syncIndex, expectedState);
 		
+		// Check if actively resyncing and not at target yet - skip immediately
+		const resyncTarget = commandType === 'cmd-prepare' 
+			? this.synchronization.resyncTargets?.prepare
+			: this.synchronization.resyncTargets?.play;
+		
+		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
+			debug('Skipping wait during resync: at syncIndex=%d, target=%d for %s', 
+				syncIndex, resyncTarget, expectedState);
+			// Return RESYNC immediately - no timeout, no waiting
+			return ProcessAction.RESYNC;
+		}
+		
 		// Log current positions for debugging
 		const positions = this.getPositions(regionName, expectedState);
 		debug('Current sync positions for %s %s: slave=%d, master=%d', 
