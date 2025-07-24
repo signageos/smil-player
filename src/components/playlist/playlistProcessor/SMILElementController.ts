@@ -1116,7 +1116,7 @@ export class SMILElementController {
 			});
 
 			// Set up active listener for sync-coordination messages only
-			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+			unsubscribe = syncGroup.onValue(async ({ key, value }: { key: string; value?: any }) => {
 				if (resolved) { return; }
 
 				// Handle sync-coordination messages (commands and ACKs)
@@ -1135,6 +1135,27 @@ export class SMILElementController {
 							syncIndex: message.syncIndex,
 							timestamp: message.timestamp,
 						};
+						
+						// Special handling if we're at resync target and master has passed us
+						if (isAtResyncTarget && message.syncIndex > syncIndex) {
+							// Master has moved past our resync target
+							const newTarget = message.syncIndex + 1;
+							if (commandType === 'cmd-prepare') {
+								this.synchronization.resyncTargets!.prepare = newTarget;
+							} else {
+								this.synchronization.resyncTargets!.play = newTarget;
+							}
+							
+							debug('Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
+							console.log(`[SYNC] Master at ${message.syncIndex}, updating resync target to ${newTarget}`);
+							
+							// Send ACK for master's position to not block it
+							await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
+							
+							cleanup();
+							resolve(ProcessAction.RESYNC);
+							return;
+						}
 						
 						// Use processElementState to determine action
 						const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
