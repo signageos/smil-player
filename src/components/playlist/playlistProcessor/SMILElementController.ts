@@ -784,16 +784,15 @@ export class SMILElementController {
 
 			// Set target to prepare for the NEXT element after what master is playing
 			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-			let nextIndex: number;
+			let nextIndex = value.syncIndex + 1;
 
-			if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+			// Check if we need to wrap around
+			if (maxIndex !== undefined && nextIndex > maxIndex) {
 				console.log('reseting index');
-				// Master playing last element, we'll prepare first element
+				// Wrap to first element
 				nextIndex = 1;
 			} else {
 				console.log('increasing index');
-				// Prepare next element after what master is playing
-				nextIndex = value.syncIndex + 1;
 			}
 
 			// Set state-specific resync target for preparation
@@ -817,16 +816,15 @@ export class SMILElementController {
 
 			// Handle wraparound for playlist looping
 			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-			let nextIndex: number;
+			let nextIndex = value.syncIndex + 1;
 
-			if (maxIndex !== undefined && value.syncIndex >= maxIndex) {
+			// Check if we need to wrap around
+			if (maxIndex !== undefined && nextIndex > maxIndex) {
 				console.log('reseting index');
-				// Master is at last element, wrap to beginning (1)
+				// Wrap to first element
 				nextIndex = 1;
 			} else {
-				// Normal case: increment
 				console.log('increasing index');
-				nextIndex = value.syncIndex + 1;
 			}
 
 			// Set state-specific resync target based on expected state
@@ -883,16 +881,15 @@ export class SMILElementController {
 
 				// Handle wraparound for playlist looping
 				const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-				let nextIndex: number;
+				let nextIndex = syncIndex + 1;
 
-				if (maxIndex !== undefined && syncIndex >= maxIndex) {
+				// Check if we need to wrap around
+				if (maxIndex !== undefined && nextIndex > maxIndex) {
 					console.log('reseting index');
-					// At last element, wrap to beginning (1)
+					// Wrap to first element
 					nextIndex = 1;
 				} else {
 					console.log('increasing index');
-					// Normal case: increment
-					nextIndex = syncIndex + 1;
 				}
 
 				// Set state-specific resync target for preparation
@@ -929,15 +926,6 @@ export class SMILElementController {
 	 * Wait for master state broadcast (slave only)
 	 */
 
-	/**
-	 * Check if this device is master for given region
-	 */
-	private async isMaster(regionName: string): Promise<boolean> {
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) { return false; }
-
-		return await syncGroup.isMaster();
-	}
 
 	/**
 	 * Broadcast a sync coordination message (commands or ACKs)
