@@ -1139,7 +1139,15 @@ export class SMILElementController {
 						// Special handling if we're at resync target and master has passed us
 						if (isAtResyncTarget && message.syncIndex > syncIndex) {
 							// Master has moved past our resync target
-							const newTarget = message.syncIndex + 1;
+							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+							let newTarget = message.syncIndex + 1;
+							
+							// Check if we need to wrap around
+							if (maxIndex !== undefined && newTarget > maxIndex) {
+								debug('Wrapping resync target from %d to 1 (max=%d)', newTarget, maxIndex);
+								newTarget = 1; // Wrap to first element
+							}
+							
 							if (commandType === 'cmd-prepare') {
 								this.synchronization.resyncTargets!.prepare = newTarget;
 							} else {
