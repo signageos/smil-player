@@ -40,9 +40,42 @@ class AckTracker {
 			return true;
 		}
 
+		// Parse the key to extract ACK type, region, and syncIndex
+		// Key format: "regionName-syncIndex-ackType"
+		const keyParts = key.split('-');
+		const ackType = keyParts[keyParts.length - 2] + '-' + keyParts[keyParts.length - 1]; // e.g., "ack-prepared"
+		const syncIndex = parseInt(keyParts[keyParts.length - 3], 10);
+		const regionName = keyParts.slice(0, -3).join('-'); // Handle region names with dashes
+
 		// Create new round
 		const round = new AckRound(expectedCount);
 		this.activeRounds.set(key, round);
+
+		// Check for already stored ACKs before setting up listener
+		// Note: Currently we only store one ACK per key due to composite key design
+		// This works because slaves send ACKs for the same position at roughly the same time
+		// Future enhancement: store multiple ACKs with device IDs if needed
+		debug('Checking for stored ACKs for %s', key);
+		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName, syncIndex);
+		if (storedAck) {
+			const age = Date.now() - storedAck.timestamp;
+			if (age < 2000) { // 2 second freshness check
+				debug('Found stored ACK for %s, age=%dms', key, age);
+				this.recordAck(key);
+				
+				// Clear consumed message immediately
+				syncGroup.clearSyncCoordinationMessage(ackType, regionName, syncIndex);
+				
+				// Check if this completes all ACKs
+				if (round.isComplete()) {
+					debug('All ACKs already received from storage for %s', key);
+					this.cleanupRound(key);
+					return true;
+				}
+			} else {
+				debug('Stored ACK too old (age=%dms > 2000ms), ignoring', age);
+			}
+		}
 
 		return new Promise<boolean>((resolve) => {
 			let resolved = false;
@@ -86,6 +119,9 @@ class AckTracker {
 						if (ackKey === key) {
 							debug('Received ACK for %s', key);
 							this.recordAck(key);
+							
+							// Clear consumed message
+							syncGroup.clearSyncCoordinationMessage(message.type, message.regionName, message.syncIndex);
 
 							// Check if all ACKs received
 							if (round.isComplete()) {
