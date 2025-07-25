@@ -808,6 +808,17 @@ export class SMILElementController {
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
 			debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
+			
+			// Clear sync state when we achieve exact match
+			if (this.synchronization.syncingInAction) {
+				debug('Exact match found - clearing resync state');
+				if (this.synchronization.resyncTargets) {
+					delete this.synchronization.resyncTargets.prepare;
+					delete this.synchronization.resyncTargets.play;
+				}
+				this.synchronization.syncingInAction = false;
+			}
+			
 			return ProcessAction.CONTINUE; // In sync, continue normally
 		} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
 			// Special case: We're waiting for 'prepared' but master is already playing a future element
