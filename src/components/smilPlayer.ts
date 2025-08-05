@@ -8,9 +8,9 @@ import { FileStructure } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
 import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
-import backupImageLandscape from '../../public/backupImage/backupImage.jpg';
+import backupImageLandscape from '../../public/backupImage/backupImage_landscape.jpg';
 // @ts-ignore
-import backupImagePortrait from '../../public/backupImage/backupImage.jpg';
+import backupImagePortrait from '../../public/backupImage/backupImage_portrait.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
 import { debug } from './smilPlayerTools';
 import { SMILScheduleEnum } from '../enums/scheduleEnums';
@@ -381,7 +381,24 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
-				await this.playBackupImage(internalStorageUnit, smilUrl);
+				// pick correct image based on orientation
+				const orientedBackupImage =
+					document.documentElement.clientWidth >= document.documentElement.clientHeight
+						? backupImageLandscape
+						: backupImagePortrait;
+				const backupImageUrl = !isNil(sos.config.backupImageUrl)
+					? sos.config.backupImageUrl
+					: orientedBackupImage;
+
+				debug('Starting to play backup image');
+				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
+				const regionInfo = <SMILFileObject>getDefaultRegion();
+
+				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
+				if (isNil(sos.config.backupImageUrl)) {
+					backupPlaylist.seq.img.localFilePath = backupImageUrl;
+				}
+				await this.processor.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
