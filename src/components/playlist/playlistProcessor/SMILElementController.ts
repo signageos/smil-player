@@ -552,6 +552,8 @@ export class SMILElementController {
 					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
 					debug('Slave in resync but no master position known - sent normal ack-prepared');
 				}
+				// Don't wait for signal-ready during resync - continue skipping elements
+				return;
 			} else {
 				// Normal case - send ACK for current position
 				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
