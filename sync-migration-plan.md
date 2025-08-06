@@ -948,6 +948,18 @@ The basic counting approach is sufficient for synchronization, but device tracki
 - Fixed waitForAcks to use active onValue listener for ACK messages
 - Updated waitForAcks signature to accept syncGroup parameter
 
+**Step 8: Remove Timing Simulation** ✅
+- Removed simulateSlaveProcessing method entirely
+- Removed all calls from coordinateElementTransition
+- Pure ACK-based synchronization now active
+- No artificial delays or timing calculations remain
+
+**Step 9: Implement coordinatePlay Methods** ✅
+- Added coordinatePlayStart method (master sends cmd-play, slaves wait)
+- Added coordinatePlayComplete method (slaves send ack-playing, master waits for ACKs)
+- Integrated with existing play flow in playlistProcessor
+- Follows same pattern as prepare coordination
+
 #### Key Implementation Details
 
 **ACK Protocol Flow**:
@@ -971,20 +983,19 @@ The basic counting approach is sufficient for synchronization, but device tracki
 
 #### Remaining Work
 
-**coordinatePlayStart/Complete Methods**:
-- Similar pattern to prepare coordination
-- Master sends cmd-play, slaves acknowledge with ack-playing
-- Not yet implemented but structure is in place
-
 **Testing and Validation**:
 - Multi-device testing required
 - Performance validation
 - Edge case handling (timeouts, disconnections)
 
-**Integration Points**:
-- Remove simulateSlaveProcessing completely
-- Update all sync points to use ACK protocol
-- Handle dynamic playlists and priority content
+**Phase 3 Integration Tasks**:
+- Update dynamic playlist integration with ACK protocol
+- Update priority content handling with ACK protocol
+- Update wallclock scheduling with ACK protocol
+- Update trigger integration with ACK protocol
+- Parse SMIL layout for `sync="true"` regions
+- Create region-specific sync groups
+- Implement region-specific state broadcasting
 
 #### Critical Implementation Notes
 
