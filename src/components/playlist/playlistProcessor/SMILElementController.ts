@@ -59,21 +59,17 @@ class AckTracker {
 		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName, syncIndex);
 		if (storedAck) {
 			const age = Date.now() - storedAck.timestamp;
-			if (age < 2000) { // 2 second freshness check
-				debug('Found stored ACK for %s, age=%dms', key, age);
-				this.recordAck(key);
-				
-				// Clear consumed message immediately
-				syncGroup.clearSyncCoordinationMessage(ackType, regionName, syncIndex);
-				
-				// Check if this completes all ACKs
-				if (round.isComplete()) {
-					debug('All ACKs already received from storage for %s', key);
-					this.cleanupRound(key);
-					return true;
-				}
-			} else {
-				debug('Stored ACK too old (age=%dms > 2000ms), ignoring', age);
+			debug('Found stored ACK for %s, age=%dms', key, age);
+			this.recordAck(key);
+			
+			// Clear consumed message immediately
+			syncGroup.clearSyncCoordinationMessage(ackType, regionName, syncIndex);
+			
+			// Check if this completes all ACKs
+			if (round.isComplete()) {
+				debug('All ACKs already received from storage for %s', key);
+				this.cleanupRound(key);
+				return true;
 			}
 		}
 
@@ -1040,23 +1036,22 @@ export class SMILElementController {
 		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName, syncIndex);
 		if (storedMsg) {
 			const age = Date.now() - storedMsg.timestamp;
-			if (age < 2000) {
-				// Create virtual elementState from stored command
-				const virtualElementState = {
-					state: expectedState,
-					regionName: storedMsg.regionName,
-					syncIndex: storedMsg.syncIndex,
-					timestamp: storedMsg.timestamp,
-				};
-				
-				// Use processElementState to determine action
-				const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
-				
-				if (action !== ProcessAction.WAIT) {
-					// Clear consumed message
-					syncGroup.clearSyncCoordinationMessage(commandType, regionName, syncIndex);
-					return action;
-				}
+			debug('Found stored %s for region=%s, syncIndex=%d, age=%dms', commandType, regionName, syncIndex, age);
+			// Create virtual elementState from stored command
+			const virtualElementState = {
+				state: expectedState,
+				regionName: storedMsg.regionName,
+				syncIndex: storedMsg.syncIndex,
+				timestamp: storedMsg.timestamp,
+			};
+			
+			// Use processElementState to determine action
+			const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
+			
+			if (action !== ProcessAction.WAIT) {
+				// Clear consumed message
+				syncGroup.clearSyncCoordinationMessage(commandType, regionName, syncIndex);
+				return action;
 			}
 		}
 
@@ -1324,20 +1319,15 @@ export class SMILElementController {
 		const storedMsg = syncGroup.getSyncCoordinationMessage('signal-ready', regionName, syncIndex);
 		if (storedMsg) {
 			const age = Date.now() - storedMsg.timestamp;
-			if (age < 2000) {
-				// 2 seconds freshness
-				const msg = 'Found stored signal-ready for region=%s, syncIndex=%d, age=%dms';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex, age);
-				} else {
-					debug(msg, regionName, syncIndex, age);
-				}
-				// Clear consumed message
-				syncGroup.clearSyncCoordinationMessage('signal-ready', regionName, syncIndex);
-				return; // Continue immediately
+			const msg = 'Found stored signal-ready for region=%s, syncIndex=%d, age=%dms';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex, age);
 			} else {
-				debug('Stored signal-ready too old (age=%dms > 2000ms), ignoring', age);
+				debug(msg, regionName, syncIndex, age);
 			}
+			// Clear consumed message
+			syncGroup.clearSyncCoordinationMessage('signal-ready', regionName, syncIndex);
+			return; // Continue immediately
 		}
 
 		// Create promise with active listener
