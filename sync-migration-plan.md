@@ -1020,6 +1020,13 @@ The basic counting approach is sufficient for synchronization, but device tracki
 4. Temporary listeners are better than persistent ones for wait operations
 5. Test that messages are actually being received, not just sent
 
+**Resync Blocking Fix**:
+- **Problem**: During resync, slaves would send ACK but then wait for signal-ready, blocking the catch-up process
+- **Root Cause**: coordinatePrepareComplete always waited for signal-ready, even during resync
+- **Solution**: Added early return after sending ACK in resync mode (line 556)
+- **Result**: Slaves can now quickly skip elements during resync while still sending ACKs to avoid blocking master
+- This fix ensures slaves can efficiently catch up to master position
+
 ---
 
 ## Future Enhancements
