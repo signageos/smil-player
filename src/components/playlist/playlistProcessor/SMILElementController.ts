@@ -1082,28 +1082,40 @@ export class SMILElementController {
 			const isAtResyncTarget = this.synchronization.syncingInAction && 
 				resyncTarget !== undefined && syncIndex === resyncTarget;
 			
-			// Use 1 hour timeout if at resync target, otherwise normal 500ms
-			const timeoutMs = isAtResyncTarget ? 3600000 : 500;
+			// Use 1 hour timeout if at resync target, otherwise no timeout for fast resync
+			const timeoutMs = isAtResyncTarget ? 3600000 : 0;
 			
 			if (isAtResyncTarget) {
 				debug('At resync target %d for %s - waiting indefinitely for master', syncIndex, expectedState);
 				console.log(`[SYNC] Slave at resync target ${syncIndex} - waiting for master command`);
 			}
 			
-			// Set up timeout
-			timeoutId = setTimeout(() => {
-				if (resolved) { return; }
-				const timeoutMsg = isAtResyncTarget 
-					? `Long timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName}`
-					: `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
-				if (timedDebug) {
-					timedDebug.log(timeoutMsg);
-				} else {
-					debug(timeoutMsg);
-				}
-				cleanup();
-				resolve(ProcessAction.CONTINUE);
-			}, timeoutMs);
+			// Set up timeout only if we have a non-zero timeout
+			if (timeoutMs > 0) {
+				timeoutId = setTimeout(() => {
+					if (resolved) { return; }
+					const timeoutMsg = isAtResyncTarget 
+						? `Long timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName}`
+						: `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
+					if (timedDebug) {
+						timedDebug.log(timeoutMsg);
+					} else {
+						debug(timeoutMsg);
+					}
+					cleanup();
+					resolve(ProcessAction.CONTINUE);
+				}, timeoutMs);
+			} else {
+				// No timeout - continue immediately to allow fast resync
+				debug('No timeout - continuing immediately for fast resync');
+				// Delay resolution slightly to allow message reception first
+				Promise.resolve().then(() => {
+					if (!resolved) {
+						cleanup();
+						resolve(ProcessAction.CONTINUE);
+					}
+				});
+			}
 
 			// Monitor master changes - if slave becomes master, continue immediately
 			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
