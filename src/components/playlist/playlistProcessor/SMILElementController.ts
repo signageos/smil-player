@@ -1098,30 +1098,21 @@ export class SMILElementController {
 				}
 			};
 
-			// Check if we're at resync target - use longer timeout
-			// COMMENTED OUT: Focusing on prepare sync only
-			// Always use prepare resync target regardless of command type
+			// Check if we're at resync target - use 10 minute timeout to prevent indefinite waiting
 			const resyncTarget = this.synchronization.resyncTargets?.prepare;
 			const isAtResyncTarget =
 				this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex === resyncTarget;
 
-			// Use 1 hour timeout if at resync target, otherwise no timeout for fast resync
-			const timeoutMs = isAtResyncTarget ? 3600000 : 0;
-
 			if (isAtResyncTarget) {
-				debug('At resync target %d for %s - waiting indefinitely for master', syncIndex, expectedState);
+				debug('At resync target %d for %s - waiting for master with 10 minute timeout', syncIndex, expectedState);
 				console.log(`[SYNC] Slave at resync target ${syncIndex} - waiting for master command`);
-			}
-
-			// Set up timeout only if we have a non-zero timeout
-			if (timeoutMs > 0) {
+				
+				// Set 10 minute timeout to prevent indefinite waiting
 				timeoutId = setTimeout(() => {
 					if (resolved) {
 						return;
 					}
-					const timeoutMsg = isAtResyncTarget
-						? `Long timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName}`
-						: `Timeout waiting for ${commandType} from master for region=${regionName}, syncIndex=${syncIndex}`;
+					const timeoutMsg = `Timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName} after 10 minutes`;
 					if (timedDebug) {
 						timedDebug.log(timeoutMsg);
 					} else {
@@ -1129,17 +1120,7 @@ export class SMILElementController {
 					}
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
-				}, timeoutMs);
-			} else {
-				// No timeout - continue immediately to allow fast resync
-				debug('No timeout - continuing immediately for fast resync');
-				// Delay resolution slightly to allow message reception first
-				Promise.resolve().then(() => {
-					if (!resolved) {
-						cleanup();
-						resolve(ProcessAction.CONTINUE);
-					}
-				});
+				}, 600000); // 10 minutes
 			}
 
 			// Monitor master changes - if slave becomes master, continue immediately
