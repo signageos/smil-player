@@ -26,7 +26,7 @@
     "lint:docs": "node ./tools/validate-docs.mjs",
     "upload-applet": "sos applet upload",
     "clean": "del-cli --force cache dist/*",
-    "prepare": "npm run clean && npm run build",
+    "clean-build": "npm run clean && npm run build && npm run escheck",
     "build": "npm run clean && webpack --display-modules",
     "build-prod": "npm run clean && cross-env NODE_ENV=production webpack --display-modules",
     "build-test": "tsc",
