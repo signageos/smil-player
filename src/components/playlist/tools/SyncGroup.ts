@@ -120,19 +120,20 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	}
 
 	// Build composite key for sync-coordination storage
-	public buildSyncCoordinationKey(type: string, regionName: string, syncIndex: number): string {
-		return `sync-coord-${type}-${regionName}-${syncIndex}`;
+	// Only uses type and regionName to store the latest message per type/region
+	public buildSyncCoordinationKey(type: string, regionName: string): string {
+		return `sync-coord-${type}-${regionName}`;
 	}
 
-	// Get specific sync-coordination message by exact match
-	public getSyncCoordinationMessage(type: string, regionName: string, syncIndex: number): any {
-		const key = this.buildSyncCoordinationKey(type, regionName, syncIndex);
+	// Get latest sync-coordination message for a type/region combination
+	public getSyncCoordinationMessage(type: string, regionName: string): any {
+		const key = this.buildSyncCoordinationKey(type, regionName);
 		return this.lastValues.get(key);
 	}
 
-	// Clear specific sync-coordination message
-	public clearSyncCoordinationMessage(type: string, regionName: string, syncIndex: number): void {
-		const key = this.buildSyncCoordinationKey(type, regionName, syncIndex);
+	// Clear sync-coordination message for a type/region combination
+	public clearSyncCoordinationMessage(type: string, regionName: string): void {
+		const key = this.buildSyncCoordinationKey(type, regionName);
 		this.lastValues.delete(key);
 		debug('Cleared sync-coordination: %s', key);
 	}
@@ -160,23 +161,13 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 
 				// Handle sync-coordination messages for ACK protocol
 				if (key === 'sync-coordination' && value) {
-					// Build composite key for sync-coordination storage
-					const coordKey = this.buildSyncCoordinationKey(value.type, value.regionName, value.syncIndex);
+					// Build composite key for sync-coordination storage (type + region only)
+					const coordKey = this.buildSyncCoordinationKey(value.type, value.regionName);
 
-					// Check for duplicates
-					const existing = this.lastValues.get(coordKey);
-					if (existing &&
-						existing.type === value.type &&
-						existing.syncIndex === value.syncIndex &&
-						existing.regionName === value.regionName &&
-						Math.abs(value.timestamp - existing.timestamp) <= 200) { // Within 200ms
-						debug('Duplicate sync-coordination detected, skipping');
-						return;
-					}
-
-					// Store with composite key
+					// No need to check for duplicates anymore - we want the latest message
+					// Store with composite key - this will overwrite any previous message of same type/region
 					this.lastValues.set(coordKey, value);
-					debug('Stored sync-coordination with key: %s', coordKey);
+					debug('Stored sync-coordination with key: %s (syncIndex=%d)', coordKey, value.syncIndex);
 
 					// Emit immediately for ACK protocol handling
 					this.emitter.emit('value', { key, value });
