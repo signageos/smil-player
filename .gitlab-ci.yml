@@ -1,134 +1,16 @@
-image: $ECR_REGISTRY/signageos/docker-node:16-alpine-build
-services:
-    - docker:dind
-
-stages:
-    - prepare
-    - test
-    - build
-    - publish
-    - release
-
-cache:
-    untracked: true
-    key: '$CI_PROJECT_ID'
-    paths:
-        - node_modules/
-
-before_script:
-    - export VERSION=`cat ./VERSION`
-    - export TAG=`cat ./PRERELEASE`
-    - cp .npmrc.template .npmrc
-    - npx --userconfig ./.npmrc @signageos/lib version-upgrade $VERSION
-    - mkdir -p dist
-    - npm install
-
-prepare:
-    image: $ECR_REGISTRY/signageos/docker:master
-    stage: prepare
-    before_script: []
-    script:
-        - ci-prepare
-    artifacts:
-        when: on_success
-        paths:
-            - ./VERSION
-            - ./PRERELEASE
-
-test:general:
-    stage: test
-    except:
-        - tags
-    script:
-        - npm test
-
-test:lint:
-    stage: test
-    except:
-        - tags
-    script:
-        - npm run lint
-
-test:changelog:
-    image: $ECR_REGISTRY/signageos/docker:master
-    stage: test
-    except:
-        - tags
-    allow_failure: true
-    script:
-        - ci-test-changelog
-
-test:check:
-    stage: test
-    except:
-        - tags
-    allow_failure: true
-    variables:
-        TZ: Europe/Prague
-    script:
-        - npm run check
-
-build:
-    stage: build
-    dependencies:
-        - prepare
-    script:
-        - npm run prepare --production
-        - npm run escheck
-    artifacts:
-        when: on_success
-        paths:
-            - dist/
-
-publish:npm:
-    stage: publish
-    dependencies:
-        - prepare
-        - build
-    script:
-        - npm publish --ignore-scripts
-
-publish:npm-public:
-    stage: publish
-    only:
-        - tags
-        - master
-    dependencies:
-        - prepare
-        - build
-    script:
-        - export NPM_REGISTRY_URL=https://registry.npmjs.org/
-        - export NPM_REGISTRY_HOST=registry.npmjs.org
-        - export NPM_AUTH_TOKEN=$PUBLIC_NPM_AUTH_TOKEN
-        - tools/prepare-npm-public.js
-        - npm publish --ignore-scripts
-
-release:tag:
-    image: $ECR_REGISTRY/signageos/docker:master
-    stage: release
-    only:
-        - master
-    when: manual
-    allow_failure: false
-    before_script: []
-    script:
-        - ci-release-tag
-
-release:notes:
-    image: $ECR_REGISTRY/signageos/docker:master
-    stage: release
-    only:
-        - tags
-    script:
-        - ci-release-notes
+include:
+  - project: "signageos/infra/gitlab-ci"
+    file: "/pipelines/ts-lib-public.yaml"
+    ref: master
+    inputs:
+      disable-prettier: true
+      disable-checktypes: true
 
 .upstream:documentation:
   stage: release
   when: on_success
   needs:
-    - prepare
-    - build
-    - publish:npm
+    - build:build-npm-package
   trigger:
     project: signageos/services/documentation
     strategy: depend
