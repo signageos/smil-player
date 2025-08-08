@@ -4,13 +4,13 @@ import { getSyncGroup } from '../tools/syncTools';
 import { TimedDebugger } from './playlistProcessor';
 
 // Process actions for element state handling
-const ProcessAction = {
+export const ProcessAction = {
 	CONTINUE: 'CONTINUE', // Exact match - continue playing normally
 	RESYNC: 'RESYNC', // Slave behind master - trigger resync to skip elements
 	WAIT: 'WAIT', // Keep waiting for correct broadcast
 } as const;
 
-type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
+export type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
 
 /**
  * Tracks acknowledgments from slave devices for synchronized operations
@@ -429,20 +429,21 @@ export class SMILElementController {
 	/**
 	 * Coordinate the start of element preparation
 	 * Master broadcasts cmd-prepare, slaves wait for it
+	 * @returns ProcessActionType indicating whether to continue or resync
 	 */
 	public async coordinatePrepareStart(
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
-	): Promise<void> {
+	): Promise<ProcessActionType> {
 		if (!this.synchronization.shouldSync) {
-			return; // No sync needed
+			return ProcessAction.CONTINUE; // No sync needed
 		}
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
 			debug('No sync group for prepare start: region=%s', regionName);
-			return;
+			return ProcessAction.CONTINUE;
 		}
 
 		const isMaster = await syncGroup.isMaster();
@@ -455,6 +456,7 @@ export class SMILElementController {
 			} else {
 				debug(msg, regionName, syncIndex);
 			}
+			return ProcessAction.CONTINUE; // Master always continues
 		} else {
 			// Slave waits for cmd-prepare from master
 			const waitMsg = 'Slave waiting for cmd-prepare from master for region=%s, syncIndex=%d';
@@ -474,8 +476,6 @@ export class SMILElementController {
 					debug(readyMsg, regionName, syncIndex);
 				}
 			} else if (action === ProcessAction.RESYNC) {
-				// Resync needed - set flags but don't throw error
-				// The resync will be handled by shouldPrepareElement
 				const resyncMsg = 'Slave detected resync needed during prepare start for region=%s, syncIndex=%d';
 				if (timedDebug) {
 					timedDebug.log(resyncMsg, regionName, syncIndex);
@@ -483,6 +483,8 @@ export class SMILElementController {
 					debug(resyncMsg, regionName, syncIndex);
 				}
 			}
+			
+			return action; // Return the action for the caller to handle
 		}
 	}
 

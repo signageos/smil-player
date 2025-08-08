@@ -79,7 +79,7 @@ import {
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
-import { SMILElementController } from './SMILElementController';
+import { SMILElementController, ProcessAction } from './SMILElementController';
 
 /**
  * TimedDebugger - A debug logger that tracks timing information
@@ -2407,11 +2407,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
 			timedDebug.log('Coordinating preparation start for sync');
-			await this.elementController.coordinatePrepareStart(
+			const action = await this.elementController.coordinatePrepareStart(
 				currentRegionInfo.regionName,
 				value.syncIndex,
 				timedDebug,
 			);
+			
+			if (action === ProcessAction.RESYNC) {
+				timedDebug.log('Resync needed - skipping element preparation');
+				return; // Skip this element during resync
+			}
+			
 			timedDebug.log('Preparation start coordination completed');
 		}
 
