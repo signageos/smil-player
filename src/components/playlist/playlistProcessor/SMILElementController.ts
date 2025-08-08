@@ -228,11 +228,11 @@ export class SMILElementController {
 	private syncState = {
 		slavePosition: {
 			prepare: new Map<string, number>(),  // regionName -> syncIndex
-			play: new Map<string, number>(),
+			// play: new Map<string, number>(),  // COMMENTED OUT: Focusing on prepare sync only
 		},
 		masterPosition: {
 			prepare: new Map<string, number>(),
-			play: new Map<string, number>(),
+			// play: new Map<string, number>(),  // COMMENTED OUT: Focusing on prepare sync only
 		},
 		pendingAcks: new Set<string>(), // "region-index-state" keys to avoid duplicates
 	};
@@ -297,15 +297,14 @@ export class SMILElementController {
 				console.log(`[SYNC] Reached prepare target at index ${syncIndex} - resuming normal sync`);
 				// Clear prepare target
 				delete this.synchronization.resyncTargets.prepare;
-				// Clear syncingInAction only if no other targets remain
-				if (!this.synchronization.resyncTargets?.play) {
-					this.synchronization.syncingInAction = false;
-					const clearMsg = 'All resync targets cleared - exiting resync mode';
-					if (timedDebug) {
-						timedDebug.log(clearMsg);
-					} else {
-						debug(clearMsg);
-					}
+				// COMMENTED OUT: Focusing on prepare sync only
+				// Clear syncingInAction immediately since we only track prepare targets
+				this.synchronization.syncingInAction = false;
+				const clearMsg = 'All resync targets cleared - exiting resync mode';
+				if (timedDebug) {
+					timedDebug.log(clearMsg);
+				} else {
+					debug(clearMsg);
 				}
 				// Continue with normal preparation
 			}
@@ -326,85 +325,87 @@ export class SMILElementController {
 		return true;
 	}
 
-	/**
-	 * Check if element should be played - handles resync logic for playback phase
-	 */
-	public async shouldPlayElement(
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<boolean> {
-		if (!this.synchronization.shouldSync) {
-			return true; // No sync needed
-		}
+	// COMMENTED OUT: Focusing on prepare sync only
+	// /**
+	//  * Check if element should be played - handles resync logic for playback phase
+	//  */
+	// public async shouldPlayElement(
+	// 	regionName: string,
+	// 	syncIndex: number,
+	// 	timedDebug?: TimedDebugger,
+	// ): Promise<boolean> {
+	// 	if (!this.synchronization.shouldSync) {
+	// 		return true; // No sync needed
+	// 	}
 
-		// Check if we're in resync mode for playing
-		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
-			if (syncIndex < this.synchronization.resyncTargets.play) {
-				const msg = 'Skipping element playback during resync: syncIndex=%d, target=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.play);
-				} else {
-					debug(msg, syncIndex, this.synchronization.resyncTargets.play);
-				}
-				return false; // Skip this element
-			} else if (syncIndex === this.synchronization.resyncTargets.play) {
-				const msg = 'Reached resync target during playback: region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex);
-				} else {
-					debug(msg, regionName, syncIndex);
-				}
-				console.log(`[SYNC] Reached play target at index ${syncIndex} - resuming normal sync`);
-				// Clear play target
-				delete this.synchronization.resyncTargets.play;
-				// Clear syncingInAction only if no other targets remain
-				if (!this.synchronization.resyncTargets?.prepare) {
-					this.synchronization.syncingInAction = false;
-					const clearMsg = 'All resync targets cleared - exiting resync mode';
-					if (timedDebug) {
-						timedDebug.log(clearMsg);
-					} else {
-						debug(clearMsg);
-					}
-				}
-				// Continue with normal sync
-			}
-		}
+	// 	// Check if we're in resync mode for playing
+	// 	if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
+	// 		if (syncIndex < this.synchronization.resyncTargets.play) {
+	// 			const msg = 'Skipping element playback during resync: syncIndex=%d, target=%d';
+	// 			if (timedDebug) {
+	// 				timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.play);
+	// 			} else {
+	// 				debug(msg, syncIndex, this.synchronization.resyncTargets.play);
+	// 			}
+	// 			return false; // Skip this element
+	// 		} else if (syncIndex === this.synchronization.resyncTargets.play) {
+	// 			const msg = 'Reached resync target during playback: region=%s, syncIndex=%d';
+	// 			if (timedDebug) {
+	// 				timedDebug.log(msg, regionName, syncIndex);
+	// 			} else {
+	// 				debug(msg, regionName, syncIndex);
+	// 			}
+	// 			console.log(`[SYNC] Reached play target at index ${syncIndex} - resuming normal sync`);
+	// 			// Clear play target
+	// 			delete this.synchronization.resyncTargets.play;
+	// 			// Clear syncingInAction only if no other targets remain
+	// 			if (!this.synchronization.resyncTargets?.prepare) {
+	// 				this.synchronization.syncingInAction = false;
+	// 				const clearMsg = 'All resync targets cleared - exiting resync mode';
+	// 				if (timedDebug) {
+	// 					timedDebug.log(clearMsg);
+	// 				} else {
+	// 					debug(clearMsg);
+	// 				}
+	// 			}
+	// 			// Continue with normal sync
+	// 		}
+	// 	}
 
-		// Normal sync flow
-		return await this.shouldStartPlayback(regionName, syncIndex, timedDebug);
-	}
+	// 	// Normal sync flow
+	// 	return await this.shouldStartPlayback(regionName, syncIndex, timedDebug);
+	// }
 
-	/**
-	 * Check if element should start playback - replaces handleElementSynchronization
-	 */
-	public async shouldStartPlayback(
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<boolean> {
-		const msg = 'Checking if should start playback: region=%s, syncIndex=%d';
-		if (timedDebug) {
-			timedDebug.log(msg, regionName, syncIndex);
-		} else {
-			debug(msg, regionName, syncIndex);
-		}
+	// COMMENTED OUT: Focusing on prepare sync only
+	// /**
+	//  * Check if element should start playback - replaces handleElementSynchronization
+	//  */
+	// public async shouldStartPlayback(
+	// 	regionName: string,
+	// 	syncIndex: number,
+	// 	timedDebug?: TimedDebugger,
+	// ): Promise<boolean> {
+	// 	const msg = 'Checking if should start playback: region=%s, syncIndex=%d';
+	// 	if (timedDebug) {
+	// 		timedDebug.log(msg, regionName, syncIndex);
+	// 	} else {
+	// 		debug(msg, regionName, syncIndex);
+	// 	}
 
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			const noGroupMsg = 'No sync group found for region: %s';
-			if (timedDebug) {
-				timedDebug.log(noGroupMsg, regionName);
-			} else {
-				debug(noGroupMsg, regionName);
-			}
-			return true;
-		}
+	// 	const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+	// 	if (!syncGroup) {
+	// 		const noGroupMsg = 'No sync group found for region: %s';
+	// 		if (timedDebug) {
+	// 			timedDebug.log(noGroupMsg, regionName);
+	// 		} else {
+	// 			debug(noGroupMsg, regionName);
+	// 		}
+	// 		return true;
+	// 	}
 
-		// Coordinate playback start
-		return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex, timedDebug);
-	}
+	// 	// Coordinate playback start
+	// 	return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex, timedDebug);
+	// }
 
 	/**
 	 * Mark element as finished - clean up sync state
@@ -579,95 +580,97 @@ export class SMILElementController {
 		}
 	}
 
-	/**
-	 * Coordinate the start of element playing
-	 * Master broadcasts cmd-play, slaves wait for it
-	 */
-	public async coordinatePlayStart(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No sync needed
-		}
+	// COMMENTED OUT: Focusing on prepare sync only
+	// /**
+	//  * Coordinate the start of element playing
+	//  * Master broadcasts cmd-play, slaves wait for it
+	//  */
+	// public async coordinatePlayStart(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
+	// 	if (!this.synchronization.shouldSync) {
+	// 		return; // No sync needed
+	// 	}
 
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('No sync group for play start: region=%s', regionName);
-			return;
-		}
+	// 	const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+	// 	if (!syncGroup) {
+	// 		debug('No sync group for play start: region=%s', regionName);
+	// 		return;
+	// 	}
 
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master broadcasts play command
-			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
-			const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-		} else {
-			// Slaves will receive cmd-play through message routing
-			const msg = 'Slave ready to receive cmd-play for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-		}
-	}
+	// 	const isMaster = await syncGroup.isMaster();
+	// 	if (isMaster) {
+	// 		// Master broadcasts play command
+	// 		await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
+	// 		const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
+	// 		if (timedDebug) {
+	// 			timedDebug.log(msg, regionName, syncIndex);
+	// 		} else {
+	// 			debug(msg, regionName, syncIndex);
+	// 		}
+	// 	} else {
+	// 		// Slaves will receive cmd-play through message routing
+	// 		const msg = 'Slave ready to receive cmd-play for region=%s, syncIndex=%d';
+	// 		if (timedDebug) {
+	// 			timedDebug.log(msg, regionName, syncIndex);
+	// 		} else {
+	// 			debug(msg, regionName, syncIndex);
+	// 		}
+	// 	}
+	// }
 
-	/**
-	 * Coordinate the completion of element play start
-	 * Slaves send ack-playing, master waits for all ACKs
-	 */
-	public async coordinatePlayComplete(
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No sync needed
-		}
+	// COMMENTED OUT: Focusing on prepare sync only
+	// /**
+	//  * Coordinate the completion of element play start
+	//  * Slaves send ack-playing, master waits for all ACKs
+	//  */
+	// public async coordinatePlayComplete(
+	// 	regionName: string,
+	// 	syncIndex: number,
+	// 	timedDebug?: TimedDebugger,
+	// ): Promise<void> {
+	// 	if (!this.synchronization.shouldSync) {
+	// 		return; // No sync needed
+	// 	}
 
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('No sync group for play complete: region=%s', regionName);
-			return;
-		}
+	// 	const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+	// 	if (!syncGroup) {
+	// 		debug('No sync group for play complete: region=%s', regionName);
+	// 		return;
+	// 	}
 
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0) {
-				const ackKey = `${regionName}-${syncIndex}-ack-playing`;
-				const msg = 'Master waiting for %d playing ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(msg, expectedAcks, ackKey);
-				} else {
-					debug(msg, expectedAcks, ackKey);
-				}
+	// 	const isMaster = await syncGroup.isMaster();
+	// 	if (isMaster) {
+	// 		// Master waits for ACKs
+	// 		const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
+	// 		if (expectedAcks > 0) {
+	// 			const ackKey = `${regionName}-${syncIndex}-ack-playing`;
+	// 			const msg = 'Master waiting for %d playing ACKs for %s';
+	// 			if (timedDebug) {
+	// 				timedDebug.log(msg, expectedAcks, ackKey);
+	// 			} else {
+	// 				debug(msg, expectedAcks, ackKey);
+	// 			}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
-				const resultMsg = acksReceived
-					? 'Master received all playing ACKs for %s'
-					: 'Master timeout waiting for playing ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(resultMsg, ackKey);
-				} else {
-					debug(resultMsg, ackKey);
-				}
-			}
-		} else {
-			// Slave sends ACK
-			await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
-			const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-		}
-	}
+	// 			const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+	// 			const resultMsg = acksReceived
+	// 				? 'Master received all playing ACKs for %s'
+	// 				: 'Master timeout waiting for playing ACKs for %s';
+	// 			if (timedDebug) {
+	// 				timedDebug.log(resultMsg, ackKey);
+	// 			} else {
+	// 				debug(resultMsg, ackKey);
+	// 			}
+	// 		}
+	// 	} else {
+	// 		// Slave sends ACK
+	// 		await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+	// 		const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
+	// 		if (timedDebug) {
+	// 			timedDebug.log(msg, regionName, syncIndex);
+	// 		} else {
+	// 			debug(msg, regionName, syncIndex);
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * Coordinate element state transition across devices
@@ -693,8 +696,8 @@ export class SMILElementController {
 
 			// Wait for ACKs from slaves
 			let expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0 && (state === 'prepared' || state === 'playing')) {
-				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+			if (expectedAcks > 0 && state === 'prepared') {  // CHANGED: Only handle prepared state
+				const ackType = 'ack-prepared';
 				const ackKey = `${regionName}-${syncIndex}-${ackType}`;
 
 				const ackMsg = 'Master waiting for %d ACKs for %s';
@@ -738,8 +741,14 @@ export class SMILElementController {
 
 			return true; // Master always continues
 		} else {
+			// CHANGED: Only handle prepared state
+			if (state !== 'prepared') {
+				debug('Skipping play state coordination - focusing on prepare only');
+				return true;
+			}
+			
 			// Slave waits for command and sends ACK
-			const commandType = state === 'prepared' ? 'cmd-prepare' : 'cmd-play';
+			const commandType = 'cmd-prepare';
 			const slaveMsg = 'Slave waiting for %s from master for region=%s, syncIndex=%d';
 			if (timedDebug) {
 				timedDebug.log(slaveMsg, commandType, regionName, syncIndex);
@@ -749,8 +758,8 @@ export class SMILElementController {
 			
 			// Use unified method to wait for command and check sync
 			const action = await this.waitForCommandAndCheckSync(
-				commandType as 'cmd-prepare' | 'cmd-play',
-				state as 'prepared' | 'playing',
+				commandType,
+				'prepared',
 				regionName,
 				syncIndex,
 				syncGroup,
@@ -760,14 +769,14 @@ export class SMILElementController {
 			// Handle the action returned
 			if (action === ProcessAction.CONTINUE) {
 				// Send ACK after receiving command
-				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+				const ackType = 'ack-prepared';
 				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
 				debug('Slave sent %s for region=%s, syncIndex=%d', ackType, regionName, syncIndex);
 				return true;
 			} else if (action === ProcessAction.RESYNC) {
 				// Resync needed - still send ACK to not block master
-				const masterPos = this.getPositions(regionName, state as 'prepared' | 'playing').master;
-				await this.sendAckForPosition(regionName, masterPos, state as 'prepared' | 'playing', syncGroup);
+				const masterPos = this.getPositions(regionName, 'prepared').master;
+				await this.sendAckForPosition(regionName, masterPos, 'prepared', syncGroup);
 				debug('Slave in resync mode - sent ACK for master position %d', masterPos);
 				return false; // Trigger resync
 			} else {
@@ -812,7 +821,7 @@ export class SMILElementController {
 				debug('Exact match found - clearing resync state');
 				if (this.synchronization.resyncTargets) {
 					delete this.synchronization.resyncTargets.prepare;
-					delete this.synchronization.resyncTargets.play;
+					// delete this.synchronization.resyncTargets.play;  // COMMENTED OUT: Focusing on prepare sync only
 				}
 				this.synchronization.syncingInAction = false;
 			}
@@ -886,15 +895,17 @@ export class SMILElementController {
 					nextIndex,
 					value.syncIndex,
 				);
-			} else if (expectedState === 'playing') {
-				this.synchronization.resyncTargets.play = nextIndex;
-				debug(
-					'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
-					regionName,
-					nextIndex,
-					value.syncIndex,
-				);
-			}
+			} 
+			// COMMENTED OUT: Focusing on prepare sync only
+			// else if (expectedState === 'playing') {
+			// 	this.synchronization.resyncTargets.play = nextIndex;
+			// 	debug(
+			// 		'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
+			// 		regionName,
+			// 		nextIndex,
+			// 		value.syncIndex,
+			// 	);
+			// }
 
 			this.synchronization.syncingInAction = true;
 			console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
@@ -1016,9 +1027,9 @@ export class SMILElementController {
 		this.updateSlavePosition(regionName, syncIndex, expectedState);
 		
 		// Check if actively resyncing and not at target yet - skip immediately
-		const resyncTarget = commandType === 'cmd-prepare' 
-			? this.synchronization.resyncTargets?.prepare
-			: this.synchronization.resyncTargets?.play;
+		// COMMENTED OUT: Focusing on prepare sync only
+		// Always use prepare resync target regardless of command type
+		const resyncTarget = this.synchronization.resyncTargets?.prepare;
 		
 		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
 			debug('Skipping wait during resync: at syncIndex=%d, target=%d for %s', 
@@ -1076,9 +1087,9 @@ export class SMILElementController {
 			};
 
 			// Check if we're at resync target - use longer timeout
-			const resyncTarget = commandType === 'cmd-prepare' 
-				? this.synchronization.resyncTargets?.prepare
-				: this.synchronization.resyncTargets?.play;
+			// COMMENTED OUT: Focusing on prepare sync only
+			// Always use prepare resync target regardless of command type
+			const resyncTarget = this.synchronization.resyncTargets?.prepare;
 			const isAtResyncTarget = this.synchronization.syncingInAction && 
 				resyncTarget !== undefined && syncIndex === resyncTarget;
 			
@@ -1168,11 +1179,15 @@ export class SMILElementController {
 								newTarget = 1; // Wrap to first element
 							}
 							
-							if (commandType === 'cmd-prepare') {
-								this.synchronization.resyncTargets!.prepare = newTarget;
-							} else {
-								this.synchronization.resyncTargets!.play = newTarget;
-							}
+							// COMMENTED OUT: Focusing on prepare sync only
+							// Always set prepare target regardless of command type
+							this.synchronization.resyncTargets!.prepare = newTarget;
+							// Original play logic:
+							// if (commandType === 'cmd-prepare') {
+							// 	this.synchronization.resyncTargets!.prepare = newTarget;
+							// } else {
+							// 	this.synchronization.resyncTargets!.play = newTarget;
+							// }
 							
 							debug('Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
 							console.log(`[SYNC] Master at ${message.syncIndex}, updating resync target to ${newTarget}`);
@@ -1256,43 +1271,49 @@ export class SMILElementController {
 		if (state === 'prepared') {
 			this.syncState.slavePosition.prepare.set(regionName, syncIndex);
 			debug('Updated slave prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
-		} else if (state === 'playing') {
-			this.syncState.slavePosition.play.set(regionName, syncIndex);
-			debug('Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
-		}
+		} 
+		// COMMENTED OUT: Focusing on prepare sync only
+		// else if (state === 'playing') {
+		// 	this.syncState.slavePosition.play.set(regionName, syncIndex);
+		// 	debug('Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
+		// }
 	}
 
 	/**
 	 * Update master position tracking
 	 */
 	private updateMasterPosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing'): void {
-		const currentPos = state === 'prepared' 
-			? this.syncState.masterPosition.prepare.get(regionName) || 0
-			: this.syncState.masterPosition.play.get(regionName) || 0;
+		// CHANGED: Only track prepared state
+		if (state !== 'prepared') {
+			return;
+		}
+		
+		const currentPos = this.syncState.masterPosition.prepare.get(regionName) || 0;
 		
 		// Only update if the new position is higher (master moving forward)
 		if (syncIndex > currentPos) {
-			if (state === 'prepared') {
-				this.syncState.masterPosition.prepare.set(regionName, syncIndex);
-				debug('Updated master prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
-			} else {
-				this.syncState.masterPosition.play.set(regionName, syncIndex);
-				debug('Updated master play position: region=%s, syncIndex=%d', regionName, syncIndex);
-			}
+			this.syncState.masterPosition.prepare.set(regionName, syncIndex);
+			debug('Updated master prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
 		}
 	}
 
 	/**
 	 * Get current positions for debugging
 	 */
-	private getPositions(regionName: string, state: 'prepared' | 'playing'): { slave: number; master: number } {
-		const slavePos = state === 'prepared'
-			? this.syncState.slavePosition.prepare.get(regionName) || 0
-			: this.syncState.slavePosition.play.get(regionName) || 0;
+	private getPositions(regionName: string, _state: 'prepared' | 'playing'): { slave: number; master: number } {
+		// COMMENTED OUT: Focusing on prepare sync only
+		// For now, only return prepare positions regardless of state parameter
+		const slavePos = this.syncState.slavePosition.prepare.get(regionName) || 0;
+		const masterPos = this.syncState.masterPosition.prepare.get(regionName) || 0;
 		
-		const masterPos = state === 'prepared'
-			? this.syncState.masterPosition.prepare.get(regionName) || 0
-			: this.syncState.masterPosition.play.get(regionName) || 0;
+		// Original play logic commented out:
+		// const slavePos = state === 'prepared'
+		// 	? this.syncState.slavePosition.prepare.get(regionName) || 0
+		// 	: this.syncState.slavePosition.play.get(regionName) || 0;
+		// 
+		// const masterPos = state === 'prepared'
+		// 	? this.syncState.masterPosition.prepare.get(regionName) || 0
+		// 	: this.syncState.masterPosition.play.get(regionName) || 0;
 			
 		return { slave: slavePos, master: masterPos };
 	}
