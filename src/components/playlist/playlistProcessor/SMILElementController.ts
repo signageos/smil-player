@@ -690,12 +690,22 @@ export class SMILElementController {
 			}
 
 			// In ACK protocol, state broadcasts are replaced by commands
+			
+			// For playing state, master must broadcast cmd-play
+			if (state === 'playing') {
+				await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
+				const cmdMsg = 'Master sent cmd-play for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(cmdMsg, regionName, syncIndex);
+				} else {
+					debug(cmdMsg, regionName, syncIndex);
+				}
+			}
 
 			// Wait for ACKs from slaves
 			let expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0 && state === 'prepared') {
-				// CHANGED: Only handle prepared state
-				const ackType = 'ack-prepared';
+			if (expectedAcks > 0 && (state === 'prepared' || state === 'playing')) {
+				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				const ackKey = `${regionName}-${syncIndex}-${ackType}`;
 
 				const ackMsg = 'Master waiting for %d ACKs for %s';
@@ -731,10 +741,25 @@ export class SMILElementController {
 					} else {
 						debug(ackResultMsg, ackKey);
 					}
+					
+					// After receiving ACKs, broadcast signal-ready
+					if (acksReceived || expectedAcks === 0) {
+						await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
+						const readyMsg = 'Master sent signal-ready for region=%s, syncIndex=%d, state=%s';
+						if (timedDebug) {
+							timedDebug.log(readyMsg, regionName, syncIndex, state);
+						} else {
+							debug(readyMsg, regionName, syncIndex, state);
+						}
+					}
 				} finally {
 					// Always unsubscribe from peer monitoring
 					unsubscribe();
 				}
+			} else if (expectedAcks === 0) {
+				// No slaves, still send signal-ready for consistency
+				await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
+				debug('Master sent signal-ready (no slaves) for region=%s, syncIndex=%d, state=%s', regionName, syncIndex, state);
 			}
 
 			return true; // Master always continues
@@ -773,6 +798,24 @@ export class SMILElementController {
 				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
 				debug('Slave sent %s for region=%s, syncIndex=%d', ackType, regionName, syncIndex);
+				
+				// Wait for signal-ready from master before proceeding
+				const waitReadyMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d, state=%s';
+				if (timedDebug) {
+					timedDebug.log(waitReadyMsg, regionName, syncIndex, state);
+				} else {
+					debug(waitReadyMsg, regionName, syncIndex, state);
+				}
+				
+				await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+				
+				const proceedMsg = 'Slave received signal-ready, proceeding with %s for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(proceedMsg, state, regionName, syncIndex);
+				} else {
+					debug(proceedMsg, state, regionName, syncIndex);
+				}
+				
 				return true;
 			} else if (action === ProcessAction.RESYNC) {
 				// Resync needed - still send ACK to not block master
