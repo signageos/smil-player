@@ -13,6 +13,13 @@ export const ProcessAction = {
 export type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
 
 /**
+ * Get ISO timestamp for debug logs
+ */
+function getTimestamp(): string {
+	return new Date().toISOString();
+}
+
+/**
  * Tracks acknowledgments from slave devices for synchronized operations
  */
 class AckTracker {
@@ -32,11 +39,11 @@ class AckTracker {
 		syncGroup: any,
 		timeoutMs: number = 500,
 	): Promise<boolean> {
-		debug('Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
+		debug('[%s] Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', getTimestamp(), key, expectedCount, timeoutMs);
 
 		// If no slaves to wait for, return immediately
 		if (expectedCount === 0) {
-			debug('No ACKs expected for %s, continuing', key);
+			debug('[%s] No ACKs expected for %s, continuing', getTimestamp(), key);
 			return true;
 		}
 
@@ -53,11 +60,11 @@ class AckTracker {
 
 		// Check for already stored ACKs before setting up listener
 		// We now store only the latest ACK per type/region
-		debug('Checking for stored ACKs for %s', key);
+		debug('[%s] Checking for stored ACKs for %s', getTimestamp(), key);
 		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName);
 		if (storedAck && storedAck.syncIndex === syncIndex) {
 			const age = Date.now() - storedAck.timestamp;
-			debug('Found stored ACK for %s, age=%dms', key, age);
+			debug('[%s] Found stored ACK for %s, age=%dms', getTimestamp(), key, age);
 			this.recordAck(key);
 
 			// Clear consumed message immediately
@@ -65,7 +72,7 @@ class AckTracker {
 
 			// Check if this completes all ACKs
 			if (round.isComplete()) {
-				debug('All ACKs already received from storage for %s', key);
+				debug('[%s] All ACKs already received from storage for %s', getTimestamp(), key);
 				this.cleanupRound(key);
 				return true;
 			}
@@ -93,7 +100,7 @@ class AckTracker {
 					return;
 				}
 				const timeoutMsg = 'ACK timeout for %s - received %d of %d ACKs. Continuing without slow devices.';
-				debug(timeoutMsg, key, round.receivedCount, expectedCount);
+				debug('[%s] ' + timeoutMsg, getTimestamp(), key, round.receivedCount, expectedCount);
 				console.log(`[SYNC] ${timeoutMsg}`, key, round.receivedCount, expectedCount);
 				cleanup();
 				resolve(false);
@@ -115,7 +122,7 @@ class AckTracker {
 
 						// Check if this ACK is for our round
 						if (ackKey === key) {
-							debug('Received ACK for %s', key);
+							debug('[%s] Received ACK for %s', getTimestamp(), key);
 							this.recordAck(key);
 
 							// Clear consumed message
@@ -123,7 +130,7 @@ class AckTracker {
 
 							// Check if all ACKs received
 							if (round.isComplete()) {
-								debug('All ACKs received for %s', key);
+								debug('[%s] All ACKs received for %s', getTimestamp(), key);
 								cleanup();
 								resolve(true);
 							}
@@ -150,17 +157,17 @@ class AckTracker {
 	public adjustExpectedCount(key: string, newExpectedCount: number): void {
 		const round = this.activeRounds.get(key);
 		if (!round) {
-			debug('Cannot adjust count for unknown round: %s', key);
+			debug('[%s] Cannot adjust count for unknown round: %s', getTimestamp(), key);
 			return;
 		}
 
 		const oldCount = round.expectedCount;
 		round.expectedCount = newExpectedCount;
-		debug('Adjusted expected ACKs for %s from %d to %d', key, oldCount, newExpectedCount);
+		debug('[%s] Adjusted expected ACKs for %s from %d to %d', getTimestamp(), key, oldCount, newExpectedCount);
 
 		// Check if we've now received all ACKs
 		if (round.isComplete()) {
-			debug('All ACKs now received after adjustment for %s', key);
+			debug('[%s] All ACKs now received after adjustment for %s', getTimestamp(), key);
 			round.resolve(true);
 		}
 	}
@@ -172,15 +179,15 @@ class AckTracker {
 	public recordAck(key: string): void {
 		const round = this.activeRounds.get(key);
 		if (!round) {
-			debug('Received ACK for unknown round: %s', key);
+			debug('[%s] Received ACK for unknown round: %s', getTimestamp(), key);
 			return;
 		}
 
 		round.addAck();
-		debug('Recorded ACK for %s - %d of %d received', key, round.receivedCount, round.expectedCount);
+		debug('[%s] Recorded ACK for %s - %d of %d received', getTimestamp(), key, round.receivedCount, round.expectedCount);
 
 		if (round.isComplete()) {
-			debug('All ACKs received for %s', key);
+			debug('[%s] All ACKs received for %s', getTimestamp(), key);
 			round.resolve(true);
 		}
 	}
@@ -248,7 +255,7 @@ export class SMILElementController {
 		if (timedDebug) {
 			timedDebug.log(msg, regionName, syncIndex);
 		} else {
-			debug(msg, regionName, syncIndex);
+			debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex);
 		}
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
@@ -257,7 +264,7 @@ export class SMILElementController {
 			if (timedDebug) {
 				timedDebug.log(noGroupMsg, regionName);
 			} else {
-				debug(noGroupMsg, regionName);
+				debug('[%s] ' + noGroupMsg, getTimestamp(), regionName);
 			}
 			return true; // No sync, continue
 		}
@@ -285,7 +292,7 @@ export class SMILElementController {
 				if (timedDebug) {
 					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.prepare);
 				} else {
-					debug(msg, syncIndex, this.synchronization.resyncTargets.prepare);
+					debug('[%s] ' + msg, getTimestamp(), syncIndex, this.synchronization.resyncTargets.prepare);
 				}
 				return false; // Skip preparation
 			} else if (syncIndex === this.synchronization.resyncTargets.prepare) {
@@ -305,7 +312,7 @@ export class SMILElementController {
 				if (timedDebug) {
 					timedDebug.log(clearMsg);
 				} else {
-					debug(clearMsg);
+					debug('[%s] ' + clearMsg, getTimestamp());
 				}
 				// Continue with normal preparation
 			}
@@ -319,7 +326,7 @@ export class SMILElementController {
 			if (timedDebug) {
 				timedDebug.log(skipMsg);
 			} else {
-				debug(skipMsg);
+				debug('[%s] ' + skipMsg, getTimestamp());
 			}
 			return false;
 		}
@@ -345,7 +352,7 @@ export class SMILElementController {
 				if (timedDebug) {
 					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.play);
 				} else {
-					debug(msg, syncIndex, this.synchronization.resyncTargets.play);
+					debug('[%s] ' + msg, getTimestamp(), syncIndex, this.synchronization.resyncTargets.play);
 				}
 				return false; // Skip this element
 			} else if (syncIndex === this.synchronization.resyncTargets.play) {
@@ -388,7 +395,7 @@ export class SMILElementController {
 		if (timedDebug) {
 			timedDebug.log(msg, regionName, syncIndex);
 		} else {
-			debug(msg, regionName, syncIndex);
+			debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex);
 		}
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
@@ -397,7 +404,7 @@ export class SMILElementController {
 			if (timedDebug) {
 				timedDebug.log(noGroupMsg, regionName);
 			} else {
-				debug(noGroupMsg, regionName);
+				debug('[%s] ' + noGroupMsg, getTimestamp(), regionName);
 			}
 			return true;
 		}
@@ -418,7 +425,7 @@ export class SMILElementController {
 		if (timedDebug) {
 			timedDebug.log(msg, regionName, syncIndex);
 		} else {
-			debug(msg, regionName, syncIndex);
+			debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex);
 		}
 
 		// Finished state is not needed in ACK protocol
@@ -436,7 +443,7 @@ export class SMILElementController {
 	): Promise<ProcessActionType> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
-			debug('No sync group for prepare start: region=%s', regionName);
+			debug('[%s] No sync group for prepare start: region=%s', getTimestamp(), regionName);
 			return ProcessAction.CONTINUE;
 		}
 
@@ -497,7 +504,7 @@ export class SMILElementController {
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
-			debug('No sync group for prepare complete: region=%s', regionName);
+			debug('[%s] No sync group for prepare complete: region=%s', getTimestamp(), regionName);
 			return;
 		}
 
@@ -544,7 +551,7 @@ export class SMILElementController {
 				} else {
 					// No master position known yet, send normal ACK
 					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
-					debug('Slave in resync but no master position known - sent normal ack-prepared');
+					debug('[%s] Slave in resync but no master position known - sent normal ack-prepared', getTimestamp());
 				}
 				// Don't wait for signal-ready during resync - continue skipping elements
 				return;
@@ -759,14 +766,14 @@ export class SMILElementController {
 			} else if (expectedAcks === 0) {
 				// No slaves, still send signal-ready for consistency
 				await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
-				debug('Master sent signal-ready (no slaves) for region=%s, syncIndex=%d, state=%s', regionName, syncIndex, state);
+				debug('[%s] Master sent signal-ready (no slaves) for region=%s, syncIndex=%d, state=%s', getTimestamp(), regionName, syncIndex, state);
 			}
 
 			return true; // Master always continues
 		} else {
 			// Handle both prepared and playing states
 			if (state !== 'prepared' && state !== 'playing') {
-				debug('Skipping coordination for state: %s', state);
+				debug('[%s] Skipping coordination for state: %s', getTimestamp(), state);
 				return true;
 			}
 
@@ -797,7 +804,7 @@ export class SMILElementController {
 				// Send ACK after receiving command
 				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
-				debug('Slave sent %s for region=%s, syncIndex=%d', ackType, regionName, syncIndex);
+				debug('[%s] Slave sent %s for region=%s, syncIndex=%d', getTimestamp(), ackType, regionName, syncIndex);
 				
 				// Wait for signal-ready from master before proceeding
 				const waitReadyMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d, state=%s';
@@ -821,11 +828,11 @@ export class SMILElementController {
 				// Resync needed - still send ACK to not block master
 				const masterPos = this.getPositions(regionName, expectedState, syncGroup).master;
 				await this.sendAckForPosition(regionName, masterPos, expectedState, syncGroup);
-				debug('Slave in resync mode - sent ACK for master position %d', masterPos);
+				debug('[%s] Slave in resync mode - sent ACK for master position %d', getTimestamp(), masterPos);
 				return false; // Trigger resync
 			} else {
 				// WAIT should not be returned from waitForCommandAndCheckSync
-				debug('Unexpected WAIT action returned - treating as timeout');
+				debug('[%s] Unexpected WAIT action returned - treating as timeout', getTimestamp());
 				return true;
 			}
 		}
@@ -846,7 +853,8 @@ export class SMILElementController {
 	): ProcessActionType {
 		// Log broadcast being processed
 		debug(
-			'Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
+			'[%s] Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
+			getTimestamp(),
 			value.state,
 			value.syncIndex,
 			value.timestamp,
@@ -857,11 +865,11 @@ export class SMILElementController {
 
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
-			debug('Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
+			debug('[%s] Received expected state: %s for region=%s, syncIndex=%d', getTimestamp(), expectedState, regionName, syncIndex);
 
 			// Clear sync state when we achieve exact match
 			if (this.synchronization.syncingInAction) {
-				debug('Exact match found - clearing resync state');
+				debug('[%s] Exact match found - clearing resync state', getTimestamp());
 				if (this.synchronization.resyncTargets) {
 					delete this.synchronization.resyncTargets.prepare;
 					delete this.synchronization.resyncTargets.play;
@@ -874,7 +882,8 @@ export class SMILElementController {
 			// Special case: We're waiting for 'prepared' but master is already playing a future element
 			// This means we missed our chance to prepare and need to catch up
 			debug(
-				'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
+				'[%s] Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
+				getTimestamp(),
 				value.syncIndex,
 				syncIndex,
 			);
@@ -899,17 +908,18 @@ export class SMILElementController {
 			this.synchronization.resyncTargets.prepare = nextIndex;
 			this.synchronization.syncingInAction = true;
 			debug(
-				'Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
+				'[%s] Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
+				getTimestamp(),
 				regionName,
 				nextIndex,
 				value.syncIndex,
 			);
 			console.log(`[SYNC] Slave needs to resync - waiting for prepared at index ${nextIndex}`);
-			debug('Returning false from waitForMasterState to trigger element skip');
+			debug('[%s] Returning false from waitForMasterState to trigger element skip', getTimestamp());
 			return ProcessAction.RESYNC; // Trigger resync - skip current element
 		} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 			// Master ahead with same state
-			debug('Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
+			debug('[%s] Master ahead - need resync. Master at %d, we are at %d', getTimestamp(), value.syncIndex, syncIndex);
 
 			// Handle wraparound for playlist looping
 			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
@@ -933,7 +943,8 @@ export class SMILElementController {
 			if (expectedState === 'prepared') {
 				this.synchronization.resyncTargets.prepare = nextIndex;
 				debug(
-					'Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
+					'[%s] Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
+					getTimestamp(),
 					regionName,
 					nextIndex,
 					value.syncIndex,
@@ -956,7 +967,8 @@ export class SMILElementController {
 		} else if (value.syncIndex < syncIndex) {
 			// Slave is ahead of master - wait for master to catch up
 			debug(
-				'Slave ahead of master - slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
+				'[%s] Slave ahead of master - slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
+				getTimestamp(),
 				syncIndex,
 				value.syncIndex,
 				regionName,
@@ -972,7 +984,8 @@ export class SMILElementController {
 			if (receivedIndex > expectedIndex) {
 				// We're behind (e.g., we expect 'prepared' but master is at 'playing')
 				debug(
-					'Behind in state progression - expected %s but master at %s for syncIndex=%d',
+					'[%s] Behind in state progression - expected %s but master at %s for syncIndex=%d',
+					getTimestamp(),
 					expectedState,
 					value.state,
 					syncIndex,
@@ -999,7 +1012,8 @@ export class SMILElementController {
 				this.synchronization.resyncTargets.prepare = nextIndex;
 				this.synchronization.syncingInAction = true;
 				debug(
-					'Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
+					'[%s] Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
+					getTimestamp(),
 					regionName,
 					nextIndex,
 				);
@@ -1007,7 +1021,8 @@ export class SMILElementController {
 			} else {
 				// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
 				debug(
-					'Ahead in state progression - expected %s but master at %s for syncIndex=%d',
+					'[%s] Ahead in state progression - expected %s but master at %s for syncIndex=%d',
+					getTimestamp(),
 					expectedState,
 					value.state,
 					syncIndex,
@@ -1044,12 +1059,12 @@ export class SMILElementController {
 		// Use provided sync group or get it
 		const group = syncGroup || getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!group) {
-			debug('No sync group to broadcast to for region: %s', regionName);
+			debug('[%s] No sync group to broadcast to for region: %s', getTimestamp(), regionName);
 			return;
 		}
 
 		await group.broadcastValue('sync-coordination', message);
-		debug('Broadcasted sync message: type=%s, region=%s, syncIndex=%d', type, regionName, syncIndex);
+		debug('[%s] Broadcasted sync message: type=%s, region=%s, syncIndex=%d', getTimestamp(), type, regionName, syncIndex);
 	}
 
 	/**
@@ -1076,7 +1091,8 @@ export class SMILElementController {
 
 		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
 			debug(
-				'Skipping wait during resync: at syncIndex=%d, target=%d for %s',
+				'[%s] Skipping wait during resync: at syncIndex=%d, target=%d for %s',
+				getTimestamp(),
 				syncIndex,
 				resyncTarget,
 				expectedState,
@@ -1088,7 +1104,8 @@ export class SMILElementController {
 		// Log current positions for debugging
 		const positions = this.getPositions(regionName, expectedState, syncGroup);
 		debug(
-			'Current sync positions for %s %s: slave=%d, master=%d',
+			'[%s] Current sync positions for %s %s: slave=%d, master=%d',
+			getTimestamp(),
 			regionName,
 			expectedState,
 			positions.slave,
@@ -1099,7 +1116,7 @@ export class SMILElementController {
 		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 		if (storedMsg) {
 			const age = Date.now() - storedMsg.timestamp;
-			debug('Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms',
+			debug('[%s] Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms', getTimestamp(),
 				commandType, regionName, storedMsg.syncIndex, syncIndex, age);
 			// Create virtual elementState from stored command
 			const virtualElementState = {
@@ -1146,7 +1163,7 @@ export class SMILElementController {
 				this.synchronization.syncingInAction && resyncTargetCheck !== undefined && syncIndex === resyncTargetCheck;
 
 			if (isAtResyncTarget) {
-				debug('At resync target %d for %s - waiting for master with 10 minute timeout', syncIndex, expectedState);
+				debug('[%s] At resync target %d for %s - waiting for master with 10 minute timeout', getTimestamp(), syncIndex, expectedState);
 				console.log(`[SYNC] Slave at resync target ${syncIndex} - waiting for master command`);
 				// Set 10 minute timeout to prevent indefinite waiting
 				timeoutId = setTimeout(() => {
@@ -1157,7 +1174,7 @@ export class SMILElementController {
 					if (timedDebug) {
 						timedDebug.log(timeoutMsg);
 					} else {
-						debug(timeoutMsg);
+						debug('[%s] ' + timeoutMsg, getTimestamp());
 					}
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
@@ -1173,7 +1190,8 @@ export class SMILElementController {
 				if (isMaster) {
 					// This device became master while waiting
 					debug(
-						'Slave became master while waiting for %s at syncIndex=%d, region=%s',
+						'[%s] Slave became master while waiting for %s at syncIndex=%d, region=%s',
+						getTimestamp(),
 						commandType,
 						syncIndex,
 						regionName,
@@ -1212,7 +1230,7 @@ export class SMILElementController {
 
 							// Check if we need to wrap around
 							if (maxIndex !== undefined && newTarget > maxIndex) {
-								debug('Wrapping resync target from %d to 1 (max=%d)', newTarget, maxIndex);
+								debug('[%s] Wrapping resync target from %d to 1 (max=%d)', getTimestamp(), newTarget, maxIndex);
 								newTarget = 1; // Wrap to first element
 							}
 
@@ -1223,7 +1241,7 @@ export class SMILElementController {
 								this.synchronization.resyncTargets!.play = newTarget;
 							}
 
-							debug('Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
+							debug('[%s] Master passed resync target - updating target from %d to %d', getTimestamp(), syncIndex, newTarget);
 							console.log(
 								`[SYNC] Master at ${message.syncIndex}, updating resync target to ${newTarget}`,
 							);
@@ -1251,7 +1269,7 @@ export class SMILElementController {
 								if (timedDebug) {
 									timedDebug.log(msg);
 								} else {
-									debug(msg);
+									debug('[%s] ' + msg, getTimestamp());
 								}
 								// Don't clear the message - we want to keep the latest for position tracking
 								cleanup();
@@ -1260,7 +1278,7 @@ export class SMILElementController {
 
 							case ProcessAction.RESYNC:
 								// We're behind - resync flags already set by processElementState
-								debug(`Detected resync needed while waiting for ${commandType}`);
+								debug('[%s] Detected resync needed while waiting for %s', getTimestamp(), commandType);
 								cleanup();
 								resolve(ProcessAction.RESYNC);
 								break;
@@ -1268,14 +1286,17 @@ export class SMILElementController {
 							case ProcessAction.WAIT:
 								// We're ahead - send ACK for master's position but keep waiting
 								debug(
-									`Slave ahead at ${syncIndex}, master at ${message.syncIndex} - sending ACK and waiting`,
+									'[%s] Slave ahead at %d, master at %d - sending ACK and waiting',
+									getTimestamp(),
+									syncIndex,
+									message.syncIndex,
 								);
 								await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
 								// Don't resolve - keep listening
 								break;
 							default:
 								// Should not happen
-								debug('Unexpected action from processElementState: %s', action);
+								debug('[%s] Unexpected action from processElementState: %s', getTimestamp(), action);
 								break;
 						}
 					}
@@ -1301,7 +1322,7 @@ export class SMILElementController {
 			this.syncState.pendingAcks.add(ackKey);
 
 			await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
-			debug('Sent ACK for master position %d while slave at different position', syncIndex);
+			debug('[%s] Sent ACK for master position %d while slave at different position', getTimestamp(), syncIndex);
 
 			// Clean up after a delay
 			setTimeout(() => {
@@ -1316,10 +1337,10 @@ export class SMILElementController {
 	private updateSlavePosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing'): void {
 		if (state === 'prepared') {
 			this.syncState.slavePosition.prepare.set(regionName, syncIndex);
-			debug('Updated slave prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
+			debug('[%s] Updated slave prepare position: region=%s, syncIndex=%d', getTimestamp(), regionName, syncIndex);
 		} else if (state === 'playing') {
 			this.syncState.slavePosition.play.set(regionName, syncIndex);
-			debug('Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
+			debug('[%s] Updated slave play position: region=%s, syncIndex=%d', getTimestamp(), regionName, syncIndex);
 		}
 	}
 
@@ -1384,7 +1405,7 @@ export class SMILElementController {
 			if (timedDebug) {
 				timedDebug.log(msg, regionName, syncIndex, age);
 			} else {
-				debug(msg, regionName, syncIndex, age);
+				debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex, age);
 			}
 			// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
 			syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
@@ -1416,7 +1437,7 @@ export class SMILElementController {
 				if (timedDebug) {
 					timedDebug.log(timeoutMsg);
 				} else {
-					debug(timeoutMsg);
+					debug('[%s] ' + timeoutMsg, getTimestamp());
 				}
 				cleanup();
 				resolve();
@@ -1440,7 +1461,7 @@ export class SMILElementController {
 						if (timedDebug) {
 							timedDebug.log(msg);
 						} else {
-							debug(msg);
+							debug('[%s] ' + msg, getTimestamp());
 						}
 						// Clear consumed message
 						syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
