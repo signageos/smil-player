@@ -2485,20 +2485,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return 'RETRY'; // Signal to processPlaylist that retry is needed
 		}
 
-		// COMMENTED OUT: Focusing on prepare sync only
-		// // NEW: Event-based sync coordination
-		// if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-		// 	timedDebug.log('Checking if should play element for sync coordination');
-		// 	const shouldPlay = await this.elementController.shouldPlayElement(
-		// 		currentRegionInfo.regionName,
-		// 		value.syncIndex,
-		// 	);
-		// 	if (!shouldPlay) {
-		// 		timedDebug.log('Element sync coordination indicates skip');
-		// 		return;
-		// 	}
-		// 	timedDebug.log('Element sync coordination passed - will play');
-		// }
+		// NEW: Event-based sync coordination for play phase
+		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			timedDebug.log('Checking if should play element for sync coordination');
+			const shouldPlay = await this.elementController.shouldPlayElement(
+				currentRegionInfo.regionName,
+				value.syncIndex,
+				timedDebug,
+			);
+			if (!shouldPlay) {
+				timedDebug.log('Element sync coordination indicates skip');
+				return;
+			}
+			timedDebug.log('Element sync coordination passed - will play');
+		}
 
 		if (!isNil(value.triggerValue)) {
 			this.promiseAwaiting[currentRegionInfo.regionName].triggerValue = value.triggerValue;
