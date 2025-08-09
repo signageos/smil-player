@@ -29,14 +29,14 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	) {
 		// Use provided deviceId or generate a unique one
 		this.id = deviceId || `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-		debug('Creating SyncGroup for %s with id %s', groupName, this.id);
+		debug('SyncGroup(%s) - Creating with id: %s at %s', groupName, this.id, new Date().toISOString());
 
 		this.monitorStatus();
 		this.monitorValues();
 	}
 
 	public async join() {
-		debug('Joining sync group %s with id %s', this.groupName, this.id);
+		debug('[%s] SyncGroup(%s) - Joining with id: %s', this.getTimestamp(), this.groupName, this.id);
 
 		await this.sos.sync.joinGroup({
 			groupName: this.groupName,
@@ -47,14 +47,14 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	public async isMaster(): Promise<boolean> {
 		if (this.masterStatus === null) {
 			this.masterStatus = await this.sos.sync.isMaster(this.groupName);
-			debug('Initial master status for %s: %s', this.groupName, this.masterStatus);
+			debug('[%s] SyncGroup(%s) - Initial master status: %s', this.getTimestamp(), this.groupName, this.masterStatus);
 		}
 
 		return this.masterStatus!;
 	}
 
 	public async broadcastValue(key: string, value?: any): Promise<void> {
-		debug('Broadcasting to %s - key: %s, value: %O', this.groupName, key, value);
+		debug('[%s] SyncGroup(%s) - Broadcasting - key: %s, value: %O', this.getTimestamp(), this.groupName, key, value);
 		await this.sos.sync.broadcastValue({ groupName: this.groupName, key, value });
 	}
 
@@ -83,7 +83,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 
 	public clearLastValue(key: string): void {
 		this.lastValues.delete(key);
-		debug('Cleared last value for key: %s', key);
+		debug('[%s] SyncGroup(%s) - Cleared last value for key: %s', this.getTimestamp(), this.groupName, key);
 	}
 
 	// Build composite key for elementState storage
@@ -105,7 +105,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 			const key = this.buildElementStateKey(regionName, syncIndex, state);
 			const value = this.lastValues.get(key);
 			if (value) {
-				debug('Found elementState for region=%s, syncIndex=%d, state=%s', regionName, syncIndex, state);
+				debug('[%s] SyncGroup(%s) - Found elementState - region: %s, syncIndex: %d, state: %s', this.getTimestamp(), this.groupName, regionName, syncIndex, state);
 				return value;
 			}
 		}
@@ -116,7 +116,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	public clearElementState(regionName: string, syncIndex: number, state: string): void {
 		const key = this.buildElementStateKey(regionName, syncIndex, state);
 		this.lastValues.delete(key);
-		debug('Cleared elementState: %s', key);
+		debug('[%s] SyncGroup(%s) - Cleared elementState: %s', this.getTimestamp(), this.groupName, key);
 	}
 
 	// Build composite key for sync-coordination storage
@@ -135,18 +135,22 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	public clearSyncCoordinationMessage(type: string, regionName: string): void {
 		const key = this.buildSyncCoordinationKey(type, regionName);
 		this.lastValues.delete(key);
-		debug('Cleared sync-coordination: %s', key);
+		debug('[%s] SyncGroup(%s) - Cleared sync-coordination: %s', this.getTimestamp(), this.groupName, key);
+	}
+
+	private getTimestamp(): string {
+		return new Date().toISOString();
 	}
 
 	private monitorStatus() {
 		this.sos.sync.onStatus(({ isMaster, groupName, connectedPeers }) => {
 			if (groupName === this.groupName) {
-				debug('Status update for %s - peers: %O', this.groupName, connectedPeers);
+				debug('[%s] SyncGroup(%s) - Status update - peers: %O', this.getTimestamp(), this.groupName, connectedPeers);
 				this.connectedPeers = connectedPeers || [];
 				this.emitter.emit('status', connectedPeers);
 
 				if (this.masterStatus !== isMaster) {
-					debug('Master status changed for %s: %s -> %s', this.groupName, this.masterStatus, isMaster);
+					debug('[%s] SyncGroup(%s) - Master status changed: %s -> %s', this.getTimestamp(), this.groupName, this.masterStatus, isMaster);
 					this.masterStatus = isMaster;
 					this.emitter.emit('master_changed', isMaster);
 				}
@@ -157,17 +161,27 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	private monitorValues() {
 		this.sos.sync.onValue(async (key, value, groupName) => {
 			if (groupName === this.groupName) {
-				debug('Received value for %s - key: %s, value: %O', this.groupName, key, value);
+				debug('[%s] SyncGroup(%s) - Received value - key: %s, value: %O', this.getTimestamp(), this.groupName, key, value);
 
 				// Handle sync-coordination messages for ACK protocol
 				if (key === 'sync-coordination' && value) {
+					// Extract action from type (e.g., 'cmd-prepare' -> 'prepare', 'ack-playing' -> 'playing')
+					const action = value.type.replace('cmd-', '').replace('ack-', '').replace('signal-', '');
+					const messageCategory = value.type.startsWith('cmd-') ? 'COMMAND' : 
+					                       value.type.startsWith('ack-') ? 'ACK' : 
+					                       value.type.startsWith('signal-') ? 'SIGNAL' : 'OTHER';
+					
+					debug('[%s] SyncGroup(%s) - Received %s message - type: %s, action: %s, syncIndex: %d, region: %s', 
+						this.getTimestamp(), this.groupName, messageCategory, value.type, action, value.syncIndex, value.regionName);
+					
 					// Build composite key for sync-coordination storage (type + region only)
 					const coordKey = this.buildSyncCoordinationKey(value.type, value.regionName);
 
 					// No need to check for duplicates anymore - we want the latest message
 					// Store with composite key - this will overwrite any previous message of same type/region
 					this.lastValues.set(coordKey, value);
-					debug('Stored sync-coordination with key: %s (syncIndex=%d)', coordKey, value.syncIndex);
+					debug('[%s] SyncGroup(%s) - Stored sync-coordination - key: %s, type: %s, syncIndex: %d, region: %s', 
+						this.getTimestamp(), this.groupName, coordKey, value.type, value.syncIndex, value.regionName);
 
 					// Emit immediately for ACK protocol handling
 					this.emitter.emit('value', { key, value });
@@ -186,13 +200,15 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 						existing.syncIndex === value.syncIndex &&
 						existing.regionName === value.regionName &&
 						Math.abs(value.timestamp - existing.timestamp) <= 200) { // Within 200ms
-						debug('Duplicate elementState detected (same values, timestamps within 200ms), skipping');
+						debug('[%s] SyncGroup(%s) - Duplicate elementState detected - state: %s, syncIndex: %d, region: %s (skipping)', 
+							this.getTimestamp(), this.groupName, value.state, value.syncIndex, value.regionName);
 						return; // Don't store or emit duplicate
 					}
 
 					// Store with composite key to prevent overwrites
 					this.lastValues.set(stateKey, value);
-					debug('Stored elementState with key: %s', stateKey);
+					debug('[%s] SyncGroup(%s) - Stored elementState - key: %s, state: %s, syncIndex: %d, region: %s', 
+						this.getTimestamp(), this.groupName, stateKey, value.state, value.syncIndex, value.regionName);
 				} else {
 					// Store other values as before
 					this.lastValues.set(key, value);
