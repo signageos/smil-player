@@ -514,7 +514,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 2000);
 				const resultMsg = acksReceived
 					? 'Master received all prepared ACKs for %s'
 					: 'Master timeout waiting for prepared ACKs for %s';
@@ -731,7 +731,7 @@ export class SMILElementController {
 				});
 
 				try {
-					const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+					const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 2000);
 
 					const ackResultMsg = acksReceived
 						? 'Master received all ACKs for %s'
