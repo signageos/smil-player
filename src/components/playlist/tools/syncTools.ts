@@ -142,10 +142,10 @@ export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) 
 			? {
 					engine: SyncEngine.SyncServer,
 					uri: sos.config.syncServerUrl,
-			  }
+				}
 			: {
 					engine: SyncEngine.P2PLocal,
-			  };
+				};
 		debug('Connecting to sync server with engine: %O', options);
 		await sos.sync.connect(options);
 		resetAppRestartCount();

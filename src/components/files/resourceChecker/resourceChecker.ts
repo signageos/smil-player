@@ -13,7 +13,7 @@ export type Resource = {
 export class ResourceChecker implements IResourceChecker {
 	private groupedResources: Map<number, Resource[]> = new Map();
 	private intervalTimers: Map<number, NodeJS.Timeout> = new Map();
-	private isRunning = false;
+	private isRunning: boolean = false;
 	private stopPromise: Promise<void> | null = null;
 
 	constructor(
@@ -25,16 +25,7 @@ export class ResourceChecker implements IResourceChecker {
 		this.groupResourcesByInterval();
 	}
 
-	private groupResourcesByInterval() {
-		for (const resource of this.resources) {
-			if (!this.groupedResources.has(resource.interval)) {
-				this.groupedResources.set(resource.interval, []);
-			}
-			this.groupedResources.get(resource.interval)!.push(resource);
-		}
-	}
-
-	start() {
+	public start() {
 		if (this.isRunning) {
 			debug('ResourceChecker is already running');
 			return;
@@ -48,11 +39,15 @@ export class ResourceChecker implements IResourceChecker {
 		for (const [interval, resourceGroup] of this.groupedResources.entries()) {
 			const scheduleNext = (): NodeJS.Timeout => {
 				const timeout = setTimeout(async () => {
-					if (!this.isRunning) return;
+					if (!this.isRunning) {
+						return;
+					}
 
 					try {
 						for (const resource of resourceGroup) {
-							if (!this.isRunning) break;
+							if (!this.isRunning) {
+								break;
+							}
 							debug('Checking resource: %O at interval: %d', resource, interval);
 
 							try {
@@ -67,7 +62,8 @@ export class ResourceChecker implements IResourceChecker {
 							scheduleNext();
 						}
 					}
-				}, interval);
+				// tslint:disable-next-line:align
+				},					   interval);
 
 				this.intervalTimers.set(interval, timeout);
 				// Safely unref only if available
@@ -83,7 +79,7 @@ export class ResourceChecker implements IResourceChecker {
 		debug('Grouped resource checks started.');
 	}
 
-	async stop() {
+	public async stop() {
 		if (!this.isRunning) {
 			debug('ResourceChecker is not running');
 			return;
@@ -137,5 +133,14 @@ export class ResourceChecker implements IResourceChecker {
 			}
 		}
 		this.intervalTimers.clear();
+	}
+
+	private groupResourcesByInterval() {
+		for (const resource of this.resources) {
+			if (!this.groupedResources.has(resource.interval)) {
+				this.groupedResources.set(resource.interval, []);
+			}
+			this.groupedResources.get(resource.interval)!.push(resource);
+		}
 	}
 }
