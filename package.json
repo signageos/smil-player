@@ -28,7 +28,7 @@
     "clean": "del-cli --force cache dist/*",
     "clean-build": "npm run clean && npm run build && npm run escheck",
     "build": "npm run clean && webpack --display-modules",
-    "build-prod": "npm run clean && cross-env NODE_ENV=production webpack --display-modules",
+    "build-prod": "npm run clean && cross-env NODE_OPTIONS='--openssl-legacy-provider' NODE_ENV=production webpack --display-modules",
     "build-test": "tsc",
     "start": "webpack-dev-server --mode development --open-emulator",
     "start-cypress": "webpack-dev-server --mode none --open-emulator",
