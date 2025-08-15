@@ -203,58 +203,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return this.playIntroLoop(introMedia, intro);
 	};
 
-	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
-		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
-		const resourceChecker = new ResourceChecker(
-			resources,
-			this.synchronization.shouldSync,
-			() => this.setCheckFilesLoop(false),
-			restart,
-		);
-		resourceChecker.start();
-	}
-
-	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
-		try {
-			if (this.sos.config.syncGroupName) {
-				debug('SyncGroupName is defined, starting sync setup');
-				if (firstIteration) {
-					await connectSyncSafe(this.sos);
-				}
-
-				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
-
-				if (firstIteration && hasDynamicContent(this.smilObject)) {
-					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
-				}
-			} else {
-				debug('No syncGroupName is defined, skipping sync setup');
-			}
-		} catch (error) {
-			debug('Error during playlist processing sync setup: %O', error);
-			console.error(error);
-		}
-	}
-
-	private async handlePlaylistProcessing(version: number): Promise<void> {
-		try {
-			const dateTimeBegin = Date.now();
-			await this.processPlaylist(this.smilObject.playlist, version);
-			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
-			const dateTimeEnd = Date.now();
-			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
-				await sleep(2000);
-			}
-		} catch (err) {
-			debug('Unexpected error processing during playlist processing: %O', err);
-			await sleep(SMILScheduleEnum.defaultAwait);
-		}
-	}
-
-	private async handlePlaylistLoop(version: number): Promise<void> {
-		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
-	}
-
 	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
 		const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 
@@ -2352,7 +2300,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		changeZIndex(value, element, +1);
 		debug(`[${debugId}] Changed z-index for element`);
 
-		// value.wasUpdated is there for a case when file updates in localstorage under same url, player needs to regenerate src to update it in browser cache
+		// value.wasUpdated is there for a case when file updates in localstorage under same url,
+		// player needs to regenerate src to update it in browser cache
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
 		let src = generateElementSrc(
 			value.src,
@@ -2546,4 +2495,56 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		debug(`[${debugId}] Element synchronization completed successfully`);
 		return true;
 	};
+
+	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		const resourceChecker = new ResourceChecker(
+			resources,
+			this.synchronization.shouldSync,
+			() => this.setCheckFilesLoop(false),
+			restart,
+		);
+		resourceChecker.start();
+	}
+
+	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
+		try {
+			if (this.sos.config.syncGroupName) {
+				debug('SyncGroupName is defined, starting sync setup');
+				if (firstIteration) {
+					await connectSyncSafe(this.sos);
+				}
+
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+
+				if (firstIteration && hasDynamicContent(this.smilObject)) {
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				}
+			} else {
+				debug('No syncGroupName is defined, skipping sync setup');
+			}
+		} catch (error) {
+			debug('Error during playlist processing sync setup: %O', error);
+			console.error(error);
+		}
+	}
+
+	private async handlePlaylistProcessing(version: number): Promise<void> {
+		try {
+			const dateTimeBegin = Date.now();
+			await this.processPlaylist(this.smilObject.playlist, version);
+			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
+			const dateTimeEnd = Date.now();
+			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+				await sleep(2000);
+			}
+		} catch (err) {
+			debug('Unexpected error processing during playlist processing: %O', err);
+			await sleep(SMILScheduleEnum.defaultAwait);
+		}
+	}
+
+	private async handlePlaylistLoop(version: number): Promise<void> {
+		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
+	}
 }
