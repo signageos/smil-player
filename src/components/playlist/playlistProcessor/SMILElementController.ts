@@ -104,7 +104,8 @@ class AckTracker {
 				console.log(`[SYNC] ${timeoutMsg}`, key, round.receivedCount, expectedCount);
 				cleanup();
 				resolve(false);
-			}, timeoutMs);
+			},
+			timeoutMs);
 
 			// Set up active listener for ACK messages
 			unsubscribe = syncGroup.onValue(({ key: msgKey, value }: { key: string; value?: any }) => {
@@ -863,6 +864,9 @@ export class SMILElementController {
 			syncIndex,
 		);
 
+		// Get maxIndex for wraparound detection
+		const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
 			debug('[%s] Received expected state: %s for region=%s, syncIndex=%d', getTimestamp(), expectedState, regionName, syncIndex);
@@ -878,6 +882,19 @@ export class SMILElementController {
 			}
 
 			return ProcessAction.CONTINUE; // In sync, continue normally
+		} else if (value.syncIndex < syncIndex || (maxIndex && syncIndex <= 2 && value.syncIndex >= (maxIndex - 1))) {
+			// Slave is ahead of master - wait for master to catch up
+			// Includes wraparound: slave at start of new iteration, master at end of previous
+			const isWraparound = maxIndex && syncIndex <= 2 && value.syncIndex >= (maxIndex - 1);
+			debug(
+				'[%s] Slave ahead of master %s- slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
+				getTimestamp(),
+				isWraparound ? '(wraparound) ' : '',
+				syncIndex,
+				value.syncIndex,
+				regionName,
+			);
+			return ProcessAction.WAIT; // Keep waiting for correct broadcast
 		} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
 			// Special case: We're waiting for 'prepared' but master is already playing a future element
 			// This means we missed our chance to prepare and need to catch up
@@ -889,7 +906,6 @@ export class SMILElementController {
 			);
 
 			// Set target to prepare for the NEXT element after what master is playing
-			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 			let nextIndex = value.syncIndex + 1;
 
 			// Check if we need to wrap around
@@ -922,7 +938,6 @@ export class SMILElementController {
 			debug('[%s] Master ahead - need resync. Master at %d, we are at %d', getTimestamp(), value.syncIndex, syncIndex);
 
 			// Handle wraparound for playlist looping
-			const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 			let nextIndex = value.syncIndex + 1;
 
 			// Check if we need to wrap around
@@ -964,16 +979,6 @@ export class SMILElementController {
 			this.synchronization.syncingInAction = true;
 			console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
 			return ProcessAction.RESYNC; // Trigger resync - skip current element
-		} else if (value.syncIndex < syncIndex) {
-			// Slave is ahead of master - wait for master to catch up
-			debug(
-				'[%s] Slave ahead of master - slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
-				getTimestamp(),
-				syncIndex,
-				value.syncIndex,
-				regionName,
-			);
-			return ProcessAction.WAIT; // Keep waiting for correct broadcast
 		} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
 			// Same element but different state
 			// Determine if we're ahead or behind based on state progression
@@ -992,7 +997,6 @@ export class SMILElementController {
 				);
 
 				// Handle wraparound for playlist looping
-				const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 				let nextIndex = syncIndex + 1;
 
 				// Check if we need to wrap around
