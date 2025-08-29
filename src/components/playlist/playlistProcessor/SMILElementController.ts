@@ -575,12 +575,33 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
-			const readyMsg = 'Slave received signal-ready, continuing for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(readyMsg, regionName, syncIndex);
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+			if (!receivedSignal) {
+				// Timeout occurred - trigger resync
+				console.log(`[SYNC] Signal-ready timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+				this.synchronization.syncingInAction = true;
+				
+				// Get master's last known position
+				const masterPos = this.getPositions(regionName, 'prepared', syncGroup).master;
+				if (masterPos > syncIndex) {
+					if (!this.synchronization.resyncTargets) {
+						this.synchronization.resyncTargets = {};
+					}
+					this.synchronization.resyncTargets.prepare = masterPos + 1;
+					const msg = 'Timeout recovery: setting resync target to %d (master at %d)';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos + 1, masterPos);
+					} else {
+						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
+					}
+				}
 			} else {
-				debug(readyMsg, regionName, syncIndex);
+				const readyMsg = 'Slave received signal-ready, continuing for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
 			}
 		}
 	}
@@ -815,16 +836,38 @@ export class SMILElementController {
 					debug(waitReadyMsg, regionName, syncIndex, state);
 				}
 				
-				await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+				const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
 				
-				const proceedMsg = 'Slave received signal-ready, proceeding with %s for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(proceedMsg, state, regionName, syncIndex);
+				if (!receivedSignal) {
+					// Timeout occurred - trigger resync
+					console.log(`[SYNC] Signal-ready timeout in coordinateElementTransition for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+					this.synchronization.syncingInAction = true;
+					
+					// Get master's last known position
+					const masterPos = this.getPositions(regionName, state, syncGroup).master;
+					if (masterPos > syncIndex) {
+						if (!this.synchronization.resyncTargets) {
+							this.synchronization.resyncTargets = {};
+						}
+						// Since this is in play coordination, set play target
+						this.synchronization.resyncTargets.play = masterPos + 1;
+						const msg = 'Timeout recovery in play: setting resync target to %d (master at %d)';
+						if (timedDebug) {
+							timedDebug.log(msg, masterPos + 1, masterPos);
+						} else {
+							debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
+						}
+					}
+					return false; // Indicate resync needed
 				} else {
-					debug(proceedMsg, state, regionName, syncIndex);
+					const proceedMsg = 'Slave received signal-ready, proceeding with %s for region=%s, syncIndex=%d';
+					if (timedDebug) {
+						timedDebug.log(proceedMsg, state, regionName, syncIndex);
+					} else {
+						debug(proceedMsg, state, regionName, syncIndex);
+					}
+					return true;
 				}
-				
-				return true;
 			} else if (action === ProcessAction.RESYNC) {
 				// Resync needed - still send ACK to not block master
 				const masterPos = this.getPositions(regionName, expectedState, syncGroup).master;
@@ -1400,7 +1443,7 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
-	): Promise<void> {
+	): Promise<boolean> {
 		// Check for stored message first
 		const storedMsg = syncGroup.getSyncCoordinationMessage('signal-ready', regionName);
 		if (storedMsg && storedMsg.syncIndex === syncIndex) {
@@ -1413,11 +1456,11 @@ export class SMILElementController {
 			}
 			// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
 			syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
-			return; // Continue immediately
+			return true; // Continue immediately - signal received
 		}
 
 		// Create promise with active listener
-		return new Promise<void>((resolve) => {
+		return new Promise<boolean>((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | undefined;
 			let timeoutId: NodeJS.Timeout | undefined;
@@ -1443,8 +1486,9 @@ export class SMILElementController {
 				} else {
 					debug('[%s] ' + timeoutMsg, getTimestamp());
 				}
+				console.log(`[SYNC] ${timeoutMsg} - will trigger resync`);
 				cleanup();
-				resolve();
+				resolve(false);
 			}, 500);
 
 			// Set up active listener
@@ -1470,7 +1514,7 @@ export class SMILElementController {
 						// Clear consumed message
 						syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
 						cleanup();
-						resolve();
+						resolve(true);
 					}
 				}
 			});
