@@ -53,9 +53,9 @@ export async function joinAllSyncGroupsOnSmilStart(
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ): Promise<void> {
-	synchronization.syncGroupName = sos.config.syncGroupName;
-	synchronization.syncGroupIds = sos.config.syncGroupIds?.split(',') ?? [];
-	synchronization.syncDeviceId = sos.config.syncDeviceId;
+	synchronization.syncGroupName = sos.config.syncGroupName as string;
+	synchronization.syncGroupIds = (sos.config.syncGroupIds as string)?.split(',') ?? [];
+	synchronization.syncDeviceId = sos.config.syncDeviceId as string;
 	synchronization.syncGroupIds.sort();
 
 	const triggerSync = await createTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
@@ -156,8 +156,11 @@ export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) 
 		const options = sos.config.syncServerUrl
 			? {
 					engine: SyncEngine.SyncServer,
-					uri: sos.config.syncServerUrl,
-				}
+					uri: sos.config.syncServerUrl as string,
+					config: {
+						allowSlaveBroadcast: true,
+					},
+			  }
 			: {
 					engine: SyncEngine.P2PLocal,
 			  };
