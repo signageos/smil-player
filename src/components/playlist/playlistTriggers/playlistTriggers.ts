@@ -553,7 +553,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			serialPort = await this.sos.hardware.openSerialPort({
-				device: this.sos.config.serialPortDevice ?? SMILTriggersEnum.nexmoDevice,
+				device: (this.sos.config.serialPortDevice as string) ?? SMILTriggersEnum.nexmoDevice,
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
 			});
 		} catch (err) {

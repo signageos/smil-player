@@ -249,92 +249,6 @@ export class SMILElementController {
 	constructor(private synchronization: Synchronization) {}
 
 	/**
-	 * Prepare element for playback - coordinates sync at element boundaries
-	 */
-	public async prepareElement(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<boolean> {
-		const msg = 'Preparing element for sync: region=%s, syncIndex=%d';
-		if (timedDebug) {
-			timedDebug.log(msg, regionName, syncIndex);
-		} else {
-			debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex);
-		}
-
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			const noGroupMsg = 'No sync group found for region: %s';
-			if (timedDebug) {
-				timedDebug.log(noGroupMsg, regionName);
-			} else {
-				debug('[%s] ' + noGroupMsg, getTimestamp(), regionName);
-			}
-			return true; // No sync, continue
-		}
-
-		// Coordinate element transition - late joiners will sync here
-		return await this.coordinateElementTransition(syncGroup, 'prepared', regionName, syncIndex, timedDebug);
-	}
-
-	/**
-	 * Check if element should be prepared - handles resync logic for preparation phase
-	 */
-	public async shouldPrepareElement(
-		regionName: string,
-		syncIndex: number,
-		timedDebug?: TimedDebugger,
-	): Promise<boolean> {
-		if (!this.synchronization.shouldSync) {
-			return true; // No sync, always prepare
-		}
-
-		// Check if we're in resync mode for preparation
-		if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.prepare) {
-			if (syncIndex < this.synchronization.resyncTargets.prepare) {
-				const msg = 'Skipping element preparation during resync: syncIndex=%d, target=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, syncIndex, this.synchronization.resyncTargets.prepare);
-				} else {
-					debug('[%s] ' + msg, getTimestamp(), syncIndex, this.synchronization.resyncTargets.prepare);
-				}
-				return false; // Skip preparation
-			} else if (syncIndex === this.synchronization.resyncTargets.prepare) {
-				const msg = 'Reached resync target during preparation: region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex);
-				} else {
-					debug(msg, regionName, syncIndex);
-				}
-				console.log(`[SYNC] Reached prepare target at index ${syncIndex} - resuming normal sync`);
-				// Clear prepare target
-				delete this.synchronization.resyncTargets.prepare;
-				// COMMENTED OUT: Focusing on prepare sync only
-				// Clear syncingInAction immediately since we only track prepare targets
-				this.synchronization.syncingInAction = false;
-				const clearMsg = 'All resync targets cleared - exiting resync mode';
-				if (timedDebug) {
-					timedDebug.log(clearMsg);
-				} else {
-					debug('[%s] ' + clearMsg, getTimestamp());
-				}
-				// Continue with normal preparation
-			}
-		}
-
-		// Coordinate preparation with other devices
-		const shouldContinue = await this.prepareElement(regionName, syncIndex, timedDebug);
-		// If preparation triggered resync, we should skip
-		if (!shouldContinue) {
-			const skipMsg = 'Preparation coordination triggered resync - skip element';
-			if (timedDebug) {
-				timedDebug.log(skipMsg);
-			} else {
-				debug('[%s] ' + skipMsg, getTimestamp());
-			}
-			return false;
-		}
-		return true;
-	}
-
-	/**
 	 * Check if element should be played - handles resync logic for playback phase
 	 */
 	public async shouldPlayElement(
@@ -412,24 +326,6 @@ export class SMILElementController {
 
 		// Coordinate playback start
 		return await this.coordinateElementTransition(syncGroup, 'playing', regionName, syncIndex, timedDebug);
-	}
-
-	/**
-	 * Mark element as finished - clean up sync state
-	 */
-	public async markElementFinished(regionName: string, syncIndex: number, timedDebug?: TimedDebugger): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No-op for non-sync playlists
-		}
-
-		const msg = 'Marking element as finished: region=%s, syncIndex=%d';
-		if (timedDebug) {
-			timedDebug.log(msg, regionName, syncIndex);
-		} else {
-			debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex);
-		}
-
-		// Finished state is not needed in ACK protocol
 	}
 
 	/**
@@ -580,7 +476,7 @@ export class SMILElementController {
 				// Timeout occurred - trigger resync
 				console.log(`[SYNC] Signal-ready timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
 				this.synchronization.syncingInAction = true;
-				
+
 				// Get master's last known position
 				const masterPos = this.getPositions(regionName, 'prepared', syncGroup).master;
 				if (masterPos > syncIndex) {
@@ -719,7 +615,7 @@ export class SMILElementController {
 			}
 
 			// In ACK protocol, state broadcasts are replaced by commands
-			
+
 			// For playing state, master must broadcast cmd-play
 			if (state === 'playing') {
 				await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
@@ -770,7 +666,7 @@ export class SMILElementController {
 					} else {
 						debug(ackResultMsg, ackKey);
 					}
-					
+
 					// After receiving ACKs, broadcast signal-ready
 					if (acksReceived || expectedAcks === 0) {
 						await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
@@ -827,7 +723,7 @@ export class SMILElementController {
 				const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
 				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
 				debug('[%s] Slave sent %s for region=%s, syncIndex=%d', getTimestamp(), ackType, regionName, syncIndex);
-				
+
 				// Wait for signal-ready from master before proceeding
 				const waitReadyMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d, state=%s';
 				if (timedDebug) {
@@ -835,14 +731,14 @@ export class SMILElementController {
 				} else {
 					debug(waitReadyMsg, regionName, syncIndex, state);
 				}
-				
+
 				const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
-				
+
 				if (!receivedSignal) {
 					// Timeout occurred - trigger resync
 					console.log(`[SYNC] Signal-ready timeout in coordinateElementTransition for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
 					this.synchronization.syncingInAction = true;
-					
+
 					// Get master's last known position
 					const masterPos = this.getPositions(regionName, state, syncGroup).master;
 					if (masterPos > syncIndex) {
@@ -1326,6 +1222,13 @@ export class SMILElementController {
 							case ProcessAction.RESYNC:
 								// We're behind - resync flags already set by processElementState
 								debug('[%s] Detected resync needed while waiting for %s', getTimestamp(), commandType);
+								// Send ACK for master's position to not block master during resync
+								await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
+								debug(
+									'[%s] Sent ACK for master position %d before starting resync',
+									getTimestamp(),
+									message.syncIndex,
+								);
 								cleanup();
 								resolve(ProcessAction.RESYNC);
 								break;

@@ -60,7 +60,7 @@ export class SmilPlayer implements ISmilPlayer {
 			throw new Error('No valid smil url provided');
 		}
 
-		smilUrl = removeWhitespace(smilUrl);
+		smilUrl = removeWhitespace(smilUrl as string);
 
 		debug('Smil file url is: %s', smilUrl);
 
@@ -93,7 +93,7 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
-	}
+	};
 
 	private async checkAndManageSmilMediaInfo(smilUrl: string): Promise<void> {
 		try {
@@ -139,7 +139,7 @@ export class SmilPlayer implements ISmilPlayer {
 		}
 
 		const backupImageObject: SMILFile = {
-			src: sos.config.backupImageUrl,
+			src: sos.config.backupImageUrl as string,
 		};
 
 		try {
@@ -200,7 +200,9 @@ export class SmilPlayer implements ISmilPlayer {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
-		config.videoOptions.background = sos.config.videoBackground || sos.config.videoBackground === 'true' || false;
+		config.videoOptions.background = (sos.config.videoBackground ||
+			sos.config.videoBackground === 'true' ||
+			false) as boolean;
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};
@@ -385,7 +387,7 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
-	}
+	};
 
 	private fallbackToPreviousPlaylist = async (
 		internalStorageUnit: IStorageUnit,
