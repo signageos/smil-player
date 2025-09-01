@@ -19,6 +19,11 @@ module.exports = (_env, argv) => {
 		},
 		resolve: {
 			extensions: ['.ts', '.tsx', '.js', '.jsx'],
+			alias: {
+				// Use the compiled dist version instead of ES6 modules
+				'@signageos/front-applet/es6/FrontApplet/FrontApplet': '@signageos/front-applet',
+				'@signageos/front-applet/es6/FrontApplet/Sync/Sync': path.resolve(__dirname, 'src/shims/SyncShim.js')
+			}
 		},
 		module: {
 			rules: [
@@ -48,7 +53,7 @@ module.exports = (_env, argv) => {
 						{
 							loader: 'babel-loader',
 							options: {
-								presets: ['@babel/preset-env'],
+								presets: ['@babel/preset-env']
 							},
 						},
 					],
