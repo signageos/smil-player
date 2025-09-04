@@ -39,7 +39,8 @@
     "url",
     "@mdx-js/mdx",
     "cross-env",
-    "glob"
+    "glob",
+    "@babel/core"
   ]
 }
 
