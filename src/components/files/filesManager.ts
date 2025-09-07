@@ -329,9 +329,47 @@ export class FilesManager implements IFilesManager {
 		}
 
 		// Location strategy uses strings as values, while lastModified uses timestamps
-		const isLocationStrategy = fetchStrategy === getStrategy(SMILEnums.location);
+		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
+		debug('isLocationStrategy', isLocationStrategy);
+		console.log('fetchStrategy.strategyType:', fetchStrategy.strategyType);
+		console.log('storedValue:', storedValue);
+		console.log('currentValue:', currentValue);
+		console.log('currentValue !== storedValue:', currentValue !== storedValue);
+
+		// Helper function to strip __smil_version query parameter from URL
+		const stripSmilVersion = (url: string | null): string | null => {
+			if (!url) return url;
+			try {
+				const urlObj = new URL(url);
+				urlObj.searchParams.delete('__smil_version');
+				return urlObj.toString();
+			} catch {
+				// If URL parsing fails, return original
+				return url;
+			}
+		};
+
+		// Debug logging for location strategy edge cases
+		if (isLocationStrategy) {
+			if (currentValue === null) {
+				debug('Location strategy: currentValue is null (request failed or no Location header)');
+			}
+			if (stripSmilVersion(currentValue) === stripSmilVersion(media.src)) {
+				debug('Location strategy: currentValue equals media.src (no redirect, same URL returned)');
+			}
+			// Log the comparison values for debugging
+			debug(
+				'Location strategy comparison - currentValue: %s, media.src: %s, storedValue: %s',
+				stripSmilVersion(currentValue),
+				stripSmilVersion(media.src),
+				stripSmilVersion(storedValue as string),
+			);
+		}
+
 		const isNewVersion = isLocationStrategy
-			? currentValue !== storedValue
+			? currentValue !== null &&
+			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		if (isNewVersion) {
@@ -447,7 +485,7 @@ export class FilesManager implements IFilesManager {
 							try {
 								debug(`Downloading file: %O`, updateValue ?? file.src);
 								// Location strategy uses strings as values, while lastModified uses timestamps
-								const isLocationStrategy = fetchStrategy === getStrategy(SMILEnums.location);
+								const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 								let downloadUrl: string;
 
 								if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
@@ -596,19 +634,7 @@ export class FilesManager implements IFilesManager {
 		debug(`Starting to check files for updates %O:`, smilObject);
 		try {
 			// For SMIL file, always use lastModified strategy
-			const smilFetchStrategy = (
-				media: MergedDownloadList,
-				timeOut: number,
-				skipContentHttpStatusCodes: number[],
-				updateContentHttpStatusCodes: number[],
-			) =>
-				getStrategy(SMILEnums.lastModified)(
-					media,
-					timeOut,
-					skipContentHttpStatusCodes,
-					updateContentHttpStatusCodes,
-					this.makeXhrRequest,
-				);
+			const smilFetchStrategy = getStrategy(SMILEnums.lastModified);
 
 			resourceCheckers = resourceCheckers.concat(
 				this.convertToResourcesCheckerFormat(
@@ -626,19 +652,7 @@ export class FilesManager implements IFilesManager {
 			// check for media updates only if its not switched off in the smil file
 			if (!smilObject.onlySmilFileUpdate) {
 				// For media files, use the strategy based on update mechanism
-				const mediaFetchStrategy = (
-					media: MergedDownloadList,
-					timeOut: number,
-					skipContentHttpStatusCodes: number[],
-					updateContentHttpStatusCodes: number[],
-				) =>
-					getStrategy(smilObject.updateMechanism)(
-						media,
-						timeOut,
-						skipContentHttpStatusCodes,
-						updateContentHttpStatusCodes,
-						this.makeXhrRequest,
-					);
+				const mediaFetchStrategy = getStrategy(smilObject.updateMechanism);
 
 				resourceCheckers = resourceCheckers.concat(
 					this.convertToResourcesCheckerFormat(
