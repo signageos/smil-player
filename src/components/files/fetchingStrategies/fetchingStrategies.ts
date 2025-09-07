@@ -11,13 +11,16 @@ type XhrRequestFunction = (
 	authHeaders?: Record<string, string>,
 ) => Promise<Response>;
 
-export type FetchStrategy = (
-	media: MergedDownloadList,
-	timeOut: number,
-	skipContentHttpStatusCodes: number[],
-	updateContentHttpStatusCodes: number[],
-	makeXhrRequest: XhrRequestFunction,
-) => Promise<string | null>;
+export interface FetchStrategy {
+	(
+		media: MergedDownloadList,
+		timeOut: number,
+		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
+		makeXhrRequest: XhrRequestFunction,
+	): Promise<string | null>;
+	strategyType?: string;
+}
 
 const locationHeaderStrategy: FetchStrategy = async (
 	media,
@@ -209,6 +212,10 @@ const lastModifiedStrategy: FetchStrategy = async (
 	return newLastModified || DEFAULT_LAST_MODIFIED;
 };
 
+// Add strategy type identifiers
+locationHeaderStrategy.strategyType = SMILEnums.location;
+lastModifiedStrategy.strategyType = SMILEnums.lastModified;
+
 // Strategy map
 const strategies: Record<string, FetchStrategy> = {
 	[SMILEnums.location]: locationHeaderStrategy,
@@ -217,5 +224,10 @@ const strategies: Record<string, FetchStrategy> = {
 
 // Factory function
 export const getStrategy = (updateMechanism: string): FetchStrategy => {
-	return strategies[updateMechanism] || strategies[SMILEnums.lastModified];
+	const strategy = strategies[updateMechanism] || strategies[SMILEnums.lastModified];
+	// Ensure the strategyType is preserved
+	if (!strategy.strategyType) {
+		strategy.strategyType = updateMechanism === SMILEnums.location ? SMILEnums.location : SMILEnums.lastModified;
+	}
+	return strategy;
 };
