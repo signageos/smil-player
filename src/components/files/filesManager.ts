@@ -350,12 +350,14 @@ export class FilesManager implements IFilesManager {
 		// Location strategy uses strings as values, while lastModified uses timestamps
 		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 		debug('isLocationStrategy', isLocationStrategy);
+		console.log('fetchStrategy.strategyType:', fetchStrategy.strategyType);
+		console.log('storedValue:', storedValue);
+		console.log('currentValue:', currentValue);
+		console.log('currentValue !== storedValue:', currentValue !== storedValue);
 
 		// Helper function to strip __smil_version query parameter from URL
 		const stripSmilVersion = (url: string | null): string | null => {
-			if (!url) {
-				return url;
-			}
+			if (!url) return url;
 			try {
 				const urlObj = new URL(url);
 				urlObj.searchParams.delete('__smil_version');
@@ -385,8 +387,8 @@ export class FilesManager implements IFilesManager {
 
 		const isNewVersion = isLocationStrategy
 			? currentValue !== null &&
-				stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
-				currentValue !== storedValue
+			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		if (isNewVersion) {
