@@ -20,7 +20,18 @@ from the server. The syntax is as follows:
 The SMIL player reaches the SMIL playlist URL and checks the Last-modified header. Once a new version of the playlist is
 uploaded, it is recognized, downloaded, and played.
 
-- `content` - defines the check interval in seconds; mandatory.
+### Update Check Intervals
+
+The SMIL Player supports separate update intervals for media files and the SMIL file itself:
+
+```xml
+<!-- Separate intervals for media and SMIL file checks -->
+<meta http-equiv="Refresh" contentRefresh="60" smilFileRefresh="1200"/>
+```
+
+- `content` - defines the check interval for media files in seconds; for backward compatibility, if used alone, applies to media files.
+- `contentRefresh` - explicitly sets the check interval for media files in seconds; use when you want separate intervals.
+- `smilFileRefresh` - sets the check interval for the SMIL file in seconds (default: 86400 seconds/24 hours).
 - `expr` - limits the check interval based on [expression](https://docs.signageos.io/hc/en-us/articles/4405241217810);
   optional.
 - `timeOut` - sets the timeout for HEAD requests in milliseconds (default: 2000ms); optional. Useful for slower or unstable networks where you may want to increase the timeout (e.g., 5000-10000ms).
@@ -34,11 +45,33 @@ period, e.g., from 1 am to 6 am:
 
 `expr="compare(time(),'01:00:00')>0 and compare(time(), '6:00:00')<0"`
 
+### Benefits of Separate Update Intervals
+
+Splitting media and SMIL file checks provides several advantages:
+
+1. **Performance Optimization**: Reduce unnecessary HEAD requests for stable SMIL files while keeping media content fresh
+2. **Bandwidth Efficiency**: SMIL files typically change less frequently than media content
+3. **Flexible Update Strategies**: 
+   - Dynamic content (news, weather) can update frequently
+   - Playlist structure can remain stable with less frequent checks
+4. **Backward Compatibility**: Using only `content` attribute continues to work for media file checks
+
+**Common Use Cases:**
+- **Dynamic Content Feeds**: Check media every 30 seconds, SMIL daily
+- **Stable Playlists**: Check media hourly, SMIL weekly
+- **Live Events**: Frequent media updates during events, rare SMIL changes
+
 ### Examples with Different Configurations
 
 ```xml
-<!-- Fast network with frequent updates -->
+<!-- Fast network with frequent updates (backward compatible) -->
 <meta http-equiv="Refresh" content="30" timeOut="2000"/>
+
+<!-- Separate intervals: media every minute, SMIL every 20 minutes -->
+<meta http-equiv="Refresh" contentRefresh="60" smilFileRefresh="1200"/>
+
+<!-- Frequent media updates, daily SMIL checks -->
+<meta http-equiv="Refresh" contentRefresh="30" smilFileRefresh="86400"/>
 
 <!-- Slower network with longer timeout -->
 <meta http-equiv="Refresh" content="60" timeOut="5000"/>
