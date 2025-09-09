@@ -71,9 +71,9 @@ You can configure the timeout for HEAD requests that check for file updates usin
 - For slower or unstable networks, consider increasing the timeout to 5000-10000ms
 - The timeout prevents the player from waiting too long when checking for updates on slow connections
 
-## Handling Unavailable Content
+## Handling Content Updates and Errors
 
-The SMIL Player can automatically skip content that returns HTTP error codes, ensuring uninterrupted playback even when some media files are unavailable.
+The SMIL Player provides comprehensive content management through HTTP status codes.
 
 ### Automatic Content Skipping
 
@@ -88,24 +88,50 @@ With this configuration:
 - The playlist continues with the next available content
 - No black screens or playback interruption occurs
 
-### Multiple Status Codes
+### Forced Content Updates
 
-You can specify multiple HTTP status codes to handle various error scenarios:
+The `updateContentOnHttpStatus` attribute provides an additional update trigger mechanism alongside last-modified headers:
 
 ```xml
-<meta http-equiv="Refresh" content="60" skipContentOnHttpStatus="403,404,500,503"/>
+<!-- Force re-download on specific status codes -->
+<meta http-equiv="Refresh" content="60" updateContentOnHttpStatus="200,205"/>
 ```
 
-Common status codes to consider:
-- **404** - Not Found: Content doesn't exist on the server
-- **403** - Forbidden: Access denied to the content
-- **500** - Internal Server Error: Server-side error
-- **503** - Service Unavailable: Temporary server unavailability
+How update detection works:
+1. **Primary mechanism**: Last-modified headers are checked
+2. **Additional mechanism**: Status codes can force updates
+3. When a configured status code is returned, content is re-downloaded regardless of last-modified
 
-This feature is particularly useful for:
-- Dynamic content feeds that may have temporary gaps
-- Playlists with external content sources
-- Preventing playback disruption in production environments
+This dual mechanism ensures:
+- Standard HTTP caching works normally with last-modified headers
+- Servers can force updates using status codes when needed
+- Dynamic content providers have flexibility in signaling updates
+
+### Comprehensive Content Management
+
+Combine both attributes for complete control:
+
+```xml
+<meta http-equiv="Refresh" content="60" 
+      skipContentOnHttpStatus="403,404,500,503"
+      updateContentOnHttpStatus="200,205"/>
+```
+
+Common status codes:
+- **Skip codes**:
+  - 404 - Not Found
+  - 403 - Forbidden
+  - 500 - Internal Server Error
+  - 503 - Service Unavailable
+- **Update codes**:
+  - 200 - OK (force refresh on success)
+  - 205 - Reset Content (explicit refresh request)
+
+This is particularly useful for:
+- Dynamic content feeds with varying availability
+- CDN environments with custom status codes
+- APIs that signal updates through HTTP status
+- Servers that don't properly set last-modified headers
 
 ## URLs with Query Parameters
 
