@@ -24,6 +24,7 @@ uploaded, it is recognized, downloaded, and played.
 - `expr` - limits the check interval based on [expression](https://docs.signageos.io/hc/en-us/articles/4405241217810);
   optional.
 - `timeOut` - sets the timeout for HEAD requests in milliseconds (default: 2000ms); optional. Useful for slower or unstable networks where you may want to increase the timeout (e.g., 5000-10000ms).
+- `skipContentOnHttpStatus` - automatically skip media files that return specified HTTP error codes (e.g., "404" or "403,404,500"); optional. This prevents playback interruption when content is unavailable.
 - `onlySmilUpdate` - when set to true, the player only checks the actual SMIL file for updates and not the media
   specified within the SMIL file.
 
@@ -43,7 +44,31 @@ period, e.g., from 1 am to 6 am:
 
 <!-- Unstable network with extended timeout and less frequent checks -->
 <meta http-equiv="Refresh" content="120" timeOut="10000" onlySmilUpdate="true"/>
+
+<!-- Skip unavailable content (404 errors) -->
+<meta http-equiv="Refresh" content="60" skipContentOnHttpStatus="404"/>
+
+<!-- Skip multiple error types for robust playback -->
+<meta http-equiv="Refresh" content="60" skipContentOnHttpStatus="403,404,500,503"/>
+
+<!-- Complete configuration with all options -->
+<meta http-equiv="Refresh" content="60" 
+      timeOut="5000" 
+      skipContentOnHttpStatus="404,503" 
+      onlySmilUpdate="false"
+      expr="compare(time(),'01:00:00')>0 and compare(time(), '6:00:00')<0"/>
 ```
+
+### Content Error Handling
+
+When `skipContentOnHttpStatus` is configured:
+- Media files returning the specified HTTP status codes are automatically skipped
+- The playlist continues playing the next available content
+- This prevents black screens or playback interruption when content is temporarily or permanently unavailable
+- Common use cases include:
+  - Dynamic content that may not always be available (404 - Not Found)
+  - Access-restricted content (403 - Forbidden)
+  - Server errors (500 - Internal Server Error, 503 - Service Unavailable)
 
 > ### Important: HEAD requests
 >The SMIL player makes a `HEAD` request to check `Last-modified` instead of using GET/POST. This method saves bandwidth.
