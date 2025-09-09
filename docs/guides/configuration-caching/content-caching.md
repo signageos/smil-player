@@ -39,6 +39,19 @@ If `onlySmilUpdate` is missing, the default value is false, which means the SMIL
 media
 within it for updates every 10 seconds.
 
+## Configuring Update Check Timeout
+
+You can configure the timeout for HEAD requests that check for file updates using the `timeOut` attribute:
+
+```xml
+<meta http-equiv="Refresh" content="60" timeOut="5000" onlySmilUpdate="false"/>
+```
+
+- `timeOut` - Timeout in milliseconds for HEAD requests (default: 2000ms)
+- This timeout applies to all update checks (SMIL file and media files)
+- For slower or unstable networks, consider increasing the timeout to 5000-10000ms
+- The timeout prevents the player from waiting too long when checking for updates on slow connections
+
 ## URLs with Query Parameters
 
 The SMIL Player treats URLs with different query parameters as separate files for caching purposes. This means that each unique combination of URL and query parameters will be cached independently.
