@@ -36,6 +36,7 @@ The SMIL Player supports separate update intervals for media files and the SMIL 
   optional.
 - `timeOut` - sets the timeout for HEAD requests in milliseconds (default: 2000ms); optional. Useful for slower or unstable networks where you may want to increase the timeout (e.g., 5000-10000ms).
 - `skipContentOnHttpStatus` - automatically skip media files that return specified HTTP error codes (e.g., "404" or "403,404,500"); optional. This prevents playback interruption when content is unavailable.
+- `updateContentOnHttpStatus` - force re-download of media files that return specified HTTP status codes (e.g., "200,205"); optional. This works alongside last-modified headers as an additional update trigger mechanism.
 - `fallbackToPreviousPlaylist` - when set to true, continues playing the current playlist if an invalid SMIL file is provided during an update (default: false); optional. Prevents disruption from deployment errors.
 - `onlySmilUpdate` - when set to true, the player only checks the actual SMIL file for updates and not the media
   specified within the SMIL file.
@@ -103,6 +104,37 @@ When `skipContentOnHttpStatus` is configured:
   - Dynamic content that may not always be available (404 - Not Found)
   - Access-restricted content (403 - Forbidden)
   - Server errors (500 - Internal Server Error, 503 - Service Unavailable)
+
+### Forced Content Updates
+
+The `updateContentOnHttpStatus` attribute provides an additional update mechanism alongside last-modified headers:
+
+```xml
+<!-- Force update when server returns specific status codes -->
+<meta http-equiv="Refresh" content="60" updateContentOnHttpStatus="200,205"/>
+
+<!-- Combine skip and update for comprehensive content management -->
+<meta http-equiv="Refresh" content="60" 
+      skipContentOnHttpStatus="404,503"
+      updateContentOnHttpStatus="200,205"/>
+```
+
+How it works:
+- When HEAD request returns a configured status code, the content is marked for re-download
+- This works **in addition to** last-modified header checks
+- Useful when servers use status codes to signal content updates
+- The player will re-download the content even if last-modified hasn't changed
+
+Common use cases:
+- **HTTP 200**: Force refresh of dynamic content on successful response
+- **HTTP 205 (Reset Content)**: Server explicitly requests content refresh
+- **Custom CDN codes**: Some CDNs use specific codes to signal new versions
+- **Dynamic content APIs**: Services that signal updates through status codes
+
+This provides flexibility for servers that:
+- Don't properly set last-modified headers
+- Use status codes as update signals
+- Need to force updates regardless of timestamps
 
 ### Fallback to Previous Playlist
 
