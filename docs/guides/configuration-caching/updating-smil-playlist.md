@@ -25,6 +25,7 @@ uploaded, it is recognized, downloaded, and played.
   optional.
 - `timeOut` - sets the timeout for HEAD requests in milliseconds (default: 2000ms); optional. Useful for slower or unstable networks where you may want to increase the timeout (e.g., 5000-10000ms).
 - `skipContentOnHttpStatus` - automatically skip media files that return specified HTTP error codes (e.g., "404" or "403,404,500"); optional. This prevents playback interruption when content is unavailable.
+- `fallbackToPreviousPlaylist` - when set to true, continues playing the current playlist if an invalid SMIL file is provided during an update (default: false); optional. Prevents disruption from deployment errors.
 - `onlySmilUpdate` - when set to true, the player only checks the actual SMIL file for updates and not the media
   specified within the SMIL file.
 
@@ -69,6 +70,35 @@ When `skipContentOnHttpStatus` is configured:
   - Dynamic content that may not always be available (404 - Not Found)
   - Access-restricted content (403 - Forbidden)
   - Server errors (500 - Internal Server Error, 503 - Service Unavailable)
+
+### Fallback to Previous Playlist
+
+The `fallbackToPreviousPlaylist` attribute provides protection against invalid SMIL updates:
+
+```xml
+<!-- Continue current playlist if invalid SMIL is provided -->
+<meta http-equiv="Refresh" content="60" fallbackToPreviousPlaylist="true"/>
+
+<!-- Combined with other options for robust operation -->
+<meta http-equiv="Refresh" content="60" 
+      fallbackToPreviousPlaylist="true"
+      skipContentOnHttpStatus="404"
+      timeOut="5000"/>
+```
+
+When enabled:
+- If an invalid or broken SMIL file is deployed, the player continues with the current valid playlist
+- No backup image is shown - the display continues uninterrupted
+- The player keeps checking for valid updates in the background
+- Once a valid SMIL is found, it will be loaded and played
+
+This is particularly useful for:
+- Production environments where display continuity is critical
+- Preventing accidental deployment of broken configurations
+- Maintaining playback during CMS or server issues
+- Avoiding the backup image display for temporary problems
+
+**Note:** Without this option, an invalid SMIL update would trigger the backup image display.
 
 > ### Important: HEAD requests
 >The SMIL player makes a `HEAD` request to check `Last-modified` instead of using GET/POST. This method saves bandwidth.

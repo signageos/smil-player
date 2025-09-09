@@ -7,6 +7,27 @@ A default backup image is provided by SignageOs, which is locally stored in the 
 
 Currently, only a single image is supported.
 
+## Fallback Mechanisms
+
+The SMIL Player provides two fallback mechanisms for handling errors:
+
+### 1. Backup Image (Default Behavior)
+When an invalid SMIL file is encountered (either during initial load or update), the player displays a backup image. This prevents black screens but interrupts the current content.
+
+### 2. Fallback to Previous Playlist (Optional)
+When `fallbackToPreviousPlaylist="true"` is configured in the refresh meta tag, the player continues playing the current valid playlist if an invalid SMIL update is received. This provides seamless continuity without interruption.
+
+```xml
+<!-- Enable fallback to previous playlist -->
+<meta http-equiv="Refresh" content="60" fallbackToPreviousPlaylist="true"/>
+```
+
+**When to use each approach:**
+- **Backup Image**: Use for initial deployment or when you want clear visual feedback that something is wrong
+- **Fallback to Previous**: Use in production when display continuity is critical and temporary deployment issues shouldn't disrupt playback
+
+See [Updating SMIL Playlist](../configuration-caching/updating-smil-playlist.md#fallback-to-previous-playlist) for more details on the fallback to previous playlist feature.
+
 ## Setup
 
 There are two options for setting up your backup image.
