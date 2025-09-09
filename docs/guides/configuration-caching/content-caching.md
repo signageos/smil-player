@@ -52,6 +52,42 @@ You can configure the timeout for HEAD requests that check for file updates usin
 - For slower or unstable networks, consider increasing the timeout to 5000-10000ms
 - The timeout prevents the player from waiting too long when checking for updates on slow connections
 
+## Handling Unavailable Content
+
+The SMIL Player can automatically skip content that returns HTTP error codes, ensuring uninterrupted playback even when some media files are unavailable.
+
+### Automatic Content Skipping
+
+Configure the player to skip content based on HTTP status codes:
+
+```xml
+<meta http-equiv="Refresh" content="60" skipContentOnHttpStatus="404"/>
+```
+
+With this configuration:
+- When a media file returns HTTP 404 (Not Found), it will be automatically skipped
+- The playlist continues with the next available content
+- No black screens or playback interruption occurs
+
+### Multiple Status Codes
+
+You can specify multiple HTTP status codes to handle various error scenarios:
+
+```xml
+<meta http-equiv="Refresh" content="60" skipContentOnHttpStatus="403,404,500,503"/>
+```
+
+Common status codes to consider:
+- **404** - Not Found: Content doesn't exist on the server
+- **403** - Forbidden: Access denied to the content
+- **500** - Internal Server Error: Server-side error
+- **503** - Service Unavailable: Temporary server unavailability
+
+This feature is particularly useful for:
+- Dynamic content feeds that may have temporary gaps
+- Playlists with external content sources
+- Preventing playback disruption in production environments
+
 ## URLs with Query Parameters
 
 The SMIL Player treats URLs with different query parameters as separate files for caching purposes. This means that each unique combination of URL and query parameters will be cached independently.
