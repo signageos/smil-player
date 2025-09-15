@@ -288,6 +288,11 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
+	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
+		if (!value) return false;
+		return Object.values(mediaInfoObject).some((storedValue) => storedValue === value);
+	};
+
 	public shouldUpdateLocalFile = async (
 		localFilePath: string,
 		media: MergedDownloadList,
@@ -371,6 +376,15 @@ export class FilesManager implements IFilesManager {
 			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
 			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
+
+		// Check if we already have this content (for location strategy only)
+		if (isNewVersion && isLocationStrategy && this.isValueAlreadyStored(currentValue, mediaInfoObject)) {
+			debug(`Content already exists locally with value: %s, skipping download but updating mapping`, currentValue);
+			return {
+				shouldUpdate: false,
+				value: currentValue, // Still return the value to update mediaInfoObject
+			};
+		}
 
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
@@ -516,6 +530,11 @@ export class FilesManager implements IFilesManager {
 							}
 						})(),
 					);
+				} else if (updateCheck.value) {
+					// File doesn't need download but we need to update the mediaInfoObject
+					// This happens when content is already downloaded but moved to a new URL
+					debug(`Updating mediaInfoObject for %s without download`, file.src);
+					filesToUpdate.set(getFileName(file.src), updateCheck.value);
 				}
 			}),
 		);
