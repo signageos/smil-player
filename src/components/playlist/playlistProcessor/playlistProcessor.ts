@@ -2352,7 +2352,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		changeZIndex(value, element, +1);
 		debug(`[${debugId}] Changed z-index for element`);
 
-		// value.wasUpdated is there for a case when file updates in localstorage under same url, player needs to regenerate src to update it in browser cache
+		// value.wasUpdated is there for a case when file updates in localstorage under same url,
+		// player needs to regenerate src to update it in browser cache
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
 		let src = generateElementSrc(
 			value.src,

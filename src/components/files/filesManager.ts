@@ -727,6 +727,33 @@ export class FilesManager implements IFilesManager {
 		return [];
 	};
 
+	/**
+	 * Get or create media info file
+	 * @param filesList - Files to get or create media info for
+	 * @returns Media info object
+	 */
+	public getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
+		if (
+			!(await this.fileExists(
+				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+			))
+		) {
+			debug('MediaInfo file not found, creating json object');
+			return createJsonStructureMediaInfo(filesList);
+		}
+
+		const response = await this.sos.fileSystem.readFile({
+			storageUnit: this.internalStorageUnit,
+			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+		});
+		try {
+			return JSON.parse(response);
+		} catch (error) {
+			debug('Cannot parse smil meta media info', error);
+			return createJsonStructureMediaInfo(filesList);
+		}
+	};
+
 	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
 		if (!value) {
 			return false;
@@ -1105,30 +1132,4 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	/**
-	 * Get or create media info file
-	 * @param filesList - Files to get or create media info for
-	 * @returns Media info object
-	 */
-	public getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
-		if (
-			!(await this.fileExists(
-				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-			))
-		) {
-			debug('MediaInfo file not found, creating json object');
-			return createJsonStructureMediaInfo(filesList);
-		}
-
-		const response = await this.sos.fileSystem.readFile({
-			storageUnit: this.internalStorageUnit,
-			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-		});
-		try {
-			return JSON.parse(response);
-		} catch (error) {
-			debug('Cannot parse smil meta media info', error);
-			return createJsonStructureMediaInfo(filesList);
-		}
-	};
 }
