@@ -288,11 +288,6 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
-		if (!value) return false;
-		return Object.values(mediaInfoObject).some((storedValue) => storedValue === value);
-	};
-
 	public shouldUpdateLocalFile = async (
 		localFilePath: string,
 		media: MergedDownloadList,
@@ -343,7 +338,9 @@ export class FilesManager implements IFilesManager {
 
 		// Helper function to strip __smil_version query parameter from URL
 		const stripSmilVersion = (url: string | null): string | null => {
-			if (!url) return url;
+			if (!url) {
+				return url;
+			}
 			try {
 				const urlObj = new URL(url);
 				urlObj.searchParams.delete('__smil_version');
@@ -373,8 +370,8 @@ export class FilesManager implements IFilesManager {
 
 		const isNewVersion = isLocationStrategy
 			? currentValue !== null &&
-			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
-			  currentValue !== storedValue
+				stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+				currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		// Check if we already have this content (for location strategy only)
@@ -474,7 +471,7 @@ export class FilesManager implements IFilesManager {
 					? {
 							shouldUpdate: true,
 							value: latestRemoteValue,
-					  }
+						}
 					: await this.shouldUpdateLocalFile(
 							localFilePath,
 							file,
@@ -483,7 +480,7 @@ export class FilesManager implements IFilesManager {
 							skipContentHttpStatusCodes,
 							updateContentHttpStatusCodes,
 							fetchStrategy,
-					  );
+						);
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
 				if (updateCheck.shouldUpdate) {
@@ -730,6 +727,50 @@ export class FilesManager implements IFilesManager {
 		return [];
 	};
 
+	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
+		if (!value) {
+			return false;
+		}
+		return Object.values(mediaInfoObject).some((storedValue) => storedValue === value);
+	};
+
+	private findActualFileForMovedContent = async (
+		currentValue: string | null,
+		mediaInfoObject: MediaInfoObject,
+		localFilePath: string,
+	): Promise<string | null> => {
+		if (!currentValue) {
+			debug('findActualFileForMovedContent: No value provided, returning null');
+			return null;
+		}
+
+		debug('findActualFileForMovedContent: Looking for files with value: %s', currentValue);
+
+		// Find which file has this content (by matching the value)
+		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
+			if (storedValue === currentValue) {
+				debug('findActualFileForMovedContent: Found matching file: %s with value: %s', fileName, storedValue);
+				const filePath = `${localFilePath}/${fileName}`;
+
+				// Get the file details to get localUri
+				const fileDetails = await this.sos.fileSystem.getFile({
+					storageUnit: this.internalStorageUnit,
+					filePath: filePath,
+				});
+
+				if (fileDetails) {
+					debug('findActualFileForMovedContent: File exists at %s, localUri: %s', filePath, fileDetails.localUri);
+					return fileDetails.localUri;
+				} else {
+					debug('findActualFileForMovedContent: File not found at expected path: %s', filePath);
+				}
+			}
+		}
+
+		debug('findActualFileForMovedContent: No matching file found for value: %s', currentValue);
+		return null;
+	};
+
 	private checkLastModified = async (
 		file: MergedDownloadList,
 		localFilePath: string,
@@ -796,6 +837,42 @@ export class FilesManager implements IFilesManager {
 				}
 
 				return result.promises;
+			} else if (updateCheck.value && 'localFilePath' in file) {
+				debug('checkLastModified: Content moved but not downloaded. Value: %s for file: %s', updateCheck.value, file.src);
+
+				// Content exists but moved - update localFilePath without downloading
+				const actualLocalUri = await this.findActualFileForMovedContent(
+					updateCheck.value,
+					mediaInfoObject,
+					localFilePath,
+				);
+
+				if (actualLocalUri) {
+					const oldLocalFilePath = file.localFilePath;
+					debug(
+						'checkLastModified: Updating localFilePath for %s from %s to %s',
+						file.src,
+						oldLocalFilePath,
+						actualLocalUri,
+					);
+
+					file.localFilePath = actualLocalUri;
+					file.wasUpdated = true;
+
+					// Update mediaInfoObject so URL B knows about its new value
+					const fileName = getFileName(file.src);
+					const oldValue = mediaInfoObject[fileName];
+					mediaInfoObject[fileName] = updateCheck.value;
+
+					debug('checkLastModified: Updating mediaInfoObject[%s] from %s to %s', fileName, oldValue, updateCheck.value);
+
+					await this.writeMediaInfoFile(mediaInfoObject);
+					debug('checkLastModified: MediaInfoObject updated and saved for moved content');
+				} else {
+					debug('checkLastModified: WARNING - Could not find actual file for moved content: %s', file.src);
+				}
+			} else {
+				debug('checkLastModified: No update needed for file: %s', file.src);
 			}
 		} catch (err) {
 			debug('Error occurred: %O during checking file version: %O', err, file);
