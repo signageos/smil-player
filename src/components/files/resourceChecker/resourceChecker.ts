@@ -122,6 +122,15 @@ export class ResourceChecker implements IResourceChecker {
 		return this.stopPromise;
 	}
 
+	private groupResourcesByInterval() {
+		for (const resource of this.resources) {
+			if (!this.groupedResources.has(resource.interval)) {
+				this.groupedResources.set(resource.interval, []);
+			}
+			this.groupedResources.get(resource.interval)!.push(resource);
+		}
+	}
+
 	private clearAllTimers() {
 		for (const [, timeout] of this.intervalTimers) {
 			if (timeout) {
