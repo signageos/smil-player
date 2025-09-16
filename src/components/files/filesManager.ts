@@ -350,10 +350,6 @@ export class FilesManager implements IFilesManager {
 		// Location strategy uses strings as values, while lastModified uses timestamps
 		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 		debug('isLocationStrategy', isLocationStrategy);
-		console.log('fetchStrategy.strategyType:', fetchStrategy.strategyType);
-		console.log('storedValue:', storedValue);
-		console.log('currentValue:', currentValue);
-		console.log('currentValue !== storedValue:', currentValue !== storedValue);
 
 		// Helper function to strip __smil_version query parameter from URL
 		const stripSmilVersion = (url: string | null): string | null => {
@@ -389,13 +385,16 @@ export class FilesManager implements IFilesManager {
 
 		const isNewVersion = isLocationStrategy
 			? currentValue !== null &&
-				stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
-				currentValue !== storedValue
+			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		// Check if we already have this content (for location strategy only)
 		if (isNewVersion && isLocationStrategy && this.isValueAlreadyStored(currentValue, mediaInfoObject)) {
-			debug(`Content already exists locally with value: %s, skipping download but updating mapping`, currentValue);
+			debug(
+				`Content already exists locally with value: %s, skipping download but updating mapping`,
+				currentValue,
+			);
 			return {
 				shouldUpdate: false,
 				value: currentValue, // Still return the value to update mediaInfoObject
@@ -490,7 +489,7 @@ export class FilesManager implements IFilesManager {
 					? {
 							shouldUpdate: true,
 							value: latestRemoteValue,
-						}
+					  }
 					: await this.shouldUpdateLocalFile(
 							localFilePath,
 							file,
@@ -499,7 +498,7 @@ export class FilesManager implements IFilesManager {
 							skipContentHttpStatusCodes,
 							updateContentHttpStatusCodes,
 							fetchStrategy,
-						);
+					  );
 
 				// check if file is already downloaded or is forcedDownload to update existing file with new version
 				if (updateCheck.shouldUpdate) {
@@ -805,7 +804,11 @@ export class FilesManager implements IFilesManager {
 				});
 
 				if (fileDetails) {
-					debug('findActualFileForMovedContent: File exists at %s, localUri: %s', filePath, fileDetails.localUri);
+					debug(
+						'findActualFileForMovedContent: File exists at %s, localUri: %s',
+						filePath,
+						fileDetails.localUri,
+					);
 					return fileDetails.localUri;
 				} else {
 					debug('findActualFileForMovedContent: File not found at expected path: %s', filePath);
@@ -878,7 +881,11 @@ export class FilesManager implements IFilesManager {
 
 				return result.promises;
 			} else if (updateCheck.value && 'localFilePath' in file) {
-				debug('checkLastModified: Content moved but not downloaded. Value: %s for file: %s', updateCheck.value, file.src);
+				debug(
+					'checkLastModified: Content moved but not downloaded. Value: %s for file: %s',
+					updateCheck.value,
+					file.src,
+				);
 
 				// Content exists but moved - update localFilePath without downloading
 				const actualLocalUri = await this.findActualFileForMovedContent(
@@ -904,7 +911,12 @@ export class FilesManager implements IFilesManager {
 					const oldValue = mediaInfoObject[fileName];
 					mediaInfoObject[fileName] = updateCheck.value;
 
-					debug('checkLastModified: Updating mediaInfoObject[%s] from %s to %s', fileName, oldValue, updateCheck.value);
+					debug(
+						'checkLastModified: Updating mediaInfoObject[%s] from %s to %s',
+						fileName,
+						oldValue,
+						updateCheck.value,
+					);
 
 					await this.writeMediaInfoFile(mediaInfoObject);
 					debug('checkLastModified: MediaInfoObject updated and saved for moved content');
