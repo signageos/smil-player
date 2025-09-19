@@ -1,4 +1,5 @@
 import { IResourceChecker } from './IResourceChecker';
+import { IFilesManager } from '../IFilesManager';
 import Debug from 'debug';
 
 const debug = Debug('@signageos/smil-player:resourceChecker');
@@ -18,6 +19,7 @@ export class ResourceChecker implements IResourceChecker {
 
 	constructor(
 		private resources: Resource[],
+		private filesManager: IFilesManager,
 		private shouldSync: boolean,
 		private playlistNonSyncStopFunction: () => void,
 		private restartPlaylist: () => void,
@@ -44,6 +46,10 @@ export class ResourceChecker implements IResourceChecker {
 					}
 
 					try {
+						// Start batch collection before checking resources
+						debug('Starting batch collection for resource group at interval %d', interval);
+						this.filesManager.startBatch();
+
 						for (const resource of resourceGroup) {
 							if (!this.isRunning) {
 								break;
@@ -57,6 +63,13 @@ export class ResourceChecker implements IResourceChecker {
 								debug('Error checking %s: %O', resource.url, error);
 							}
 						}
+
+						// Commit batch after all resources in this interval group have been checked
+						debug('Committing batch updates for resource group at interval %d', interval);
+						// Extract filesList from resources in this interval group for commitBatch
+						const filesList = resourceGroup.map((r) => ({ src: r.url } as any));
+						await this.filesManager.commitBatch(filesList);
+						debug('Batch committed successfully for interval %d', interval);
 					} finally {
 						if (this.isRunning) {
 							scheduleNext();

@@ -68,6 +68,8 @@ export class FilesManager implements IFilesManager {
 	private smilLogging: SmilLogger = {
 		enabled: false,
 	};
+	// Batch update state for atomic mediaInfoObject updates
+	private batchUpdates: Map<string, string | number> = new Map();
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -370,6 +372,11 @@ export class FilesManager implements IFilesManager {
 			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
+		console.log(isNewVersion);
+		console.log(isLocationStrategy);
+		console.log(currentValue);
+		console.log(this.isValueAlreadyStored(currentValue, mediaInfoObject));
+
 		// Check if we already have this content (for location strategy only)
 		if (isNewVersion && isLocationStrategy && this.isValueAlreadyStored(currentValue, mediaInfoObject)) {
 			debug(
@@ -639,6 +646,7 @@ export class FilesManager implements IFilesManager {
 		await Promise.all(downloadPromises);
 
 		// Update mediaInfoObject and save to storage after all downloads are complete
+		console.log('1');
 		await this.updateMediaInfoAfterDownloads(mediaInfoObject, allFilesToUpdate);
 
 		return downloadPromises;
@@ -843,8 +851,12 @@ export class FilesManager implements IFilesManager {
 				// Wait for the download to complete
 				await Promise.all(result.promises);
 
-				// Update the mediaInfoObject after download completes
-				await this.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+				// Collect updates for batch processing instead of immediate write
+				console.log('2');
+				result.filesToUpdate.forEach((value, fileName) => {
+					debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
+					this.collectUpdate(fileName, String(value));
+				});
 
 				// Update file metadata to ensure it's properly tracked
 				const filePath = `${localFilePath}/${getFileName(file.src)}`;
@@ -860,10 +872,15 @@ export class FilesManager implements IFilesManager {
 					file.wasUpdated = true;
 				}
 
-				// Update the file's value in the media info object
+				// Collect update for batch processing instead of immediate write
 				if (fileDetails && fileDetails.lastModifiedAt) {
-					mediaInfoObject[getFileName(file.src)] = fileDetails.lastModifiedAt;
-					await this.writeMediaInfoFile(mediaInfoObject);
+					const fileName = getFileName(file.src);
+					debug(
+						'Collecting batch update for downloaded file: %s with lastModifiedAt: %s',
+						fileName,
+						fileDetails.lastModifiedAt,
+					);
+					this.collectUpdate(fileName, fileDetails.lastModifiedAt);
 				}
 
 				return result.promises;
@@ -893,20 +910,19 @@ export class FilesManager implements IFilesManager {
 					file.localFilePath = actualLocalUri;
 					file.wasUpdated = true;
 
-					// Update mediaInfoObject so URL B knows about its new value
+					// Collect update for batch processing instead of immediate write
 					const fileName = getFileName(file.src);
 					const oldValue = mediaInfoObject[fileName];
-					mediaInfoObject[fileName] = updateCheck.value;
 
 					debug(
-						'checkLastModified: Updating mediaInfoObject[%s] from %s to %s',
+						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
 						fileName,
 						oldValue,
 						updateCheck.value,
 					);
 
-					await this.writeMediaInfoFile(mediaInfoObject);
-					debug('checkLastModified: MediaInfoObject updated and saved for moved content');
+					this.collectUpdate(fileName, updateCheck.value);
+					debug('checkLastModified: Batch update collected for moved content');
 				} else {
 					debug('checkLastModified: WARNING - Could not find actual file for moved content: %s', file.src);
 				}
@@ -1142,5 +1158,42 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		}
+	};
+
+	// Batch update methods for atomic mediaInfoObject updates
+	public startBatch = (): void => {
+		debug('Starting batch collection for mediaInfoObject updates');
+		this.batchUpdates.clear();
+	};
+
+	public collectUpdate = (fileName: string, value: string | number): void => {
+		debug('Collecting batch update for file: %s with value: %s', fileName, value);
+		this.batchUpdates.set(fileName, value);
+	};
+
+	public commitBatch = async (filesList: MergedDownloadList[]): Promise<void> => {
+		if (this.batchUpdates.size === 0) {
+			debug('No batch updates to commit');
+			return;
+		}
+
+		debug('Committing %d batch updates to mediaInfoObject', this.batchUpdates.size);
+
+		// Read current mediaInfoObject
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
+
+		// Apply all collected updates
+		for (const [fileName, value] of this.batchUpdates) {
+			const oldValue = mediaInfoObject[fileName];
+			mediaInfoObject[fileName] = value;
+			debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
+		}
+
+		// Write once after all updates
+		await this.writeMediaInfoFile(mediaInfoObject);
+		debug('Batch updates committed and mediaInfoObject saved');
+
+		// Clear batch after successful commit
+		this.batchUpdates.clear();
 	};
 }

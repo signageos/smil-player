@@ -169,6 +169,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		] as MergedDownloadList[]);
 
 		// Update the mediaInfoObject after download completes
+		console.log('3');
 		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 
 		await Promise.all(downloadPromises);
@@ -207,6 +208,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
 		const resourceChecker = new ResourceChecker(
 			resources,
+			this.files,
 			this.synchronization.shouldSync,
 			() => this.setCheckFilesLoop(false),
 			restart,
