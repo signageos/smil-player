@@ -889,12 +889,11 @@ export class FilesManager implements IFilesManager {
 				debug('Clearing %d files from temp folder: %s', files.length, folder);
 
 				for (const file of files) {
-					const filePath = `${folder}/${file.name}`;
 					try {
-						await this.deleteFile(filePath);
-						debug('Deleted temp file: %s', filePath);
+						await this.deleteFile(file.filePath);
+						debug('Deleted temp file: %s', file.filePath);
 					} catch (err) {
-						debug('Error deleting temp file %s: %O', filePath, err);
+						debug('Error deleting temp file %s: %O', file.filePath, err);
 					}
 				}
 			} catch (err) {
