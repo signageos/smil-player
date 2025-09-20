@@ -454,12 +454,19 @@ export class FilesManager implements IFilesManager {
 		fetchStrategy: FetchStrategy,
 		forceDownload: boolean = false,
 		latestRemoteValue?: string,
+		useTempFolder: boolean = false,
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
+
+		// Determine the actual download path
+		const downloadPath = useTempFolder ? this.getTempFolder(localFilePath) : localFilePath;
+		if (useTempFolder) {
+			debug('Using temp folder for downloads: %s instead of %s', downloadPath, localFilePath);
+		}
 
 		// Create a map to track which files need to be updated in mediaInfoObject
 		const filesToUpdate: Map<string, number | string> = new Map();
@@ -499,6 +506,8 @@ export class FilesManager implements IFilesManager {
 					}
 
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
+					const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
+
 					promises.push(
 						(async () => {
 							try {
@@ -518,13 +527,20 @@ export class FilesManager implements IFilesManager {
 								await this.sos.fileSystem.downloadFile(
 									{
 										storageUnit: this.internalStorageUnit,
-										filePath: createLocalFilePath(localFilePath, file.src),
+										filePath: actualDownloadPath,
 									},
 									downloadUrl,
 									authHeaders,
 								);
 
-								debug(`File downloaded: %s`, updateValue ?? file.src);
+								debug(`File downloaded to: %s`, actualDownloadPath);
+
+								// Track file in temp if using temp folder
+								if (useTempFolder) {
+									const fileName = getFileName(file.src);
+									this.tempDownloads.set(fileName, actualDownloadPath);
+									debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
+								}
 
 								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
 							} catch (err) {
