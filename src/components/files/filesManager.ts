@@ -70,6 +70,8 @@ export class FilesManager implements IFilesManager {
 	};
 	// Batch update state for atomic mediaInfoObject updates
 	private batchUpdates: Map<string, string | number> = new Map();
+	// Track files downloaded to temp folders: filename -> temp path
+	private tempDownloads: Map<string, string> = new Map();
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -808,6 +810,33 @@ export class FilesManager implements IFilesManager {
 			return false;
 		}
 		return Object.values(mediaInfoObject).some((storedValue) => storedValue === value);
+	};
+
+	/**
+	 * Get the temp folder path for a given standard folder path
+	 */
+	private getTempFolder = (standardFolder: string): string => {
+		switch (standardFolder) {
+			case FileStructure.videos:
+				return FileStructure.videosTmp;
+			case FileStructure.images:
+				return FileStructure.imagesTmp;
+			case FileStructure.audios:
+				return FileStructure.audiosTmp;
+			case FileStructure.widgets:
+				return FileStructure.widgetsTmp;
+			default:
+				debug('No temp folder defined for: %s, using standard folder', standardFolder);
+				return standardFolder;
+		}
+	};
+
+	/**
+	 * Clear temp downloads tracking
+	 */
+	private clearTempDownloads = (): void => {
+		debug('Clearing temp downloads tracking. Previous count: %d', this.tempDownloads.size);
+		this.tempDownloads.clear();
 	};
 
 	private findActualFileForMovedContent = async (
