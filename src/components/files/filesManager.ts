@@ -857,6 +857,164 @@ export class FilesManager implements IFilesManager {
 		this.tempDownloads.clear();
 	};
 
+	/**
+	 * Clear all temp folders by deleting their contents
+	 */
+	private clearTempFolders = async (): Promise<void> => {
+		const tempFolders = [
+			FileStructure.videosTmp,
+			FileStructure.imagesTmp,
+			FileStructure.audiosTmp,
+			FileStructure.widgetsTmp,
+		];
+
+		for (const folder of tempFolders) {
+			try {
+				const files = await this.sos.fileSystem.listFiles({
+					storageUnit: this.internalStorageUnit,
+					filePath: folder,
+				});
+
+				debug('Clearing %d files from temp folder: %s', files.length, folder);
+
+				for (const file of files) {
+					const filePath = `${folder}/${file.name}`;
+					try {
+						await this.deleteFile(filePath);
+						debug('Deleted temp file: %s', filePath);
+					} catch (err) {
+						debug('Error deleting temp file %s: %O', filePath, err);
+					}
+				}
+			} catch (err) {
+				// Folder might not exist or be empty
+				debug('Error listing temp folder %s: %O', folder, err);
+			}
+		}
+	};
+
+	/**
+	 * Identify files that are no longer needed and can be deleted
+	 */
+	private identifyObsoleteFiles = async (
+		filesList: MergedDownloadList[],
+		mediaInfoObject: MediaInfoObject,
+	): Promise<Set<string>> => {
+		const obsoleteFiles = new Set<string>();
+		const neededFiles = new Set<string>();
+
+		// Build a set of all files that are still needed
+		for (const file of filesList) {
+			const fileName = getFileName(file.src);
+			const value = mediaInfoObject[fileName];
+
+			// Find which actual file this URL needs
+			for (const [storedFileName, storedValue] of Object.entries(mediaInfoObject)) {
+				if (storedValue === value) {
+					neededFiles.add(storedFileName);
+				}
+			}
+		}
+
+		// Identify files that exist but are no longer needed
+		for (const fileName of Object.keys(mediaInfoObject)) {
+			if (!neededFiles.has(fileName)) {
+				obsoleteFiles.add(fileName);
+				debug('Identified obsolete file: %s', fileName);
+			}
+		}
+
+		return obsoleteFiles;
+	};
+
+	/**
+	 * Migrate files from temp folders to standard folders
+	 */
+	private migrateFromTempToStandard = async (
+		filesList: MergedDownloadList[],
+		mediaInfoObject: MediaInfoObject,
+	): Promise<void> => {
+		if (this.tempDownloads.size === 0) {
+			debug('No temp downloads to migrate');
+			return;
+		}
+
+		debug('Starting migration of %d files from temp to standard folders', this.tempDownloads.size);
+
+		// First, identify obsolete files
+		const obsoleteFiles = await this.identifyObsoleteFiles(filesList, mediaInfoObject);
+
+		// Delete obsolete files from standard folders
+		for (const fileName of obsoleteFiles) {
+			// Find in which folder this file exists
+			const folders = [FileStructure.videos, FileStructure.images, FileStructure.audios, FileStructure.widgets];
+			for (const folder of folders) {
+				const filePath = `${folder}/${fileName}`;
+				try {
+					if (await this.fileExists(filePath)) {
+						await this.deleteFile(filePath);
+						debug('Deleted obsolete file: %s', filePath);
+					}
+				} catch (err) {
+					debug('Error checking/deleting obsolete file %s: %O', filePath, err);
+				}
+			}
+		}
+
+		// Move files from temp to standard locations
+		for (const [fileName, tempPath] of this.tempDownloads) {
+			// Determine the standard path from the temp path
+			const standardPath = tempPath
+				.replace(FileStructure.videosTmp, FileStructure.videos)
+				.replace(FileStructure.imagesTmp, FileStructure.images)
+				.replace(FileStructure.audiosTmp, FileStructure.audios)
+				.replace(FileStructure.widgetsTmp, FileStructure.widgets);
+
+			try {
+				// Check if file exists in standard location and delete it first
+				if (await this.fileExists(standardPath)) {
+					debug('Deleting existing file before migration: %s', standardPath);
+					await this.deleteFile(standardPath);
+				}
+
+				// Move file from temp to standard
+				debug('Moving file from %s to %s', tempPath, standardPath);
+				await this.sos.fileSystem.moveFile({
+					storageUnit: this.internalStorageUnit,
+					filePath: tempPath,
+					newFilePath: standardPath,
+				});
+
+				debug('Successfully migrated: %s', fileName);
+
+				// Update localFilePath for media items
+				for (const file of filesList) {
+					if (getFileName(file.src) === fileName && 'localFilePath' in file) {
+						const fileDetails = await this.sos.fileSystem.getFile({
+							storageUnit: this.internalStorageUnit,
+							filePath: standardPath,
+						});
+						if (fileDetails) {
+							file.localFilePath = fileDetails.localUri;
+							debug('Updated localFilePath for %s to %s', file.src, fileDetails.localUri);
+						}
+					}
+				}
+			} catch (err) {
+				debug('Error migrating file %s: %O', fileName, err);
+				// Continue with other files even if one fails
+			}
+		}
+
+		// Clear temp folders after migration
+		await this.clearTempFolders();
+
+		// Clear tracking
+		this.clearTempDownloads();
+
+		debug('Migration completed');
+	};
+
 	private findActualFileForMovedContent = async (
 		currentValue: string | null,
 		mediaInfoObject: MediaInfoObject,
