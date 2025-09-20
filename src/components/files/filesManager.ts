@@ -1241,6 +1241,7 @@ export class FilesManager implements IFilesManager {
 
 					// Collect update for batch processing instead of immediate write
 					const fileName = getFileName(file.src);
+					const oldValue = mediaInfoObject[fileName];
 
 					debug(
 						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
