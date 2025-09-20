@@ -1011,11 +1011,16 @@ export class FilesManager implements IFilesManager {
 
 				// Move file from temp to standard
 				debug('Moving file from %s to %s', tempPath, standardPath);
-				await this.sos.fileSystem.moveFile({
-					storageUnit: this.internalStorageUnit,
-					filePath: tempPath,
-					newFilePath: standardPath,
-				});
+				await this.sos.fileSystem.moveFile(
+					{
+						storageUnit: this.internalStorageUnit,
+						filePath: tempPath,
+					},
+					{
+						storageUnit: this.internalStorageUnit,
+						filePath: standardPath,
+					},
+				);
 
 				debug('Successfully migrated: %s', fileName);
 
