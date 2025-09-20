@@ -454,19 +454,12 @@ export class FilesManager implements IFilesManager {
 		fetchStrategy: FetchStrategy,
 		forceDownload: boolean = false,
 		latestRemoteValue?: string,
-		useTempFolder: boolean = false,
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
-
-		// Determine the actual download path
-		const downloadPath = useTempFolder ? this.getTempFolder(localFilePath) : localFilePath;
-		if (useTempFolder) {
-			debug('Using temp folder for downloads: %s instead of %s', downloadPath, localFilePath);
-		}
 
 		// Create a map to track which files need to be updated in mediaInfoObject
 		const filesToUpdate: Map<string, number | string> = new Map();
@@ -505,6 +498,15 @@ export class FilesManager implements IFilesManager {
 						filesToUpdate.set(getFileName(file.src), updateValue);
 					}
 
+					// Determine if this is new content that should go to temp folder
+					// Use temp folder when forceDownload is true AND content is genuinely new
+					const isNewContent = forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
+					const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
+
+					if (isNewContent) {
+						debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
+					}
+
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 					const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
 
@@ -536,7 +538,7 @@ export class FilesManager implements IFilesManager {
 								debug(`File downloaded to: %s`, actualDownloadPath);
 
 								// Track file in temp if using temp folder
-								if (useTempFolder) {
+								if (isNewContent) {
 									const fileName = getFileName(file.src);
 									this.tempDownloads.set(fileName, actualDownloadPath);
 									debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
@@ -929,7 +931,7 @@ export class FilesManager implements IFilesManager {
 				if (isNewContent) {
 					debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
 
-					// Download new content to temp folder
+					// Download new content to temp folder (forceDownload=true triggers temp folder for new content)
 					const result = await this.parallelDownloadAllFiles(
 						[file],
 						localFilePath,
@@ -937,9 +939,8 @@ export class FilesManager implements IFilesManager {
 						[],
 						[],
 						fetchStrategy,
-						true,
+						true, // forceDownload=true will use temp folder for new content
 						updateCheck.value,
-						true, // Use temp folder for new content
 					);
 
 					// Wait for the download to complete

@@ -68,7 +68,6 @@ export interface IFilesManager {
 		fetchStrategy: FetchStrategy,
 		forceDownload?: boolean,
 		latestRemoteValue?: number | string,
-		useTempFolder?: boolean,
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
