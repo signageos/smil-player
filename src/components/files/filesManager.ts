@@ -798,29 +798,40 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public commitBatch = async (filesList: MergedDownloadList[]): Promise<void> => {
-		if (this.batchUpdates.size === 0) {
-			debug('No batch updates to commit');
+		if (this.batchUpdates.size === 0 && this.tempDownloads.size === 0) {
+			debug('No batch updates or temp downloads to commit');
 			return;
 		}
 
-		debug('Committing %d batch updates to mediaInfoObject', this.batchUpdates.size);
+		debug(
+			'Committing %d batch updates and %d temp downloads',
+			this.batchUpdates.size,
+			this.tempDownloads.size,
+		);
 
 		// Read current mediaInfoObject
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 
-		// Apply all collected updates
+		// Migrate files from temp to standard if needed
+		if (this.tempDownloads.size > 0) {
+			debug('Triggering migration from temp to standard folders');
+			await this.migrateFromTempToStandard(filesList, mediaInfoObject);
+		}
+
+		// Apply all collected updates to mediaInfoObject
 		for (const [fileName, value] of this.batchUpdates) {
 			const oldValue = mediaInfoObject[fileName];
 			mediaInfoObject[fileName] = value;
 			debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
 		}
 
-		// Write once after all updates
+		// Write mediaInfoObject once after all updates (as requested - last step)
 		await this.writeMediaInfoFile(mediaInfoObject);
 		debug('Batch updates committed and mediaInfoObject saved');
 
 		// Clear batch after successful commit
 		this.batchUpdates.clear();
+		// tempDownloads already cleared in migrateFromTempToStandard
 	};
 
 	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
