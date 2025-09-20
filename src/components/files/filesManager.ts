@@ -894,6 +894,22 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
+	 * Get the merged state including pending batch updates
+	 */
+	private getMergedMediaInfoState = (mediaInfoObject: MediaInfoObject): MediaInfoObject => {
+		// Create a copy of the current state
+		const mergedState = { ...mediaInfoObject };
+
+		// Apply pending batch updates
+		for (const [fileName, value] of this.batchUpdates) {
+			mergedState[fileName] = value;
+			debug('Applying pending update to merged state: %s = %s', fileName, value);
+		}
+
+		return mergedState;
+	};
+
+	/**
 	 * Identify files that are no longer needed and can be deleted
 	 */
 	private identifyObsoleteFiles = async (
@@ -903,13 +919,17 @@ export class FilesManager implements IFilesManager {
 		const obsoleteFiles = new Set<string>();
 		const neededFiles = new Set<string>();
 
-		// Build a set of all files that are still needed
+		// Get the merged state including pending updates
+		const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
+		debug('Using merged state with %d pending updates for obsolete file detection', this.batchUpdates.size);
+
+		// Build a set of all files that are still needed based on MERGED state
 		for (const file of filesList) {
 			const fileName = getFileName(file.src);
-			const value = mediaInfoObject[fileName];
+			const value = mergedState[fileName];
 
 			// Find which actual file this URL needs
-			for (const [storedFileName, storedValue] of Object.entries(mediaInfoObject)) {
+			for (const [storedFileName, storedValue] of Object.entries(mergedState)) {
 				if (storedValue === value) {
 					neededFiles.add(storedFileName);
 				}
@@ -917,13 +937,14 @@ export class FilesManager implements IFilesManager {
 		}
 
 		// Identify files that exist but are no longer needed
-		for (const fileName of Object.keys(mediaInfoObject)) {
+		for (const fileName of Object.keys(mergedState)) {
 			if (!neededFiles.has(fileName)) {
 				obsoleteFiles.add(fileName);
 				debug('Identified obsolete file: %s', fileName);
 			}
 		}
 
+		debug('Identified %d obsolete files out of %d total files', obsoleteFiles.size, Object.keys(mergedState).length);
 		return obsoleteFiles;
 	};
 
