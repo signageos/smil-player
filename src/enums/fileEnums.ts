@@ -8,6 +8,11 @@ export enum FileStructure {
 	widgets = 'smil/widgets',
 	extracted = 'smil/widgets/extracted',
 	offlineReports = 'offlineReports',
+	// Temp folders for atomic file updates
+	videosTmp = 'smil/videos/tmp',
+	audiosTmp = 'smil/audios/tmp',
+	imagesTmp = 'smil/images/tmp',
+	widgetsTmp = 'smil/widgets/tmp',
 }
 
 export enum mapObject {
