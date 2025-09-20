@@ -923,57 +923,78 @@ export class FilesManager implements IFilesManager {
 			);
 
 			if (updateCheck.shouldUpdate) {
-				// when there is forceDownload true, we dont care about timeout so use default one
-				const result = await this.parallelDownloadAllFiles(
-					[file],
-					localFilePath,
-					SMILScheduleEnum.fileCheckTimeout,
-					[],
-					[],
-					fetchStrategy,
-					true,
-					updateCheck.value,
-				);
+				// Check if this is genuinely new content or content that has moved
+				const isNewContent = updateCheck.value && !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
 
-				// Wait for the download to complete
-				await Promise.all(result.promises);
+				if (isNewContent) {
+					debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
 
-				// Collect updates for batch processing instead of immediate write
-				console.log('2');
-				result.filesToUpdate.forEach((value, fileName) => {
-					debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
-					this.collectUpdate(fileName, String(value));
-				});
-
-				// Update file metadata to ensure it's properly tracked
-				const filePath = `${localFilePath}/${getFileName(file.src)}`;
-				const fileDetails = await this.sos.fileSystem.getFile({
-					storageUnit: this.internalStorageUnit,
-					filePath: filePath,
-				});
-
-				// TODO: fix typing, change filepath only for media not for smil file itself
-				// mark file as updated to force reload in browser cache
-				if ('localFilePath' in file) {
-					file.localFilePath = fileDetails ? fileDetails.localUri : '';
-					file.wasUpdated = true;
-				}
-
-				// Collect update for batch processing instead of immediate write
-				if (fileDetails && fileDetails.lastModifiedAt) {
-					const fileName = getFileName(file.src);
-					debug(
-						'Collecting batch update for downloaded file: %s with lastModifiedAt: %s',
-						fileName,
-						fileDetails.lastModifiedAt,
+					// Download new content to temp folder
+					const result = await this.parallelDownloadAllFiles(
+						[file],
+						localFilePath,
+						SMILScheduleEnum.fileCheckTimeout,
+						[],
+						[],
+						fetchStrategy,
+						true,
+						updateCheck.value,
+						true, // Use temp folder for new content
 					);
-					this.collectUpdate(fileName, fileDetails.lastModifiedAt);
-				}
 
-				return result.promises;
+					// Wait for the download to complete
+					await Promise.all(result.promises);
+
+					// Collect updates for batch processing instead of immediate write
+					console.log('2');
+					result.filesToUpdate.forEach((value, fileName) => {
+						debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
+						this.collectUpdate(fileName, String(value));
+					});
+
+					// For files downloaded to temp, we'll update localFilePath during migration
+					// So we don't update it here
+					if ('localFilePath' in file) {
+						// Keep the standard path, not temp path
+						file.wasUpdated = true;
+					}
+
+					return result.promises;
+				} else {
+					debug('checkLastModified: Content already exists locally, skipping download for %s', file.src);
+
+					// Content exists but may have moved - update mapping without downloading
+					if (updateCheck.value) {
+						const fileName = getFileName(file.src);
+						debug('Collecting batch update for moved content: %s with value: %s', fileName, updateCheck.value);
+						this.collectUpdate(fileName, String(updateCheck.value));
+
+						// Update localFilePath to point to existing file
+						if ('localFilePath' in file) {
+							const actualLocalUri = await this.findActualFileForMovedContent(
+								updateCheck.value,
+								mediaInfoObject,
+								localFilePath,
+							);
+							if (actualLocalUri) {
+								const oldPath = file.localFilePath;
+								file.localFilePath = actualLocalUri;
+								// Set flag only if path actually changed
+								if (oldPath !== actualLocalUri) {
+									(file as any).localPathChanged = true;
+									debug('Local path changed for %s: %s -> %s', file.src, oldPath, actualLocalUri);
+								}
+							}
+						}
+					}
+
+					return [];
+				}
 			} else if (updateCheck.value && 'localFilePath' in file) {
+				// This else if block handles the case where content hasn't changed but may have moved
+				// This is essentially the same as the moved content handling above
 				debug(
-					'checkLastModified: Content moved but not downloaded. Value: %s for file: %s',
+					'checkLastModified: Content exists, no update needed. Value: %s for file: %s',
 					updateCheck.value,
 					file.src,
 				);
@@ -1005,7 +1026,6 @@ export class FilesManager implements IFilesManager {
 
 					// Collect update for batch processing instead of immediate write
 					const fileName = getFileName(file.src);
-					const oldValue = mediaInfoObject[fileName];
 
 					debug(
 						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
