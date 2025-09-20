@@ -907,6 +907,12 @@ export class FilesManager implements IFilesManager {
 						actualLocalUri,
 					);
 
+					// Check if the local path actually changed
+					if (actualLocalUri !== oldLocalFilePath) {
+						(file as any).localPathChanged = true;
+						debug('checkLastModified: Setting localPathChanged flag for %s', file.src);
+					}
+
 					file.localFilePath = actualLocalUri;
 					file.wasUpdated = true;
 

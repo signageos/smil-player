@@ -47,6 +47,7 @@ export class SmilPlayer implements ISmilPlayer {
 		debug('sOS is ready');
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
+		Debug.enable('@signageos/smil-player:*');
 
 		if (sos.config.debugEnabled === true || sos.config.debugEnabled === 'true') {
 			debug('Debug enabled in config, enabling debug logs');
@@ -158,6 +159,7 @@ export class SmilPlayer implements ISmilPlayer {
 			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
 
 			// Update the mediaInfoObject after download completes
+			console.log('4');
 			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 		} catch (err) {
 			debug('Failed to download backup image: %O', err);
@@ -217,6 +219,7 @@ export class SmilPlayer implements ISmilPlayer {
 				const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
 
 				// Update the mediaInfoObject after download completes
+				console.log('5');
 				await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 				// }
 

@@ -1879,6 +1879,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let promiseRaceArray = [];
 		let videoEnded = false;
 		params.pop();
+
+		// Capture values as local constants to prevent mutation issues
+		const videoPath = params[0];
+		const regionLeft = currentRegionInfo.left;
+		const regionTop = currentRegionInfo.top;
+		const regionWidth = currentRegionInfo.width;
+		const regionHeight = currentRegionInfo.height;
+
 		if (
 			this.currentlyPlaying[currentRegionInfo.regionName]?.src !== video.src &&
 			this.currentlyPlaying[currentRegionInfo.regionName]?.playing &&
@@ -1895,7 +1903,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		try {
 			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			debug(`[${debugId}] After## video play function - single video: %O`, video);
 		} catch (err) {
 			// no await to not to block playback when server takes too long to respond
@@ -1906,14 +1914,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!!video.syncIndex && this.synchronization.shouldSync,
 				err.message,
 			);
-			await sosVideoObject.stop(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 		}
 
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
@@ -1922,13 +1924,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
-			this.sos.video.onceEnded(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			),
+			(async () => {
+				console.log('before once ended');
+				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+				console.log('after once ended');
+			})(),
 		);
 
 		// stop video when playlist was stopped by higher priority
@@ -1939,6 +1939,28 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					!videoEnded
 				) {
 					await sleep(100);
+				}
+			})(),
+		);
+
+		// Check if video local path has changed (content moved to different URL)
+		promiseRaceArray.push(
+			(async () => {
+				while (!(video as any).localPathChanged && !videoEnded) {
+					await sleep(100);
+				}
+				if ((video as any).localPathChanged) {
+					debug(`[${debugId}] Video local path has changed due to content move, stopping playback`);
+					// Stop the video that's playing from the old path
+					await sosVideoObject.stop(
+						videoPath,
+						regionLeft,
+						regionTop,
+						regionWidth,
+						regionHeight,
+					);
+					(video as any).localPathChanged = false; // Reset the flag
+					videoEnded = true;
 				}
 			})(),
 		);
