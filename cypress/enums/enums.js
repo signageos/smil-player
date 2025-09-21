@@ -1,0 +1,52 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+var CypressTimeouts;
+(function (CypressTimeouts) {
+    CypressTimeouts[CypressTimeouts["submitTimeout"] = 500] = "submitTimeout";
+    CypressTimeouts[CypressTimeouts["transitionTimeout"] = 1000] = "transitionTimeout";
+    // duration of media in tests, in 5 seconds one media will finish and will be replaced by another
+    CypressTimeouts[CypressTimeouts["videoTransitionTimeout"] = 5300] = "videoTransitionTimeout";
+    CypressTimeouts[CypressTimeouts["imageTransitionTimeout"] = 3300] = "imageTransitionTimeout";
+    CypressTimeouts[CypressTimeouts["elementAwaitTimeout"] = 13000] = "elementAwaitTimeout";
+    CypressTimeouts[CypressTimeouts["longerElementAwaitTimeout"] = 15000] = "longerElementAwaitTimeout";
+})(CypressTimeouts = exports.CypressTimeouts || (exports.CypressTimeouts = {}));
+var TestServer;
+(function (TestServer) {
+    TestServer[TestServer["port"] = 3000] = "port";
+    TestServer["assetsPath"] = "cypress/testFiles/assets";
+    TestServer["dynamicTestFilesPath"] = "cypress/testFiles/dynamic";
+    TestServer["testFilesPath"] = "cypress/testFiles";
+})(TestServer = exports.TestServer || (exports.TestServer = {}));
+var SMILUrls;
+(function (SMILUrls) {
+    SMILUrls["zones"] = "http://localhost:3000/zonesCypress.smil";
+    SMILUrls["noActiveSeq"] = "http://localhost:3000/wallclockNoActiveSeq.smil";
+    SMILUrls["noActivePar"] = "http://localhost:3000/wallclockNoActivePar.smil";
+    SMILUrls["wallclockFixedSeqWebsite"] = "http://localhost:3000/wallclockFixedSeqWebsite.smil";
+    SMILUrls["wallclockFixedParWebsite"] = "http://localhost:3000/wallclockFixedParWebsite.smil";
+    SMILUrls["wallclockConditionalSeq"] = "http://localhost:3000/wallclockConditionalSeq.smil";
+    SMILUrls["wallclockConditionalPar"] = "http://localhost:3000/wallclockConditionalPar.smil";
+    SMILUrls["repeatCountNoIntro"] = " http://localhost:3000/repeatCountNoIntro.smil";
+    SMILUrls["repeatCountIntroVideo"] = "http://localhost:3000/repeatCountIntroVideo.smil";
+    SMILUrls["repeatCountIntroImage"] = "http://localhost:3000/repeatCountIntroImage.smil";
+    SMILUrls["conditionalMediaElement"] = "http://localhost:3000/conditionalMediaElement.smil";
+    SMILUrls["introFirstVideoSame"] = "http://localhost:3000/introFirstVideoSame.smil";
+    SMILUrls["relativeFilePaths"] = "http://localhost:3000/relativeFilePaths.smil";
+    SMILUrls["priorityStop"] = "http://localhost:3000/dynamic/priorityStop.smil";
+    SMILUrls["priorityPause"] = "http://localhost:3000/dynamic/priorityPause.smil";
+    SMILUrls["priorityDefer"] = "http://localhost:3000/dynamic/priorityDefer.smil";
+    SMILUrls["wallclockFuture"] = "http://localhost:3000/dynamic/wallclockFuture.smil";
+    SMILUrls["correctOrder"] = "http://localhost:3000/correctOrder.smil";
+    SMILUrls["noAdditionalPar"] = "http://localhost:3000/noAdditionalPar.smil";
+    SMILUrls["noAdditionalSeq"] = "http://localhost:3000/noAdditionalSeq.smil";
+    SMILUrls["wallclockRepeatCount"] = "http://localhost:3000/wallclockRepeatCount.smil";
+    SMILUrls["triggersKeyboard"] = "http://localhost:3000/triggersKeyboard.smil";
+    SMILUrls["triggersMouse"] = "http://localhost:3000/triggersMouse.smil";
+    SMILUrls["brokenXml"] = "http://localhost:3000/brokenXml.smil";
+    SMILUrls["nonExisting"] = "http://localhost:3000/none";
+    SMILUrls["videoStreams"] = "http://localhost:3000/videoStreams.smil";
+    SMILUrls["notExistingMedia"] = "http://localhost:3000/NotExistingMedia.smil";
+    SMILUrls["widgetExtensions"] = "http://localhost:3000/widgetExtensions.smil";
+    SMILUrls["cssBottom"] = "http://localhost:3000/cssBottomAndRight.smil";
+    SMILUrls["conditionalTimePriority"] = "http://localhost:3000/dynamic/conditionalTimePriority.smil";
+})(SMILUrls = exports.SMILUrls || (exports.SMILUrls = {}));

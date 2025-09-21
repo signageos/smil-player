@@ -912,29 +912,23 @@ export class FilesManager implements IFilesManager {
 	 */
 	private checkAvailableSpace = async (estimatedRequiredSpace: number): Promise<boolean> => {
 		try {
-			// Get storage info from the internal storage unit
-			const storageInfo = await this.sos.fileSystem.getStorageInfo({
-				storageUnit: this.internalStorageUnit,
-			});
-
-			if (!storageInfo) {
-				debug('Unable to get storage info, proceeding anyway');
-				return true; // Proceed optimistically if we can't get info
-			}
-
-			const availableSpace = storageInfo.availableSize || 0;
-			const hasEnoughSpace = availableSpace > estimatedRequiredSpace;
-
-			debug(
-				'Storage check: Available: %d MB, Required: %d MB, Sufficient: %s',
-				Math.round(availableSpace / (1024 * 1024)),
-				Math.round(estimatedRequiredSpace / (1024 * 1024)),
-				hasEnoughSpace ? 'Yes' : 'No',
-			);
+			// Get free space directly from the internal storage unit
+			const availableSpace = this.internalStorageUnit.freeSpace || 0;
 
 			// Add safety margin - require at least 10% more space than estimated
 			const safetyMargin = 1.1;
-			return availableSpace > estimatedRequiredSpace * safetyMargin;
+			const requiredWithMargin = estimatedRequiredSpace * safetyMargin;
+			const hasEnoughSpace = availableSpace > requiredWithMargin;
+
+			debug(
+				'Storage check: Available: %d MB, Required: %d MB (with margin: %d MB), Sufficient: %s',
+				Math.round(availableSpace / (1024 * 1024)),
+				Math.round(estimatedRequiredSpace / (1024 * 1024)),
+				Math.round(requiredWithMargin / (1024 * 1024)),
+				hasEnoughSpace ? 'Yes' : 'No',
+			);
+
+			return hasEnoughSpace;
 		} catch (err) {
 			debug('Error checking available storage space: %O', err);
 			// If we can't check space, proceed anyway and handle errors later
