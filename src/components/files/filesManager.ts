@@ -869,6 +869,35 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
+	 * Determine the full file path for a given filename by searching in all media folders
+	 * @param fileName - The filename to search for (e.g., "video_hash123.mp4")
+	 * @returns The full file path if found, null otherwise
+	 */
+	private determineFilePath = async (fileName: string): Promise<string | null> => {
+		const folders = [
+			FileStructure.videos,
+			FileStructure.images,
+			FileStructure.audios,
+			FileStructure.widgets,
+		];
+
+		for (const folder of folders) {
+			const filePath = `${folder}/${fileName}`;
+			try {
+				if (await this.fileExists(filePath)) {
+					debug('Found file %s at path: %s', fileName, filePath);
+					return filePath;
+				}
+			} catch (err) {
+				debug('Error checking file existence at %s: %O', filePath, err);
+			}
+		}
+
+		debug('File %s not found in any media folder', fileName);
+		return null;
+	};
+
+	/**
 	 * Clear all temp folders by deleting their contents
 	 */
 	private clearTempFolders = async (): Promise<void> => {
