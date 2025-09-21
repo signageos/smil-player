@@ -1338,10 +1338,8 @@ export class FilesManager implements IFilesManager {
 						if (fileDetails && fileDetails.localUri !== file.localFilePath) {
 							const oldPath = file.localFilePath;
 							file.localFilePath = fileDetails.localUri;
-							// Set localPathChanged flag only for video files (SMILVideo type)
-							if ('type' in file && (file as any).type === 'video') {
-								(file as any).localPathChanged = true;
-							}
+							// Set localPathChanged flag for any file that had its path updated
+							(file as any).localPathChanged = true;
 							debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, fileDetails.localUri);
 						}
 					} catch (err) {
