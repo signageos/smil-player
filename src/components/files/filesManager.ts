@@ -56,6 +56,14 @@ declare global {
 	}
 }
 
+// Type for tracking content movements between URLs
+interface ContentMovement {
+	sourceFileName: string; // The file that contains the content (e.g., "video_hashA.mp4")
+	sourceFilePath?: string; // Full path to the source file (populated later)
+	destinationFileNames: Set<string>; // Files that need this content (e.g., Set(["video_hashB.mp4"]))
+	contentValue: string | number; // The value that identifies this content (redirect URL or timestamp)
+}
+
 export class FilesManager implements IFilesManager {
 	private sos: FrontApplet;
 	private smilFileUrl: string;
@@ -932,6 +940,80 @@ export class FilesManager implements IFilesManager {
 			// If we can't check space, proceed anyway and handle errors later
 			return true;
 		}
+	};
+
+	/**
+	 * Detect content movements between URLs by comparing current and merged states
+	 * @param filesList - List of files to check
+	 * @param currentMediaInfo - Current mediaInfoObject state (before updates)
+	 * @param mergedMediaInfo - Merged state including pending batch updates
+	 * @returns Map of content movements, keyed by content value
+	 */
+	private detectContentMovements = (
+		filesList: MergedDownloadList[],
+		currentMediaInfo: MediaInfoObject,
+		mergedMediaInfo: MediaInfoObject,
+	): Map<string, ContentMovement> => {
+		const movements = new Map<string, ContentMovement>();
+
+		debug('Detecting content movements for %d files', filesList.length);
+
+		// Check each file to see if its content has changed
+		for (const file of filesList) {
+			const destFileName = getFileName(file.src); // Get this URL's filename
+			const currentValue = currentMediaInfo[destFileName]; // What content this URL currently has
+			const newValue = mergedMediaInfo[destFileName]; // What content this URL will have
+
+			// Skip if no change or no new value
+			if (currentValue === newValue || !newValue) {
+				continue;
+			}
+
+			debug(
+				'File %s: content changing from %s to %s',
+				destFileName,
+				currentValue || 'none',
+				newValue,
+			);
+
+			// Find where this new content currently exists
+			for (const [sourceFileName, sourceValue] of Object.entries(currentMediaInfo)) {
+				if (sourceValue === newValue && sourceFileName !== destFileName) {
+					// Found: content is moving FROM sourceFileName TO destFileName
+					debug(
+						'Content %s is moving from %s to %s',
+						newValue,
+						sourceFileName,
+						destFileName,
+					);
+
+					// Track this movement
+					if (!movements.has(String(newValue))) {
+						movements.set(String(newValue), {
+							sourceFileName,
+							destinationFileNames: new Set(),
+							contentValue: newValue,
+						});
+					}
+					movements.get(String(newValue))!.destinationFileNames.add(destFileName);
+					break; // Found the source, no need to continue searching
+				}
+			}
+		}
+
+		// Log summary
+		for (const [value, movement] of movements) {
+			debug(
+				'Movement detected: Content %s from %s to %d destination(s): %s',
+				value,
+				movement.sourceFileName,
+				movement.destinationFileNames.size,
+				Array.from(movement.destinationFileNames).join(', '),
+			);
+		}
+
+		debug('Total content movements detected: %d', movements.size);
+		return movements;
 	};
 
 	/**
