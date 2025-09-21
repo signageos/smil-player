@@ -1947,18 +1947,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		promiseRaceArray.push(
 			(async () => {
 				while (!(video as any).localPathChanged && !videoEnded) {
+					console.log((video as any).localPathChanged);
 					await sleep(100);
 				}
 				if ((video as any).localPathChanged) {
 					debug(`[${debugId}] Video local path has changed due to content move, stopping playback`);
 					// Stop the video that's playing from the old path
-					await sosVideoObject.stop(
-						videoPath,
-						regionLeft,
-						regionTop,
-						regionWidth,
-						regionHeight,
-					);
+					await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 					(video as any).localPathChanged = false; // Reset the flag
 					videoEnded = true;
 				}
