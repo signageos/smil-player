@@ -898,6 +898,43 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
+	 * Check if there's enough available storage space for operations
+	 * @param estimatedRequiredSpace - Estimated space needed in bytes
+	 * @returns True if there's enough space, false otherwise
+	 */
+	private checkAvailableSpace = async (estimatedRequiredSpace: number): Promise<boolean> => {
+		try {
+			// Get storage info from the internal storage unit
+			const storageInfo = await this.sos.fileSystem.getStorageInfo({
+				storageUnit: this.internalStorageUnit,
+			});
+
+			if (!storageInfo) {
+				debug('Unable to get storage info, proceeding anyway');
+				return true; // Proceed optimistically if we can't get info
+			}
+
+			const availableSpace = storageInfo.availableSize || 0;
+			const hasEnoughSpace = availableSpace > estimatedRequiredSpace;
+
+			debug(
+				'Storage check: Available: %d MB, Required: %d MB, Sufficient: %s',
+				Math.round(availableSpace / (1024 * 1024)),
+				Math.round(estimatedRequiredSpace / (1024 * 1024)),
+				hasEnoughSpace ? 'Yes' : 'No',
+			);
+
+			// Add safety margin - require at least 10% more space than estimated
+			const safetyMargin = 1.1;
+			return availableSpace > estimatedRequiredSpace * safetyMargin;
+		} catch (err) {
+			debug('Error checking available storage space: %O', err);
+			// If we can't check space, proceed anyway and handle errors later
+			return true;
+		}
+	};
+
+	/**
 	 * Clear all temp folders by deleting their contents
 	 */
 	private clearTempFolders = async (): Promise<void> => {
