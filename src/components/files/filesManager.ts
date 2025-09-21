@@ -1017,6 +1017,136 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
+	 * Copy content to new locations based on detected movements
+	 * This ensures each URL has the correct content with its proper filename
+	 * @param movements - Map of content movements to process
+	 * @returns Number of successful copies
+	 */
+	private copyContentToNewLocations = async (
+		movements: Map<string, ContentMovement>,
+	): Promise<number> => {
+		let successfulCopies = 0;
+		let failedCopies = 0;
+
+		debug('Starting content copy operations for %d movements', movements.size);
+
+		// First, populate source file paths for all movements
+		for (const movement of movements.values()) {
+			const sourcePath = await this.determineFilePath(movement.sourceFileName);
+			if (!sourcePath) {
+				debug('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
+				continue;
+			}
+			movement.sourceFilePath = sourcePath;
+		}
+
+		// Estimate total space needed (rough estimate)
+		let estimatedSpace = 0;
+		for (const movement of movements.values()) {
+			if (!movement.sourceFilePath) continue;
+
+			try {
+				const fileInfo = await this.sos.fileSystem.getFile({
+					storageUnit: this.internalStorageUnit,
+					filePath: movement.sourceFilePath,
+				});
+				if (fileInfo?.size) {
+					// Space needed = file size * number of destinations
+					estimatedSpace += fileInfo.size * movement.destinationFileNames.size;
+				}
+			} catch (err) {
+				debug('Could not get file size for %s: %O', movement.sourceFilePath, err);
+			}
+		}
+
+		// Check available space if we have an estimate
+		if (estimatedSpace > 0) {
+			const hasSpace = await this.checkAvailableSpace(estimatedSpace);
+			if (!hasSpace) {
+				debug('WARNING: May not have enough space for all copies. Required: %d MB',
+					Math.round(estimatedSpace / (1024 * 1024)));
+				// Continue anyway - some copies might succeed
+			}
+		}
+
+		// Perform copy operations
+		for (const [contentValue, movement] of movements) {
+			if (!movement.sourceFilePath) {
+				debug('Skipping movement for content %s - no source path', contentValue);
+				continue;
+			}
+
+			debug(
+				'Copying content %s from %s to %d destination(s)',
+				contentValue,
+				movement.sourceFileName,
+				movement.destinationFileNames.size,
+			);
+
+			// Copy to each destination
+			for (const destFileName of movement.destinationFileNames) {
+				// Determine destination folder based on file extension
+				const destPath = await this.determineFilePath(destFileName);
+				let destFolder: string;
+
+				// If file already exists, use its current folder
+				if (destPath) {
+					destFolder = destPath.substring(0, destPath.lastIndexOf('/'));
+				} else {
+					// Determine folder based on source path
+					if (movement.sourceFilePath.includes(FileStructure.videos)) {
+						destFolder = FileStructure.videos;
+					} else if (movement.sourceFilePath.includes(FileStructure.images)) {
+						destFolder = FileStructure.images;
+					} else if (movement.sourceFilePath.includes(FileStructure.audios)) {
+						destFolder = FileStructure.audios;
+					} else if (movement.sourceFilePath.includes(FileStructure.widgets)) {
+						destFolder = FileStructure.widgets;
+					} else {
+						debug('Could not determine destination folder for %s', destFileName);
+						failedCopies++;
+						continue;
+					}
+				}
+
+				const finalDestPath = `${destFolder}/${destFileName}`;
+
+				try {
+					debug('Copying file: %s -> %s', movement.sourceFilePath, finalDestPath);
+
+					// Copy file (this will overwrite if destination exists)
+					await this.sos.fileSystem.copyFile(
+						{
+							storageUnit: this.internalStorageUnit,
+							filePath: movement.sourceFilePath,
+						},
+						{
+							storageUnit: this.internalStorageUnit,
+							filePath: finalDestPath,
+						},
+					);
+
+					successfulCopies++;
+					debug('Successfully copied %s to %s', movement.sourceFileName, destFileName);
+				} catch (err) {
+					failedCopies++;
+					debug('ERROR: Failed to copy %s to %s: %O',
+						movement.sourceFileName, destFileName, err);
+					// Continue with other copies even if this one fails
+				}
+			}
+		}
+
+		debug(
+			'Content copy operations complete. Successful: %d, Failed: %d',
+			successfulCopies,
+			failedCopies,
+		);
+
+		return successfulCopies;
+	};
+
+	/**
 	 * Clear all temp folders by deleting their contents
 	 */
 	private clearTempFolders = async (): Promise<void> => {
