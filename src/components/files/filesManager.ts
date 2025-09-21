@@ -1044,11 +1044,9 @@ export class FilesManager implements IFilesManager {
 					storageUnit: this.internalStorageUnit,
 					filePath: movement.sourceFilePath,
 				});
-				if (fileInfo) {
-					// Space needed = estimated file size * number of destinations
-					// IFile doesn't have size property, estimate 50MB per file
-					const estimatedFileSize = 50 * 1024 * 1024; // 50MB
-					estimatedSpace += estimatedFileSize * movement.destinationFileNames.size;
+				if (fileInfo?.sizeBytes) {
+					// Space needed = file size * number of destinations
+					estimatedSpace += fileInfo.sizeBytes * movement.destinationFileNames.size;
 				}
 			} catch (err) {
 				debug('Could not get file size for %s: %O', movement.sourceFilePath, err);
