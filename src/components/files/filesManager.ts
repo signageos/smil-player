@@ -382,7 +382,6 @@ export class FilesManager implements IFilesManager {
 			  currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
-
 		// Check if we already have this content (for location strategy only)
 		if (isNewVersion && isLocationStrategy && this.isValueAlreadyStored(currentValue, mediaInfoObject)) {
 			debug(
@@ -1084,9 +1083,11 @@ export class FilesManager implements IFilesManager {
 				const finalDestPath = `${destFolder}/${destFileName}`;
 
 				try {
-					debug('Copying file: %s -> %s', movement.sourceFilePath, finalDestPath);
-
 					// Copy file (this will overwrite if destination exists)
+					debug('  Executing copy operation:');
+					debug('    Source: %s', movement.sourceFilePath);
+					debug('    Destination: %s', finalDestPath);
+
 					await this.sos.fileSystem.copyFile(
 						{
 							storageUnit: this.internalStorageUnit,
@@ -1102,7 +1103,7 @@ export class FilesManager implements IFilesManager {
 					);
 
 					successfulCopies++;
-					debug('Successfully copied %s to %s', movement.sourceFileName, destFileName);
+					debug('  ✓ Successfully copied %s to %s', movement.sourceFileName, destFileName);
 				} catch (err) {
 					failedCopies++;
 					debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
@@ -1223,8 +1224,17 @@ export class FilesManager implements IFilesManager {
 		debug('Starting migration process. Temp downloads: %d', this.tempDownloads.size);
 
 		// Step 1: Detect content movements (including batch updates)
+		debug('\n=== STEP 1: DETECTING CONTENT MOVEMENTS ===');
 		const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
+		debug('Merged state includes %d batch updates', this.batchUpdates.size);
 		const contentMovements = this.detectContentMovements(filesList, mediaInfoObject, mergedState);
+		debug('Detected %d content movements', contentMovements.size);
+		for (const [value, movement] of contentMovements) {
+			debug('  Movement: content %s from %s to %s',
+				value,
+				movement.sourceFileName,
+				Array.from(movement.destinationFileNames).join(', '));
+		}
 
 		// Step 2: Check available space for copies
 		const estimatedSpaceNeeded = contentMovements.size * 50 * 1024 * 1024; // Estimate 50MB per file
@@ -1235,14 +1245,22 @@ export class FilesManager implements IFilesManager {
 		}
 
 		// Step 3: Perform content copies for moved content
+		debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
 		if (contentMovements.size > 0 && hasSpace) {
+			debug('Starting copy operations for %d movements', contentMovements.size);
 			const successfulCopies = await this.copyContentToNewLocations(contentMovements);
 			debug('Content copy phase complete. Successful copies: %d', successfulCopies);
+		} else {
+			debug('No content copies needed (movements: %d, hasSpace: %s)', contentMovements.size, hasSpace);
 		}
 
 		// Step 4: Process temp downloads if any
+		debug('\n=== STEP 4: PROCESSING TEMP DOWNLOADS ===');
 		if (this.tempDownloads.size > 0) {
-			debug('Processing %d temp downloads', this.tempDownloads.size);
+			debug('Processing %d temp downloads:', this.tempDownloads.size);
+			for (const [fileName, tempPath] of this.tempDownloads) {
+				debug('  Temp file: %s at %s', fileName, tempPath);
+			}
 
 			// DISABLED: File deletion to focus on URL content shifting
 			// Keeping all files to ensure content shifting from URL A to URL B works
@@ -1290,6 +1308,9 @@ export class FilesManager implements IFilesManager {
 							storageUnit: this.internalStorageUnit,
 							filePath: standardPath,
 						},
+						{
+							overwrite: true,
+						},
 					);
 
 					debug('Successfully migrated: %s', fileName);
@@ -1305,10 +1326,18 @@ export class FilesManager implements IFilesManager {
 
 		// Step 5: Update localFilePath for all media items
 		// Note: We check tempDownloads before clearing it
+		debug('\n=== STEP 5: UPDATING LOCAL FILE PATHS ===');
+		debug('Processing %d files for localFilePath updates', filesList.length);
+
 		for (const file of filesList) {
+			debug('\n--- Processing file: %s ---', file.src);
 			if ('localFilePath' in file) {
 				const fileName = getFileName(file.src);
+				debug('  Generated fileName from URL: %s', fileName);
+				debug('  Current localFilePath: %s', file.localFilePath);
+
 				const actualPath = await this.determineFilePath(fileName);
+				debug('  Found file at path: %s', actualPath || 'NOT FOUND');
 
 				if (actualPath) {
 					try {
@@ -1318,42 +1347,52 @@ export class FilesManager implements IFilesManager {
 						});
 						if (fileDetails) {
 							const oldPath = file.localFilePath;
-							file.localFilePath = fileDetails.localUri;
+							const newPath = fileDetails.localUri;
+
+							debug('  File details retrieved:');
+							debug('    - Old localFilePath: %s', oldPath);
+							debug('    - New localFilePath: %s', newPath);
+							debug('    - Path changed: %s', oldPath !== newPath);
+
+							file.localFilePath = newPath;
 
 							// Set localPathChanged for files that:
 							// 1. Were downloaded to temp (tracked in tempDownloads before clearing)
 							// 2. Were affected by content movements
 							// 3. Actually had their path changed
 							const wasInTemp = this.tempDownloads.has(fileName);
-							const wasMovement = contentMovements.has(String(this.batchUpdates.get(fileName)));
-							const pathChanged = oldPath !== fileDetails.localUri;
+							const batchValue = this.batchUpdates.get(fileName);
+							const wasMovement = contentMovements.has(String(batchValue));
+							const pathChanged = oldPath !== newPath;
+
+							debug('  LocalPathChanged criteria:');
+							debug('    - Was in temp: %s (fileName: %s in tempDownloads)', wasInTemp, fileName);
+							debug('    - Was movement: %s (batchValue: %s in contentMovements)', wasMovement, batchValue);
+							debug('    - Path changed: %s', pathChanged);
 
 							if (wasInTemp || wasMovement || pathChanged) {
 								(file as any).localPathChanged = true;
-								debug(
-									'Set localPathChanged for %s (wasInTemp: %s, wasMovement: %s, pathChanged: %s)',
-									file.src,
-									wasInTemp,
-									wasMovement,
-									pathChanged,
-								);
+								debug('  ✓ Set localPathChanged=true for %s', file.src);
+							} else {
+								debug('  ✗ localPathChanged remains false for %s', file.src);
 							}
 
-							if (pathChanged) {
-								debug(
-									'Updated localFilePath for %s from %s to %s',
-									file.src,
-									oldPath,
-									fileDetails.localUri,
-								);
-							}
+						} else {
+							debug('  WARNING: No file details returned for path: %s', actualPath);
 						}
 					} catch (err) {
-						debug('Error updating localFilePath for %s: %O', file.src, err);
+						debug('  ERROR updating localFilePath for %s: %O', file.src, err);
 					}
+				} else {
+					debug('  WARNING: No file found for fileName: %s', fileName);
+					debug('  This file may not have been downloaded yet');
 				}
+			} else {
+				debug('  Skipping - file has no localFilePath property');
 			}
 		}
+
+		debug('\n=== END OF STEP 5 ===')
 
 		// Clear temp downloads tracking after we've used it for localPathChanged detection
 		if (this.tempDownloads.size > 0) {
