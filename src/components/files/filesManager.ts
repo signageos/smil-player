@@ -991,7 +991,7 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * Copy content to new locations based on detected movements
-	 * This ensures each URL has the correct content with its proper filename
+	 * Uses temp copies to preserve content during cascading movements
 	 * @param movements - Map of content movements to process
 	 * @returns Number of successful copies
 	 */
@@ -1022,8 +1022,8 @@ export class FilesManager implements IFilesManager {
 					filePath: movement.sourceFilePath,
 				});
 				if (fileInfo?.sizeBytes) {
-					// Space needed = file size * number of destinations
-					estimatedSpace += fileInfo.sizeBytes * movement.destinationFileNames.size;
+					// Space needed = file size * number of destinations + temp copies
+					estimatedSpace += fileInfo.sizeBytes * (movement.destinationFileNames.size + 1);
 				}
 			} catch (err) {
 				debug('Could not get file size for %s: %O', movement.sourceFilePath, err);
@@ -1042,12 +1042,66 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 
-		// Perform copy operations
+		// Step 1: Copy all source files to temp locations to preserve them
+		const tempCopies = new Map<string, string>(); // Map from original path to temp path
+		debug('Creating temp copies to preserve source content...');
+
+		for (const [contentValue, movement] of movements) {
+			if (!movement.sourceFilePath) continue;
+
+			// Create temp path
+			const tempFileName = `temp_${Date.now()}_${movement.sourceFileName}`;
+			let tempFolder: string;
+
+			if (movement.sourceFilePath.includes(FileStructure.videos)) {
+				tempFolder = FileStructure.videosTmp;
+			} else if (movement.sourceFilePath.includes(FileStructure.images)) {
+				tempFolder = FileStructure.imagesTmp;
+			} else if (movement.sourceFilePath.includes(FileStructure.audios)) {
+				tempFolder = FileStructure.audiosTmp;
+			} else {
+				tempFolder = FileStructure.widgetsTmp;
+			}
+
+			const tempPath = `${tempFolder}/${tempFileName}`;
+
+			try {
+				// Copy to temp location
+				debug('  Creating temp copy: %s -> %s', movement.sourceFilePath, tempPath);
+				await this.sos.fileSystem.copyFile(
+					{
+						storageUnit: this.internalStorageUnit,
+						filePath: movement.sourceFilePath,
+					},
+					{
+						storageUnit: this.internalStorageUnit,
+						filePath: tempPath,
+					},
+					{
+						overwrite: true,
+					},
+				);
+
+				tempCopies.set(movement.sourceFilePath, tempPath);
+				debug('  ✓ Created temp copy for %s', movement.sourceFileName);
+			} catch (err) {
+				debug('ERROR: Failed to create temp copy for %s: %O', movement.sourceFileName, err);
+				// Try to continue with original file
+				tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
+			}
+		}
+
+		// Step 2: Copy from temp locations to final destinations
+		debug('Copying from temp locations to final destinations...');
+
 		for (const [contentValue, movement] of movements) {
 			if (!movement.sourceFilePath) {
 				debug('Skipping movement for content %s - no source path', contentValue);
 				continue;
 			}
+
+			// Use temp copy if available, otherwise use original
+			const sourcePath = tempCopies.get(movement.sourceFilePath) || movement.sourceFilePath;
 
 			debug(
 				'Copying content %s from %s to %d destination(s)',
@@ -1085,15 +1139,15 @@ export class FilesManager implements IFilesManager {
 				const finalDestPath = `${destFolder}/${destFileName}`;
 
 				try {
-					// Copy file (this will overwrite if destination exists)
+					// Copy file from temp location (this will overwrite if destination exists)
 					debug('  Executing copy operation:');
-					debug('    Source: %s', movement.sourceFilePath);
+					debug('    Source: %s', sourcePath);
 					debug('    Destination: %s', finalDestPath);
 
 					await this.sos.fileSystem.copyFile(
 						{
 							storageUnit: this.internalStorageUnit,
-							filePath: movement.sourceFilePath,
+							filePath: sourcePath,
 						},
 						{
 							storageUnit: this.internalStorageUnit,
@@ -1110,6 +1164,20 @@ export class FilesManager implements IFilesManager {
 					failedCopies++;
 					debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
 					// Continue with other copies even if this one fails
+				}
+			}
+		}
+
+		// Step 3: Clean up temp copies
+		debug('Cleaning up temp copies...');
+		for (const [originalPath, tempPath] of tempCopies) {
+			if (tempPath !== originalPath) { // Only delete if it's actually a temp copy
+				try {
+					await this.deleteFile(tempPath);
+					debug('  Deleted temp copy: %s', tempPath);
+				} catch (err) {
+					debug('  Warning: Could not delete temp copy %s: %O', tempPath, err);
+					// Non-critical, continue
 				}
 			}
 		}
