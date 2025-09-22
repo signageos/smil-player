@@ -682,7 +682,6 @@ export class FilesManager implements IFilesManager {
 		await Promise.all(downloadPromises);
 
 		// Update mediaInfoObject and save to storage after all downloads are complete
-		console.log('1');
 		await this.updateMediaInfoAfterDownloads(mediaInfoObject, allFilesToUpdate);
 
 		return downloadPromises;
@@ -1410,7 +1409,6 @@ export class FilesManager implements IFilesManager {
 		debug('Processing %d files for localFilePath updates', filesList.length);
 
 		for (const file of filesList) {
-			console.log(file);
 			debug('\n--- Processing file: %s ---', file.src);
 			if ('localFilePath' in file) {
 				const fileName = getFileName(file.src);

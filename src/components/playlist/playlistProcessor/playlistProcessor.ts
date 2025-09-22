@@ -169,7 +169,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		] as MergedDownloadList[]);
 
 		// Update the mediaInfoObject after download completes
-		console.log('3');
 		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 
 		await Promise.all(downloadPromises);
@@ -1925,9 +1924,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
 			(async () => {
-				console.log('before once ended');
 				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
-				console.log('after once ended');
 			})(),
 		);
 
