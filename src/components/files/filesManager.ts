@@ -1167,48 +1167,50 @@ export class FilesManager implements IFilesManager {
 		return mergedState;
 	};
 
-	/**
-	 * Identify files that are no longer needed and can be deleted
-	 */
-	private identifyObsoleteFiles = async (
-		filesList: MergedDownloadList[],
-		mediaInfoObject: MediaInfoObject,
-	): Promise<Set<string>> => {
-		const obsoleteFiles = new Set<string>();
-		const neededFiles = new Set<string>();
-
-		// Get the merged state including pending updates
-		const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
-		debug('Using merged state with %d pending updates for obsolete file detection', this.batchUpdates.size);
-
-		// Build a set of all files that are still needed based on MERGED state
-		for (const file of filesList) {
-			const fileName = getFileName(file.src);
-			const value = mergedState[fileName];
-
-			// Find which actual file this URL needs
-			for (const [storedFileName, storedValue] of Object.entries(mergedState)) {
-				if (storedValue === value) {
-					neededFiles.add(storedFileName);
-				}
-			}
-		}
-
-		// Identify files that exist but are no longer needed
-		for (const fileName of Object.keys(mergedState)) {
-			if (!neededFiles.has(fileName)) {
-				obsoleteFiles.add(fileName);
-				debug('Identified obsolete file: %s', fileName);
-			}
-		}
-
-		debug(
-			'Identified %d obsolete files out of %d total files',
-			obsoleteFiles.size,
-			Object.keys(mergedState).length,
-		);
-		return obsoleteFiles;
-	};
+	// DISABLED: File deletion functionality
+	// Keeping this commented for future reference when re-enabling cleanup
+	// /**
+	//  * Identify files that are no longer needed and can be deleted
+	//  */
+	// private identifyObsoleteFiles = async (
+	// 	filesList: MergedDownloadList[],
+	// 	mediaInfoObject: MediaInfoObject,
+	// ): Promise<Set<string>> => {
+	// 	const obsoleteFiles = new Set<string>();
+	// 	const neededFiles = new Set<string>();
+	//
+	// 	// Get the merged state including pending updates
+	// 	const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
+	// 	debug('Using merged state with %d pending updates for obsolete file detection', this.batchUpdates.size);
+	//
+	// 	// Build a set of all files that are still needed based on MERGED state
+	// 	for (const file of filesList) {
+	// 		const fileName = getFileName(file.src);
+	// 		const value = mergedState[fileName];
+	//
+	// 		// Find which actual file this URL needs
+	// 		for (const [storedFileName, storedValue] of Object.entries(mergedState)) {
+	// 			if (storedValue === value) {
+	// 				neededFiles.add(storedFileName);
+	// 			}
+	// 		}
+	// 	}
+	//
+	// 	// Identify files that exist but are no longer needed
+	// 	for (const fileName of Object.keys(mergedState)) {
+	// 		if (!neededFiles.has(fileName)) {
+	// 			obsoleteFiles.add(fileName);
+	// 			debug('Identified obsolete file: %s', fileName);
+	// 		}
+	// 	}
+	//
+	// 	debug(
+	// 		'Identified %d obsolete files out of %d total files',
+	// 		obsoleteFiles.size,
+	// 		Object.keys(mergedState).length,
+	// 	);
+	// 	return obsoleteFiles;
+	// };
 
 	/**
 	 * Migrate files from temp folders to standard folders
@@ -1242,21 +1244,23 @@ export class FilesManager implements IFilesManager {
 		if (this.tempDownloads.size > 0) {
 			debug('Processing %d temp downloads', this.tempDownloads.size);
 
-			// Identify obsolete files (files that no one needs anymore)
-			const obsoleteFiles = await this.identifyObsoleteFiles(filesList, mediaInfoObject);
-
-			// Delete obsolete files from standard folders
-			for (const fileName of obsoleteFiles) {
-				const filePath = await this.determineFilePath(fileName);
-				if (filePath) {
-					try {
-						await this.deleteFile(filePath);
-						debug('Deleted obsolete file: %s', filePath);
-					} catch (err) {
-						debug('Error deleting obsolete file %s: %O', filePath, err);
-					}
-				}
-			}
+			// DISABLED: File deletion to focus on URL content shifting
+			// Keeping all files to ensure content shifting from URL A to URL B works
+			// const obsoleteFiles = await this.identifyObsoleteFiles(filesList, mediaInfoObject);
+			//
+			// // Delete obsolete files from standard folders
+			// for (const fileName of obsoleteFiles) {
+			// 	const filePath = await this.determineFilePath(fileName);
+			// 	if (filePath) {
+			// 		try {
+			// 			await this.deleteFile(filePath);
+			// 			debug('Deleted obsolete file: %s', filePath);
+			// 		} catch (err) {
+			// 			debug('Error deleting obsolete file %s: %O', filePath, err);
+			// 		}
+			// 	}
+			// }
+			debug('File deletion disabled - keeping all files for content shifting');
 
 			// Move files from temp to standard locations
 			for (const [fileName, tempPath] of this.tempDownloads) {
@@ -1268,14 +1272,15 @@ export class FilesManager implements IFilesManager {
 					.replace(FileStructure.widgetsTmp, FileStructure.widgets);
 
 				try {
-					// Check if file exists in standard location and delete it first
-					if (await this.fileExists(standardPath)) {
-						debug('Deleting existing file before migration: %s', standardPath);
-						await this.deleteFile(standardPath);
-					}
+					// DISABLED: File deletion before migration
+					// Using overwrite instead to preserve content shifting
+					// if (await this.fileExists(standardPath)) {
+					// 	debug('Deleting existing file before migration: %s', standardPath);
+					// 	await this.deleteFile(standardPath);
+					// }
 
-					// Move file from temp to standard
-					debug('Moving file from %s to %s', tempPath, standardPath);
+					// Move file from temp to standard (will overwrite if exists)
+					debug('Moving file from %s to %s (with overwrite)', tempPath, standardPath);
 					await this.sos.fileSystem.moveFile(
 						{
 							storageUnit: this.internalStorageUnit,
@@ -1791,8 +1796,10 @@ export class FilesManager implements IFilesManager {
 							filePath: storedFile.filePath,
 						}))
 					) {
-						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
-						await this.deleteFile(storedFile.filePath);
+						// DISABLED: File deletion for files not in new SMIL
+						// Keeping all files to ensure content shifting works
+						debug(`File was not found in new SMIL file, keeping it: %O`, storedFile);
+						// await this.deleteFile(storedFile.filePath);
 					}
 				}
 			}
