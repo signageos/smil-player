@@ -1,5 +1,6 @@
 import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
+import { MergedDownloadList } from '../../../models/filesModels';
 import Debug from 'debug';
 
 const debug = Debug('@signageos/smil-player:resourceChecker');
@@ -9,7 +10,7 @@ export type Resource = {
 	interval: number;
 	checkFunction: () => Promise<Promise<void>[]>;
 	actionOnSuccess: (data: Promise<void>[], stopChecker: () => Promise<void>) => Promise<void>;
-	mediaObject?: any;  // Optional - only media resources will have this
+	mediaObject?: MergedDownloadList;  // Optional - only media resources will have this
 };
 
 export class ResourceChecker implements IResourceChecker {
