@@ -925,6 +925,7 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * Detect content movements between URLs by comparing current and merged states
+	 * Handles cascading movements where content shifts through multiple URLs (A→B→C)
 	 * @param filesList - List of files to check
 	 * @param currentMediaInfo - Current mediaInfoObject state (before updates)
 	 * @param mergedMediaInfo - Merged state including pending batch updates
@@ -939,6 +940,16 @@ export class FilesManager implements IFilesManager {
 
 		debug('Detecting content movements for %d files', filesList.length);
 
+		// Build a map of what content each filename will have after updates
+		const destinationContentMap = new Map<string, string>();
+		for (const file of filesList) {
+			const fileName = getFileName(file.src);
+			const newValue = mergedMediaInfo[fileName];
+			if (newValue) {
+				destinationContentMap.set(fileName, String(newValue));
+			}
+		}
+
 		// Check each file to see if its content has changed
 		for (const file of filesList) {
 			const destFileName = getFileName(file.src); // Get this URL's filename
@@ -952,23 +963,54 @@ export class FilesManager implements IFilesManager {
 
 			debug('File %s: content changing from %s to %s', destFileName, currentValue || 'none', newValue);
 
-			// Find where this new content currently exists
-			for (const [sourceFileName, sourceValue] of Object.entries(currentMediaInfo)) {
-				if (sourceValue === newValue && sourceFileName !== destFileName) {
-					// Found: content is moving FROM sourceFileName TO destFileName
-					debug('Content %s is moving from %s to %s', newValue, sourceFileName, destFileName);
+			// Find the ultimate source of this content by following the chain
+			let sourceFileName: string | null = null;
+			let searchValue = String(newValue);
+			const visited = new Set<string>(); // Prevent infinite loops
 
-					// Track this movement
-					if (!movements.has(String(newValue))) {
-						movements.set(String(newValue), {
-							sourceFileName,
-							destinationFileNames: new Set(),
-							contentValue: newValue,
-						});
+			// Follow the chain backwards to find where content originally comes from
+			while (!sourceFileName && !visited.has(searchValue)) {
+				visited.add(searchValue);
+
+				// Find which file currently has this content
+				for (const [fileName, value] of Object.entries(currentMediaInfo)) {
+					if (String(value) === searchValue && fileName !== destFileName) {
+						// Check if this file is also getting new content
+						const fileNewContent = destinationContentMap.get(fileName);
+						if (fileNewContent && fileNewContent !== searchValue) {
+							// This file is also changing, trace back further
+							debug('File %s has content %s but is changing to %s, tracing back...',
+								fileName, searchValue, fileNewContent);
+							searchValue = String(currentMediaInfo[fileName]);
+							break;
+						} else {
+							// This file keeps its content or isn't changing, it's our source
+							sourceFileName = fileName;
+							debug('Found ultimate source: %s has content %s', fileName, searchValue);
+							break;
+						}
 					}
-					movements.get(String(newValue))!.destinationFileNames.add(destFileName);
-					break; // Found the source, no need to continue searching
 				}
+
+				// Safety check: if we can't find the content anywhere, break
+				if (!sourceFileName && visited.size > filesList.length) {
+					debug('WARNING: Could not trace back content %s after %d iterations', newValue, visited.size);
+					break;
+				}
+			}
+
+			if (sourceFileName) {
+				// Track this movement
+				const contentKey = String(newValue);
+				if (!movements.has(contentKey)) {
+					movements.set(contentKey, {
+						sourceFileName,
+						destinationFileNames: new Set(),
+						contentValue: newValue,
+					});
+				}
+				movements.get(contentKey)!.destinationFileNames.add(destFileName);
+				debug('Content %s will be copied from %s to %s', newValue, sourceFileName, destFileName);
 			}
 		}
 

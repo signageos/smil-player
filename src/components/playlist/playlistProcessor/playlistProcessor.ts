@@ -1962,13 +1962,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// );
 
 		// Add 6-second timeout to handle content changes
-		promiseRaceArray.push(
-			(async () => {
-				await sleep(6000); // Wait 6 seconds
-				debug(`[${debugId}] 6-second timeout reached, stopping playback for potential content change`);
-				videoEnded = true;
-			})(),
-		);
+		// promiseRaceArray.push(
+		// 	(async () => {
+		// 		await sleep(6000); // Wait 6 seconds
+		// 		debug(`[${debugId}] 6-second timeout reached, stopping playback for potential content change`);
+		// 		videoEnded = true;
+		// 	})(),
+		// );
 
 		// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 		// so playback can continue
