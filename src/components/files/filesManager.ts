@@ -979,8 +979,12 @@ export class FilesManager implements IFilesManager {
 						const fileNewContent = destinationContentMap.get(fileName);
 						if (fileNewContent && fileNewContent !== searchValue) {
 							// This file is also changing, trace back further
-							debug('File %s has content %s but is changing to %s, tracing back...',
-								fileName, searchValue, fileNewContent);
+							debug(
+								'File %s has content %s but is changing to %s, tracing back...',
+								fileName,
+								searchValue,
+								fileNewContent,
+							);
 							searchValue = String(currentMediaInfo[fileName]);
 							break;
 						} else {
