@@ -49,6 +49,7 @@ import { Resource } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
 import { getStrategy } from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
+import { ConditionalExprFormat } from '../../enums/conditionalEnums';
 
 declare global {
 	interface Window {
@@ -322,12 +323,10 @@ export class FilesManager implements IFilesManager {
 			return { shouldUpdate: false };
 		}
 
-		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
-			debug(`File does not exist in local storage: %s  downloading`, media.src);
-			return {
-				shouldUpdate: true,
-				value: currentValue,
-			};
+		// Check if content should be skipped (set by fetch strategy)
+		if (media.expr === ConditionalExprFormat.skipContent) {
+			debug(`Content marked as skip for media: %s, not downloading`, media.src);
+			return { shouldUpdate: false };
 		}
 
 		const storedValue = mediaInfoObject[getFileName(media.src)];
@@ -396,6 +395,14 @@ export class FilesManager implements IFilesManager {
 
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
+			return {
+				shouldUpdate: true,
+				value: currentValue,
+			};
+		}
+
+		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
+			debug(`File does not exist in local storage: %s  downloading`, media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
@@ -1046,7 +1053,7 @@ export class FilesManager implements IFilesManager {
 		const tempCopies = new Map<string, string>(); // Map from original path to temp path
 		debug('Creating temp copies to preserve source content...');
 
-		for (const [contentValue, movement] of movements) {
+		for (const [, movement] of movements) {
 			if (!movement.sourceFilePath) continue;
 
 			// Create temp path
@@ -1171,7 +1178,8 @@ export class FilesManager implements IFilesManager {
 		// Step 3: Clean up temp copies
 		debug('Cleaning up temp copies...');
 		for (const [originalPath, tempPath] of tempCopies) {
-			if (tempPath !== originalPath) { // Only delete if it's actually a temp copy
+			if (tempPath !== originalPath) {
+				// Only delete if it's actually a temp copy
 				try {
 					await this.deleteFile(tempPath);
 					debug('  Deleted temp copy: %s', tempPath);
@@ -1741,7 +1749,7 @@ export class FilesManager implements IFilesManager {
 					await stopChecker();
 				}
 			},
-			mediaObject: resource,  // Add the media object reference
+			mediaObject: resource, // Add the media object reference
 		};
 	};
 
@@ -1912,10 +1920,8 @@ export class FilesManager implements IFilesManager {
 							filePath: storedFile.filePath,
 						}))
 					) {
-						// DISABLED: File deletion for files not in new SMIL
-						// Keeping all files to ensure content shifting works
 						debug(`File was not found in new SMIL file, keeping it: %O`, storedFile);
-						// await this.deleteFile(storedFile.filePath);
+						await this.deleteFile(storedFile.filePath);
 					}
 				}
 			}
