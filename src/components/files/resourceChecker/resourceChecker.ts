@@ -9,6 +9,7 @@ export type Resource = {
 	interval: number;
 	checkFunction: () => Promise<Promise<void>[]>;
 	actionOnSuccess: (data: Promise<void>[], stopChecker: () => Promise<void>) => Promise<void>;
+	mediaObject?: any;  // Optional - only media resources will have this
 };
 
 export class ResourceChecker implements IResourceChecker {
@@ -66,8 +67,10 @@ export class ResourceChecker implements IResourceChecker {
 
 						// Commit batch after all resources in this interval group have been checked
 						debug('Committing batch updates for resource group at interval %d', interval);
-						// Extract filesList from resources in this interval group for commitBatch
-						const filesList = resourceGroup.map((r) => ({ src: r.url } as any));
+						// Extract media objects from resources in this interval group for commitBatch
+						const filesList = resourceGroup
+							.filter((r) => r.mediaObject)
+							.map((r) => r.mediaObject!);
 						await this.filesManager.commitBatch(filesList);
 						debug('Batch committed successfully for interval %d', interval);
 					} finally {

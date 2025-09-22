@@ -1230,10 +1230,12 @@ export class FilesManager implements IFilesManager {
 		const contentMovements = this.detectContentMovements(filesList, mediaInfoObject, mergedState);
 		debug('Detected %d content movements', contentMovements.size);
 		for (const [value, movement] of contentMovements) {
-			debug('  Movement: content %s from %s to %s',
+			debug(
+				'  Movement: content %s from %s to %s',
 				value,
 				movement.sourceFileName,
-				Array.from(movement.destinationFileNames).join(', '));
+				Array.from(movement.destinationFileNames).join(', '),
+			);
 		}
 
 		// Step 2: Check available space for copies
@@ -1330,6 +1332,7 @@ export class FilesManager implements IFilesManager {
 		debug('Processing %d files for localFilePath updates', filesList.length);
 
 		for (const file of filesList) {
+			console.log(file);
 			debug('\n--- Processing file: %s ---', file.src);
 			if ('localFilePath' in file) {
 				const fileName = getFileName(file.src);
@@ -1367,7 +1370,11 @@ export class FilesManager implements IFilesManager {
 
 							debug('  LocalPathChanged criteria:');
 							debug('    - Was in temp: %s (fileName: %s in tempDownloads)', wasInTemp, fileName);
-							debug('    - Was movement: %s (batchValue: %s in contentMovements)', wasMovement, batchValue);
+							debug(
+								'    - Was movement: %s (batchValue: %s in contentMovements)',
+								wasMovement,
+								batchValue,
+							);
 							debug('    - Path changed: %s', pathChanged);
 
 							if (wasInTemp || wasMovement || pathChanged) {
@@ -1376,7 +1383,6 @@ export class FilesManager implements IFilesManager {
 							} else {
 								debug('  ✗ localPathChanged remains false for %s', file.src);
 							}
-
 						} else {
 							debug('  WARNING: No file details returned for path: %s', actualPath);
 						}
@@ -1392,7 +1398,7 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 
-		debug('\n=== END OF STEP 5 ===')
+		debug('\n=== END OF STEP 5 ===');
 
 		// Clear temp downloads tracking after we've used it for localPathChanged detection
 		if (this.tempDownloads.size > 0) {
@@ -1665,6 +1671,7 @@ export class FilesManager implements IFilesManager {
 					await stopChecker();
 				}
 			},
+			mediaObject: resource,  // Add the media object reference
 		};
 	};
 
