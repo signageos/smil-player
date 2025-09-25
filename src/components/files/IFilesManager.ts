@@ -72,4 +72,8 @@ export interface IFilesManager {
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
+	// Batch update methods for atomic mediaInfoObject updates
+	startBatch: () => void;
+	collectUpdate: (fileName: string, value: string) => void;
+	commitBatch: (filesList: MergedDownloadList[]) => Promise<void>;
 }

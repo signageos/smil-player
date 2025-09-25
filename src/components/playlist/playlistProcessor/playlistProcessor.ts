@@ -207,6 +207,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
 		const resourceChecker = new ResourceChecker(
 			resources,
+			this.files,
 			this.synchronization.shouldSync,
 			() => this.setCheckFilesLoop(false),
 			restart,
@@ -1877,6 +1878,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let promiseRaceArray = [];
 		let videoEnded = false;
 		params.pop();
+
+		// Capture values as local constants to prevent mutation issues
+		const videoPath = params[0];
+		const regionLeft = currentRegionInfo.left;
+		const regionTop = currentRegionInfo.top;
+		const regionWidth = currentRegionInfo.width;
+		const regionHeight = currentRegionInfo.height;
+
 		if (
 			this.currentlyPlaying[currentRegionInfo.regionName]?.src !== video.src &&
 			this.currentlyPlaying[currentRegionInfo.regionName]?.playing &&
@@ -1893,7 +1902,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		try {
 			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			debug(`[${debugId}] After## video play function - single video: %O`, video);
 		} catch (err) {
 			// no await to not to block playback when server takes too long to respond
@@ -1904,14 +1913,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!!video.syncIndex && this.synchronization.shouldSync,
 				err.message,
 			);
-			await sosVideoObject.stop(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 		}
 
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
@@ -1920,13 +1923,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
-			this.sos.video.onceEnded(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			),
+			(async () => {
+				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			})(),
 		);
 
 		// stop video when playlist was stopped by higher priority
@@ -1940,6 +1939,33 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			})(),
 		);
+
+		// Check if video local path has changed (content moved to different URL)
+		// Commented out localPathChanged check due to issues with flag not being set properly
+		// promiseRaceArray.push(
+		// 	(async () => {
+		// 		while (!(video as any).localPathChanged && !videoEnded) {
+		// 			console.log((video as any).localPathChanged);
+		// 			await sleep(100);
+		// 		}
+		// 		if ((video as any).localPathChanged) {
+		// 			debug(`[${debugId}] Video local path has changed due to content move, stopping playback`);
+		// 			// Stop the video that's playing from the old path
+		// 			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+		// 			(video as any).localPathChanged = false; // Reset the flag
+		// 			videoEnded = true;
+		// 		}
+		// 	})(),
+		// );
+
+		// Add 6-second timeout to handle content changes
+		// promiseRaceArray.push(
+		// 	(async () => {
+		// 		await sleep(6000); // Wait 6 seconds
+		// 		debug(`[${debugId}] 6-second timeout reached, stopping playback for potential content change`);
+		// 		videoEnded = true;
+		// 	})(),
+		// );
 
 		// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 		// so playback can continue
