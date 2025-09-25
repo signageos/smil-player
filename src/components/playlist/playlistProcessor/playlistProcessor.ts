@@ -1940,33 +1940,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			})(),
 		);
 
-		// Check if video local path has changed (content moved to different URL)
-		// Commented out localPathChanged check due to issues with flag not being set properly
-		// promiseRaceArray.push(
-		// 	(async () => {
-		// 		while (!(video as any).localPathChanged && !videoEnded) {
-		// 			console.log((video as any).localPathChanged);
-		// 			await sleep(100);
-		// 		}
-		// 		if ((video as any).localPathChanged) {
-		// 			debug(`[${debugId}] Video local path has changed due to content move, stopping playback`);
-		// 			// Stop the video that's playing from the old path
-		// 			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
-		// 			(video as any).localPathChanged = false; // Reset the flag
-		// 			videoEnded = true;
-		// 		}
-		// 	})(),
-		// );
-
-		// Add 6-second timeout to handle content changes
-		// promiseRaceArray.push(
-		// 	(async () => {
-		// 		await sleep(6000); // Wait 6 seconds
-		// 		debug(`[${debugId}] 6-second timeout reached, stopping playback for potential content change`);
-		// 		videoEnded = true;
-		// 	})(),
-		// );
-
 		// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 		// so playback can continue
 		// TODO: fix in webos app
