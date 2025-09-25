@@ -204,6 +204,59 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return this.playIntroLoop(introMedia, intro);
 	};
 
+	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		const resourceChecker = new ResourceChecker(
+			resources,
+			this.files,
+			this.synchronization.shouldSync,
+			() => this.setCheckFilesLoop(false),
+			restart,
+		);
+		resourceChecker.start();
+	}
+
+	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
+		try {
+			if (this.sos.config.syncGroupName) {
+				debug('SyncGroupName is defined, starting sync setup');
+				if (firstIteration) {
+					await connectSyncSafe(this.sos);
+				}
+
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+
+				if (firstIteration && hasDynamicContent(this.smilObject)) {
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				}
+			} else {
+				debug('No syncGroupName is defined, skipping sync setup');
+			}
+		} catch (error) {
+			debug('Error during playlist processing sync setup: %O', error);
+			console.error(error);
+		}
+	}
+
+	private async handlePlaylistProcessing(version: number): Promise<void> {
+		try {
+			const dateTimeBegin = Date.now();
+			await this.processPlaylist(this.smilObject.playlist, version);
+			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
+			const dateTimeEnd = Date.now();
+			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+				await sleep(2000);
+			}
+		} catch (err) {
+			debug('Unexpected error processing during playlist processing: %O', err);
+			await sleep(SMILScheduleEnum.defaultAwait);
+		}
+	}
+
+	private async handlePlaylistLoop(version: number): Promise<void> {
+		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
+	}
+
 	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
 		const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 
@@ -2013,6 +2066,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let promiseRaceArray = [];
 		let videoEnded = false;
 		params.pop();
+
+		// Capture values as local constants to prevent mutation issues
+		const videoPath = params[0];
+		const regionLeft = currentRegionInfo.left;
+		const regionTop = currentRegionInfo.top;
+		const regionWidth = currentRegionInfo.width;
+		const regionHeight = currentRegionInfo.height;
+
 		if (
 			this.currentlyPlaying[currentRegionInfo.regionName]?.src !== video.src &&
 			this.currentlyPlaying[currentRegionInfo.regionName]?.playing &&
@@ -2029,7 +2090,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		try {
 			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			debug(`[${debugId}] After## video play function - single video: %O`, video);
 		} catch (err) {
 			// no await to not to block playback when server takes too long to respond
@@ -2040,14 +2101,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!!video.syncIndex && this.synchronization.shouldSync,
 				err.message,
 			);
-			await sosVideoObject.stop(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			);
-			await sosVideoObject.play(...params);
+			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 		}
 
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
@@ -2056,13 +2111,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
-			this.sos.video.onceEnded(
-				params[0],
-				currentRegionInfo.left,
-				currentRegionInfo.top,
-				currentRegionInfo.width,
-				currentRegionInfo.height,
-			),
+			(async () => {
+				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			})(),
 		);
 
 		// stop video when playlist was stopped by higher priority
@@ -2076,6 +2127,33 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			})(),
 		);
+
+		// Check if video local path has changed (content moved to different URL)
+		// Commented out localPathChanged check due to issues with flag not being set properly
+		// promiseRaceArray.push(
+		// 	(async () => {
+		// 		while (!(video as any).localPathChanged && !videoEnded) {
+		// 			console.log((video as any).localPathChanged);
+		// 			await sleep(100);
+		// 		}
+		// 		if ((video as any).localPathChanged) {
+		// 			debug(`[${debugId}] Video local path has changed due to content move, stopping playback`);
+		// 			// Stop the video that's playing from the old path
+		// 			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+		// 			(video as any).localPathChanged = false; // Reset the flag
+		// 			videoEnded = true;
+		// 		}
+		// 	})(),
+		// );
+
+		// Add 6-second timeout to handle content changes
+		// promiseRaceArray.push(
+		// 	(async () => {
+		// 		await sleep(6000); // Wait 6 seconds
+		// 		debug(`[${debugId}] 6-second timeout reached, stopping playback for potential content change`);
+		// 		videoEnded = true;
+		// 	})(),
+		// );
 
 		// due to webos bug when onceEnded function never resolves, add videoDuration + 1000ms function to resolve
 		// so playback can continue

@@ -3,30 +3,63 @@
         <layout>
             <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"></root-layout>
             <region regionName="fullscreen" left="0" top="0" width="1080" height="1920" z-index="1"
-                    backgroundColor="#000000" sync="false"></region>
+                    backgroundColor="#000000" sync="true"></region>
         </layout>
         <meta http-equiv="Refresh" content="20" timeOut="5000" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
-              skipContentOnHttpStatus="404" smilFileRefresh="1200" updateMechanism="location"></meta>
-        <meta log="true" type="manual"
-              endpoint="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/pop?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab"></meta>
-        <meta defaultRepeatCount="indefinite"></meta>
+              skipContentOnHttpStatus="404" smilFileRefresh="604800" updateMechanism="location"></meta>
+        <!--        <meta log="true" type="manual"-->
+        <!--              endpoint="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/pop?screen=303212c2-87dc-b928-8197-6065c872baa7"></meta>-->
+        <!--        <meta defaultRepeatCount="indefinite"></meta>-->
     </head>
     <body>
         <seq>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=1"
+            <video src="http://localhost:3003/?id=1"
                    popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=2"
-                   popName="signagelab_event" popType="video" popTags="video2" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=3"
-                   popName="signagelab_event" popType="video" popTags="video3" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=4"
-                   popName="signagelab_event" popType="video" popTags="video4" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=5"
-                   popName="signagelab_event" popType="video" popTags="video5" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=6"
-                   popName="signagelab_event" popType="video" popTags="video6" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=7"
-                   popName="signagelab_event" popType="video" popTags="video7" region="fullscreen"></video>
+            <video src="http://localhost:3003/?id=2"
+                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
+            <video src="http://localhost:3003/?id=3"
+                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
+            <video src="http://localhost:3003/?id=4"
+                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
+
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=2"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video2" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=3"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video3" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=4"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video4" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=5"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video5" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=6"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video6" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=7"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video7" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=8"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video8" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=9"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video9" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=10"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video10" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=11"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video11" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=12"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video12" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=13"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video13" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=14"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video14" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=15"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video15" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=16"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video16" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=17"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video17" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=18"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video18" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=19"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video19" region="fullscreen"></video>-->
+            <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=20"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video20" region="fullscreen"></video>-->
         </seq>
     </body>
 </smil>
