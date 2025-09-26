@@ -799,12 +799,6 @@ export class FilesManager implements IFilesManager {
 					file.wasUpdated = true;
 				}
 
-				// Update the file's value in the media info object
-				if (fileDetails && fileDetails.lastModifiedAt) {
-					mediaInfoObject[getFileName(file.src)] = fileDetails.lastModifiedAt;
-					await this.writeMediaInfoFile(mediaInfoObject);
-				}
-
 				return result.promises;
 			}
 		} catch (err) {
