@@ -28,6 +28,7 @@ import {
 	FileStructure,
 	MINIMAL_STORAGE_FREE_SPACE,
 	smilLogging,
+	STORAGE_MAX_FILES,
 } from '../../enums/fileEnums';
 import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import {
@@ -1785,7 +1786,9 @@ export class FilesManager implements IFilesManager {
 					!found &&
 					storedFileName !== getFileName(smilUrl) &&
 					!storedFileName.includes(FileStructure.smilMediaInfoFileName) &&
-					!storedFileName.includes(FileStructure.offlineReports)
+					!storedFileName.includes(FileStructure.offlineReports) &&
+					!storedFileName.includes(FileStructure.storageInfoFileName) && // Preserve storage info files
+					!storedFile.filePath.includes('/storage/') // Preserve all storage folders and their contents
 				) {
 					// delete only path with files, not just folders
 					if (
@@ -1799,6 +1802,131 @@ export class FilesManager implements IFilesManager {
 					}
 				}
 			}
+		}
+	};
+
+	/**
+	 * Storage Info Management Methods
+	 */
+
+	/**
+	 * Get the appropriate storage folder based on media type
+	 */
+	private getStorageFolder = (mediaType: string): string => {
+		switch (mediaType) {
+			case 'video':
+				return FileStructure.storageVideos;
+			case 'audio':
+				return FileStructure.storageAudios;
+			case 'image':
+				return FileStructure.storageImages;
+			case 'ref':
+				return FileStructure.storageWidgets;
+			default:
+				debug('Unknown media type for storage folder: %s', mediaType);
+				return FileStructure.storageVideos; // Default fallback
+		}
+	};
+
+	/**
+	 * Read storage info from JSON file with error handling
+	 */
+	private getStorageInfo = async (storageFolder: string): Promise<Record<string, any>> => {
+		const infoPath = `${storageFolder}/${FileStructure.storageInfoFileName}`;
+
+		try {
+			if (!(await this.fileExists(infoPath))) {
+				debug('Storage info not found, creating new: %s', infoPath);
+				return {};
+			}
+
+			const content = await this.sos.fileSystem.readFile({
+				storageUnit: this.internalStorageUnit,
+				filePath: infoPath,
+			});
+
+			const parsed = JSON.parse(content);
+			debug('Loaded storage info from %s with %d entries', infoPath, Object.keys(parsed).length);
+			return parsed || {};
+		} catch (err) {
+			// Handle corrupted file gracefully - storage is optimization, not critical
+			debug('Error reading storage info from %s, returning empty: %O', infoPath, err);
+			return {};
+		}
+	};
+
+	/**
+	 * Save storage info to JSON file with error handling
+	 */
+	private saveStorageInfo = async (storageFolder: string, info: Record<string, any>): Promise<void> => {
+		try {
+			const infoPath = `${storageFolder}/${FileStructure.storageInfoFileName}`;
+
+			// Ensure storage folder exists
+			try {
+				await this.sos.fileSystem.createDirectory({
+					storageUnit: this.internalStorageUnit,
+					filePath: storageFolder,
+				});
+			} catch (err) {
+				// Directory might already exist, that's OK
+				debug('Storage folder already exists or could not be created: %s', storageFolder);
+			}
+
+			await this.sos.fileSystem.writeFile(
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: infoPath,
+				},
+				JSON.stringify(info, null, 2),
+			);
+
+			debug('Saved storage info to %s with %d entries', infoPath, Object.keys(info).length);
+		} catch (err) {
+			// Log but don't fail - storage is optimization, not critical
+			debug('Failed to save storage info to %s: %O', storageFolder, err);
+		}
+	};
+
+	/**
+	 * Ensure storage space by removing oldest file if we exceed the limit
+	 * Maintains maximum of STORAGE_MAX_FILES files per storage folder
+	 */
+	private ensureStorageSpace = async (storageFolder: string): Promise<void> => {
+		try {
+			const storageInfo = await this.getStorageInfo(storageFolder);
+			const entries = Object.entries(storageInfo);
+
+			// If we have reached the limit, delete the oldest file
+			if (entries.length >= STORAGE_MAX_FILES) {
+				// Sort by timestamp, oldest first
+				entries.sort((a, b) => {
+					const timestampA = a[1].timestamp || 0;
+					const timestampB = b[1].timestamp || 0;
+					return timestampA - timestampB;
+				});
+
+				// Delete the oldest file
+				const [keyToDelete, entryToDelete] = entries[0];
+
+				try {
+					await this.deleteFile(entryToDelete.storagePath);
+					delete storageInfo[keyToDelete];
+					await this.saveStorageInfo(storageFolder, storageInfo);
+					debug(
+						'Deleted oldest storage file to make room (was at %d files): %s',
+						entries.length,
+						entryToDelete.storagePath,
+					);
+				} catch (err) {
+					debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
+				}
+			} else {
+				debug('Storage space OK: %d/%d files in %s', entries.length, STORAGE_MAX_FILES, storageFolder);
+			}
+		} catch (err) {
+			debug('Error ensuring storage space for %s: %O', storageFolder, err);
+			// Continue anyway - we'll just overwrite if needed
 		}
 	};
 }
