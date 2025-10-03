@@ -639,7 +639,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			debug('Starting trigger: %O', triggerInfo.trigger);
 			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
 			const stringDuration = findDuration(triggerMedia);
-			console.log(triggerMedia);
 			debug('Trigger: %O with duration: %s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
 				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
