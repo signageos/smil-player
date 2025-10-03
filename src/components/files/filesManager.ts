@@ -1929,4 +1929,212 @@ export class FilesManager implements IFilesManager {
 			// Continue anyway - we'll just overwrite if needed
 		}
 	};
+
+	/**
+	 * Preserve a file to storage folder before it gets overwritten
+	 * @param filePath - Current file path in active folder
+	 * @param contentValue - Content identifier (location URL for location strategy)
+	 * @param mediaType - Type of media (video/audio/image/ref)
+	 * @returns true if preserved successfully, false otherwise
+	 */
+	private preserveFileToStorage = async (
+		filePath: string,
+		contentValue: string | number,
+		mediaType: string,
+	): Promise<boolean> => {
+		try {
+			// Check available space before moving file
+			const fileStats = await this.sos.fileSystem.getFile({
+				storageUnit: this.internalStorageUnit,
+				filePath,
+			});
+
+			// Check if file exists
+			if (!fileStats) {
+				debug('File not found or inaccessible, cannot preserve: %s', filePath);
+				return false;
+			}
+
+			const fileSize = fileStats.sizeBytes || 0;
+
+			// If we don't know the file size, we still try to preserve it
+			// but log a warning
+			if (!fileStats.sizeBytes) {
+				debug('Warning: File size unknown for %s, proceeding with preservation anyway', filePath);
+			} else {
+				// Only check space if we know the file size
+				const hasSpace = await this.checkAvailableSpace(fileSize);
+				if (!hasSpace) {
+					debug('Not enough space to preserve file to storage: %s (size: %d bytes)', filePath, fileSize);
+					return false;
+				}
+			}
+
+			const storageFolder = this.getStorageFolder(mediaType);
+
+			// Ensure we have space in storage (max 20 files)
+			await this.ensureStorageSpace(storageFolder);
+
+			// Generate storage filename based on content value
+			// For location strategy, contentValue is the location URL
+			const storageFileName = getFileName(String(contentValue));
+			const storagePath = `${storageFolder}/${storageFileName}`;
+
+			debug(
+				'Preserving file to storage: %s -> %s (content: %s)',
+				filePath,
+				storagePath,
+				contentValue,
+			);
+
+			// Move file to storage with rename
+			await this.sos.fileSystem.moveFile(
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath,
+				},
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: storagePath,
+				},
+			);
+
+			// Update storage info
+			const storageInfo = await this.getStorageInfo(storageFolder);
+			storageInfo[String(contentValue)] = {
+				storagePath,
+				originalFileName: path.basename(filePath),
+				timestamp: Date.now(),
+				fileSize,
+			};
+			await this.saveStorageInfo(storageFolder, storageInfo);
+
+			debug('Successfully preserved file to storage: %s', storagePath);
+			return true;
+		} catch (err) {
+			debug('Failed to preserve file to storage: %s, error: %O', filePath, err);
+			return false;
+		}
+	};
+
+	/**
+	 * Check if content already exists in storage
+	 * @param contentValue - Content identifier to look for (location URL for location strategy)
+	 * @param mediaType - Type of media (video/audio/image/ref)
+	 * @returns Storage path if found, null otherwise
+	 */
+	private checkStorageForContent = async (
+		contentValue: string | number,
+		mediaType: string,
+	): Promise<string | null> => {
+		try {
+			const storageFolder = this.getStorageFolder(mediaType);
+			const expectedFileName = getFileName(String(contentValue));
+			const expectedPath = `${storageFolder}/${expectedFileName}`;
+
+			debug('Checking storage for content: %s in %s', contentValue, expectedPath);
+
+			// Direct file check first (fastest path)
+			if (await this.fileExists(expectedPath)) {
+				debug('Found in storage by direct path: %s', expectedPath);
+				return expectedPath;
+			}
+
+			// Check storage info as backup (in case file was named differently)
+			const storageInfo = await this.getStorageInfo(storageFolder);
+			const entry = storageInfo[String(contentValue)];
+
+			if (entry && entry.storagePath) {
+				// Verify the file actually exists
+				if (await this.fileExists(entry.storagePath)) {
+					debug('Found in storage via info lookup: %s', entry.storagePath);
+					return entry.storagePath;
+				} else {
+					// File in metadata but not on disk - clean up metadata
+					debug('Storage info references missing file, cleaning up: %s', entry.storagePath);
+					delete storageInfo[String(contentValue)];
+					await this.saveStorageInfo(storageFolder, storageInfo);
+				}
+			}
+
+			debug('Content not found in storage: %s', contentValue);
+			return null;
+		} catch (err) {
+			debug('Error checking storage for content %s: %O', contentValue, err);
+			return null; // On error, proceed with download
+		}
+	};
+
+	/**
+	 * Restore a file from storage to active folder
+	 * CRITICAL: File must be renamed to match the requesting URL's hash
+	 * @param storagePath - Path to file in storage
+	 * @param targetFolder - Target folder (e.g., FileStructure.videos)
+	 * @param requestingUrl - The URL that's requesting this content (used to generate correct filename)
+	 * @returns true if restored successfully, false otherwise
+	 */
+	private restoreFromStorage = async (
+		storagePath: string,
+		targetFolder: string,
+		requestingUrl: string,
+	): Promise<boolean> => {
+		try {
+			// Get file size for space check
+			const fileStats = await this.sos.fileSystem.getFile({
+				storageUnit: this.internalStorageUnit,
+				filePath: storagePath,
+			});
+
+			// Check if file exists and get size
+			if (!fileStats) {
+				debug('Storage file not found or inaccessible: %s', storagePath);
+				return false;
+			}
+
+			const fileSize = fileStats.sizeBytes || 0;
+
+			// Check if we have space to copy (only if size is known)
+			if (fileStats.sizeBytes) {
+				const hasSpace = await this.checkAvailableSpace(fileSize);
+				if (!hasSpace) {
+					debug('Not enough space to restore from storage: %s (size: %d bytes)', storagePath, fileSize);
+					return false;
+				}
+			} else {
+				debug('Warning: File size unknown for storage file %s, proceeding with restore anyway', storagePath);
+			}
+
+			// CRITICAL: Generate the correct filename based on the requesting URL
+			// This ensures the player finds the file with the expected name
+			const targetFileName = getFileName(requestingUrl);
+			const fullTargetPath = `${targetFolder}/${targetFileName}`;
+
+			debug(
+				'Restoring from storage: %s -> %s (for URL: %s)',
+				storagePath,
+				fullTargetPath,
+				requestingUrl,
+			);
+
+			// Copy file from storage to active folder with the correct name
+			// We copy instead of move to keep it available for other potential uses
+			await this.sos.fileSystem.copyFile(
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: storagePath,
+				},
+				{
+					storageUnit: this.internalStorageUnit,
+					filePath: fullTargetPath,
+				},
+				true, // override existing file if present
+			);
+
+			debug('Successfully restored from storage: %s -> %s', storagePath, fullTargetPath);
+			return true;
+		} catch (err) {
+			debug('Failed to restore from storage: %s, error: %O', storagePath, err);
+			return false; // Will trigger normal download
+		}
+	};
 }
