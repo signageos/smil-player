@@ -522,6 +522,24 @@ export class FilesManager implements IFilesManager {
 					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 					const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
 
+					// Before downloading, check if we should preserve the existing file to storage
+					const existingFileName = getFileName(file.src);
+					const existingValue = mediaInfoObject[existingFileName];
+
+					if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
+						// Check if this content is needed by any other URLs
+						const stillNeeded = filesList.some(
+							(f) => f.src !== file.src && mediaInfoObject[getFileName(f.src)] === existingValue,
+						);
+
+						if (!stillNeeded) {
+							debug('Preserving old content to storage before download: %s', fullLocalFilePath);
+							await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
+						} else {
+							debug('Content still needed by other URLs, not preserving: %s', existingValue);
+						}
+					}
+
 					promises.push(
 						(async () => {
 							try {
@@ -1000,9 +1018,15 @@ export class FilesManager implements IFilesManager {
 	 * Copy content to new locations based on detected movements
 	 * Uses temp copies to preserve content during cascading movements
 	 * @param movements - Map of content movements to process
+	 * @param mediaInfoObject - Current media info for checking content values
+	 * @param filesList - List of files to check if content is still needed
 	 * @returns Number of successful copies
 	 */
-	private copyContentToNewLocations = async (movements: Map<string, ContentMovement>): Promise<number> => {
+	private copyContentToNewLocations = async (
+		movements: Map<string, ContentMovement>,
+		mediaInfoObject: MediaInfoObject,
+		filesList: MergedDownloadList[],
+	): Promise<number> => {
 		let successfulCopies = 0;
 		let failedCopies = 0;
 
@@ -1145,6 +1169,25 @@ export class FilesManager implements IFilesManager {
 
 				const finalDestPath = `${destFolder}/${destFileName}`;
 
+				// Before copying, preserve destination file if it exists and is not needed elsewhere
+				if (await this.fileExists(finalDestPath)) {
+					const destValue = mediaInfoObject[destFileName];
+					if (destValue) {
+						// Check if this content is still needed by other URLs after the movement
+						const stillNeeded = filesList.some(
+							(f) => getFileName(f.src) !== destFileName && mediaInfoObject[getFileName(f.src)] === destValue,
+						);
+
+						if (!stillNeeded) {
+							debug('  Preserving destination content before overwrite: %s (value: %s)', finalDestPath, destValue);
+							const mediaType = mapFileType(destFolder);
+							await this.preserveFileToStorage(finalDestPath, destValue, mediaType);
+						} else {
+							debug('  Destination content still needed elsewhere, not preserving: %s', destValue);
+						}
+					}
+				}
+
 				try {
 					// Copy file from temp location (this will overwrite if destination exists)
 					debug('  Executing copy operation:');
@@ -1283,7 +1326,7 @@ export class FilesManager implements IFilesManager {
 		debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
 		if (contentMovements.size > 0 && hasSpace) {
 			debug('Starting copy operations for %d movements', contentMovements.size);
-			const successfulCopies = await this.copyContentToNewLocations(contentMovements);
+			const successfulCopies = await this.copyContentToNewLocations(contentMovements, mediaInfoObject, filesList);
 			debug('Content copy phase complete. Successful copies: %d', successfulCopies);
 		} else {
 			debug('No content copies needed (movements: %d, hasSpace: %s)', contentMovements.size, hasSpace);
@@ -1980,12 +2023,7 @@ export class FilesManager implements IFilesManager {
 			const storageFileName = getFileName(String(contentValue));
 			const storagePath = `${storageFolder}/${storageFileName}`;
 
-			debug(
-				'Preserving file to storage: %s -> %s (content: %s)',
-				filePath,
-				storagePath,
-				contentValue,
-			);
+			debug('Preserving file to storage: %s -> %s (content: %s)', filePath, storagePath, contentValue);
 
 			// Move file to storage with rename
 			await this.sos.fileSystem.moveFile(
@@ -2109,12 +2147,7 @@ export class FilesManager implements IFilesManager {
 			const targetFileName = getFileName(requestingUrl);
 			const fullTargetPath = `${targetFolder}/${targetFileName}`;
 
-			debug(
-				'Restoring from storage: %s -> %s (for URL: %s)',
-				storagePath,
-				fullTargetPath,
-				requestingUrl,
-			);
+			debug('Restoring from storage: %s -> %s (for URL: %s)', storagePath, fullTargetPath, requestingUrl);
 
 			// Copy file from storage to active folder with the correct name
 			// We copy instead of move to keep it available for other potential uses
@@ -2127,7 +2160,9 @@ export class FilesManager implements IFilesManager {
 					storageUnit: this.internalStorageUnit,
 					filePath: fullTargetPath,
 				},
-				true, // override existing file if present
+				{
+					overwrite: true,
+				},
 			);
 
 			debug('Successfully restored from storage: %s -> %s', storagePath, fullTargetPath);
