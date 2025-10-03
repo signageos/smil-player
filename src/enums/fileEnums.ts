@@ -13,6 +13,12 @@ export enum FileStructure {
 	audiosTmp = 'smil/audios/tmp',
 	imagesTmp = 'smil/images/tmp',
 	widgetsTmp = 'smil/widgets/tmp',
+	// Storage folders for preserving old content
+	storageVideos = 'smil/storage/videos',
+	storageAudios = 'smil/storage/audios',
+	storageImages = 'smil/storage/images',
+	storageWidgets = 'smil/storage/widgets',
+	storageInfoFileName = 'storageInfo.json',
 }
 
 export enum mapObject {
@@ -36,3 +42,4 @@ export const MINIMAL_STORAGE_FREE_SPACE = 50 * 1024;
 // ten minutes
 export const CUSTOM_ENDPOINT_OFFLINE_INTERVAL = 60 * 1000 * 10;
 export const DEFAULT_LAST_MODIFIED = 'Thu, 01 Jan 1970 00:00:00 GMT';
+export const STORAGE_MAX_FILES = 20;

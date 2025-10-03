@@ -1485,30 +1485,12 @@ export class FilesManager implements IFilesManager {
 						this.collectUpdate(fileName, String(value));
 					});
 
-					// Get file details from temp location to get lastModifiedAt
-					const tempFilePath = `${this.getTempFolder(localFilePath)}/${getFileName(file.src)}`;
-					const fileDetails = await this.sos.fileSystem.getFile({
-						storageUnit: this.internalStorageUnit,
-						filePath: tempFilePath,
-					});
-
 					// For files downloaded to temp, we'll update localFilePath during migration
 					// So we don't update it here - keep pointing to standard location
 					if ('localFilePath' in file) {
 						// Keep the standard path, not temp path
 						// localFilePath will be updated during migration from temp to standard
 						file.wasUpdated = true;
-					}
-
-					// Collect lastModifiedAt for batch update
-					if (fileDetails && fileDetails.lastModifiedAt) {
-						const fileName = getFileName(file.src);
-						debug(
-							'Collecting batch update for downloaded file: %s with lastModifiedAt: %s',
-							fileName,
-							fileDetails.lastModifiedAt,
-						);
-						this.collectUpdate(fileName, fileDetails.lastModifiedAt);
 					}
 
 					return result.promises;
