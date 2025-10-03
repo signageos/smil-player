@@ -32,7 +32,15 @@
     "babel-loader",
     "cache-loader",
     "es-check",
-    "webpack-dev-server"
+    "webpack-dev-server",
+    "del-cli",
+    "json-easy-filter",
+    "node-object-hash",
+    "url",
+    "@mdx-js/mdx",
+    "cross-env",
+    "glob",
+    "@babel/core"
   ]
 }
 

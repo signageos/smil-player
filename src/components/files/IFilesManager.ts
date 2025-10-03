@@ -8,14 +8,17 @@ import {
 	SMILWidget,
 	SosHtmlElement,
 } from '../../models/mediaModels';
-import {
-	CheckETagFunctions,
-	MediaInfoObject,
-	MergedDownloadList,
-	SMILFile,
-	SMILFileObject,
-} from '../../models/filesModels';
+import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
+import { Resource } from './resourceChecker/resourceChecker';
+import { FetchStrategy } from './fetchingStrategies/fetchingStrategies';
+
+export type { FetchStrategy };
+
+export interface UpdateCheckResult {
+	shouldUpdate: boolean;
+	value?: string;
+}
 
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
@@ -47,7 +50,11 @@ export interface IFilesManager {
 		localFilePath: string,
 		media: MergedDownloadList,
 		mediaInfoObject: MediaInfoObject,
-	) => Promise<boolean>;
+		timeOut: number,
+		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
+		fetchStrategy: FetchStrategy,
+	) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;
 	deleteFile: (filePath: string) => Promise<void>;
 	readFile: (filePath: string) => Promise<string>;
@@ -55,10 +62,14 @@ export interface IFilesManager {
 	parallelDownloadAllFiles: (
 		filesList: MergedDownloadList[],
 		localFilePath: string,
-		forceDownload: boolean,
-	) => Promise<Promise<void>[]>;
+		timeOut: number,
+		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
+		fetchStrategy: FetchStrategy,
+		forceDownload?: boolean,
+		latestRemoteValue?: number | string,
+	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
-	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<CheckETagFunctions>;
-	fetchLastModified: (fileSrc: string) => Promise<null | string | number>;
+	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
 }

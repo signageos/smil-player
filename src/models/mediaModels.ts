@@ -9,6 +9,12 @@ export type PoPAttributes = {
 	popFileName?: string;
 };
 
+export type UpdateChecks = {
+	updateCheckUrl?: string;
+	updateCheckInterval?: number;
+	allowLocalFallback?: boolean;
+};
+
 export type SMILVideo = {
 	id?: string;
 	expr?: string;
@@ -22,13 +28,16 @@ export type SMILVideo = {
 	region: string;
 	lastModified?: number;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	regionInfo: RegionAttributes;
 	media?: string;
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
-} & PoPAttributes;
+	wasUpdated?: boolean;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILAudio = {
 	id?: string;
@@ -41,12 +50,15 @@ export type SMILAudio = {
 	lastModified?: number;
 	regionInfo: RegionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILImage = {
 	id?: string;
@@ -61,12 +73,15 @@ export type SMILImage = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILWidget = {
 	id?: string;
@@ -81,17 +96,21 @@ export type SMILWidget = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
+	useInReportUrl: string;
 	playing?: boolean;
 	triggerValue?: string;
 	dynamicValue?: string;
 	syncGroupName?: string;
+	wasUpdated?: boolean;
 	'z-index': string;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILTicker = {
 	id?: string;
 	expr?: string;
 	src: string;
+	useInReportUrl: string;
 	text: string[] | string;
 	fontName?: string;
 	fontSize?: string;
@@ -114,9 +133,12 @@ export type SMILTicker = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	'z-index': string;
+	wasUpdated?: boolean;
 	timeoutReference?: ReturnType<typeof setTimeout>;
-} & PoPAttributes;
+} & PoPAttributes &
+	UpdateChecks;
 
+// TODO: check if still necessary
 export type SosHtmlElement = {
 	expr?: string;
 	src: string;
@@ -132,7 +154,9 @@ export type SosHtmlElement = {
 	regionInfo: RegionAttributes;
 	transitionInfo?: TransitionAttributes;
 	localFilePath: string;
-} & PoPAttributes;
+	useInReportUrl?: string;
+} & PoPAttributes &
+	UpdateChecks;
 
 export type SMILIntro = {
 	expr?: string;

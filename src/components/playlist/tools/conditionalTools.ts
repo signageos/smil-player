@@ -291,7 +291,7 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 		return compareValues(parsed.constValue, '0', comparable);
 	}
 
-	// helper simplified syntax for weekdays
+	// helper simplified syntax for weekdayConditional expressions
 	if (parsed.func === ConditionalExprFunction.weekDay || parsed.func === ConditionalExprFunction.weekDayUTC) {
 		if (!parsed.compareValue || !parsed.comparator) {
 			throw new Error(`You have to compare weekday() function`);

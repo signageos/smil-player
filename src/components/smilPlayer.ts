@@ -1,10 +1,9 @@
-/* tslint:disable:Unnecessary semicolon missing whitespace */
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
-import { isNil } from 'lodash';
+import { isNil, isEmpty } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
 import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
@@ -13,17 +12,16 @@ import backupImage from '../../public/backupImage/backupImage.jpg';
 import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
 import { debug } from './smilPlayerTools';
 import { SMILScheduleEnum } from '../enums/scheduleEnums';
-import { SMILEnums } from '../enums/generalEnums';
+import { SMILEnums, smilUpdate } from '../enums/generalEnums';
 import { FilesManager } from './files/filesManager';
 import { XmlParser } from './xmlParser/xmlParser';
 import { SmilPlayerPlaylist } from './playlist/playlist';
 import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcessor';
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
-import { applyFetchPolyfill } from '../polyfills/fetch';
 import { ISmilPlayer } from './ISmilPlayer';
-// import Debug from 'debug';
-
-applyFetchPolyfill();
+import { EmptyPlaylistError } from '../errors/EmptyPlaylistError';
+import Debug from 'debug';
+import { getStrategy } from './files/fetchingStrategies/fetchingStrategies';
 
 export class SmilPlayer implements ISmilPlayer {
 	private readonly files: FilesManager;
@@ -45,8 +43,13 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
-		// Debug.enable('@signageos/smil-player:*');
-		// Debug.disable();
+		// debug disabled by default, enabled only if debugEnabled is set to true in config
+		Debug.disable();
+
+		if (sos.config.debugEnabled === true || sos.config.debugEnabled === 'true') {
+			debug('Debug enabled in config, enabling debug logs');
+			Debug.enable('@signageos/smil-player:*');
+		}
 
 		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
 
@@ -70,33 +73,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 		debug('File structure created');
 
-		if (
-			await this.files.fileExists(
-				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-			)
-		) {
-			try {
-				const fileContent = JSON.parse(
-					await this.files.readFile(
-						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-					),
-				);
-
-				// delete mediaInfo file only in case that currently played smil is different from previous
-				if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
-					// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
-					await this.files.deleteFile(
-						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-					);
-				}
-			} catch (err) {
-				debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
-				// file is malformed, delete from internal storage
-				await this.files.deleteFile(
-					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
-				);
-			}
-		}
+		await this.checkAndManageSmilMediaInfo(smilUrl);
 
 		while (true) {
 			try {
@@ -113,7 +90,81 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
-	};
+	}
+
+	private async checkAndManageSmilMediaInfo(smilUrl: string): Promise<void> {
+		try {
+			if (
+				await this.files.fileExists(
+					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				)
+			) {
+				try {
+					const fileContent = JSON.parse(
+						await this.files.readFile(
+							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+						),
+					);
+
+					// delete mediaInfo file only in case that currently played smil is different from previous
+					if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
+						// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
+						await this.files.deleteFile(
+							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+						);
+					}
+				} catch (err) {
+					debug('Malformed file: %s , deleting', FileStructure.smilMediaInfoFileName);
+					// file is malformed, delete from internal storage
+					await this.files.deleteFile(
+						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+					);
+				}
+			}
+		} catch (err) {
+			// Handle any errors that might occur during file operations
+			debug('Error during SMIL media info file management: %O', err);
+			if (err instanceof Error) {
+				debug('Error details: %s', err.message);
+			}
+		}
+	}
+
+	private async downloadBackupImage(): Promise<void> {
+		if (isNil(sos.config.backupImageUrl)) {
+			return;
+		}
+
+		const backupImageObject: SMILFile = {
+			src: sos.config.backupImageUrl,
+		};
+
+		try {
+			// default timeout because at this stage, we dont have info about custom one
+			const result = await this.files.parallelDownloadAllFiles(
+				[backupImageObject],
+				FileStructure.images,
+				SMILScheduleEnum.fileCheckTimeout,
+				[],
+				[],
+				getStrategy(SMILEnums.lastModified),
+			);
+
+			await Promise.all(result.promises);
+
+			// Get the mediaInfoObject for this file
+			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
+
+			// Update the mediaInfoObject after download completes
+			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+		} catch (err) {
+			debug('Failed to download backup image: %O', err);
+			// Log additional error details if available
+			if (err instanceof Error) {
+				debug('Error details: %s', err.message);
+			}
+		}
+	}
 
 	private main = async (
 		internalStorageUnit: IStorageUnit,
@@ -121,6 +172,8 @@ export class SmilPlayer implements ISmilPlayer {
 		thisSos: FrontApplet,
 		playIntro: boolean = true,
 		firstIteration: boolean = true,
+		ignoreInvalidSmil: boolean = false,
+		invalidSmilLooping: boolean = false,
 	) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
@@ -130,30 +183,12 @@ export class SmilPlayer implements ISmilPlayer {
 			src: smilUrl,
 		};
 		let downloadPromises: Promise<void>[] = [];
-		let forceDownload = false;
 
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
 
-		try {
-			if (
-				!isNil(sos.config.backupImageUrl) &&
-				!isNil(await this.files.fetchLastModified(sos.config.backupImageUrl))
-			) {
-				forceDownload = true;
-				const backupImageObject = {
-					src: sos.config.backupImageUrl,
-				};
-				downloadPromises = await this.files.parallelDownloadAllFiles(
-					[backupImageObject],
-					FileStructure.images,
-					forceDownload,
-				);
-				await Promise.all(downloadPromises);
-			}
-		} catch (err) {
-			debug('Unexpected error occurred during backup image download : %O', err);
-		}
+		// Download backup image if configured
+		await this.downloadBackupImage();
 
 		let smilFileContent: string = '';
 		let xmlOkParsed: boolean = false;
@@ -163,15 +198,25 @@ export class SmilPlayer implements ISmilPlayer {
 		while (smilFileContent === '' || !xmlOkParsed) {
 			try {
 				// download SMIL file if device has internet connection and smil file exists on remote server
-				if (!isNil(await this.files.fetchLastModified(smilFile.src))) {
-					forceDownload = true;
-					downloadPromises = await this.files.parallelDownloadAllFiles(
-						[smilFile],
-						FileStructure.rootFolder,
-						forceDownload,
-					);
-					await Promise.all(downloadPromises);
-				}
+				// if (!isNil(await this.files.fetchLastModified(smilFile))) {
+				// default timeout because at this stage, we dont have info about custom one
+				const result = await this.files.parallelDownloadAllFiles(
+					[smilFile],
+					FileStructure.rootFolder,
+					SMILScheduleEnum.fileCheckTimeout,
+					[],
+					[],
+					getStrategy(SMILEnums.lastModified),
+					false,
+				);
+				await Promise.all(result.promises);
+
+				// Get the mediaInfoObject for this file
+				const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
+
+				// Update the mediaInfoObject after download completes
+				await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+				// }
 
 				smilFileContent = await thisSos.fileSystem.readFile({
 					storageUnit: internalStorageUnit,
@@ -183,6 +228,11 @@ export class SmilPlayer implements ISmilPlayer {
 
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
 				debug('SMIL file parsed: %O', smilObject);
+
+				if (isEmpty(smilObject.playlist)) {
+					debug('Empty SMIL playlist, smil file wont be processed further');
+					throw new EmptyPlaylistError('Empty SMIL playlist');
+				}
 
 				this.processor.setSmilObject(smilObject);
 
@@ -245,11 +295,29 @@ export class SmilPlayer implements ISmilPlayer {
 				xmlOkParsed = true;
 
 				debug('Starting to process parsed smil file');
-				const restart = () => this.main(internalStorageUnit, smilUrl, thisSos, false, false);
+				const restart = () =>
+					this.main(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						false,
+						false,
+						smilObject.refresh.fallbackToPreviousPlaylist,
+					);
 				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
 				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
 			} catch (err) {
+				if (err instanceof EmptyPlaylistError) {
+					debug('Fallback to previous playlist because new SMIL file has empty playlist');
+					return await this.fallbackToPreviousPlaylist(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						invalidSmilLooping,
+						SMILEnums.defaultRefresh * 1000,
+					);
+				}
 				if (smilFileContent === '') {
 					debug('Unexpected error occurred during smil file download : %O', err);
 				} else {
@@ -261,10 +329,21 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
+				if (ignoreInvalidSmil) {
+					debug('fallbackToPreviousPlaylist is on, ignoring new invalid playlist');
+					return await this.fallbackToPreviousPlaylist(
+						internalStorageUnit,
+						smilUrl,
+						thisSos,
+						invalidSmilLooping,
+						SMILEnums.defaultDownloadRetry * 1000,
+					);
+				}
+
 				debug('Starting to play backup image');
 				const backupImageUrl = !isNil(sos.config.backupImageUrl) ? sos.config.backupImageUrl : backupImage;
 				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-				const regionInfo = <SMILFileObject>getDefaultRegion();
+				const regionInfo = getDefaultRegion() as SMILFileObject;
 
 				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
 				if (isNil(sos.config.backupImageUrl)) {
@@ -274,5 +353,27 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
-	};
+	}
+
+	private fallbackToPreviousPlaylist = async (
+		internalStorageUnit: IStorageUnit,
+		smilUrl: string,
+		thisSos: FrontApplet,
+		invalidSmilLooping: boolean,
+		interval: number,
+	) => {
+		if (invalidSmilLooping) {
+			debug('Unexpected error occurred, another checker looping');
+			return smilUpdate.invalid;
+		}
+
+		const intervalId = setInterval(async () => {
+			const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true, true);
+			if (response !== smilUpdate.invalid) {
+				console.debug('Found valid smil file, exiting invalid smil loop');
+				clearInterval(intervalId);
+			}
+			// tslint:disable-next-line:align
+		}, interval);
+	}
 }
