@@ -7,6 +7,7 @@ import { broadcastSyncValue, joinSyncGroup } from './dynamicTools';
 import { SMILFileObject } from '../../../models/filesModels';
 import { getDynamicTagsFromPlaylist } from './dynamicPlaylistTools';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
+import { ParsedTriggerInfo } from '../../../models/triggerModels';
 
 // sets synchronization object to its starting values
 export function initSyncObject(): Synchronization {
@@ -49,12 +50,50 @@ export async function joinAllSyncGroupsOnSmilStart(
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ): Promise<void> {
-	let initCalled = false;
-
-	synchronization.syncGroupName = sos.config.syncGroupName ?? 'testingSmilGroup';
+	synchronization.syncGroupName = sos.config.syncGroupName;
 	synchronization.syncGroupIds = sos.config.syncGroupIds?.split(',') ?? [];
 	synchronization.syncDeviceId = sos.config.syncDeviceId;
 	synchronization.syncGroupIds.sort();
+
+	const triggerSync = await joinTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
+	const regionSync = await joinRegionSyncGroups(sos, synchronization, smilObject);
+
+	if (triggerSync || regionSync) {
+		// smil has some sync region, turn on sync
+		debug('Sync groups joined, turning sync on');
+		synchronization.shouldSync = true;
+		debug('sync object: %O', synchronization);
+
+		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-prioritySync`);
+		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-idlePrioritySync`);
+	} else {
+		debug('No sync groups found, turning sync off');
+	}
+}
+
+async function joinTriggerSyncGroups(
+	sos: FrontApplet,
+	synchronization: Synchronization,
+	triggerInfo: ParsedTriggerInfo,
+): Promise<boolean> {
+	for (let [key] of Object.entries(triggerInfo)) {
+		if (key.startsWith('sync-')) {
+			debug(
+				'Initializing sync server group for failover triggers: %s with deviceSyncId: %s',
+				`${synchronization.syncGroupName}`,
+				synchronization.syncDeviceId,
+			);
+
+			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
+			// join just once is enough for sync triggers since all share same sync group
+			return true;
+		}
+	}
+	return false;
+}
+
+async function joinRegionSyncGroups(sos: FrontApplet, synchronization: Synchronization, smilObject: SMILFileObject) {
+	let result = false;
 	for (let [key, value] of Object.entries(smilObject.region)) {
 		if (!isNil(value.region)) {
 			if (!isArray(value.region)) {
@@ -73,7 +112,7 @@ export async function joinAllSyncGroupsOnSmilStart(
 						synchronization,
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 					);
-					initCalled = true;
+					result = true;
 				}
 			}
 		}
@@ -85,30 +124,30 @@ export async function joinAllSyncGroupsOnSmilStart(
 			);
 			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-before`);
 			await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-${key}-after`);
-			initCalled = true;
+			result = true;
+
+			debug(
+				'Initializing sync server group regular finished: %s with deviceSyncId: %s',
+				`${synchronization.syncGroupName}-${key}`,
+				synchronization.syncDeviceId,
+			);
 		}
 	}
-	if (!initCalled) {
-		debug(
-			'Initializing sync server group: %s with deviceSyncId: %s',
-			`${synchronization.syncGroupName}`,
-			synchronization.syncDeviceId,
-		);
-		await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}`);
-	} else {
-		// smil has some sync region, turn on sync
-		debug('Sync groups joined, turning sync on');
-		synchronization.shouldSync = true;
-		debug('sync object: %O', synchronization);
-	}
-
-	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-prioritySync`);
-	await joinSyncGroup(sos, synchronization, `${synchronization.syncGroupName}-idlePrioritySync`);
+	return result;
 }
 
 export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
 	try {
-		await sos.sync.connect({ engine: SyncEngine.P2PLocal });
+		const options = sos.config.syncServerUrl
+			? {
+					engine: SyncEngine.SyncServer,
+					uri: sos.config.syncServerUrl,
+				}
+			: {
+					engine: SyncEngine.P2PLocal,
+				};
+		debug('Connecting to sync server with engine: %O', options);
+		await sos.sync.connect(options);
 		resetAppRestartCount();
 	} catch (error) {
 		debug('Error occurred during sync connection: %O', error);

@@ -510,17 +510,29 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				const triggerId =
 					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
-				const triggerMedia = this.smilObject.triggers[triggerId];
+				debug('Widget trigger Id: %s', triggerId);
+
+				// Widgets triggers do not have info specified in smil xml header, only in playlist
 				const triggerInfo = {
 					trigger: triggerId,
 				};
+
+				debug('Widget trigger info: %s', triggerInfo);
+
+				const triggerMedia = this.smilObject.triggers[triggerId];
+				debug('Widget trigger media: %O', triggerMedia);
+
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
 				const stringDuration = findDuration(triggerMedia);
+				debug('Duration: %s for trigger Id: %s', stringDuration, triggerId);
 				if (!isNil(stringDuration)) {
-					await this.processTriggerDuration(triggerInfo as any, triggerMedia, stringDuration);
+					debug('Starting duration widget trigger: %s', triggerId);
+					await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
 					return;
 				}
+				debug('Starting repeatCount widget trigger: %s', triggerId);
+				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			},
 			false,
 		);
@@ -627,6 +639,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			debug('Starting trigger: %O', triggerInfo.trigger);
 			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
 			const stringDuration = findDuration(triggerMedia);
+			debug('Trigger: %O with duration: %s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
 				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
 				return;
@@ -714,7 +727,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private processTriggerDuration = async (
-		triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+		triggerInfo: { trigger: string },
 		triggerMedia: TriggerObject,
 		stringDuration: string,
 		priorityObject: PriorityObject = {} as PriorityObject,
@@ -765,7 +778,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private processTriggerRepeatCount = async (
-		triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+		triggerInfo: { trigger: string },
 		triggerMedia: TriggerObject,
 		priorityObject: PriorityObject = {} as PriorityObject,
 	) => {

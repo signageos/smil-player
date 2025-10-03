@@ -14,7 +14,7 @@
 	"useTabs": true,
 	"overrides": [
 		{
-			"files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
+			"files": ["*.ts", "*.tsx"],
 			"options": {
 				"parser": "typescript"
 			}

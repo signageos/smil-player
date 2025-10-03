@@ -37,6 +37,7 @@ import { isRelativePath } from '../../files/tools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { smilLogging } from '../../../enums/fileEnums';
 import cloneDeep = require('lodash/cloneDeep');
+import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 
 export const debug = Debug('@signageos/smil-player:xmlParser');
 
@@ -311,9 +312,6 @@ export function extractDataFromPlaylist(
 }
 
 export function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
-	// use default value at start
-	regions.refresh.refreshInterval = SMILEnums.defaultRefresh;
-
 	if (!isNil(metaObjects.meta)) {
 		parseMetaInfo(metaObjects.meta, regions);
 	}
@@ -331,18 +329,60 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 	if (!Array.isArray(meta)) {
 		meta = [meta];
 	}
+	// TODO: find better way
+	let smilFileRefreshSet = false;
 	for (const metaRecord of meta) {
-		if (metaRecord.hasOwnProperty(SMILEnums.metaContent)) {
-			regions.refresh.refreshInterval = parseInt(metaRecord.content) || SMILEnums.defaultRefresh;
+		if (
+			metaRecord.hasOwnProperty(SMILEnums.metaContent) ||
+			metaRecord.hasOwnProperty(SMILEnums.metaContentRefresh)
+		) {
+			// Support both content and contentRefresh parameters
+			const refreshValue = metaRecord.contentRefresh || metaRecord.content;
+			regions.refresh.refreshInterval = refreshValue
+				? (parseInt(refreshValue) || SMILEnums.defaultRefresh) * 1000
+				: SMILEnums.defaultRefresh * 1000;
 			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
+			// timeout for last-modified header check
+			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
+			regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;
 		}
+
+		if (metaRecord.hasOwnProperty(SMILEnums.metaSmilRefresh)) {
+			regions.refresh.smilFileRefresh = metaRecord.smilFileRefresh
+				? (parseInt(metaRecord.smilFileRefresh) || regions.refresh.refreshInterval) * 1000
+				: regions.refresh.refreshInterval;
+			smilFileRefreshSet = true;
+		}
+
 		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
 			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 		}
+
+		if (metaRecord.hasOwnProperty(SMILEnums.skipContentOnHttpStatus)) {
+			regions.skipContentOnHttpStatus = metaRecord.skipContentOnHttpStatus
+				? metaRecord.skipContentOnHttpStatus.split(',').map(Number)
+				: [];
+		}
+
+		if (metaRecord.hasOwnProperty(SMILEnums.updateMechanism)) {
+			regions.updateMechanism =
+				metaRecord.updateMechanism === SMILEnums.location ? SMILEnums.location : SMILEnums.lastModified;
+		}
+
+		if (metaRecord.hasOwnProperty(SMILEnums.updateContentOnHttpStatus)) {
+			regions.updateContentOnHttpStatus = metaRecord.updateContentOnHttpStatus
+				? metaRecord.updateContentOnHttpStatus.split(',').map(Number)
+				: [];
+		}
+
 		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
+			const filteredLoggingType = metaRecord.type?.split(',').filter(isAllowedSmilLogging) || [];
+			const result: (smilLogging.standard | smilLogging.proofOfPlay)[] =
+				filteredLoggingType.length > 0 ? filteredLoggingType : [smilLogging.standard];
+
 			regions.logger = {
 				enabled: metaRecord.log === true,
-				type: metaRecord.type === smilLogging.proofOfPlay ? smilLogging.proofOfPlay : smilLogging.standard,
+				type: result,
 				endpoint: metaRecord.endpoint,
 			};
 		}
@@ -356,6 +396,14 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.defaultTransition = metaRecord.defaultTransition;
 		}
 	}
+
+	if (!smilFileRefreshSet) {
+		regions.refresh.smilFileRefresh = regions.refresh.refreshInterval;
+	}
+}
+
+function isAllowedSmilLogging(item: string): item is smilLogging.standard | smilLogging.proofOfPlay {
+	return item === smilLogging.standard || item === smilLogging.proofOfPlay;
 }
 
 function parseSensorsInfo(sensors: SMILSensors): ParsedSensor[] {
@@ -417,12 +465,18 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 	const regionsObject: RegionsObject = {
 		region: {},
 		refresh: {
-			refreshInterval: 0,
+			refreshInterval: SMILEnums.defaultRefresh * 1000,
+			smilFileRefresh: SMILEnums.defaultRefresh * 1000,
+			timeOut: SMILScheduleEnum.fileCheckTimeout as number,
+			fallbackToPreviousPlaylist: false,
 		},
 		onlySmilFileUpdate: false,
+		skipContentOnHttpStatus: [],
+		updateContentOnHttpStatus: [],
+		updateMechanism: SMILEnums.lastModified,
 		logger: {
 			enabled: false,
-			type: smilLogging.standard,
+			type: [smilLogging.standard],
 		},
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {

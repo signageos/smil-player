@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
+  previous playlist
+- add option to check for media updates using location header or url instead of last-modified header in the response
+- add option to skip or update content based on the status code from response
+
+### Fixed
+
+- fixed handling of trigger sync groups when the playlist contains no sync
+
 ## [3.2.4] - 2025-04-01
 
 ### Fixed

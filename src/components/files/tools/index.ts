@@ -6,11 +6,18 @@ import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { checksumString } from './checksum';
-import { FileStructure, mapObject, WidgetExtensions, WidgetFullPath } from '../../../enums/fileEnums';
+import {
+	DEFAULT_LAST_MODIFIED,
+	FileStructure,
+	mapObject,
+	WidgetExtensions,
+	WidgetFullPath,
+} from '../../../enums/fileEnums';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { removeLastArrayItem } from '../../playlist/tools/generalTools';
+import moment from 'moment';
 
 export const debug = Debug('@signageos/smil-player:filesManager');
 
@@ -34,7 +41,9 @@ export function getFileName(url: string) {
 		return url;
 	}
 	const parsedUrl = URLVar.parse(url);
-	const filePathChecksum = parsedUrl.host ? `_${checksumString(parsedUrl.host + parsedUrl.pathname, 8)}` : '';
+	const filePathChecksum = parsedUrl.host
+		? `_${checksumString(parsedUrl.host + parsedUrl.pathname + JSON.stringify(parsedUrl.query), 8)}`
+		: '';
 	const fileName = path.basename(parsedUrl.pathname ?? url);
 	const sanitizedExtname = path
 		.extname(parsedUrl.pathname ?? url)
@@ -64,6 +73,7 @@ export function createVersionedUrl(
 	playlistVersion: number = 0,
 	smilUrlVersion: string | null = null,
 	isWidget: boolean = false,
+	wasUpdated: boolean = false,
 ): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
@@ -72,14 +82,19 @@ export function createVersionedUrl(
 	if (isWidget && !isLocalFileWidget(sourceUrl)) {
 		return urlWithoutSearch;
 	}
-	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
+	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion, wasUpdated);
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
 }
 
-export function generateSmilUrlVersion(playlistVersion: number = 0, smilUrlVersion: string | null = null): string {
+export function generateSmilUrlVersion(
+	playlistVersion: number = 0,
+	smilUrlVersion: string | null = null,
+	wasUpdated: boolean = false,
+): string {
 	if (
 		!isNil(smilUrlVersion) &&
-		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1))
+		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1)) &&
+		!wasUpdated
 	) {
 		return smilUrlVersion;
 	}
@@ -118,12 +133,14 @@ export function createLocalFilePath(localFilePath: string, src: string): string 
 export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): MediaInfoObject {
 	let fileLastModifiedObject: MediaInfoObject = {};
 	for (let file of fileList) {
-		fileLastModifiedObject[getFileName(file.src)] = file.lastModified ? file.lastModified : 0;
+		fileLastModifiedObject[getFileName(file.src)] = file.lastModified
+			? file.lastModified
+			: moment(DEFAULT_LAST_MODIFIED).valueOf();
 	}
 	return fileLastModifiedObject;
 }
 
-export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: string | number) {
+export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: number | string) {
 	jsonObject[attr] = value;
 }
 
@@ -176,7 +193,9 @@ export function createPoPMessagePayload(
 		...(errMessage ? { errorMessage: errMessage } : {}),
 		...(value.popCustomId ? { customId: value.popCustomId } : {}),
 		...(value.popType ? { type: value.popType } : {}),
-		...(value.popTags ? { tags: [...value.popTags.split(','), new Date().toISOString()] } : {}),
+		...(value.popTags
+			? { tags: [...value.popTags.split(','), value.useInReportUrl!, new Date().toISOString()] }
+			: {}),
 		...(value.popFileName ? { fileName: value.popFileName } : {}),
 	};
 }

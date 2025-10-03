@@ -281,7 +281,7 @@ describe('Playlist tools component', () => {
 				],
 			];
 
-			const awaitTimes = [SMILScheduleEnum.defaultAwait, 0, SMILScheduleEnum.defaultAwait, 0];
+			const awaitTimes = [SMILScheduleEnum.defaultAwait, SMILScheduleEnum.defaultAwait, SMILScheduleEnum.defaultAwait, 0];
 
 			for (let i = 0; i < testSchedules.length; i += 1) {
 				const response = setDefaultAwait(testSchedules[i]);

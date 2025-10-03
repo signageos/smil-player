@@ -76,6 +76,8 @@ import {
 	joinAllSyncGroupsOnSmilStart,
 } from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
+import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
+import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -151,12 +153,23 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
-		downloadPromises = downloadPromises.concat(
-			await this.files.parallelDownloadAllFiles(
-				[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
-				fileStructure,
-			),
+		const result = await this.files.parallelDownloadAllFiles(
+			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
+			fileStructure,
+			this.smilObject.refresh.timeOut,
+			[],
+			[],
+			getStrategy(SMILEnums.lastModified),
 		);
+		downloadPromises = downloadPromises.concat(result.promises);
+
+		// Get the mediaInfoObject for this file
+		const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([
+			this.smilObject.intro[0][introMedia],
+		] as MergedDownloadList[]);
+
+		// Update the mediaInfoObject after download completes
+		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 
 		await Promise.all(downloadPromises);
 		debug('Intro media downloaded: %O', this.smilObject.intro[0]);
@@ -190,125 +203,27 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return this.playIntroLoop(introMedia, intro);
 	};
 
-	/**
-	 * main processing function of smil player, runs playlist in endless loop and periodically
-	 * checks for smil and media update in parallel
-	 * @param smilFile - representation of actual SMIL file
-	 * @param firstIteration
-	 * @param restart
-	 */
 	public processingLoop = async (smilFile: SMILFile, firstIteration: boolean, restart: () => void): Promise<void> => {
-		const promises = [];
+		const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
 
-		promises.push(
-			(async () => {
-				// used during playlist update, give enough time to start playing first content from new playlist and then start file check again
-				while (!this.getCheckFilesLoop()) {
-					await sleep(1000);
-				}
-				while (this.getCheckFilesLoop()) {
-					if (isNil(this.smilObject.refresh.expr) || !isConditionalExpExpired(this.smilObject.refresh)) {
-						debug('Prepare ETag check for smil media files prepared');
-						const {
-							fileEtagPromisesMedia: fileEtagPromisesMedia,
-							fileEtagPromisesSMIL: fileEtagPromisesSMIL,
-						} = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
-						debug('Last modified check for smil media files prepared');
-						debug('Checking files for changes');
-						if (
-							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-							this.synchronization.shouldSync
-						) {
-							debug('One of the files changed, restarting loop with sync on');
-							await this.sos.refresh();
-							break;
-						}
+		const promises = [
+			// File checking process
+			this.handleFileChecking(smilFile, restart),
 
-						if (
-							(fileEtagPromisesMedia?.length > 0 || fileEtagPromisesSMIL?.length > 0) &&
-							!this.synchronization.shouldSync
-						) {
-							debug('One of the files changed, restarting loop with sync off');
-							this.setCheckFilesLoop(false);
-							break;
-						}
+			// Sync setup
+			this.handleSyncSetup(firstIteration),
 
-						debug('File changes checked');
+			// Playlist processing loop
+			this.handlePlaylistLoop(version),
 
-						await sleep(this.smilObject.refresh.refreshInterval * 1000);
-						debug('after file check interval');
-					} else {
-						debug('Conditional expression for files update is false: %s', this.smilObject.refresh.expr);
-						await sleep(this.smilObject.refresh.refreshInterval * 1000);
-					}
-				}
-				debug('calling restart function');
-				// no await
-				restart();
-			})(),
-		);
+			// Trigger watching process
+			this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop),
 
-		promises.push(
-			(async () => {
-				try {
-					// connect to the sync server only on start of smil, not on updates
-					if (firstIteration) {
-						await connectSyncSafe(this.sos);
-					}
-
-					await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
-
-					if (firstIteration && hasDynamicContent(this.smilObject)) {
-						await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
-					}
-				} catch (error) {
-					debug('Error during playlist processing sync setup: %O', error);
-					console.error(error);
-				}
-
-				// check if its first playlist
-				const version = firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1;
-				// endless processing of smil playlist
-				await this.runEndlessLoop(async () => {
-					try {
-						const dateTimeBegin = Date.now();
-						await this.processPlaylist(this.smilObject.playlist, version);
-						debug(
-							'One smil playlist iteration finished ' +
-								version +
-								' ' +
-								JSON.stringify(this.cancelFunction),
-						);
-						const dateTimeEnd = Date.now();
-						if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
-							await sleep(2000);
-						}
-					} catch (err) {
-						debug('Unexpected error processing during playlist processing: %O', err);
-						await sleep(SMILScheduleEnum.defaultAwait);
-					}
-				}, version);
-			})(),
-		);
-
-		promises.push(
-			(async () => {
-				// triggers processing
-				await this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop);
-			})(),
-		);
-
-		promises.push(
-			(async () => {
-				// worker to process offline custom endpoint reports
-				await this.runEndlessLoop(
-					async () => {
-						await this.files.watchCustomEndpointReports();
-					},
-					firstIteration ? this.getPlaylistVersion() : this.getPlaylistVersion() + 1,
-				);
-			})(),
-		);
+			// Custom endpoint reports processing
+			this.runEndlessLoop(async () => {
+				await this.files.watchCustomEndpointReports();
+			}, version),
+		];
 
 		await Promise.all(promises);
 	};
@@ -544,7 +459,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					endTime,
 					priorityObject,
 				);
-
 				await this.playElement(
 					value as SMILMedia,
 					version,
@@ -813,12 +727,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								isNil(this.synchronization.syncValue)
 							) {
 								await sleep(SMILScheduleEnum.defaultAwait);
-								console.log('start waiting for idle priority sync', Date.now());
 								await this.sos.sync.wait(
 									'idle',
 									`${this.synchronization.syncGroupName}-idlePrioritySync`,
 								);
-								console.log('finished waiting for idle priority sync', Date.now());
 							} else {
 								await sleep(SMILScheduleEnum.defaultAwait);
 							}
@@ -836,9 +748,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
-							console.log('start waiting for priority sync', Date.now());
 							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
-							console.log('finished waiting for priority sync', Date.now());
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -1306,6 +1216,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param isLast - if this media is last element in current playlist
 	 * @param currentRegionInfo
 	 * @param parentRegionInfo
+	 * @param debugId
 	 */
 	private playHtmlContent = async (
 		value: SMILImage | SMILWidget | SMILTicker,
@@ -1316,6 +1227,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		isLast: boolean,
 		currentRegionInfo: RegionAttributes,
 		parentRegionInfo: RegionAttributes,
+		debugId: string, // Add debugId parameter
 	): Promise<void> => {
 		const taskStartDate = moment().toDate();
 		const handlePriorityWhenDone = () =>
@@ -1384,24 +1296,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							transitionDuration,
 							taskStartDate,
 							version,
+							debugId, // Pass debugId to waitMediaOnScreen
 						);
 
 						debug(
-							'Finished iteration of playlist: %O',
+							`[${debugId}] Finished iteration of playlist: %O`,
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
-						// await this.handleElementSynchronization(
-						// 	value,
-						// 	currentRegionInfo,
-						// 	parentRegionInfo,
-						// 	currentIndex,
-						// 	'after',
-						// );
-
 						await handlePriorityWhenDone();
 						debug(
-							'Finished checking iteration of playlist: %O',
+							`[${debugId}] Finished checking iteration of playlist: %O`,
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
@@ -1411,22 +1316,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						changeZIndex(value, element, -2);
 
-						// if (
-						// 	!(await this.handleElementSynchronization(
-						// 		value,
-						// 		currentRegionInfo,
-						// 		parentRegionInfo,
-						// 		currentIndex,
-						// 		'after',
-						// 	))
-						// ) {
-						// 	return;
-						// }
-
-						debug('finished playing element: %O', value);
+						debug(`[${debugId}] finished playing element: %O`, value);
 					} catch (err) {
 						debug(
-							'Unexpected error: %O during html element playback promise function: %s',
+							`[${debugId}] Unexpected error: %O during html element playback promise function: %s`,
 							err,
 							value.localFilePath,
 						);
@@ -1445,7 +1338,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				})(),
 			];
 		} catch (err) {
-			debug('Unexpected error: %O during html element playback: %s', err, value.localFilePath);
+			debug(`[${debugId}] Unexpected error: %O during html element playback: %s`, err, value.localFilePath);
 
 			await handlePriorityWhenDone();
 
@@ -1467,10 +1360,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param element - displayed SOS HTML element
 	 * @param arrayIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
 	 * @param elementHtml - actual HTML element visible on page
-	 * @param currentElementPriorityLevel
 	 * @param transitionDuration - duration of transitions between images
 	 * @param taskStartDate - date when element was displayed
 	 * @param version - smil internal version of current playlist
+	 * @param debugId
 	 */
 	private waitMediaOnScreen = async (
 		currentRegionInfo: RegionAttributes,
@@ -1481,27 +1374,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		transitionDuration: number,
 		taskStartDate: Date,
 		version: number,
+		debugId: string,
 	): Promise<void> => {
-		debug('Starting to play element: %O', element);
+		debug(`[${debugId}] Starting to play element: %O`, element);
 		let duration = setElementDuration(element.dur);
 		let transitionSet = false;
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version);
-
-		if (this.syncContentPrepared?.fullScreenTrigger && !element.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(
-			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-			// 	Date.now(),
-			// );
-			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1500);
-			// console.log(
-			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger.syncGroupName,
-			// 	Date.now(),
-			// );
-			// delete this.syncContentPrepared?.fullScreenTrigger;
-		}
 
 		// rare case during seamless update with only one widget in playlist.
 		if (elementHtml.style.visibility !== 'visible') {
@@ -1512,7 +1391,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		this.setCurrentlyPlaying(element, tag, currentRegionInfo.regionName);
 
-		debug('waiting image duration: %s from element: %s', duration, element.id);
+		debug(`[${debugId}] waiting image duration: %s from element: %s`, duration, element.id);
 
 		while (
 			duration > 0 &&
@@ -1537,7 +1416,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!transitionSet
 			) {
 				transitionSet = true;
-				debug('setting transition css for element: %O', element, duration, transitionDuration);
+				debug(`[${debugId}] setting transition css for element: %O`, element, duration, transitionDuration);
 				setTransitionCss(
 					element,
 					elementHtml,
@@ -1549,7 +1428,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sleep(100);
 		}
 
-		debug('element playing finished: %O', element);
+		debug(`[${debugId}] element playing finished: %O`, element);
 
 		// no await to not to block playback when server takes too long to respond
 		this.files.sendMediaReport(
@@ -1602,6 +1481,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param endTime - when should playlist end, specified either in date in millis or how many times should playlist play
 	 * @param isLast - if this media is last element in current playlist
 	 * @param version - smil internal version of current playlist
+	 * @param debugId
 	 */
 	private shouldWaitAndContinue = async (
 		media: SMILMedia,
@@ -1612,6 +1492,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		endTime: number,
 		isLast: boolean,
 		version: number,
+		debugId: string,
 	): Promise<boolean> => {
 		if (isNil(this.promiseAwaiting[regionInfo.regionName])) {
 			this.promiseAwaiting[regionInfo.regionName] = cloneDeep(media);
@@ -1632,7 +1513,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			version >= this.getPlaylistVersion()
 		) {
 			debug(
-				'Master dynamic playlist is waiting for all preceding content to finish: %s, %s',
+				`[${debugId}] Master dynamic playlist is waiting for all preceding content to finish: %s, %s`,
 				media.dynamicValue,
 				Date.now(),
 			);
@@ -1642,7 +1523,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 			await Promise.all(promises);
 			debug(
-				'Master dynamic playlist finished waiting for all preceding content to finish: %s, %s',
+				`[${debugId}] Master dynamic playlist finished waiting for all preceding content to finish: %s, %s`,
 				media.dynamicValue,
 				Date.now(),
 			);
@@ -1658,21 +1539,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlaying[regionInfo.regionName].nextElement.type =
 				get(media, 'localFilePath', 'default').indexOf(FileStructure.videos) === -1 ? 'html' : 'video';
 
-			debug('checking if this playlist is newer version than currently playing');
+			debug(`[${debugId}] checking if this playlist is newer version than currently playing`);
 			if (version > this.playlistVersion && !media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
 				this.foundNewPlaylist = true;
 			}
 			if (this.promiseAwaiting[regionInfo.regionName]) {
 				debug(
-					'waiting for previous promise in current region: %s, %O, with timestamp : %s',
+					`[${debugId}] waiting for previous promise in current region: %s, %O, with timestamp : %s`,
 					regionInfo.regionName,
 					media,
 					Date.now(),
 				);
-				debug(this.promiseAwaiting[regionInfo.regionName]);
+				debug(`[${debugId}]`, this.promiseAwaiting[regionInfo.regionName]);
 				await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 				debug(
-					'waiting for previous promise in current region finished: %s, %O with timestamp: %s',
+					`[${debugId}] waiting for previous promise in current region finished: %s, %O with timestamp: %s`,
 					regionInfo.regionName,
 					media,
 					Date.now(),
@@ -1682,7 +1563,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (media.dynamicValue && !this.synchronization.shouldSync) {
 			debug(
-				'dynamic playlist will not play because synchronization has been stopped: %s, %s',
+				`[${debugId}] dynamic playlist will not play because synchronization has been stopped: %s, %s`,
 				media.dynamicValue,
 				this.synchronization.shouldSync,
 			);
@@ -1701,7 +1582,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			media.hasOwnProperty(SMILTriggersEnum.triggerValue) &&
 			!this.triggers.triggersEndless[media.triggerValue as string]?.play
 		) {
-			debug('trigger was cancelled prematurely: %s', media.triggerValue);
+			debug(`[${debugId}] trigger was cancelled prematurely: %s`, media.triggerValue);
 			return false;
 		}
 
@@ -1716,7 +1597,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			}
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
-			debug('dynamic playlist was cancelled prematurely: %s', media.dynamicValue);
+			debug(`[${debugId}] dynamic playlist was cancelled prematurely: %s`, media.dynamicValue);
 			return false;
 		}
 
@@ -1733,27 +1614,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			currentIndexPriority?.player.contentPause !== 0 ||
 			currentIndexPriority?.behaviour === 'pause'
 		) {
-			// wait a bit to avoid race condition during lower priority wait and dynamic content switch
-			// TODO: was this needed?
-			// await sleep(300);
 			debug(
-				'Playlist was stopped/paused by higher priority during await: %O, media: %O',
+				`[${debugId}] Playlist was stopped/paused by higher priority during await: %O, media: %O`,
 				currentIndexPriority,
 				media,
 			);
 			return false;
 		}
 
-		// TODO: previous contition, check if needed
-		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
-		// if (
-		// 	(currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) ||
-		// 	(currentIndexPriority?.player.timesPlayed > endTime && endTime !== 0)
-		// ) {
-
-		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
 		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) {
-			debug('Playtime for playlist: %O with media: %O was exceeded wait, exiting', currentIndexPriority, media);
+			debug(
+				`[${debugId}] Playtime for playlist: %O with media: %O was exceeded wait, exiting`,
+				currentIndexPriority,
+				media,
+			);
 			await this.priority.handlePriorityWhenDone(
 				media as SMILMedia,
 				regionInfo.regionName,
@@ -1764,21 +1638,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				this.triggers,
 			);
-			// TODO: race condition check
-			// await sleep(1000);
-
 			return false;
 		}
 
-		// previous element in playlist was deffered, dont play it
-		// if (currentIndexPriority?.behaviour === 'defer') {
-		// 	debug('Playlist was deferred by higher priority during await: %O, media: %O', currentIndexPriority, media);
-		// 	await sleep(250);
-		// }
-
-		debug('Playlist is ready to play: %O with media: %O', currentIndexPriority, media);
-		// regenerate that current priority is playing due to mechanic that priority ends itself plus sync at the end of the playlist
-		// ( another playlist can jump in during the process, this is to prevent it )
+		debug(`[${debugId}] Playlist is ready to play: %O with media: %O`, currentIndexPriority, media);
 		this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player.playing = true;
 		return true;
 	};
@@ -1795,6 +1658,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param parentRegionInfo
 	 * @param sosVideoObject
 	 * @param params
+	 * @param debugId
 	 */
 	private playVideo = async (
 		video: SMILVideo,
@@ -1807,6 +1671,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		parentRegionInfo: RegionAttributes,
 		sosVideoObject: Video | Stream,
 		params: VideoParams,
+		debugId: string, // Add debugId parameter
 	) => {
 		const taskStartDate = moment().toDate();
 		const handlePriorityWhenDone = () =>
@@ -1822,7 +1687,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			);
 
 		try {
-			debug('Playing video: %O', video);
+			debug(`[${debugId}] Playing video: %O`, video);
 
 			// trigger combined with video background
 			if (config.videoOptions.background) {
@@ -1841,6 +1706,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								parentRegionInfo,
 								version,
 								arrayIndex,
+								debugId, // Pass debugId
 							);
 						} else {
 							await this.handleStreamPlay(
@@ -1850,10 +1716,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								currentRegionInfo,
 								parentRegionInfo,
 								version,
+								debugId, // Pass debugId
 							);
 						}
 
-						debug('Playing video finished: %O in playlist version: %s', video, version);
+						debug(`[${debugId}] Playing video finished: %O in playlist version: %s`, video, version);
 
 						// no await to not to block playback when server takes too long to respond
 						this.files.sendMediaReport(
@@ -1881,60 +1748,38 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							if (this.getCancelFunction()) {
 								await this.cancelPreviousMedia(currentRegionInfo);
 								debug(
-									'Finished iteration of playlist: %O',
+									`[${debugId}] Finished iteration of playlist: %O`,
 									this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 								);
-
-								// await this.handleElementSynchronization(
-								// 	video,
-								// 	currentRegionInfo,
-								// 	parentRegionInfo,
-								// 	currentIndex,
-								// 	'after',
-								// );
 
 								await handlePriorityWhenDone();
 								break;
 							}
 						}
-						// no video.stop function so one video can be played gapless in infinite loop
-						// stopping is handled by cancelPreviousMedia function
-						// force stop video only when reloading smil file due to new version of smil
+
 						if (this.getCancelFunction()) {
 							await this.cancelPreviousMedia(currentRegionInfo);
 							debug(
-								'Finished iteration of playlist: %O',
+								`[${debugId}] Finished iteration of playlist: %O`,
 								this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 							);
-
-							// await this.handleElementSynchronization(
-							// 	video,
-							// 	currentRegionInfo,
-							// 	parentRegionInfo,
-							// 	currentIndex,
-							// 	'after',
-							// );
 
 							await handlePriorityWhenDone();
 							return;
 						}
 
 						debug(
-							'Finished iteration of playlist: %O',
+							`[${debugId}] Finished iteration of playlist: %O`,
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
-						// await this.handleElementSynchronization(
-						// 	video,
-						// 	currentRegionInfo,
-						// 	parentRegionInfo,
-						// 	currentIndex,
-						// 	'after',
-						// );
-
 						await handlePriorityWhenDone();
 					} catch (err) {
-						debug('Unexpected error: %O occurred during single video playback: O%', err, video);
+						debug(
+							`[${debugId}] Unexpected error: %O occurred during single video playback: O%`,
+							err,
+							video,
+						);
 
 						await handlePriorityWhenDone();
 
@@ -1947,26 +1792,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							err.message,
 						);
 					}
-					//
-					// if (
-					// 	!(await this.handleElementSynchronization(
-					// 		video,
-					// 		currentRegionInfo,
-					// 		parentRegionInfo,
-					// 		currentIndex,
-					// 		'after',
-					// 	))
-					// ) {
-					// 	return;
-					// }
-					debug('finished playing element: %O', video);
+					debug(`[${debugId}] finished playing element: %O`, video);
 				})(),
 			];
 
 			// give time to smil player to play video before massive wallclock processing
 			await sleep(1000);
 		} catch (err) {
-			debug('Unexpected error: %O occurred during single video prepare: O%', err, video);
+			debug(`[${debugId}] Unexpected error: %O occurred during single video prepare: O%`, err, video);
 			await handlePriorityWhenDone();
 			// no await to not to block playback when server takes too long to respond
 			this.files.sendMediaReport(
@@ -1987,6 +1820,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		parentRegionInfo: RegionAttributes,
 		version: number,
 		arrayIndex: number,
+		debugId: string, // Add debugId parameter
 	) => {
 		let promiseRaceArray = [];
 		let videoEnded = false;
@@ -2005,25 +1839,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		if (this.syncContentPrepared?.fullScreenTrigger && !video.dynamicValue && this.synchronization.shouldSync) {
-			// console.log(
-			// 	'start1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-			// 	Date.now(),
-			// );
-			// await this.sos.sync.wait('customValue', this.synchronization.syncGroupName, 1000);
-			// console.log(
-			// 	'end1 of fist non-sync media after dynamic content end in syncgroup',
-			// 	this.syncContentPrepared?.fullScreenTrigger?.syncGroupName,
-			// 	Date.now(),
-			// );
-			// delete this.syncContentPrepared?.fullScreenTrigger;
-		}
-
 		try {
-			debug('Calling## video play function - single video: %O', video);
+			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
 			await sosVideoObject.play(...params);
-			debug('After## video play function - single video: %O', video);
+			debug(`[${debugId}] After## video play function - single video: %O`, video);
 		} catch (err) {
 			// no await to not to block playback when server takes too long to respond
 			this.files.sendMediaReport(
@@ -2047,7 +1866,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName);
 
-		debug('Starting## playing video onceEnded function - single video: %O', video);
+		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
 			this.sos.video.onceEnded(
 				params[0],
@@ -2101,11 +1920,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		currentRegionInfo: RegionAttributes,
 		parentRegionInfo: RegionAttributes,
 		version: number,
+		debugId: string,
 	) => {
+		debug(`[${debugId}] Starting stream playback for: %O`, stream);
 		let promiseRaceArray = [];
 
-		// remove protocol parameter for Video Inputs and Internal Ports
 		if (stream.protocol === StreamEnums.internal) {
+			debug(`[${debugId}] Removing protocol parameter for internal stream`);
 			params.pop();
 		}
 
@@ -2115,14 +1936,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		this.setCurrentlyPlaying(stream, 'video', currentRegionInfo.regionName);
 
-		// if video has specified duration in smil file, cancel it after given duration passes
 		if ('dur' in stream) {
 			const parsedDuration: number = setElementDuration(stream.dur!);
-			debug('Got dur: %s for stream: %O', parsedDuration, stream);
+			debug(`[${debugId}] Got dur: %s for stream: %O`, parsedDuration, stream);
 			promiseRaceArray.push(sleep(parsedDuration));
 		}
 
-		// promiseRaceArray.push(await sosVideoObject.play(...params));
 		promiseRaceArray.push(
 			waitForSuccessOrFailEvents(smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent),
 		);
@@ -2130,7 +1949,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			await Promise.race(promiseRaceArray);
 		} catch (err) {
-			debug('Unexpected error: %O during single stream playback play at stream: %O', err, stream);
+			debug(`[${debugId}] Unexpected error: %O during single stream playback play at stream: %O`, err, stream);
 		}
 	};
 
@@ -2242,9 +2061,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		endTime: number,
 		isLast: boolean,
 	) => {
+		const debugId = `playElement_${version}_${key}_${Date.now()}`;
+		debug(`[${debugId}] Starting to play element: %O`, value);
+
 		// html page case
 		if ('localFilePath' in value && removeDigits(key) === 'ref' && !isWidgetUrl(value.src)) {
 			value.localFilePath = value.src;
+			debug(`[${debugId}] Updated localFilePath for ref element: %s`, value.localFilePath);
 		}
 
 		// TODO: implement check to sos library
@@ -2254,13 +2077,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			isNil((value as SMILVideo).isStream) &&
 			removeDigits(key) !== HtmlEnum.ticker
 		) {
-			debug('Element: %O has empty localFilepath: %O', value);
+			debug(`[${debugId}] Element has empty localFilepath: %O`, value);
 			await sleep(100);
 			return;
 		}
 
 		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-			debug('Conditional expression: %s, for element: %O is false', value.expr!, value);
+			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return;
 		}
@@ -2270,9 +2093,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		let element = document.getElementById(value.id ?? '') as HTMLElement;
 
 		const parentRegionInfo = value.regionInfo;
+		debug(`[${debugId}] Handling triggers for element`);
 		let currentRegionInfo = await this.triggers.handleTriggers(value, element);
 
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
+			debug(
+				`[${debugId}] Region changed from %s to %s`,
+				parentRegionInfo.regionName,
+				currentRegionInfo.regionName,
+			);
 			this.currentlyPlayingPriority[currentRegionInfo.regionName] = cloneDeep(
 				this.currentlyPlayingPriority[parentRegionInfo.regionName],
 			);
@@ -2282,7 +2111,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		switch (removeDigits(key)) {
 			case 'video':
-				const result = await this.handleVideoPrepare(value as SMILVideo, currentRegionInfo);
+				const result = await this.handleVideoPrepare(value as SMILVideo, currentRegionInfo, debugId);
 				// video does not exist in local storage ( seamless update case )
 				if (isNil(result)) {
 					return;
@@ -2290,10 +2119,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				({ sosVideoObject, params } = result);
 				break;
 			case 'img':
-				this.handleHtmlElementPrepare(value as SMILImage, element, version);
+				this.handleHtmlElementPrepare(value as SMILImage, element, version, debugId);
 				break;
 			case 'ref':
-				this.handleHtmlElementPrepare(value as SMILWidget, element, version, true);
+				this.handleHtmlElementPrepare(value as SMILWidget, element, version, debugId, true);
 				break;
 			case 'ticker':
 				break;
@@ -2311,13 +2140,22 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				endTime,
 				isLast,
 				version,
+				debugId,
 			))
 		) {
 			return;
 		}
 
 		// should sync mechanism skip current element
-		if (!(await this.handleElementSynchronization(value, currentRegionInfo, parentRegionInfo, currentIndex))) {
+		if (
+			!(await this.handleElementSynchronization(
+				value,
+				currentRegionInfo,
+				parentRegionInfo,
+				currentIndex,
+				debugId,
+			))
+		) {
 			return;
 		}
 
@@ -2354,6 +2192,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					parentRegionInfo,
 					sosVideoObject,
 					params,
+					debugId, // Pass debugId
 				);
 				break;
 			case SMILEnums.img:
@@ -2367,6 +2206,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					isLast,
 					currentRegionInfo,
 					parentRegionInfo,
+					debugId, // Pass debugId
 				);
 				break;
 			case 'ticker':
@@ -2379,6 +2219,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					isLast,
 					currentRegionInfo,
 					parentRegionInfo,
+					debugId, // Pass debugId
 				);
 				break;
 			// case 'audio':
@@ -2392,6 +2233,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private handleVideoPrepare = async (
 		value: SMILVideo,
 		regionInfo: RegionAttributes,
+		debugId: string,
 	): Promise<
 		| {
 				sosVideoObject: Video | Stream;
@@ -2399,6 +2241,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		  }
 		| undefined
 	> => {
+		debug(`[${debugId}] Starting video preparation for: %O`, value);
+
 		const sosVideoObject: Video | Stream = isNil(value.isStream) ? this.sos.video : this.sos.stream;
 		const options = isNil(value.isStream) ? config.videoOptions : value.protocol;
 		const videoPath = isNil(value.isStream) ? value.localFilePath : value.src;
@@ -2412,6 +2256,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		];
 
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
+			debug(`[${debugId}] Currently playing video exists, waiting 50ms`);
 			await sleep(50);
 		}
 
@@ -2428,14 +2273,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!(await this.files.fileExists(createLocalFilePath(FileStructure.videos, value.src))) &&
 				!value.isStream
 			) {
-				debug(`Video does not exists in local storage: %O with params: %O`, value, params);
+				debug(`[${debugId}] Video does not exist in local storage: %O with params: %O`, value, params);
 				return undefined;
 			}
 
-			debug(`Preparing## video: %O with params: %O in region: %O`, value, params, regionInfo);
+			debug(`[${debugId}] Preparing video with params: %O in region: %O`, params, regionInfo);
 			await sosVideoObject.prepare(...params);
 			this.videoPreparing[regionInfo.regionName] = cloneDeep(value);
-			debug(`Video prepared: %O with params: %O`, value, params);
+			debug(`[${debugId}] Video prepared successfully`);
 		}
 		return {
 			sosVideoObject,
@@ -2447,14 +2292,29 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		value: SMILImage | SMILWidget,
 		element: HTMLElement,
 		version: number,
+		debugId: string,
 		isWidget: boolean = false,
 	) => {
-		changeZIndex(value, element, +1);
+		debug(`[${debugId}] Starting HTML element preparation for: %O`, value);
 
+		changeZIndex(value, element, +1);
+		debug(`[${debugId}] Changed z-index for element`);
+
+		// value.wasUpdated is there for a case when file updates in localstorage under same url,
+		// player needs to regenerate src to update it in browser cache
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
-		let src = generateElementSrc(value.src, value.localFilePath, version, smilUrlVersion, isWidget);
+		let src = generateElementSrc(
+			value.src,
+			value.localFilePath,
+			version,
+			smilUrlVersion,
+			isWidget,
+			value.wasUpdated,
+		);
+		debug(`[${debugId}] Generated source URL: %s`, src);
 
 		if (value.transitionInfo?.type === 'billboard' && !element.style.backgroundImage) {
+			debug(`[${debugId}] Setting up billboard transition`);
 			element.childNodes.forEach((child: HTMLElement) => {
 				child.childNodes.forEach((div: HTMLElement) => {
 					div.style.backgroundImage = `url(${src})`;
@@ -2463,8 +2323,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 		// add query parameter to invalidate cache on devices
 		if ((element.getAttribute('src') === null || element.getAttribute('src') !== src) && value.preload !== false) {
+			// src after file update was already regenerated, set to false so
+			value.wasUpdated = false;
+			debug(`[${debugId}] Updating element source attribute`, element.getAttribute('src'), src);
 			element.setAttribute('src', src);
 		}
+		debug(`[${debugId}] HTML element preparation completed`);
 	};
 
 	private handleElementSynchronization = async (
@@ -2472,20 +2336,28 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		currentRegionInfo: RegionAttributes,
 		parentRegionInfo: RegionAttributes,
 		currentIndex: number,
+		debugId: string,
 		suffix: 'after' | 'before' = 'before',
 	): Promise<boolean> => {
+		debug(`[${debugId}] Starting element synchronization for: %O`, value);
+
 		// do not sync at the end of the element playback if syncing with another device is in progress
 		if (suffix === 'after' && (this.synchronization.syncingInAction || this.synchronization.movingForward)) {
-			debug('synchronization in action, skipping after sync for element %O', value);
+			debug(`[${debugId}] Synchronization in action, skipping after sync`);
 			return false;
 		}
 		let regionInfo = value.regionInfo;
 		// sync of nested regions ( dynamic playlist )
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
+			debug(
+				`[${debugId}] Region changed from %s to %s`,
+				parentRegionInfo.regionName,
+				currentRegionInfo.regionName,
+			);
 			regionInfo = currentRegionInfo;
 		}
 		if (regionInfo.sync && this.synchronization.shouldSync) {
-			debug('synchronizing for region %s', regionInfo.regionName);
+			debug(`[${debugId}] Starting synchronization for region %s`, regionInfo.regionName);
 			let desiredSyncIndex = this.synchronization.syncValue;
 			if (
 				isNil(this.synchronization.syncValue) ||
@@ -2493,7 +2365,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.synchronization.movingForward
 			) {
 				debug(
-					`entering ${suffix} sync handling in region %s with syncIndex %d with syncValue %s with movingForward`,
+					`[${debugId}] Entering ${suffix} sync handling in region %s with syncIndex %d with syncValue %s with movingForward`,
 					regionInfo.regionName,
 					value.syncIndex,
 					this.synchronization.syncValue,
@@ -2506,7 +2378,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					this.synchronization.syncingInAction
 				) {
 					//move one forward
-					debug('synchronizing for region, moving forward %s', regionInfo.regionName);
+					debug(`[${debugId}] Moving forward in region %s`, regionInfo.regionName);
 					this.synchronization.syncingInAction = false;
 					this.synchronization.movingForward = true;
 					this.synchronization.syncValue = undefined;
@@ -2527,7 +2399,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					numberOfNonSync: 0,
 				};
 				debug(
-					`synchronization ${suffix} staring in region %s with syncIndex %d with dynamicValue %s with groupName %s with timestamp: %d`,
+					`[${debugId}] Synchronization ${suffix} starting in region %s with syncIndex %d with dynamicValue %s with groupName %s with timestamp: %d`,
 					regionInfo.regionName,
 					value.syncIndex,
 					value.dynamicValue,
@@ -2536,6 +2408,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				);
 				try {
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+						debug(`[${debugId}] Sending sync wait started report for master dynamic playlist`);
 						this.files.sendReport({
 							type: 'SMIL.SyncWait-Started',
 							source: createSourceReportObject(
@@ -2548,17 +2421,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						});
 					}
 
-					// regenerate that current priority is playing due to mechanic that priority ends itself plus sync at the end of the playlist
 					// ( another playlist can jump in during the process, this is to prevent it )
 					if (suffix === 'before') {
+						debug(`[${debugId}] Setting player as playing for current priority`);
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
 					}
 
-					console.log('start waiting for playing element sync', Date.now(), suffix, value.syncIndex);
+					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());
 					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
-					console.log('finished waiting for playing element sync', Date.now(), suffix, value.syncIndex);
+					debug(`[${debugId}] Finished sync wait for playing element, timestamp: %d`, Date.now());
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
+						debug(`[${debugId}] Sending sync wait ended report for master dynamic playlist`);
 						this.files.sendReport({
 							type: 'SMIL.SyncWait-Ended',
 							source: createSourceReportObject(
@@ -2571,24 +2445,25 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						});
 					}
 				} catch (err) {
+					debug(`[${debugId}] Error occurred during sync.wait: %O`, err);
 					this.synchronization.syncingInAction = false;
 					this.synchronization.movingForward = false;
-					debug('ERROR occurred during sync.wait', err);
 				}
 
 				debug(
-					`synchronization ${suffix} finished in region %s with syncIndex %d with timestamp: %d`,
+					`[${debugId}] Synchronization ${suffix} finished in region %s with syncIndex %d with timestamp: %d`,
 					regionInfo.regionName,
 					value.syncIndex,
 					Date.now(),
 				);
 
 				if (value.dynamicValue && !this.triggers.dynamicPlaylist[value.dynamicValue].play) {
-					debug('dynamic playlist was stopped during sync.wait: %O', value);
+					debug(`[${debugId}] Dynamic playlist was stopped during sync.wait: %O`, value);
 					return false;
 				}
 
 				if (value.syncIndex !== desiredSyncIndex) {
+					debug(`[${debugId}] Updating sync value to: %d`, desiredSyncIndex);
 					this.synchronization.syncValue = desiredSyncIndex;
 				}
 
@@ -2598,7 +2473,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			if (!isEqual(value.syncIndex, desiredSyncIndex) && !isNil(desiredSyncIndex)) {
 				debug(
-					'starting synchronization process desired syncIndex %d, current syncIndex %d',
+					`[${debugId}] Starting synchronization process desired syncIndex %d, current syncIndex %d`,
 					desiredSyncIndex,
 					value.syncIndex,
 				);
@@ -2607,14 +2482,69 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		} else {
 			if (this.syncContentPrepared?.fullScreenTrigger) {
+				debug(`[${debugId}] Incrementing non-sync counter`);
 				this.syncContentPrepared.fullScreenTrigger.numberOfNonSync++;
 
 				if (this.syncContentPrepared?.fullScreenTrigger?.numberOfNonSync > 1) {
+					debug(`[${debugId}] Removing fullScreenTrigger due to multiple non-sync elements`);
 					delete this.syncContentPrepared.fullScreenTrigger;
 				}
 			}
 		}
 
+		debug(`[${debugId}] Element synchronization completed successfully`);
 		return true;
 	};
+
+	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		const resourceChecker = new ResourceChecker(
+			resources,
+			this.synchronization.shouldSync,
+			() => this.setCheckFilesLoop(false),
+			restart,
+		);
+		resourceChecker.start();
+	}
+
+	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
+		try {
+			if (this.sos.config.syncGroupName) {
+				debug('SyncGroupName is defined, starting sync setup');
+				if (firstIteration) {
+					await connectSyncSafe(this.sos);
+				}
+
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+
+				if (firstIteration && hasDynamicContent(this.smilObject)) {
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+				}
+			} else {
+				debug('No syncGroupName is defined, skipping sync setup');
+			}
+		} catch (error) {
+			debug('Error during playlist processing sync setup: %O', error);
+			console.error(error);
+		}
+	}
+
+	private async handlePlaylistProcessing(version: number): Promise<void> {
+		try {
+			const dateTimeBegin = Date.now();
+			await this.processPlaylist(this.smilObject.playlist, version);
+			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
+			const dateTimeEnd = Date.now();
+			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
+				await sleep(2000);
+			}
+		} catch (err) {
+			debug('Unexpected error processing during playlist processing: %O', err);
+			await sleep(SMILScheduleEnum.defaultAwait);
+		}
+	}
+
+	private async handlePlaylistLoop(version: number): Promise<void> {
+		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
+	}
 }

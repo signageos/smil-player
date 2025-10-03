@@ -2,7 +2,26 @@
 sidebar_position: 7
 ---
 # Debugging
-To get detailed development logs from the SMIL Player runtime, add the following record to your browser Local Storage where you are testing SMIL Player:
+There are two ways to enable detailed development logs from the SMIL Player runtime:
+
+## Method 1: Configuration Parameter (Recommended)
+The easiest way to enable debug logs is through the SMIL Player configuration:
+
+1. In your Applet Timing Configuration, set the `debugEnabled` parameter to "true"
+2. Debug logs will automatically appear in the console
+3. Set to "false" or remove the parameter to disable logging
+
+```
+debugEnabled: "true"
+```
+
+This method is ideal for:
+- Production troubleshooting without code changes
+- Temporary debugging sessions
+- Remote device diagnostics
+
+## Method 2: Local Storage (Development)
+For development and testing, you can also enable logs via browser Local Storage:
 
 ```javascript title="Enabling dev logging"
 // Enable debug logs for SMIL Player

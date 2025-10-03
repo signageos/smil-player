@@ -12,6 +12,22 @@ A simple image played for defined duration.
 <img src="ad2.jpg" dur="5s" fit="fill"/>
 ```
 
+### Using Query Parameters
+
+Images can include query parameters for dynamic content, versioning, or tracking purposes. Each unique URL with
+different query parameters will be cached as a separate file.
+
+```xml
+<!-- Different banner versions cached separately -->
+<img src="https://example.com/banner.jpg?version=1.0&amp;lang=en" dur="5s" region="main"/>
+<img src="https://example.com/banner.jpg?version=1.0&amp;lang=es" dur="5s" region="main"/>
+
+        <!-- Dynamic image selection based on parameters -->
+<img src="https://cdn.example.com/promo.jpg?campaign=holiday&amp;week=1" dur="10s" fit="cover"/>
+```
+
+**Note:** Remember to use `&amp;` instead of `&` for proper XML encoding when separating query parameters.
+
 The `dur` attribute specifies a duration of the still image during playback. The valid value is either with or without
 `s`econds - `dur="10"` `dur="10s"`. Decimals are *not allowed* (e.g. dur="10.45s").
 
