@@ -394,6 +394,30 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 
+		// Check if content exists in storage (for location strategy only)
+		if (isNewVersion && isLocationStrategy && currentValue) {
+			const mediaType = mapFileType(localFilePath);
+			const storageFile = await this.checkStorageForContent(currentValue, mediaType);
+			if (storageFile) {
+				debug('Content found in storage: %s, restoring instead of downloading', storageFile);
+				// Restore from storage to the correct location
+				const restored = await this.restoreFromStorage(
+					storageFile,
+					localFilePath, // Use regular path, not temp - file goes directly to final location
+					media.src,
+				);
+				if (restored) {
+					debug('Successfully restored from storage for %s', media.src);
+					return {
+						shouldUpdate: false,
+						value: currentValue, // Update mediaInfoObject with the value
+					};
+				} else {
+					debug('Failed to restore from storage, will download instead');
+				}
+			}
+		}
+
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
 			return {
@@ -528,9 +552,7 @@ export class FilesManager implements IFilesManager {
 
 					if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
 						// Check if this content is needed by any other URLs
-						const stillNeeded = filesList.some(
-							(f) => f.src !== file.src && mediaInfoObject[getFileName(f.src)] === existingValue,
-						);
+						const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
 
 						if (!stillNeeded) {
 							debug('Preserving old content to storage before download: %s', fullLocalFilePath);
@@ -1174,12 +1196,14 @@ export class FilesManager implements IFilesManager {
 					const destValue = mediaInfoObject[destFileName];
 					if (destValue) {
 						// Check if this content is still needed by other URLs after the movement
-						const stillNeeded = filesList.some(
-							(f) => getFileName(f.src) !== destFileName && mediaInfoObject[getFileName(f.src)] === destValue,
-						);
+						const stillNeeded = this.isContentNeededByOtherUrls(destValue, destFileName, filesList, mediaInfoObject);
 
 						if (!stillNeeded) {
-							debug('  Preserving destination content before overwrite: %s (value: %s)', finalDestPath, destValue);
+							debug(
+								'  Preserving destination content before overwrite: %s (value: %s)',
+								finalDestPath,
+								destValue,
+							);
 							const mediaType = mapFileType(destFolder);
 							await this.preserveFileToStorage(finalDestPath, destValue, mediaType);
 						} else {
@@ -1846,6 +1870,35 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		}
+	};
+
+	/**
+	 * Helper Methods
+	 */
+
+	/**
+	 * Check if content is needed by any other URLs in the playlist
+	 * @param contentValue - The content value to check
+	 * @param excludeUrlOrFileName - URL or filename to exclude from the check
+	 * @param filesList - List of all files in the playlist
+	 * @param mediaInfoObject - Current media info state
+	 * @returns true if content is needed by other URLs, false otherwise
+	 */
+	private isContentNeededByOtherUrls = (
+		contentValue: string | number,
+		excludeUrlOrFileName: string,
+		filesList: MergedDownloadList[],
+		mediaInfoObject: MediaInfoObject,
+	): boolean => {
+		// Handle both URL and filename inputs
+		const excludeFileName = excludeUrlOrFileName.includes('/')
+			? getFileName(excludeUrlOrFileName)  // It's a URL, convert to filename
+			: excludeUrlOrFileName;                // It's already a filename
+
+		return filesList.some((f) => {
+			const fileName = getFileName(f.src);
+			return fileName !== excludeFileName && mediaInfoObject[fileName] === contentValue;
+		});
 	};
 
 	/**
