@@ -13,7 +13,8 @@ export enum FileStructure {
 	audiosTmp = 'smil/audios/tmp',
 	imagesTmp = 'smil/images/tmp',
 	widgetsTmp = 'smil/widgets/tmp',
-	// Storage folders for preserving old content
+	// Storage folders for preserving old content (parent must be defined before children)
+	storage = 'smil/storage',
 	storageVideos = 'smil/storage/videos',
 	storageAudios = 'smil/storage/audios',
 	storageImages = 'smil/storage/images',

@@ -1953,40 +1953,11 @@ export class FilesManager implements IFilesManager {
 
 	/**
 	 * Save storage info to JSON file with error handling
+	 * Note: Storage directories are created at startup by createFileStructure()
 	 */
 	private saveStorageInfo = async (storageFolder: string, info: Record<string, any>): Promise<void> => {
 		try {
 			const infoPath = `${storageFolder}/${FileStructure.storageInfoFileName}`;
-
-			// Ensure storage folders exist (create parent first, then child)
-			try {
-				// Create parent storage folder first
-				const parentFolder = 'smil/storage';
-				try {
-					await this.sos.fileSystem.createDirectory({
-						storageUnit: this.internalStorageUnit,
-						filePath: parentFolder,
-					});
-					debug('Created parent storage folder: %s', parentFolder);
-				} catch (err) {
-					// Parent might already exist, that's OK
-					debug('Parent storage folder already exists: %s', parentFolder);
-				}
-
-				// Now create the specific storage folder
-				try {
-					await this.sos.fileSystem.createDirectory({
-						storageUnit: this.internalStorageUnit,
-						filePath: storageFolder,
-					});
-					debug('Created storage folder: %s', storageFolder);
-				} catch (err) {
-					// Directory might already exist, that's OK
-					debug('Storage folder already exists: %s', storageFolder);
-				}
-			} catch (err) {
-				debug('Error creating storage directories: %O', err);
-			}
 
 			await this.sos.fileSystem.writeFile(
 				{
