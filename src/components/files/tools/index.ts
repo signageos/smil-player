@@ -145,7 +145,7 @@ export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, valu
 }
 
 export function mapFileType(filePath: string): ItemType {
-	const fileType = filePath.substring(filePath.lastIndexOf('/'));
+	const fileType = filePath.substring(filePath.lastIndexOf('/') + 1);
 	return get(mapObject, fileType, 'unknown');
 }
 
