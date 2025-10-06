@@ -859,11 +859,10 @@ export class FilesManager implements IFilesManager {
 		// Read current mediaInfoObject
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 
-		// Migrate files from temp to standard if needed
-		if (this.tempDownloads.size > 0) {
-			debug('Triggering migration from temp to standard folders');
-			await this.migrateFromTempToStandard(filesList, mediaInfoObject);
-		}
+		// Always run migration to ensure localFilePath is set for all files
+		// This covers: temp downloads, content movements, and storage restorations
+		debug('Triggering migration from temp to standard folders');
+		await this.migrateFromTempToStandard(filesList, mediaInfoObject);
 
 		// Apply all collected updates to mediaInfoObject
 		for (const [fileName, value] of this.batchUpdates) {
