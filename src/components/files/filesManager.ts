@@ -399,15 +399,18 @@ export class FilesManager implements IFilesManager {
 			const mediaType = mapFileType(localFilePath);
 			const storageFile = await this.checkStorageForContent(currentValue, mediaType);
 			if (storageFile) {
-				debug('Content found in storage: %s, restoring instead of downloading', storageFile);
-				// Restore from storage to the correct location
-				const restored = await this.restoreFromStorage(
+				debug('Content found in storage: %s, restoring to temp folder', storageFile);
+				// Restore from storage to temp folder (not directly to final location)
+				const tempPath = await this.restoreFromStorage(
 					storageFile,
-					localFilePath, // Use regular path, not temp - file goes directly to final location
+					localFilePath, // Pass regular path, restoreFromStorage will convert to temp
 					media.src,
 				);
-				if (restored) {
-					debug('Successfully restored from storage for %s', media.src);
+				if (tempPath) {
+					// Track in tempDownloads for migration
+					const fileName = getFileName(media.src);
+					this.tempDownloads.set(fileName, tempPath);
+					debug('Successfully restored from storage to temp for %s, tracked for migration', media.src);
 					return {
 						shouldUpdate: false,
 						value: currentValue, // Update mediaInfoObject with the value
@@ -2146,18 +2149,18 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
-	 * Restore a file from storage to active folder
+	 * Restore a file from storage to temp folder
 	 * CRITICAL: File must be renamed to match the requesting URL's hash
 	 * @param storagePath - Path to file in storage
 	 * @param targetFolder - Target folder (e.g., FileStructure.videos)
 	 * @param requestingUrl - The URL that's requesting this content (used to generate correct filename)
-	 * @returns true if restored successfully, false otherwise
+	 * @returns temp file path if restored successfully, null otherwise
 	 */
 	private restoreFromStorage = async (
 		storagePath: string,
 		targetFolder: string,
 		requestingUrl: string,
-	): Promise<boolean> => {
+	): Promise<string | null> => {
 		try {
 			// Get file size for space check
 			const fileStats = await this.sos.fileSystem.getFile({
@@ -2187,11 +2190,13 @@ export class FilesManager implements IFilesManager {
 			// CRITICAL: Generate the correct filename based on the requesting URL
 			// This ensures the player finds the file with the expected name
 			const targetFileName = getFileName(requestingUrl);
-			const fullTargetPath = `${targetFolder}/${targetFileName}`;
+			// Always restore to temp folder first to preserve original content for movement detection
+			const tempFolder = this.getTempFolder(targetFolder);
+			const fullTargetPath = `${tempFolder}/${targetFileName}`;
 
-			debug('Restoring from storage: %s -> %s (for URL: %s)', storagePath, fullTargetPath, requestingUrl);
+			debug('Restoring from storage to temp: %s -> %s (for URL: %s)', storagePath, fullTargetPath, requestingUrl);
 
-			// Copy file from storage to active folder with the correct name
+			// Copy file from storage to temp folder with the correct name
 			// We copy instead of move to keep it available for other potential uses
 			await this.sos.fileSystem.copyFile(
 				{
@@ -2207,11 +2212,11 @@ export class FilesManager implements IFilesManager {
 				},
 			);
 
-			debug('Successfully restored from storage: %s -> %s', storagePath, fullTargetPath);
-			return true;
+			debug('Successfully restored from storage to temp: %s -> %s', storagePath, fullTargetPath);
+			return fullTargetPath; // Return the temp path for tracking
 		} catch (err) {
 			debug('Failed to restore from storage: %s, error: %O', storagePath, err);
-			return false; // Will trigger normal download
+			return null; // Will trigger normal download
 		}
 	};
 }
