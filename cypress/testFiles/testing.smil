@@ -17,10 +17,10 @@
                    popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
             <video src="http://localhost:3003/?id=2"
                    popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
-            <video src="http://localhost:3003/?id=3"
-                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
-            <video src="http://localhost:3003/?id=4"
-                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
+            <!--            <video src="http://localhost:3003/?id=3"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>-->
+            <!--            <video src="http://localhost:3003/?id=4"-->
+            <!--                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>-->
 
             <!--            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=303212c2-87dc-b928-8197-6065c872baa7&amp;id=2"-->
             <!--                   popName="signagelab_event" popType="video" popTags="video2" region="fullscreen"></video>-->

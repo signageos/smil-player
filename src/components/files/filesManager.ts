@@ -2171,7 +2171,7 @@ export class FilesManager implements IFilesManager {
 			// Check if file exists and get size
 			if (!fileStats) {
 				debug('Storage file not found or inaccessible: %s', storagePath);
-				return false;
+				return null;
 			}
 
 			const fileSize = fileStats.sizeBytes || 0;
@@ -2181,7 +2181,7 @@ export class FilesManager implements IFilesManager {
 				const hasSpace = await this.checkAvailableSpace(fileSize);
 				if (!hasSpace) {
 					debug('Not enough space to restore from storage: %s (size: %d bytes)', storagePath, fileSize);
-					return false;
+					return null;
 				}
 			} else {
 				debug('Warning: File size unknown for storage file %s, proceeding with restore anyway', storagePath);
