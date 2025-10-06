@@ -1,3 +1,3 @@
 import { SmilPlayer } from './components/smilPlayer';
 
-new SmilPlayer().start();
+new SmilPlayer('http://localhost:3000/testing.smil').start();
