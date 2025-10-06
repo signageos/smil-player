@@ -2162,30 +2162,23 @@ export class FilesManager implements IFilesManager {
 		requestingUrl: string,
 	): Promise<string | null> => {
 		try {
-			// Get file size for space check
+			// Verify the storage file exists before attempting restoration
 			const fileStats = await this.sos.fileSystem.getFile({
 				storageUnit: this.internalStorageUnit,
 				filePath: storagePath,
 			});
 
-			// Check if file exists and get size
+			// Check if file exists
 			if (!fileStats) {
 				debug('Storage file not found or inaccessible: %s', storagePath);
 				return null;
 			}
 
-			const fileSize = fileStats.sizeBytes || 0;
-
-			// Check if we have space to copy (only if size is known)
-			if (fileStats.sizeBytes) {
-				const hasSpace = await this.checkAvailableSpace(fileSize);
-				if (!hasSpace) {
-					debug('Not enough space to restore from storage: %s (size: %d bytes)', storagePath, fileSize);
-					return null;
-				}
-			} else {
-				debug('Warning: File size unknown for storage file %s, proceeding with restore anyway', storagePath);
-			}
+			// Note: We don't check for available space here - let the copy operation
+			// fail naturally if there's insufficient space. This is consistent with
+			// how content movements handle space issues. If there's no space for
+			// restoration, download would also fail, so the player will continue
+			// without the update (graceful degradation).
 
 			// CRITICAL: Generate the correct filename based on the requesting URL
 			// This ensures the player finds the file with the expected name
