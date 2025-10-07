@@ -609,7 +609,9 @@ export class FilesManager implements IFilesManager {
 				// Determine download URL
 				let downloadUrl: string;
 				if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
-					downloadUrl = createDownloadPath(updateValue);
+					// For location strategy, use the location URL directly without adding __smil_version
+					// The location header already provides the exact URL we need
+					downloadUrl = updateValue as string;
 				} else {
 					downloadUrl = createDownloadPath(file.src);
 				}
