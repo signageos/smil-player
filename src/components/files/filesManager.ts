@@ -586,6 +586,7 @@ export class FilesManager implements IFilesManager {
 				downloadUrl: string;
 				existingValue?: string | number;
 				shouldPreserve: boolean;
+				existingFilePath?: string; // Path to existing file with same content (for reuse)
 			}
 
 			const downloadTasks: DownloadTask[] = [];
@@ -675,6 +676,24 @@ export class FilesManager implements IFilesManager {
 				debug('DEDUP: Total duplicate downloads that could be optimized: %d', totalDuplicates);
 			}
 
+			// Phase 3b.5: Check for existing content that can be reused
+			debug('Phase 3b.5: Checking for existing content that can be reused');
+			for (const [contentUrl, tasks] of taskGroups) {
+				// Check if this content already exists locally (only check once per group)
+				const existingFilePath = await this.findExistingContentFile(
+					contentUrl, // The location URL is the content identifier
+					mediaInfoObject
+				);
+
+				if (existingFilePath) {
+					// Store this info in the first task (we'll check it in Phase 3c)
+					// We only set it on the first task to keep it simple
+					tasks[0].existingFilePath = existingFilePath;
+					debug('DEDUP: Found existing content at %s for %d tasks (content: %s)',
+						existingFilePath, tasks.length, contentUrl);
+				}
+			}
+
 			// Phase 3c: Execute download tasks with optimization (download once per content group)
 			debug('Phase 3c: Executing downloads WITH OPTIMIZATION - download once per content group');
 
@@ -684,6 +703,68 @@ export class FilesManager implements IFilesManager {
 			for (const [contentUrl, tasks] of taskGroups) {
 				debug('Processing content group: %s (%d tasks)', contentUrl, tasks.length);
 
+				// Check if we found existing content for this group
+				const existingFilePath = tasks[0].existingFilePath;
+
+				if (existingFilePath) {
+					// SAFE: Copy existing content to temp for ALL tasks in group
+					debug('DEDUP: Reusing existing content from %s for %d tasks', existingFilePath, tasks.length);
+
+					for (const task of tasks) {
+						// Handle storage preservation if needed (keep existing logic)
+						if (task.shouldPreserve && task.existingValue) {
+							debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
+							await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+						} else if (task.existingValue && !task.shouldPreserve) {
+							debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+						}
+
+						try {
+							// SAFE: Copy to temp folder
+							debug('DEDUP: Copying existing content to temp: %s -> %s', existingFilePath, task.actualDownloadPath);
+							await this.sos.fileSystem.copyFile(
+								{
+									storageUnit: this.internalStorageUnit,
+									filePath: existingFilePath,
+								},
+								{
+									storageUnit: this.internalStorageUnit,
+									filePath: task.actualDownloadPath,
+								},
+								{
+									overwrite: true,
+								}
+							);
+
+							debug('DEDUP: Successfully copied existing content for: %s (fileName: %s)', task.file.src, task.fileName);
+
+							// CRITICAL: Track in tempDownloads for migration
+							if (task.isNewContent) {
+								this.tempDownloads.set(task.fileName, task.actualDownloadPath);
+								debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
+							}
+
+							// Report as successful
+							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+						} catch (err) {
+							debug('DEDUP: Failed to copy existing content: %O', err);
+							// On error, we'll fall through to normal download logic below
+							// Remove the existingFilePath marker so it will download instead
+							tasks[0].existingFilePath = undefined;
+							break; // Exit the loop and proceed to download
+						}
+					}
+
+					// If we successfully copied all files, continue to next group
+					if (tasks[0].existingFilePath) {
+						optimizedDownloads++;
+						skippedDownloads += tasks.length;
+						debug('DEDUP: Successfully reused existing content for all %d tasks', tasks.length);
+						continue; // Skip to next content group
+					}
+				}
+
+				// If no existing content or copy failed, proceed with download logic
 				if (tasks.length === 1) {
 					// Single task - no optimization needed
 					const task = tasks[0];
@@ -1866,6 +1947,40 @@ export class FilesManager implements IFilesManager {
 		}
 
 		debug('findActualFileForMovedContent: No matching file found for value: %s', currentValue);
+		return null;
+	};
+
+	/**
+	 * Find an existing file that contains specific content
+	 * Used to check if content already exists locally before downloading
+	 * @param contentValue - The content value (e.g., location URL) to search for
+	 * @param mediaInfoObject - The media info object containing file-value mappings
+	 * @returns The file path if found and exists, null otherwise
+	 */
+	private findExistingContentFile = async (
+		contentValue: string,
+		mediaInfoObject: MediaInfoObject
+	): Promise<string | null> => {
+		debug('findExistingContentFile: Looking for existing content with value: %s', contentValue);
+
+		// Search for any file with this content value
+		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
+			if (storedValue === contentValue) {
+				debug('findExistingContentFile: Found matching file: %s', fileName);
+
+				// Use existing method to determine file path
+				const filePath = await this.determineFilePath(fileName);
+
+				if (filePath && await this.fileExists(filePath)) {
+					debug('findExistingContentFile: File exists at: %s', filePath);
+					return filePath;
+				} else {
+					debug('findExistingContentFile: File not found at expected path: %s', filePath);
+				}
+			}
+		}
+
+		debug('findExistingContentFile: No existing file found for content: %s', contentValue);
 		return null;
 	};
 
