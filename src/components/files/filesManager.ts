@@ -640,71 +640,96 @@ export class FilesManager implements IFilesManager {
 				});
 			}
 
-			// Phase 3b: Execute download tasks (how to download)
-			debug('Phase 3b: Executing %d download tasks', downloadTasks.length);
+			// Phase 3b: Group download tasks by content (for location strategy)
+			debug('Phase 3b: Grouping %d download tasks by content', downloadTasks.length);
 
-			// Log task structure for debugging (will be useful for optimization)
-			if (downloadTasks.length > 0) {
-				debug('Download tasks structure:');
-				const tasksByUrl = new Map<string, number>();
-				downloadTasks.forEach(task => {
-					const count = tasksByUrl.get(task.downloadUrl) || 0;
-					tasksByUrl.set(task.downloadUrl, count + 1);
-				});
-				tasksByUrl.forEach((count, url) => {
-					if (count > 1) {
-						debug('  - %d tasks for URL: %s', count, url);
-					}
-				});
-			}
+			// Group tasks by their download URL (which represents the actual content location)
+			const taskGroups = new Map<string, DownloadTask[]>();
 
 			for (const task of downloadTasks) {
-				if (task.isNewContent) {
-					debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
+				const contentKey = task.downloadUrl; // For location strategy, this is the actual content URL
+
+				if (!taskGroups.has(contentKey)) {
+					taskGroups.set(contentKey, []);
 				}
+				taskGroups.get(contentKey)!.push(task);
+			}
 
-				// Preserve existing file to storage if needed
-				if (task.shouldPreserve && task.existingValue) {
-					debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
-					await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
-				} else if (task.existingValue && !task.shouldPreserve) {
-					debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+			// Log grouped structure
+			debug('Grouped download tasks into %d unique content groups:', taskGroups.size);
+			let totalDuplicates = 0;
+			taskGroups.forEach((tasks, url) => {
+				if (tasks.length > 1) {
+					debug('  Content group: %s', url);
+					debug('    - %d files need this content:', tasks.length);
+					tasks.forEach(task => {
+						debug('      * %s (fileName: %s)', task.file.src, task.fileName);
+					});
+					totalDuplicates += (tasks.length - 1);
 				}
+			});
 
-				// Create download promise
-				promises.push(
-					(async () => {
-						try {
-							debug(`Downloading file: %O`, task.updateValue ?? task.file.src);
-							debug(`Using downloadUrl: %s for file: %s`, task.downloadUrl, task.file.src);
-							const authHeaders = window.getAuthHeaders?.(task.downloadUrl);
+			if (totalDuplicates > 0) {
+				debug('DEDUP: Total duplicate downloads that could be optimized: %d', totalDuplicates);
+			}
 
-							await this.sos.fileSystem.downloadFile(
-								{
-									storageUnit: this.internalStorageUnit,
-									filePath: task.actualDownloadPath,
-								},
-								task.downloadUrl,
-								authHeaders,
-							);
+			// Phase 3c: Execute download tasks (still downloading individually, no optimization yet)
+			debug('Phase 3c: Executing downloads (still individual downloads, no optimization yet)');
 
-							debug(`File downloaded to: %s`, task.actualDownloadPath);
+			// NOTE: Currently executing all downloads individually
+			// In future steps, we'll optimize to download once per content group
+			for (const [contentUrl, tasks] of taskGroups) {
+				// Currently iterating through groups but still downloading each task individually
+				debug('Processing content group: %s (%d tasks)', contentUrl, tasks.length);
 
-							// Track file in temp if using temp folder
-							if (task.isNewContent) {
-								this.tempDownloads.set(task.fileName, task.actualDownloadPath);
-								debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
+				for (const task of tasks) {
+					if (task.isNewContent) {
+						debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
+					}
+
+					// Preserve existing file to storage if needed
+					if (task.shouldPreserve && task.existingValue) {
+						debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
+						await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+					} else if (task.existingValue && !task.shouldPreserve) {
+						debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+					}
+
+					// Create download promise (still individual download for each task)
+					promises.push(
+						(async () => {
+							try {
+								debug(`Downloading file: %O`, task.updateValue ?? task.file.src);
+								debug(`Using downloadUrl: %s for file: %s`, task.downloadUrl, task.file.src);
+								const authHeaders = window.getAuthHeaders?.(task.downloadUrl);
+
+								await this.sos.fileSystem.downloadFile(
+									{
+										storageUnit: this.internalStorageUnit,
+										filePath: task.actualDownloadPath,
+									},
+									task.downloadUrl,
+									authHeaders,
+								);
+
+								debug(`File downloaded to: %s`, task.actualDownloadPath);
+
+								// Track file in temp if using temp folder
+								if (task.isNewContent) {
+									this.tempDownloads.set(task.fileName, task.actualDownloadPath);
+									debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
+								}
+
+								this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+							} catch (err) {
+								debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
+								this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, err.message);
+								// Remove from filesToUpdate if download failed
+								filesToUpdate.delete(task.fileName);
 							}
-
-							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
-						} catch (err) {
-							debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
-							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, err.message);
-							// Remove from filesToUpdate if download failed
-							filesToUpdate.delete(task.fileName);
-						}
-					})(),
-				);
+						})(),
+					);
+				}
 			}
 
 			// Also handle files that don't need download but need mediaInfoObject update
