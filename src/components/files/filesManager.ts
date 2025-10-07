@@ -574,7 +574,23 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 
-			// Phase 3: Process all files that need downloading (existing logic, no optimization yet)
+			// Phase 3a: Build download tasks (separate what needs downloading)
+			interface DownloadTask {
+				file: MergedDownloadList;
+				fileName: string;
+				updateValue: string | number;
+				isNewContent: boolean;
+				downloadPath: string;
+				fullLocalFilePath: string;
+				actualDownloadPath: string;
+				downloadUrl: string;
+				existingValue?: string | number;
+				shouldPreserve: boolean;
+			}
+
+			const downloadTasks: DownloadTask[] = [];
+			debug('Phase 3a: Building download tasks for %d files', validResults.length);
+
 			for (const result of validResults) {
 				const { file, updateCheck, fileName } = result;
 				const updateValue = updateCheck.value;
@@ -587,65 +603,105 @@ export class FilesManager implements IFilesManager {
 					forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
 				const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
 
-				if (isNewContent) {
-					debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
-				}
-
 				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
 				const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
 
-				// Before downloading, check if we should preserve the existing file to storage
+				// Determine download URL
+				let downloadUrl: string;
+				if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
+					downloadUrl = createDownloadPath(updateValue);
+				} else {
+					downloadUrl = createDownloadPath(file.src);
+				}
+
+				// Check if we should preserve existing file
 				const existingValue = mediaInfoObject[fileName];
+				let shouldPreserve = false;
 
-				if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
-					// Check if this content is needed by any other URLs
-					const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
-
-					if (!stillNeeded) {
-						debug('Preserving old content to storage before download: %s', fullLocalFilePath);
-						await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
-					} else {
-						debug('Content still needed by other URLs, not preserving: %s', existingValue);
+				if (existingValue && !isNewContent) {
+					const fileExistsLocally = await this.fileExists(fullLocalFilePath);
+					if (fileExistsLocally) {
+						const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
+						shouldPreserve = !stillNeeded;
 					}
 				}
 
+				downloadTasks.push({
+					file,
+					fileName,
+					updateValue,
+					isNewContent,
+					downloadPath,
+					fullLocalFilePath,
+					actualDownloadPath,
+					downloadUrl,
+					existingValue: existingValue || undefined,
+					shouldPreserve
+				});
+			}
+
+			// Phase 3b: Execute download tasks (how to download)
+			debug('Phase 3b: Executing %d download tasks', downloadTasks.length);
+
+			// Log task structure for debugging (will be useful for optimization)
+			if (downloadTasks.length > 0) {
+				debug('Download tasks structure:');
+				const tasksByUrl = new Map<string, number>();
+				downloadTasks.forEach(task => {
+					const count = tasksByUrl.get(task.downloadUrl) || 0;
+					tasksByUrl.set(task.downloadUrl, count + 1);
+				});
+				tasksByUrl.forEach((count, url) => {
+					if (count > 1) {
+						debug('  - %d tasks for URL: %s', count, url);
+					}
+				});
+			}
+
+			for (const task of downloadTasks) {
+				if (task.isNewContent) {
+					debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
+				}
+
+				// Preserve existing file to storage if needed
+				if (task.shouldPreserve && task.existingValue) {
+					debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
+					await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+				} else if (task.existingValue && !task.shouldPreserve) {
+					debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+				}
+
+				// Create download promise
 				promises.push(
 					(async () => {
 						try {
-							debug(`Downloading file: %O`, updateValue ?? file.src);
-							let downloadUrl: string;
-
-							if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
-								downloadUrl = createDownloadPath(updateValue);
-							} else {
-								downloadUrl = createDownloadPath(file.src);
-							}
-							debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
-							const authHeaders = window.getAuthHeaders?.(downloadUrl);
+							debug(`Downloading file: %O`, task.updateValue ?? task.file.src);
+							debug(`Using downloadUrl: %s for file: %s`, task.downloadUrl, task.file.src);
+							const authHeaders = window.getAuthHeaders?.(task.downloadUrl);
 
 							await this.sos.fileSystem.downloadFile(
 								{
 									storageUnit: this.internalStorageUnit,
-									filePath: actualDownloadPath,
+									filePath: task.actualDownloadPath,
 								},
-								downloadUrl,
+								task.downloadUrl,
 								authHeaders,
 							);
 
-							debug(`File downloaded to: %s`, actualDownloadPath);
+							debug(`File downloaded to: %s`, task.actualDownloadPath);
 
 							// Track file in temp if using temp folder
-							if (isNewContent) {
-								this.tempDownloads.set(fileName, actualDownloadPath);
-								debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
+							if (task.isNewContent) {
+								this.tempDownloads.set(task.fileName, task.actualDownloadPath);
+								debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
 							}
 
-							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
 						} catch (err) {
-							debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
-							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
+							debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
+							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, err.message);
 							// Remove from filesToUpdate if download failed
-							filesToUpdate.delete(fileName);
+							filesToUpdate.delete(task.fileName);
 						}
 					})(),
 				);
