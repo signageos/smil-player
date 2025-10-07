@@ -780,13 +780,51 @@ export class FilesManager implements IFilesManager {
 
 								this.sendDownloadReport(fileType, primaryTask.fullLocalFilePath, primaryTask.file, taskStartDate);
 
-								// TODO: In Step 5, we'll copy this file for the other tasks
-								// For now, just log that we're skipping them
+								// Step 5: Copy the primary file for all other tasks in this group
+								debug('DEDUP: Copying primary file for %d duplicate URLs', tasks.length - 1);
+
 								for (let i = 1; i < tasks.length; i++) {
-									const skippedTask = tasks[i];
-									debug('DEDUP: SKIPPED download for: %s (will be handled in Step 5)', skippedTask.file.src);
-									// Note: These files won't work until we implement copy in Step 5
+									const duplicateTask = tasks[i];
+
+									try {
+										debug('DEDUP: Copying for duplicate: %s -> %s', primaryTask.actualDownloadPath, duplicateTask.actualDownloadPath);
+
+										// Copy the primary file to the duplicate's location
+										await this.sos.fileSystem.copyFile(
+											{
+												storageUnit: this.internalStorageUnit,
+												filePath: primaryTask.actualDownloadPath,
+											},
+											{
+												storageUnit: this.internalStorageUnit,
+												filePath: duplicateTask.actualDownloadPath,
+											},
+											{
+												overwrite: true,
+											}
+										);
+
+										debug('DEDUP: Successfully copied file for: %s (fileName: %s)', duplicateTask.file.src, duplicateTask.fileName);
+
+										// Track the copied file in temp if using temp folder
+										if (duplicateTask.isNewContent) {
+											this.tempDownloads.set(duplicateTask.fileName, duplicateTask.actualDownloadPath);
+											debug(`Tracked temp copy: %s -> %s`, duplicateTask.fileName, duplicateTask.actualDownloadPath);
+										}
+
+										// Send download report for the copied file (report as successful "download")
+										this.sendDownloadReport(fileType, duplicateTask.fullLocalFilePath, duplicateTask.file, taskStartDate);
+
+									} catch (copyErr) {
+										debug('DEDUP: ERROR - Failed to copy for duplicate: %s, error: %O', duplicateTask.file.src, copyErr);
+										// Send error report for failed copy
+										this.sendDownloadReport(fileType, duplicateTask.fullLocalFilePath, duplicateTask.file, taskStartDate, copyErr.message);
+										// Remove from filesToUpdate if copy failed
+										filesToUpdate.delete(duplicateTask.fileName);
+									}
 								}
+
+								debug('DEDUP: Copy phase complete for content group');
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
 								this.sendDownloadReport(fileType, primaryTask.fullLocalFilePath, primaryTask.file, taskStartDate, err.message);
@@ -798,23 +836,24 @@ export class FilesManager implements IFilesManager {
 					optimizedDownloads++;
 					skippedDownloads += (tasks.length - 1);
 
-					// Skip the rest of the tasks in this group (for now - will be fixed in Step 5)
+					// Handle preservation for duplicate tasks
+					// (downloads are skipped but we still need to preserve old content if needed)
 					for (let i = 1; i < tasks.length; i++) {
-						const skippedTask = tasks[i];
+						const duplicateTask = tasks[i];
 						// Preserve existing files to storage if needed
-						if (skippedTask.shouldPreserve && skippedTask.existingValue) {
-							debug('Preserving old content to storage (skipped download): %s', skippedTask.fullLocalFilePath);
-							await this.preserveFileToStorage(skippedTask.fullLocalFilePath, skippedTask.existingValue, fileType);
+						if (duplicateTask.shouldPreserve && duplicateTask.existingValue) {
+							debug('Preserving old content to storage (duplicate task): %s', duplicateTask.fullLocalFilePath);
+							await this.preserveFileToStorage(duplicateTask.fullLocalFilePath, duplicateTask.existingValue, fileType);
 						}
-						// Note: Not downloading these files yet - they will be handled in Step 5
-						debug('DEDUP: Skipping download for duplicate: %s (fileName: %s)', skippedTask.file.src, skippedTask.fileName);
+						// Files will be created by copy operation after primary download
+						debug('DEDUP: Download skipped for: %s (will copy from primary)', duplicateTask.file.src);
 					}
 				}
 			}
 
 			debug('DEDUP: Download optimization complete - Downloaded: %d, Skipped: %d', optimizedDownloads, skippedDownloads);
 			if (skippedDownloads > 0) {
-				debug('DEDUP: WARNING - %d files skipped and will not work until Step 5 (copy implementation)', skippedDownloads);
+				debug('DEDUP: Optimization saved %d duplicate downloads (files copied locally instead)', skippedDownloads);
 			}
 
 			// Also handle files that don't need download but need mediaInfoObject update
