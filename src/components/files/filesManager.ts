@@ -502,120 +502,282 @@ export class FilesManager implements IFilesManager {
 		// Create a map to track which files need to be updated in mediaInfoObject
 		const filesToUpdate: Map<string, number | string> = new Map();
 
-		await Promise.all(
-			filesList.map(async (file) => {
-				// do not download website widgets or video streams
-				if (shouldNotDownload(localFilePath, file)) {
-					debug('Will not download file: %O', file);
-					return;
+		// Check if we should use the duplicate detection approach for location header strategy
+		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
+
+		if (isLocationStrategy) {
+			debug('DEDUP: Starting duplicate detection for location header strategy');
+
+			// Phase 1: Collect all update checks in parallel
+			const checkResults = await Promise.all(
+				filesList.map(async (file) => {
+					// do not download website widgets or video streams
+					if (shouldNotDownload(localFilePath, file)) {
+						debug('Will not download file: %O', file);
+						return null;
+					}
+
+					// check for local urls to files (media/file.mp4)
+					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+
+					const updateCheck = forceDownload
+						? {
+								shouldUpdate: true,
+								value: latestRemoteValue,
+						  }
+						: await this.shouldUpdateLocalFile(
+								localFilePath,
+								file,
+								mediaInfoObject,
+								timeOut,
+								skipContentHttpStatusCodes,
+								updateContentHttpStatusCodes,
+								fetchStrategy,
+						  );
+
+					return {
+						file,
+						updateCheck,
+						fileName: getFileName(file.src)
+					};
+				})
+			);
+
+			// Filter out nulls and files that don't need updates
+			const validResults = checkResults.filter(
+				(result): result is { file: MergedDownloadList; updateCheck: any; fileName: string } =>
+					result !== null && result.updateCheck.shouldUpdate && !!result.updateCheck.value
+			);
+
+			// Phase 2: Detect duplicates based on location URL
+			const locationGroups = new Map<string, Array<{file: MergedDownloadList, fileName: string}>>();
+
+			for (const result of validResults) {
+				const locationUrl = String(result.updateCheck.value);
+
+				if (!locationGroups.has(locationUrl)) {
+					locationGroups.set(locationUrl, []);
+				}
+				locationGroups.get(locationUrl)!.push({
+					file: result.file,
+					fileName: result.fileName
+				});
+			}
+
+			// Log duplicates (only groups with 2+ files)
+			for (const [locationUrl, group] of locationGroups) {
+				if (group.length > 1) {
+					const urls = group.map(g => g.file.src).join(', ');
+					debug('DEDUP: Found %d URLs pointing to same content: %s', group.length, locationUrl);
+					debug('DEDUP: Affected URLs: %s', urls);
+					debug('DEDUP: Potential download savings: %d duplicate downloads', group.length - 1);
+				}
+			}
+
+			// Phase 3: Process all files that need downloading (existing logic, no optimization yet)
+			for (const result of validResults) {
+				const { file, updateCheck, fileName } = result;
+				const updateValue = updateCheck.value;
+
+				// Store the value for later update after successful download
+				filesToUpdate.set(fileName, updateValue);
+
+				// Determine if this is new content that should go to temp folder
+				const isNewContent =
+					forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
+				const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
+
+				if (isNewContent) {
+					debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
 				}
 
-				// check for local urls to files (media/file.mp4)
-				file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
+				const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
 
-				const updateCheck = forceDownload
-					? {
-							shouldUpdate: true,
-							value: latestRemoteValue,
-					  }
-					: await this.shouldUpdateLocalFile(
-							localFilePath,
-							file,
-							mediaInfoObject,
-							timeOut,
-							skipContentHttpStatusCodes,
-							updateContentHttpStatusCodes,
-							fetchStrategy,
-					  );
+				// Before downloading, check if we should preserve the existing file to storage
+				const existingValue = mediaInfoObject[fileName];
 
-				// check if file is already downloaded or is forcedDownload to update existing file with new version
-				if (updateCheck.shouldUpdate) {
-					const updateValue = 'value' in updateCheck ? updateCheck.value : undefined;
-					if (updateValue) {
-						// Store the value for later update after successful download
-						filesToUpdate.set(getFileName(file.src), updateValue);
+				if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
+					// Check if this content is needed by any other URLs
+					const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
+
+					if (!stillNeeded) {
+						debug('Preserving old content to storage before download: %s', fullLocalFilePath);
+						await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
+					} else {
+						debug('Content still needed by other URLs, not preserving: %s', existingValue);
 					}
+				}
 
-					// Determine if this is new content that should go to temp folder
-					// Use temp folder when forceDownload is true AND content is genuinely new
-					const isNewContent =
-						forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
-					const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
+				promises.push(
+					(async () => {
+						try {
+							debug(`Downloading file: %O`, updateValue ?? file.src);
+							let downloadUrl: string;
 
-					if (isNewContent) {
-						debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
-					}
-
-					const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
-					const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
-
-					// Before downloading, check if we should preserve the existing file to storage
-					const existingFileName = getFileName(file.src);
-					const existingValue = mediaInfoObject[existingFileName];
-
-					if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
-						// Check if this content is needed by any other URLs
-						const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
-
-						if (!stillNeeded) {
-							debug('Preserving old content to storage before download: %s', fullLocalFilePath);
-							await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
-						} else {
-							debug('Content still needed by other URLs, not preserving: %s', existingValue);
-						}
-					}
-
-					promises.push(
-						(async () => {
-							try {
-								debug(`Downloading file: %O`, updateValue ?? file.src);
-								// Location strategy uses strings as values, while lastModified uses timestamps
-								const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
-								let downloadUrl: string;
-
-								if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
-									downloadUrl = createDownloadPath(updateValue);
-								} else {
-									downloadUrl = createDownloadPath(file.src);
-								}
-								debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
-								const authHeaders = window.getAuthHeaders?.(downloadUrl);
-
-								await this.sos.fileSystem.downloadFile(
-									{
-										storageUnit: this.internalStorageUnit,
-										filePath: actualDownloadPath,
-									},
-									downloadUrl,
-									authHeaders,
-								);
-
-								debug(`File downloaded to: %s`, actualDownloadPath);
-
-								// Track file in temp if using temp folder
-								if (isNewContent) {
-									const fileName = getFileName(file.src);
-									this.tempDownloads.set(fileName, actualDownloadPath);
-									debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
-								}
-
-								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
-							} catch (err) {
-								debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
-								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
-								// Remove from filesToUpdate if download failed
-								filesToUpdate.delete(getFileName(file.src));
+							if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
+								downloadUrl = createDownloadPath(updateValue);
+							} else {
+								downloadUrl = createDownloadPath(file.src);
 							}
-						})(),
-					);
-				} else if (updateCheck.value) {
-					// File doesn't need download but we need to update the mediaInfoObject
-					// This happens when content is already downloaded but moved to a new URL
-					debug(`Updating mediaInfoObject for %s without download`, file.src);
-					filesToUpdate.set(getFileName(file.src), updateCheck.value);
-				}
-			}),
-		);
+							debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
+							const authHeaders = window.getAuthHeaders?.(downloadUrl);
+
+							await this.sos.fileSystem.downloadFile(
+								{
+									storageUnit: this.internalStorageUnit,
+									filePath: actualDownloadPath,
+								},
+								downloadUrl,
+								authHeaders,
+							);
+
+							debug(`File downloaded to: %s`, actualDownloadPath);
+
+							// Track file in temp if using temp folder
+							if (isNewContent) {
+								this.tempDownloads.set(fileName, actualDownloadPath);
+								debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
+							}
+
+							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+						} catch (err) {
+							debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+							this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
+							// Remove from filesToUpdate if download failed
+							filesToUpdate.delete(fileName);
+						}
+					})(),
+				);
+			}
+
+			// Also handle files that don't need download but need mediaInfoObject update
+			const noDownloadResults = checkResults.filter(
+				(result): result is { file: MergedDownloadList; updateCheck: any; fileName: string } =>
+					result !== null && !result.updateCheck.shouldUpdate && !!result.updateCheck.value
+			);
+
+			for (const result of noDownloadResults) {
+				debug(`Updating mediaInfoObject for %s without download`, result.file.src);
+				filesToUpdate.set(result.fileName, result.updateCheck.value);
+			}
+		} else {
+			// Original logic for non-location strategies
+			await Promise.all(
+				filesList.map(async (file) => {
+					// do not download website widgets or video streams
+					if (shouldNotDownload(localFilePath, file)) {
+						debug('Will not download file: %O', file);
+						return;
+					}
+
+					// check for local urls to files (media/file.mp4)
+					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+
+					const updateCheck = forceDownload
+						? {
+								shouldUpdate: true,
+								value: latestRemoteValue,
+						  }
+						: await this.shouldUpdateLocalFile(
+								localFilePath,
+								file,
+								mediaInfoObject,
+								timeOut,
+								skipContentHttpStatusCodes,
+								updateContentHttpStatusCodes,
+								fetchStrategy,
+						  );
+
+					// check if file is already downloaded or is forcedDownload to update existing file with new version
+					if (updateCheck.shouldUpdate) {
+						const updateValue = 'value' in updateCheck ? updateCheck.value : undefined;
+						if (updateValue) {
+							// Store the value for later update after successful download
+							filesToUpdate.set(getFileName(file.src), updateValue);
+						}
+
+						// Determine if this is new content that should go to temp folder
+						// Use temp folder when forceDownload is true AND content is genuinely new
+						const isNewContent =
+							forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
+						const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
+
+						if (isNewContent) {
+							debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
+						}
+
+						const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
+						const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
+
+						// Before downloading, check if we should preserve the existing file to storage
+						const existingFileName = getFileName(file.src);
+						const existingValue = mediaInfoObject[existingFileName];
+
+						if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
+							// Check if this content is needed by any other URLs
+							const stillNeeded = this.isContentNeededByOtherUrls(existingValue, file.src, filesList, mediaInfoObject);
+
+							if (!stillNeeded) {
+								debug('Preserving old content to storage before download: %s', fullLocalFilePath);
+								await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
+							} else {
+								debug('Content still needed by other URLs, not preserving: %s', existingValue);
+							}
+						}
+
+						promises.push(
+							(async () => {
+								try {
+									debug(`Downloading file: %O`, updateValue ?? file.src);
+									// Location strategy uses strings as values, while lastModified uses timestamps
+									const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
+									let downloadUrl: string;
+
+									if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
+										downloadUrl = createDownloadPath(updateValue);
+									} else {
+										downloadUrl = createDownloadPath(file.src);
+									}
+									debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
+									const authHeaders = window.getAuthHeaders?.(downloadUrl);
+
+									await this.sos.fileSystem.downloadFile(
+										{
+											storageUnit: this.internalStorageUnit,
+											filePath: actualDownloadPath,
+										},
+										downloadUrl,
+										authHeaders,
+									);
+
+									debug(`File downloaded to: %s`, actualDownloadPath);
+
+									// Track file in temp if using temp folder
+									if (isNewContent) {
+										const fileName = getFileName(file.src);
+										this.tempDownloads.set(fileName, actualDownloadPath);
+										debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
+									}
+
+									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+								} catch (err) {
+									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
+									// Remove from filesToUpdate if download failed
+									filesToUpdate.delete(getFileName(file.src));
+								}
+							})(),
+						);
+					} else if (updateCheck.value) {
+						// File doesn't need download but we need to update the mediaInfoObject
+						// This happens when content is already downloaded but moved to a new URL
+						debug(`Updating mediaInfoObject for %s without download`, file.src);
+						filesToUpdate.set(getFileName(file.src), updateCheck.value);
+					}
+				}),
+			);
+		}
 
 		// Return both the promises array and the filesToUpdate map
 		return { promises, filesToUpdate };
