@@ -673,16 +673,19 @@ export class FilesManager implements IFilesManager {
 				debug('DEDUP: Total duplicate downloads that could be optimized: %d', totalDuplicates);
 			}
 
-			// Phase 3c: Execute download tasks (still downloading individually, no optimization yet)
-			debug('Phase 3c: Executing downloads (still individual downloads, no optimization yet)');
+			// Phase 3c: Execute download tasks with optimization (download once per content group)
+			debug('Phase 3c: Executing downloads WITH OPTIMIZATION - download once per content group');
 
-			// NOTE: Currently executing all downloads individually
-			// In future steps, we'll optimize to download once per content group
+			let optimizedDownloads = 0;
+			let skippedDownloads = 0;
+
 			for (const [contentUrl, tasks] of taskGroups) {
-				// Currently iterating through groups but still downloading each task individually
 				debug('Processing content group: %s (%d tasks)', contentUrl, tasks.length);
 
-				for (const task of tasks) {
+				if (tasks.length === 1) {
+					// Single task - no optimization needed
+					const task = tasks[0];
+
 					if (task.isNewContent) {
 						debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
 					}
@@ -695,7 +698,7 @@ export class FilesManager implements IFilesManager {
 						debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 					}
 
-					// Create download promise (still individual download for each task)
+					// Download as normal for single file
 					promises.push(
 						(async () => {
 							try {
@@ -729,7 +732,89 @@ export class FilesManager implements IFilesManager {
 							}
 						})(),
 					);
+					optimizedDownloads++;
+				} else {
+					// Multiple tasks for same content - OPTIMIZATION APPLIES
+					debug('DEDUP: Optimizing download for content group with %d files', tasks.length);
+
+					// Process the first task - this will be the primary download
+					const primaryTask = tasks[0];
+					debug('DEDUP: Primary download task: %s (fileName: %s)', primaryTask.file.src, primaryTask.fileName);
+
+					if (primaryTask.isNewContent) {
+						debug('Using temp folder for new content: %s instead of %s', primaryTask.downloadPath, localFilePath);
+					}
+
+					// Preserve existing file to storage if needed (only for primary)
+					if (primaryTask.shouldPreserve && primaryTask.existingValue) {
+						debug('Preserving old content to storage before download: %s', primaryTask.fullLocalFilePath);
+						await this.preserveFileToStorage(primaryTask.fullLocalFilePath, primaryTask.existingValue, fileType);
+					} else if (primaryTask.existingValue && !primaryTask.shouldPreserve) {
+						debug('Content still needed by other URLs, not preserving: %s', primaryTask.existingValue);
+					}
+
+					// Download only the primary file
+					promises.push(
+						(async () => {
+							try {
+								debug(`DEDUP: Downloading primary file: %O`, primaryTask.updateValue ?? primaryTask.file.src);
+								debug(`Using downloadUrl: %s for file: %s`, primaryTask.downloadUrl, primaryTask.file.src);
+								const authHeaders = window.getAuthHeaders?.(primaryTask.downloadUrl);
+
+								await this.sos.fileSystem.downloadFile(
+									{
+										storageUnit: this.internalStorageUnit,
+										filePath: primaryTask.actualDownloadPath,
+									},
+									primaryTask.downloadUrl,
+									authHeaders,
+								);
+
+								debug(`DEDUP: Primary file downloaded to: %s`, primaryTask.actualDownloadPath);
+
+								// Track file in temp if using temp folder
+								if (primaryTask.isNewContent) {
+									this.tempDownloads.set(primaryTask.fileName, primaryTask.actualDownloadPath);
+									debug(`Tracked temp download: %s -> %s`, primaryTask.fileName, primaryTask.actualDownloadPath);
+								}
+
+								this.sendDownloadReport(fileType, primaryTask.fullLocalFilePath, primaryTask.file, taskStartDate);
+
+								// TODO: In Step 5, we'll copy this file for the other tasks
+								// For now, just log that we're skipping them
+								for (let i = 1; i < tasks.length; i++) {
+									const skippedTask = tasks[i];
+									debug('DEDUP: SKIPPED download for: %s (will be handled in Step 5)', skippedTask.file.src);
+									// Note: These files won't work until we implement copy in Step 5
+								}
+							} catch (err) {
+								debug(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
+								this.sendDownloadReport(fileType, primaryTask.fullLocalFilePath, primaryTask.file, taskStartDate, err.message);
+								// Remove from filesToUpdate if download failed
+								filesToUpdate.delete(primaryTask.fileName);
+							}
+						})(),
+					);
+					optimizedDownloads++;
+					skippedDownloads += (tasks.length - 1);
+
+					// Skip the rest of the tasks in this group (for now - will be fixed in Step 5)
+					for (let i = 1; i < tasks.length; i++) {
+						const skippedTask = tasks[i];
+						// Preserve existing files to storage if needed
+						if (skippedTask.shouldPreserve && skippedTask.existingValue) {
+							debug('Preserving old content to storage (skipped download): %s', skippedTask.fullLocalFilePath);
+							await this.preserveFileToStorage(skippedTask.fullLocalFilePath, skippedTask.existingValue, fileType);
+						}
+						// Note: Not downloading these files yet - they will be handled in Step 5
+						debug('DEDUP: Skipping download for duplicate: %s (fileName: %s)', skippedTask.file.src, skippedTask.fileName);
+					}
 				}
+			}
+
+			debug('DEDUP: Download optimization complete - Downloaded: %d, Skipped: %d', optimizedDownloads, skippedDownloads);
+			if (skippedDownloads > 0) {
+				debug('DEDUP: WARNING - %d files skipped and will not work until Step 5 (copy implementation)', skippedDownloads);
 			}
 
 			// Also handle files that don't need download but need mediaInfoObject update
