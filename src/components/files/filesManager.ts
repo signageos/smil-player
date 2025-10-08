@@ -2577,13 +2577,17 @@ export class FilesManager implements IFilesManager {
 						updateContentHttpStatusCodes,
 						fetchStrategy,
 					),
+				async () =>
+					this.detectUpdateOnly(
+						resource,
+						rootFolder,
+						timeOut,
+						skipContentHttpStatusCodes,
+						updateContentHttpStatusCodes,
+						fetchStrategy,
+					),
 				refreshInterval,
 				reloadPlayerOnUpdate,
-				rootFolder,
-				timeOut,
-				skipContentHttpStatusCodes,
-				updateContentHttpStatusCodes,
-				fetchStrategy,
 			);
 		});
 	};
@@ -2591,13 +2595,9 @@ export class FilesManager implements IFilesManager {
 	private convertToResourceCheckerFormat = (
 		resource: MergedDownloadList,
 		checkFunction: () => Promise<Promise<void>[]>,
+		detectFunction: () => Promise<UpdateDetection | null>,
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
-		rootFolder?: string,
-		timeOut?: number,
-		skipContentHttpStatusCodes?: number[],
-		updateContentHttpStatusCodes?: number[],
-		fetchStrategy?: FetchStrategy,
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
@@ -2605,16 +2605,9 @@ export class FilesManager implements IFilesManager {
 			checkFunction: async () => {
 				return checkFunction();
 			},
-			detectFunction: rootFolder && timeOut !== undefined && fetchStrategy ? async () => {
-				return this.detectUpdateOnly(
-					resource,
-					rootFolder,
-					timeOut,
-					skipContentHttpStatusCodes || [],
-					updateContentHttpStatusCodes || [],
-					fetchStrategy,
-				);
-			} : undefined,
+			detectFunction: async () => {
+				return detectFunction();
+			},
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
 				if (data.length > 0 && reloadPlayerOnUpdate) {
