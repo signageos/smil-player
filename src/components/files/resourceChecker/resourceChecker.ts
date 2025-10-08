@@ -19,6 +19,7 @@ export type Resource = {
 	url: string;
 	interval: number;
 	checkFunction: () => Promise<Promise<void>[]>;
+	detectFunction?: () => Promise<UpdateDetection | null>;  // Optional - for media files to support batch download optimization
 	actionOnSuccess: (data: Promise<void>[], stopChecker: () => Promise<void>) => Promise<void>;
 	mediaObject?: MergedDownloadList;  // Optional - only media resources will have this
 };
