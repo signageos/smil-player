@@ -2293,6 +2293,92 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
+	/**
+	 * Process and batch download new content updates
+	 * Groups detections by localFilePath and fetchStrategy, then downloads in batches
+	 * Used by resource checker for optimized batch downloading
+	 * @param detections Array of update detections that need downloads
+	 */
+	public processNewContentUpdates = async (
+		detections: UpdateDetection[],
+	): Promise<void> => {
+		if (detections.length === 0) {
+			return;
+		}
+
+		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
+
+		// Group by localFilePath AND fetchStrategy
+		// Different file types or strategies can't be batched together
+		const groups = new Map<string, UpdateDetection[]>();
+
+		for (const detection of detections) {
+			const key = `${detection.localFilePath}|${detection.fetchStrategy.strategyType}`;
+			if (!groups.has(key)) {
+				groups.set(key, []);
+			}
+			groups.get(key)!.push(detection);
+		}
+
+		debug('processNewContentUpdates: Grouped into %d batches', groups.size);
+
+		// Batch download each group
+		for (const [key, groupDetections] of groups) {
+			const files = groupDetections.map(d => d.file);
+			const fetchStrategy = groupDetections[0].fetchStrategy;
+			const localFilePath = groupDetections[0].localFilePath;
+
+			debug(
+				'processNewContentUpdates: Batch downloading %d files for %s with strategy %s',
+				files.length,
+				localFilePath,
+				fetchStrategy.strategyType,
+			);
+
+			try {
+				// Use existing parallelDownloadAllFiles with multiple files
+				// Existing deduplication logic (Phase 3b/3c) will handle duplicate content
+				const result = await this.parallelDownloadAllFiles(
+					files,
+					localFilePath,
+					SMILScheduleEnum.fileCheckTimeout,
+					[],
+					[],
+					fetchStrategy,
+					true, // forceDownload for new content
+					groupDetections[0].updateValue, // latestRemoteValue
+				);
+
+				// Wait for all downloads to complete
+				await Promise.all(result.promises);
+
+				debug('processNewContentUpdates: Downloads complete for group: %s', key);
+
+				// Post-process: collectUpdate and set wasUpdated for each file
+				for (const detection of groupDetections) {
+					const fileName = getFileName(detection.file.src);
+
+					if (result.filesToUpdate.has(fileName)) {
+						const value = result.filesToUpdate.get(fileName)!;
+						debug('processNewContentUpdates: Collecting batch update for %s with value: %s', fileName, value);
+						this.collectUpdate(fileName, String(value));
+					}
+
+					if ('localFilePath' in detection.file) {
+						detection.file.wasUpdated = true;
+					}
+				}
+
+				debug('processNewContentUpdates: Batch processing complete for group: %s', key);
+			} catch (err) {
+				debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
+				// Continue with other groups even if one fails
+			}
+		}
+
+		debug('processNewContentUpdates: All batches processed');
+	};
+
 	private convertToResourcesCheckerFormat = (
 		resources: MergedDownloadList[],
 		rootFolder: string,
