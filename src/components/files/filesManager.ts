@@ -2531,8 +2531,9 @@ export class FilesManager implements IFilesManager {
 		debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
 
 		// Find where the content actually is
+		// TODO: fix type casting
 		const actualLocalUri = await this.findActualFileForMovedContent(
-			detection.updateValue,
+			detection.updateValue as string,
 			detection.mediaInfoObject,
 			detection.localFilePath,
 		);
@@ -2578,6 +2579,11 @@ export class FilesManager implements IFilesManager {
 					),
 				refreshInterval,
 				reloadPlayerOnUpdate,
+				rootFolder,
+				timeOut,
+				skipContentHttpStatusCodes,
+				updateContentHttpStatusCodes,
+				fetchStrategy,
 			);
 		});
 	};
@@ -2587,6 +2593,11 @@ export class FilesManager implements IFilesManager {
 		checkFunction: () => Promise<Promise<void>[]>,
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
+		rootFolder?: string,
+		timeOut?: number,
+		skipContentHttpStatusCodes?: number[],
+		updateContentHttpStatusCodes?: number[],
+		fetchStrategy?: FetchStrategy,
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
@@ -2594,6 +2605,16 @@ export class FilesManager implements IFilesManager {
 			checkFunction: async () => {
 				return checkFunction();
 			},
+			detectFunction: rootFolder && timeOut !== undefined && fetchStrategy ? async () => {
+				return this.detectUpdateOnly(
+					resource,
+					rootFolder,
+					timeOut,
+					skipContentHttpStatusCodes || [],
+					updateContentHttpStatusCodes || [],
+					fetchStrategy,
+				);
+			} : undefined,
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
 				if (data.length > 0 && reloadPlayerOnUpdate) {
