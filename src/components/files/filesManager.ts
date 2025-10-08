@@ -46,7 +46,7 @@ import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
-import { Resource } from './resourceChecker/resourceChecker';
+import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
 import { getStrategy } from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
@@ -2231,6 +2231,66 @@ export class FilesManager implements IFilesManager {
 		}
 
 		return [];
+	};
+
+	/**
+	 * Detect if a file needs update without downloading
+	 * Used for batch download optimization in resource checker
+	 * @returns UpdateDetection object if update needed, null otherwise
+	 */
+	private detectUpdateOnly = async (
+		file: MergedDownloadList,
+		localFilePath: string,
+		timeOut: number,
+		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
+		fetchStrategy: FetchStrategy,
+	): Promise<UpdateDetection | null> => {
+		// Skip streams (same logic as checkLastModified)
+		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
+			return null;
+		}
+
+		try {
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
+
+			const updateCheck = await this.shouldUpdateLocalFile(
+				localFilePath,
+				file,
+				mediaInfoObject,
+				timeOut,
+				skipContentHttpStatusCodes,
+				updateContentHttpStatusCodes,
+				fetchStrategy,
+			);
+
+			if (!updateCheck.shouldUpdate) {
+				return null;  // No update needed
+			}
+
+			// Determine if new content (needs download) or moved content (no download)
+			const isNewContent =
+				updateCheck.value && !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
+
+			debug(
+				'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
+				file.src,
+				isNewContent,
+				updateCheck.value,
+			);
+
+			return {
+				file,
+				localFilePath,
+				updateValue: updateCheck.value,
+				needsDownload: isNewContent,  // true = NEW_CONTENT, false = MOVED_CONTENT
+				mediaInfoObject,
+				fetchStrategy,
+			};
+		} catch (err) {
+			debug('Error during update detection for %s: %O', file.src, err);
+			return null;
+		}
 	};
 
 	private convertToResourcesCheckerFormat = (
