@@ -1,9 +1,19 @@
 import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
-import { MergedDownloadList } from '../../../models/filesModels';
+import { MergedDownloadList, MediaInfoObject } from '../../../models/filesModels';
+import { FetchStrategy } from '../fetchingStrategies/fetchingStrategies';
 import Debug from 'debug';
 
 const debug = Debug('@signageos/smil-player:resourceChecker');
+
+export type UpdateDetection = {
+	file: MergedDownloadList;
+	localFilePath: string;
+	updateValue: string | number;
+	needsDownload: boolean;  // true = NEW_CONTENT (needs download), false = MOVED_CONTENT (just update mapping)
+	mediaInfoObject: MediaInfoObject;
+	fetchStrategy: FetchStrategy;
+};
 
 export type Resource = {
 	url: string;
