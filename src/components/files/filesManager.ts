@@ -2264,13 +2264,12 @@ export class FilesManager implements IFilesManager {
 				fetchStrategy,
 			);
 
-			if (!updateCheck.shouldUpdate) {
-				return null;  // No update needed
+			if (!updateCheck.shouldUpdate || !updateCheck.value) {
+				return null;  // No update needed or no value
 			}
 
 			// Determine if new content (needs download) or moved content (no download)
-			const isNewContent =
-				updateCheck.value && !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
+			const isNewContent = !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
 
 			debug(
 				'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
