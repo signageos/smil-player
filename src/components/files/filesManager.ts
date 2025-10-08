@@ -587,6 +587,7 @@ export class FilesManager implements IFilesManager {
 				existingValue?: string | number;
 				shouldPreserve: boolean;
 				existingFilePath?: string; // Path to existing file with same content (for reuse)
+				storageFilePath?: string; // Path to file in storage with same content (Step 7)
 			}
 
 			const downloadTasks: DownloadTask[] = [];
@@ -691,6 +692,19 @@ export class FilesManager implements IFilesManager {
 					tasks[0].existingFilePath = existingFilePath;
 					debug('DEDUP: Found existing content at %s for %d tasks (content: %s)',
 						existingFilePath, tasks.length, contentUrl);
+				} else {
+					// Step 7: Check storage as last resort before downloading
+					const storageFilePath = await this.checkStorageForContent(
+						contentUrl, // The location URL is the content identifier
+						fileType
+					);
+
+					if (storageFilePath) {
+						// Store this info in the first task (we'll check it in Phase 3c)
+						tasks[0].storageFilePath = storageFilePath;
+						debug('DEDUP: Found content in storage at %s for %d tasks (content: %s)',
+							storageFilePath, tasks.length, contentUrl);
+					}
 				}
 			}
 
@@ -705,6 +719,7 @@ export class FilesManager implements IFilesManager {
 
 				// Check if we found existing content for this group
 				const existingFilePath = tasks[0].existingFilePath;
+				const storageFilePath = tasks[0].storageFilePath; // Step 7: Check for storage content
 
 				if (existingFilePath) {
 					// SAFE: Copy existing content to temp for ALL tasks in group
@@ -761,6 +776,93 @@ export class FilesManager implements IFilesManager {
 						skippedDownloads += tasks.length;
 						debug('DEDUP: Successfully reused existing content for all %d tasks', tasks.length);
 						continue; // Skip to next content group
+					}
+				} else if (storageFilePath) {
+					// Step 7: Restore from storage (similar to Step 6 pattern)
+					debug('DEDUP: Restoring content from storage at %s for %d tasks', storageFilePath, tasks.length);
+
+					// Restore once for the first task
+					let restoredTempPath: string | null = null;
+					const firstTask = tasks[0];
+
+					// Handle storage preservation if needed for first task
+					if (firstTask.shouldPreserve && firstTask.existingValue) {
+						debug('Preserving old content to storage before restoration: %s', firstTask.fullLocalFilePath);
+						await this.preserveFileToStorage(firstTask.fullLocalFilePath, firstTask.existingValue, fileType);
+					}
+
+					try {
+						// Restore from storage to temp for the first task
+						restoredTempPath = await this.restoreFromStorage(
+							storageFilePath,
+							firstTask.actualDownloadPath.substring(0, firstTask.actualDownloadPath.lastIndexOf('/')),
+							firstTask.file.src
+						);
+
+						if (restoredTempPath) {
+							debug('DEDUP: Successfully restored from storage to: %s', restoredTempPath);
+
+							// For the first task, we already have the file in place
+							// Track it in tempDownloads
+							if (firstTask.isNewContent) {
+								this.tempDownloads.set(firstTask.fileName, restoredTempPath);
+								debug('Tracked restored temp file: %s -> %s', firstTask.fileName, restoredTempPath);
+							}
+
+							// Report as successful for first task
+							this.sendDownloadReport(fileType, firstTask.fullLocalFilePath, firstTask.file, taskStartDate);
+
+							// Copy locally for remaining tasks in the group
+							for (let i = 1; i < tasks.length; i++) {
+								const task = tasks[i];
+
+								// Handle storage preservation if needed
+								if (task.shouldPreserve && task.existingValue) {
+									debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
+									await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+								}
+
+								try {
+									// Copy the restored file to this task's temp location
+									debug('DEDUP: Copying restored content to temp: %s -> %s', restoredTempPath, task.actualDownloadPath);
+									await this.sos.fileSystem.copyFile(
+										{
+											storageUnit: this.internalStorageUnit,
+											filePath: restoredTempPath,
+										},
+										{
+											storageUnit: this.internalStorageUnit,
+											filePath: task.actualDownloadPath,
+										},
+										{
+											overwrite: true,
+										}
+									);
+
+									debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
+
+									// Track in tempDownloads
+									if (task.isNewContent) {
+										this.tempDownloads.set(task.fileName, task.actualDownloadPath);
+										debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
+									}
+
+									// Report as successful
+									this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+								} catch (err) {
+									debug('DEDUP: Failed to copy restored content: %O', err);
+									// Continue trying for other tasks
+								}
+							}
+
+							optimizedDownloads++;
+							skippedDownloads += tasks.length;
+							debug('DEDUP: Successfully restored and reused content from storage for %d tasks', tasks.length);
+							continue; // Skip to next content group
+						}
+					} catch (err) {
+						debug('DEDUP: Failed to restore from storage: %O', err);
+						// Fall through to normal download logic
 					}
 				}
 
