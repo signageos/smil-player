@@ -491,7 +491,7 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 		fetchStrategy: FetchStrategy,
 		forceDownload: boolean = false,
-		latestRemoteValue?: string,
+		latestRemoteValue?: string | number,
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -2345,7 +2345,7 @@ export class FilesManager implements IFilesManager {
 					[],
 					fetchStrategy,
 					true, // forceDownload for new content
-					String(groupDetections[0].updateValue), // latestRemoteValue (convert to string)
+					groupDetections[0].updateValue, // latestRemoteValue (string for location, number for lastModified)
 				);
 
 				// Wait for all downloads to complete
