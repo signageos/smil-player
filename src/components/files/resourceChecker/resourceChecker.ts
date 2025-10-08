@@ -63,11 +63,66 @@ export class ResourceChecker implements IResourceChecker {
 						debug('Starting batch collection for resource group at interval %d', interval);
 						this.filesManager.startBatch();
 
+						// Phase 1: Detection - collect all update detections
+						const detections: UpdateDetection[] = [];
+						const resourcesWithoutDetectFunction: Resource[] = [];
+
 						for (const resource of resourceGroup) {
 							if (!this.isRunning) {
 								break;
 							}
-							debug('Checking resource: %O at interval: %d', resource, interval);
+
+							if (resource.detectFunction) {
+								try {
+									debug('Phase 1: Detecting updates for %s', resource.url);
+									const detection = await resource.detectFunction();
+									if (detection) {
+										detections.push(detection);
+									}
+								} catch (error) {
+									debug('Error detecting update for %s: %O', resource.url, error);
+								}
+							} else {
+								// Resources without detectFunction (like SMIL files) - process later
+								resourcesWithoutDetectFunction.push(resource);
+							}
+						}
+
+						// Phase 2: Classify detections
+						const newContentDetections = detections.filter((d) => d.needsDownload);
+						const movedContentDetections = detections.filter((d) => !d.needsDownload);
+
+						debug(
+							'Phase 2: %d new content detections, %d moved content detections',
+							newContentDetections.length,
+							movedContentDetections.length,
+						);
+
+						// Phase 3: Batch process new content downloads
+						if (newContentDetections.length > 0) {
+							try {
+								debug('Phase 3: Batch downloading %d new content files', newContentDetections.length);
+								await this.filesManager.processNewContentUpdates(newContentDetections);
+							} catch (error) {
+								debug('Error processing new content updates: %O', error);
+							}
+						}
+
+						// Phase 4: Handle moved content (no download needed)
+						for (const detection of movedContentDetections) {
+							try {
+								await this.filesManager.handleMovedContent(detection);
+							} catch (error) {
+								debug('Error handling moved content for %s: %O', detection.file.src, error);
+							}
+						}
+
+						// Phase 5: Process resources without detectFunction (SMIL files, etc.)
+						for (const resource of resourcesWithoutDetectFunction) {
+							if (!this.isRunning) {
+								break;
+							}
+							debug('Checking resource (legacy): %O at interval: %d', resource, interval);
 
 							try {
 								const response = await resource.checkFunction();
@@ -77,7 +132,7 @@ export class ResourceChecker implements IResourceChecker {
 							}
 						}
 
-						// Commit batch after all resources in this interval group have been checked
+						// Phase 6: Commit batch after all resources in this interval group have been checked
 						debug('Committing batch updates for resource group at interval %d', interval);
 						// Extract media objects from resources in this interval group for commitBatch
 						const filesList = resourceGroup
