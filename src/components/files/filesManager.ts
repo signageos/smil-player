@@ -2345,7 +2345,7 @@ export class FilesManager implements IFilesManager {
 					[],
 					fetchStrategy,
 					true, // forceDownload for new content
-					groupDetections[0].updateValue, // latestRemoteValue
+					String(groupDetections[0].updateValue), // latestRemoteValue (convert to string)
 				);
 
 				// Wait for all downloads to complete
