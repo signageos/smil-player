@@ -10,7 +10,7 @@ import {
 } from '../../models/mediaModels';
 import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
-import { Resource } from './resourceChecker/resourceChecker';
+import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './fetchingStrategies/fetchingStrategies';
 
 export type { FetchStrategy };
@@ -76,4 +76,7 @@ export interface IFilesManager {
 	startBatch: () => void;
 	collectUpdate: (fileName: string, value: string) => void;
 	commitBatch: (filesList: MergedDownloadList[]) => Promise<void>;
+	// Batch download optimization methods
+	processNewContentUpdates: (detections: UpdateDetection[]) => Promise<void>;
+	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
 }
