@@ -2193,6 +2193,37 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
+	 * Update file.localFilePath to point to where content actually exists
+	 * Shared helper for moved content handling across checkLastModified and handleMovedContent
+	 * @returns true if successfully updated, false otherwise
+	 */
+	private updateLocalFilePathForMovedContent = async (
+		file: MergedDownloadList,
+		updateValue: string | number,
+		mediaInfoObject: MediaInfoObject,
+		localFilePath: string,
+	): Promise<boolean> => {
+		if (!('localFilePath' in file)) {
+			return false;
+		}
+
+		const actualLocalUri = await this.findActualFileForMovedContent(
+			String(updateValue),
+			mediaInfoObject,
+			localFilePath,
+		);
+
+		if (actualLocalUri) {
+			const oldPath = file.localFilePath;
+			file.localFilePath = actualLocalUri;
+			debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, actualLocalUri);
+			return true;
+		}
+
+		return false;
+	};
+
+	/**
 	 * Find an existing file that contains specific content
 	 * Used to check if content already exists locally before downloading
 	 * @param contentValue - The content value (e.g., location URL) to search for
@@ -2226,17 +2257,26 @@ export class FilesManager implements IFilesManager {
 		return null;
 	};
 
-	private checkLastModified = async (
+	/**
+	 * Internal detection logic shared by checkLastModified and detectUpdateOnly
+	 * Extracts common detection pattern to avoid duplication
+	 * @returns Detection result with updateCheck, mediaInfoObject, and isNewContent flag, or null if skipped/error
+	 */
+	private detectFileUpdateInternal = async (
 		file: MergedDownloadList,
 		localFilePath: string,
 		timeOut: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
+		skipContentHttpStatusCodes: number[],
+		updateContentHttpStatusCodes: number[],
 		fetchStrategy: FetchStrategy,
-	): Promise<Promise<void>[]> => {
-		// do not check streams for update
+	): Promise<{
+		updateCheck: UpdateCheckResult;
+		mediaInfoObject: MediaInfoObject;
+		isNewContent: boolean;
+	} | null> => {
+		// Skip streams
 		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
-			return [];
+			return null;
 		}
 
 		try {
@@ -2252,15 +2292,52 @@ export class FilesManager implements IFilesManager {
 				fetchStrategy,
 			);
 
-			if (updateCheck.shouldUpdate) {
-				// Check if this is genuinely new content or content that has moved
-				const isNewContent =
-					updateCheck.value && !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
+			// Determine if new content (only matters if shouldUpdate=true)
+			const isNewContent =
+				updateCheck.shouldUpdate && updateCheck.value
+					? !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject)
+					: false;
 
+			return {
+				updateCheck,
+				mediaInfoObject,
+				isNewContent,
+			};
+		} catch (err) {
+			debug('Error during update detection for %s: %O', file.src, err);
+			return null;
+		}
+	};
+
+	private checkLastModified = async (
+		file: MergedDownloadList,
+		localFilePath: string,
+		timeOut: number,
+		skipContentHttpStatusCodes: number[] = [],
+		updateContentHttpStatusCodes: number[] = [],
+		fetchStrategy: FetchStrategy,
+	): Promise<Promise<void>[]> => {
+		const detection = await this.detectFileUpdateInternal(
+			file,
+			localFilePath,
+			timeOut,
+			skipContentHttpStatusCodes,
+			updateContentHttpStatusCodes,
+			fetchStrategy,
+		);
+
+		if (!detection) {
+			return [];
+		}
+
+		const { updateCheck, mediaInfoObject, isNewContent } = detection;
+
+		try {
+			if (updateCheck.shouldUpdate) {
 				if (isNewContent) {
 					debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
 
-					// Download new content to temp folder (forceDownload=true triggers temp folder for new content)
+					// Download new content to temp folder
 					const result = await this.parallelDownloadAllFiles(
 						[file],
 						localFilePath,
@@ -2268,24 +2345,19 @@ export class FilesManager implements IFilesManager {
 						[],
 						[],
 						fetchStrategy,
-						true, // forceDownload=true will use temp folder for new content
+						true,
 						updateCheck.value,
 					);
 
-					// Wait for the download to complete
 					await Promise.all(result.promises);
 
-					// Collect updates for batch processing instead of immediate write
+					// Collect updates for batch processing
 					result.filesToUpdate.forEach((value, fileName) => {
 						debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
 						this.collectUpdate(fileName, String(value));
 					});
 
-					// For files downloaded to temp, we'll update localFilePath during migration
-					// So we don't update it here - keep pointing to standard location
 					if ('localFilePath' in file) {
-						// Keep the standard path, not temp path
-						// localFilePath will be updated during migration from temp to standard
 						file.wasUpdated = true;
 					}
 
@@ -2296,68 +2368,42 @@ export class FilesManager implements IFilesManager {
 					// Content exists but may have moved - update mapping without downloading
 					if (updateCheck.value) {
 						const fileName = getFileName(file.src);
-						debug(
-							'Collecting batch update for moved content: %s with value: %s',
-							fileName,
-							updateCheck.value,
-						);
 						this.collectUpdate(fileName, String(updateCheck.value));
-
-						// Update localFilePath to point to existing file
-						if ('localFilePath' in file) {
-							const actualLocalUri = await this.findActualFileForMovedContent(
-								updateCheck.value,
-								mediaInfoObject,
-								localFilePath,
-							);
-							if (actualLocalUri) {
-								file.localFilePath = actualLocalUri;
-								debug('Updated localFilePath for %s to %s', file.src, actualLocalUri);
-							}
-						}
+						await this.updateLocalFilePathForMovedContent(
+							file,
+							updateCheck.value,
+							mediaInfoObject,
+							localFilePath,
+						);
 					}
 
 					return [];
 				}
 			} else if (updateCheck.value && 'localFilePath' in file) {
-				// This else if block handles the case where content hasn't changed but may have moved
-				// This is essentially the same as the moved content handling above
+				// Content hasn't changed but may have moved
 				debug(
 					'checkLastModified: Content exists, no update needed. Value: %s for file: %s',
 					updateCheck.value,
 					file.src,
 				);
 
-				// Content exists but moved - update localFilePath without downloading
-				const actualLocalUri = await this.findActualFileForMovedContent(
+				const updated = await this.updateLocalFilePathForMovedContent(
+					file,
 					updateCheck.value,
 					mediaInfoObject,
 					localFilePath,
 				);
 
-				if (actualLocalUri) {
-					const oldLocalFilePath = file.localFilePath;
-					debug(
-						'checkLastModified: Updating localFilePath for %s from %s to %s',
-						file.src,
-						oldLocalFilePath,
-						actualLocalUri,
-					);
-
-					file.localFilePath = actualLocalUri;
+				if (updated) {
 					file.wasUpdated = true;
-
-					// Collect update for batch processing instead of immediate write
 					const fileName = getFileName(file.src);
 					const oldValue = mediaInfoObject[fileName];
-
 					debug(
 						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
 						fileName,
 						oldValue,
 						updateCheck.value,
 					);
-
 					this.collectUpdate(fileName, updateCheck.value);
 					debug('checkLastModified: Batch update collected for moved content');
 				} else {
@@ -2386,50 +2432,34 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[],
 		fetchStrategy: FetchStrategy,
 	): Promise<UpdateDetection | null> => {
-		// Skip streams (same logic as checkLastModified)
-		if (localFilePath === FileStructure.videos && !isNil((file as SMILVideo).isStream)) {
-			return null;
+		const detection = await this.detectFileUpdateInternal(
+			file,
+			localFilePath,
+			timeOut,
+			skipContentHttpStatusCodes,
+			updateContentHttpStatusCodes,
+			fetchStrategy,
+		);
+
+		if (!detection || !detection.updateCheck.shouldUpdate || !detection.updateCheck.value) {
+			return null; // No update needed
 		}
 
-		try {
-			const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
+		debug(
+			'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
+			file.src,
+			detection.isNewContent,
+			detection.updateCheck.value,
+		);
 
-			const updateCheck = await this.shouldUpdateLocalFile(
-				localFilePath,
-				file,
-				mediaInfoObject,
-				timeOut,
-				skipContentHttpStatusCodes,
-				updateContentHttpStatusCodes,
-				fetchStrategy,
-			);
-
-			if (!updateCheck.shouldUpdate || !updateCheck.value) {
-				return null; // No update needed or no value
-			}
-
-			// Determine if new content (needs download) or moved content (no download)
-			const isNewContent = !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject);
-
-			debug(
-				'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
-				file.src,
-				isNewContent,
-				updateCheck.value,
-			);
-
-			return {
-				file,
-				localFilePath,
-				updateValue: updateCheck.value,
-				needsDownload: isNewContent, // true = NEW_CONTENT, false = MOVED_CONTENT
-				mediaInfoObject,
-				fetchStrategy,
-			};
-		} catch (err) {
-			debug('Error during update detection for %s: %O', file.src, err);
-			return null;
-		}
+		return {
+			file,
+			localFilePath,
+			updateValue: detection.updateCheck.value,
+			needsDownload: detection.isNewContent, // true = NEW_CONTENT, false = MOVED_CONTENT
+			mediaInfoObject: detection.mediaInfoObject,
+			fetchStrategy,
+		};
 	};
 
 	/**
@@ -2530,24 +2560,12 @@ export class FilesManager implements IFilesManager {
 	public handleMovedContent = async (detection: UpdateDetection): Promise<void> => {
 		debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
 
-		// Find where the content actually is
-		// TODO: fix type casting
-		const actualLocalUri = await this.findActualFileForMovedContent(
-			detection.updateValue as string,
+		await this.updateLocalFilePathForMovedContent(
+			detection.file,
+			detection.updateValue,
 			detection.mediaInfoObject,
 			detection.localFilePath,
 		);
-
-		if (actualLocalUri && 'localFilePath' in detection.file) {
-			const oldPath = detection.file.localFilePath;
-			detection.file.localFilePath = actualLocalUri;
-			debug(
-				'handleMovedContent: Updated localFilePath for %s from %s to %s',
-				detection.file.src,
-				oldPath,
-				actualLocalUri,
-			);
-		}
 
 		// Update mapping in mediaInfoObject
 		const fileName = getFileName(detection.file.src);

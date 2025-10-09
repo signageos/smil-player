@@ -47,7 +47,6 @@ export class SmilPlayer implements ISmilPlayer {
 		debug('sOS is ready');
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
-		Debug.enable('@signageos/smil-player:*');
 
 		if (sos.config.debugEnabled === true || sos.config.debugEnabled === 'true') {
 			debug('Debug enabled in config, enabling debug logs');
