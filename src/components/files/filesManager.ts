@@ -1471,6 +1471,16 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
+						false,  // reloadPlayerOnUpdate
+						(resource) =>  // Pass detectFunction for media
+							this.detectUpdateOnly(
+								resource,
+								FileStructure.videos,
+								smilObject.refresh.timeOut,
+								smilObject.skipContentOnHttpStatus,
+								smilObject.updateContentOnHttpStatus,
+								mediaFetchStrategy,
+							),
 					),
 				);
 
@@ -1483,6 +1493,16 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
+						false,  // reloadPlayerOnUpdate
+						(resource) =>  // Pass detectFunction for media
+							this.detectUpdateOnly(
+								resource,
+								FileStructure.audios,
+								smilObject.refresh.timeOut,
+								smilObject.skipContentOnHttpStatus,
+								smilObject.updateContentOnHttpStatus,
+								mediaFetchStrategy,
+							),
 					),
 				);
 
@@ -1495,6 +1515,16 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
+						false,  // reloadPlayerOnUpdate
+						(resource) =>  // Pass detectFunction for media
+							this.detectUpdateOnly(
+								resource,
+								FileStructure.images,
+								smilObject.refresh.timeOut,
+								smilObject.skipContentOnHttpStatus,
+								smilObject.updateContentOnHttpStatus,
+								mediaFetchStrategy,
+							),
 					),
 				);
 
@@ -1507,6 +1537,16 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
+						false,  // reloadPlayerOnUpdate
+						(resource) =>  // Pass detectFunction for media
+							this.detectUpdateOnly(
+								resource,
+								FileStructure.widgets,
+								smilObject.refresh.timeOut,
+								smilObject.skipContentOnHttpStatus,
+								smilObject.updateContentOnHttpStatus,
+								mediaFetchStrategy,
+							),
 					),
 				);
 			}
@@ -2601,6 +2641,7 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 		fetchStrategy: FetchStrategy,
 		reloadPlayerOnUpdate: boolean = false,
+		detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>,  // NEW optional parameter
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
@@ -2614,15 +2655,7 @@ export class FilesManager implements IFilesManager {
 						updateContentHttpStatusCodes,
 						fetchStrategy,
 					),
-				async () =>
-					this.detectUpdateOnly(
-						resource,
-						rootFolder,
-						timeOut,
-						skipContentHttpStatusCodes,
-						updateContentHttpStatusCodes,
-						fetchStrategy,
-					),
+				detectFunction ? async () => detectFunction(resource) : undefined,  // Pass if provided
 				refreshInterval,
 				reloadPlayerOnUpdate,
 			);
@@ -2632,7 +2665,7 @@ export class FilesManager implements IFilesManager {
 	private convertToResourceCheckerFormat = (
 		resource: MergedDownloadList,
 		checkFunction: () => Promise<Promise<void>[]>,
-		detectFunction: () => Promise<UpdateDetection | null>,
+		detectFunction?: () => Promise<UpdateDetection | null>,  // Make optional with ?
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
 	): Resource => {
@@ -2642,9 +2675,9 @@ export class FilesManager implements IFilesManager {
 			checkFunction: async () => {
 				return checkFunction();
 			},
-			detectFunction: async () => {
+			detectFunction: detectFunction ? async () => {
 				return detectFunction();
-			},
+			} : undefined,  // Only add if provided
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
 				if (data.length > 0 && reloadPlayerOnUpdate) {
