@@ -2636,9 +2636,9 @@ export class FilesManager implements IFilesManager {
 						updateContentHttpStatusCodes,
 						fetchStrategy,
 					),
-				detectFunction ? async () => detectFunction(resource) : undefined,  // Pass if provided
 				refreshInterval,
 				reloadPlayerOnUpdate,
+				detectFunction ? async () => detectFunction(resource) : undefined,  // Pass if provided - must be last
 			);
 		});
 	};
@@ -2646,9 +2646,9 @@ export class FilesManager implements IFilesManager {
 	private convertToResourceCheckerFormat = (
 		resource: MergedDownloadList,
 		checkFunction: () => Promise<Promise<void>[]>,
-		detectFunction?: () => Promise<UpdateDetection | null>,  // Make optional with ?
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
+		detectFunction?: () => Promise<UpdateDetection | null>,  // Make optional with ? - must be last
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
