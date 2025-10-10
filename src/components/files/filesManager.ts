@@ -2564,7 +2564,6 @@ export class FilesManager implements IFilesManager {
 			try {
 				// Use existing parallelDownloadAllFiles with multiple files
 				// Existing deduplication logic (Phase 3b/3c) will handle duplicate content
-				// TODO: fix type casting
 				const result = await this.parallelDownloadAllFiles(
 					files,
 					localFilePath,
@@ -2573,7 +2572,7 @@ export class FilesManager implements IFilesManager {
 					[],
 					fetchStrategy,
 					true, // forceDownload for new content
-					groupDetections[0].updateValue as string,
+					String(groupDetections[0].updateValue),
 				);
 
 				// Wait for all downloads to complete
