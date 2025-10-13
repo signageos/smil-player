@@ -236,7 +236,14 @@ export class FilesManager implements IFilesManager {
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
 			// to create difference between download and media played
 			value.popName = 'media-download';
-			await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
+			if (this.smilLogging.endpoint) {
+				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				await this.sendCustomEndpointReport(
+					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage, 'download')),
+				);
+			} else {
+				await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
+			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
 			await this.sendReport({
@@ -1471,8 +1478,10 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
-						false,  // reloadPlayerOnUpdate
-						(resource) =>  // Pass detectFunction for media
+						false, // reloadPlayerOnUpdate
+						(
+							resource, // Pass detectFunction for media
+						) =>
 							this.detectUpdateOnly(
 								resource,
 								FileStructure.videos,
@@ -1493,8 +1502,10 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
-						false,  // reloadPlayerOnUpdate
-						(resource) =>  // Pass detectFunction for media
+						false, // reloadPlayerOnUpdate
+						(
+							resource, // Pass detectFunction for media
+						) =>
 							this.detectUpdateOnly(
 								resource,
 								FileStructure.audios,
@@ -1515,8 +1526,10 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
-						false,  // reloadPlayerOnUpdate
-						(resource) =>  // Pass detectFunction for media
+						false, // reloadPlayerOnUpdate
+						(
+							resource, // Pass detectFunction for media
+						) =>
 							this.detectUpdateOnly(
 								resource,
 								FileStructure.images,
@@ -1537,8 +1550,10 @@ export class FilesManager implements IFilesManager {
 						smilObject.skipContentOnHttpStatus,
 						smilObject.updateContentOnHttpStatus,
 						mediaFetchStrategy,
-						false,  // reloadPlayerOnUpdate
-						(resource) =>  // Pass detectFunction for media
+						false, // reloadPlayerOnUpdate
+						(
+							resource, // Pass detectFunction for media
+						) =>
 							this.detectUpdateOnly(
 								resource,
 								FileStructure.widgets,
@@ -2640,7 +2655,7 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 		fetchStrategy: FetchStrategy,
 		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>,  // NEW optional parameter
+		detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>, // NEW optional parameter
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
@@ -2656,7 +2671,7 @@ export class FilesManager implements IFilesManager {
 					),
 				refreshInterval,
 				reloadPlayerOnUpdate,
-				detectFunction ? async () => detectFunction(resource) : undefined,  // Pass if provided - must be last
+				detectFunction ? async () => detectFunction(resource) : undefined, // Pass if provided - must be last
 			);
 		});
 	};
@@ -2666,7 +2681,7 @@ export class FilesManager implements IFilesManager {
 		checkFunction: () => Promise<Promise<void>[]>,
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: () => Promise<UpdateDetection | null>,  // Make optional with ? - must be last
+		detectFunction?: () => Promise<UpdateDetection | null>, // Make optional with ? - must be last
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
@@ -2674,9 +2689,11 @@ export class FilesManager implements IFilesManager {
 			checkFunction: async () => {
 				return checkFunction();
 			},
-			detectFunction: detectFunction ? async () => {
-				return detectFunction();
-			} : undefined,  // Only add if provided
+			detectFunction: detectFunction
+				? async () => {
+						return detectFunction();
+				  }
+				: undefined, // Only add if provided
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
 				if (data.length > 0 && reloadPlayerOnUpdate) {
