@@ -3019,6 +3019,12 @@ export class FilesManager implements IFilesManager {
 		mediaType: string,
 	): Promise<boolean> => {
 		try {
+			// SMIL files should never be preserved to storage
+			if (filePath.includes('.smil')) {
+				debug('Skipping storage preservation for SMIL file: %s', filePath);
+				return false;
+			}
+
 			// Check available space before moving file
 			const fileStats = await this.sos.fileSystem.getFile({
 				storageUnit: this.internalStorageUnit,
