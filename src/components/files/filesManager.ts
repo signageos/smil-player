@@ -2553,12 +2553,12 @@ export class FilesManager implements IFilesManager {
 
 		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
 
-		// Group by localFilePath AND fetchStrategy
-		// Different file types or strategies can't be batched together
+		// Group by updateValue (content URL) and localFilePath
+		// Only files needing the same content in the same folder are batched together
 		const groups = new Map<string, UpdateDetection[]>();
 
 		for (const detection of detections) {
-			const key = `${detection.localFilePath}|${detection.fetchStrategy.strategyType}`;
+			const key = `${detection.updateValue}|${detection.localFilePath}`;
 			if (!groups.has(key)) {
 				groups.set(key, []);
 			}
