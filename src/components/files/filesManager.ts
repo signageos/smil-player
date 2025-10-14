@@ -1480,7 +1480,8 @@ export class FilesManager implements IFilesManager {
 						mediaFetchStrategy,
 						false, // reloadPlayerOnUpdate
 						(
-							resource, // Pass detectFunction for media
+							resource,
+							detectedValues, // Pass detectFunction for media
 						) =>
 							this.detectUpdateOnly(
 								resource,
@@ -1489,6 +1490,7 @@ export class FilesManager implements IFilesManager {
 								smilObject.skipContentOnHttpStatus,
 								smilObject.updateContentOnHttpStatus,
 								mediaFetchStrategy,
+								detectedValues,
 							),
 					),
 				);
@@ -1504,7 +1506,8 @@ export class FilesManager implements IFilesManager {
 						mediaFetchStrategy,
 						false, // reloadPlayerOnUpdate
 						(
-							resource, // Pass detectFunction for media
+							resource,
+							detectedValues, // Pass detectFunction for media
 						) =>
 							this.detectUpdateOnly(
 								resource,
@@ -1513,6 +1516,7 @@ export class FilesManager implements IFilesManager {
 								smilObject.skipContentOnHttpStatus,
 								smilObject.updateContentOnHttpStatus,
 								mediaFetchStrategy,
+								detectedValues,
 							),
 					),
 				);
@@ -1528,7 +1532,8 @@ export class FilesManager implements IFilesManager {
 						mediaFetchStrategy,
 						false, // reloadPlayerOnUpdate
 						(
-							resource, // Pass detectFunction for media
+							resource,
+							detectedValues, // Pass detectFunction for media
 						) =>
 							this.detectUpdateOnly(
 								resource,
@@ -1537,6 +1542,7 @@ export class FilesManager implements IFilesManager {
 								smilObject.skipContentOnHttpStatus,
 								smilObject.updateContentOnHttpStatus,
 								mediaFetchStrategy,
+								detectedValues,
 							),
 					),
 				);
@@ -1552,7 +1558,8 @@ export class FilesManager implements IFilesManager {
 						mediaFetchStrategy,
 						false, // reloadPlayerOnUpdate
 						(
-							resource, // Pass detectFunction for media
+							resource,
+							detectedValues, // Pass detectFunction for media
 						) =>
 							this.detectUpdateOnly(
 								resource,
@@ -1561,6 +1568,7 @@ export class FilesManager implements IFilesManager {
 								smilObject.skipContentOnHttpStatus,
 								smilObject.updateContentOnHttpStatus,
 								mediaFetchStrategy,
+								detectedValues,
 							),
 					),
 				);
@@ -2505,6 +2513,7 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[],
 		updateContentHttpStatusCodes: number[],
 		fetchStrategy: FetchStrategy,
+		detectedValues?: Set<string>,
 	): Promise<UpdateDetection | null> => {
 		const detection = await this.detectFileUpdateInternal(
 			file,
@@ -2519,10 +2528,24 @@ export class FilesManager implements IFilesManager {
 			return null; // No update needed
 		}
 
+		// Check if this content was already detected in the current cycle
+		const alreadyDetectedInCycle = detectedValues?.has(`${detection.updateCheck.value}|${localFilePath}`) ?? false;
+
+		// If already detected in this cycle and was marked as new content, change to moved content
+		let needsDownload = detection.isNewContent;
+		if (alreadyDetectedInCycle && detection.isNewContent) {
+			debug(
+				'detectUpdateOnly: Content %s already detected in cycle, changing from NEW to MOVED for %s',
+				detection.updateCheck.value,
+				file.src,
+			);
+			needsDownload = false; // Mark as MOVED_CONTENT instead of NEW_CONTENT
+		}
+
 		debug(
 			'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
 			file.src,
-			detection.isNewContent,
+			needsDownload,
 			detection.updateCheck.value,
 		);
 
@@ -2530,7 +2553,7 @@ export class FilesManager implements IFilesManager {
 			file,
 			localFilePath,
 			updateValue: detection.updateCheck.value,
-			needsDownload: detection.isNewContent, // true = NEW_CONTENT, false = MOVED_CONTENT
+			needsDownload, // true = NEW_CONTENT, false = MOVED_CONTENT
 			mediaInfoObject: detection.mediaInfoObject,
 			fetchStrategy,
 		};
@@ -2655,7 +2678,7 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 		fetchStrategy: FetchStrategy,
 		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>, // NEW optional parameter
+		detectFunction?: (resource: MergedDownloadList, detectedValues: Set<string>) => Promise<UpdateDetection | null>, // NEW optional parameter
 	) => {
 		return resources.map((resource) => {
 			return this.convertToResourceCheckerFormat(
@@ -2671,7 +2694,7 @@ export class FilesManager implements IFilesManager {
 					),
 				refreshInterval,
 				reloadPlayerOnUpdate,
-				detectFunction ? async () => detectFunction(resource) : undefined, // Pass if provided - must be last
+				detectFunction ? async (detectedValues) => detectFunction(resource, detectedValues) : undefined, // Pass if provided - must be last
 			);
 		});
 	};
@@ -2681,7 +2704,7 @@ export class FilesManager implements IFilesManager {
 		checkFunction: () => Promise<Promise<void>[]>,
 		defaultInterval: number,
 		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: () => Promise<UpdateDetection | null>, // Make optional with ? - must be last
+		detectFunction?: (detectedValues: Set<string>) => Promise<UpdateDetection | null>, // Make optional with ? - must be last
 	): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
@@ -2690,8 +2713,8 @@ export class FilesManager implements IFilesManager {
 				return checkFunction();
 			},
 			detectFunction: detectFunction
-				? async () => {
-						return detectFunction();
+				? async (detectedValues: Set<string>) => {
+						return detectFunction(detectedValues);
 				  }
 				: undefined, // Only add if provided
 			actionOnSuccess: async (data, stopChecker) => {
