@@ -111,12 +111,13 @@ export class ResourceChecker implements IResourceChecker {
 							}
 						}
 
-						// Phase 4: Handle moved content (no download needed)
-						for (const detection of movedContentDetections) {
+						// Phase 4: Batch process moved content (copy only, no download)
+						if (movedContentDetections.length > 0) {
 							try {
-								await this.filesManager.handleMovedContent(detection);
+								debug('Phase 4: Batch processing %d moved content files', movedContentDetections.length);
+								await this.filesManager.processNewContentUpdates(movedContentDetections);
 							} catch (error) {
-								debug('Error handling moved content for %s: %O', detection.file.src, error);
+								debug('Error processing moved content updates: %O', error);
 							}
 						}
 
