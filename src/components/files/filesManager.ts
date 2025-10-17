@@ -608,8 +608,9 @@ export class FilesManager implements IFilesManager {
 				filesToUpdate.set(fileName, updateValue);
 
 				// Determine if this is new content that should go to temp folder
-				const isNewContent =
-					forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
+				// When forceDownload=true, always use temp folder to ensure proper tracking
+				// This handles both NEW_CONTENT and MOVED_CONTENT scenarios
+				const isNewContent = forceDownload && updateValue;
 				const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
 
 				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
@@ -1219,9 +1220,9 @@ export class FilesManager implements IFilesManager {
 						}
 
 						// Determine if this is new content that should go to temp folder
-						// Use temp folder when forceDownload is true AND content is genuinely new
-						const isNewContent =
-							forceDownload && updateValue && !this.isValueAlreadyStored(updateValue, mediaInfoObject);
+						// When forceDownload=true, always use temp folder to ensure proper tracking
+						// This handles both NEW_CONTENT and MOVED_CONTENT scenarios
+						const isNewContent = forceDownload && updateValue;
 						const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
 
 						if (isNewContent) {
@@ -2505,8 +2506,36 @@ export class FilesManager implements IFilesManager {
 			fetchStrategy,
 		);
 
-		if (!detection || !detection.updateCheck.shouldUpdate || !detection.updateCheck.value) {
-			return null; // No update needed
+		if (!detection || !detection.updateCheck.value) {
+			return null; // No update at all
+		}
+
+		// Check if this is MOVED_CONTENT scenario
+		// shouldUpdate: false but value provided means content exists locally
+		if (!detection.updateCheck.shouldUpdate && detection.updateCheck.value) {
+			const fileName = getFileName(file.src);
+			const currentLocalValue = detection.mediaInfoObject[fileName];
+
+			// If file needs to point to different content
+			if (currentLocalValue !== detection.updateCheck.value) {
+				debug(
+					'MOVED_CONTENT detected: %s needs to update from %s to %s',
+					file.src,
+					currentLocalValue,
+					detection.updateCheck.value,
+				);
+
+				return {
+					file,
+					localFilePath,
+					updateValue: detection.updateCheck.value,
+					needsDownload: false, // MOVED_CONTENT - copy only
+					mediaInfoObject: detection.mediaInfoObject,
+					fetchStrategy,
+				};
+			}
+			// Content mapping is already correct, no action needed
+			return null;
 		}
 
 		// Check if this content was already detected in the current cycle
