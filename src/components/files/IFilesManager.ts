@@ -69,6 +69,7 @@ export interface IFilesManager {
 		forceDownload?: boolean,
 		latestRemoteValue?: number | string,
 		allFilesList?: MergedDownloadList[],
+		externalPendingUpdates?: Map<string, string | number>,
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
