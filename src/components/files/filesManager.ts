@@ -473,6 +473,7 @@ export class FilesManager implements IFilesManager {
 		forceDownload: boolean = false,
 		latestRemoteValue?: string,
 		allFilesList?: MergedDownloadList[], // Optional full playlist for preservation check
+		externalPendingUpdates?: Map<string, string | number>, // Complete pending updates across all phases
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -604,7 +605,7 @@ export class FilesManager implements IFilesManager {
 				const existingValue = mediaInfoObject[fileName];
 				let shouldPreserve = false;
 
-				if (existingValue && !isNewContent) {
+				if (existingValue) {
 					const fileExistsLocally = await this.fileExists(fullLocalFilePath);
 					if (fileExistsLocally) {
 						// Use full playlist if provided, otherwise fall back to current batch
@@ -614,7 +615,7 @@ export class FilesManager implements IFilesManager {
 							file.src,
 							filesForCheck,
 							mediaInfoObject,
-							filesToUpdate, // Pass pending updates to consider future state
+							externalPendingUpdates || filesToUpdate, // Use complete pending updates if available
 						);
 						shouldPreserve = !stillNeeded;
 					}
@@ -2562,6 +2563,15 @@ export class FilesManager implements IFilesManager {
 
 		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
 
+		// Build complete pending updates map for ALL files in this batch
+		// This is critical for preservation checks to see the future state of ALL files across all phases
+		const allPendingUpdates = new Map<string, string | number>();
+		for (const detection of detections) {
+			const fileName = getFileName(detection.file.src);
+			allPendingUpdates.set(fileName, detection.updateValue);
+		}
+		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
+
 		// Group by updateValue (content URL) and localFilePath
 		// Only files needing the same content in the same folder are batched together
 		const groups = new Map<string, UpdateDetection[]>();
@@ -2605,6 +2615,7 @@ export class FilesManager implements IFilesManager {
 					groupDetections[0].needsDownload, // Use actual needsDownload value from detection
 					String(groupDetections[0].updateValue),
 					allFilesList, // Pass full files list for accurate preservation check
+					allPendingUpdates, // Pass complete pending updates across all phases
 				);
 
 				// Wait for all downloads to complete
