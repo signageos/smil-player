@@ -401,33 +401,6 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 
-		// Check if content exists in storage (for location strategy only)
-		if (isNewVersion && isLocationStrategy && currentValue) {
-			const mediaType = mapFileType(localFilePath);
-			const storageFile = await this.checkStorageForContent(currentValue, mediaType);
-			if (storageFile) {
-				debug('Content found in storage: %s, restoring to temp folder', storageFile);
-				// Restore from storage to temp folder (not directly to final location)
-				const tempPath = await this.restoreFromStorage(
-					storageFile,
-					localFilePath, // Pass regular path, restoreFromStorage will convert to temp
-					media.src,
-				);
-				if (tempPath) {
-					// Track in tempDownloads for migration
-					const fileName = getFileName(media.src);
-					this.tempDownloads.set(fileName, tempPath);
-					debug('Successfully restored from storage to temp for %s, tracked for migration', media.src);
-					return {
-						shouldUpdate: false,
-						value: currentValue, // Update mediaInfoObject with the value
-					};
-				} else {
-					debug('Failed to restore from storage, will download instead');
-				}
-			}
-		}
-
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
 			return {
