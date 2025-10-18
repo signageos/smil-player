@@ -101,11 +101,16 @@ export class ResourceChecker implements IResourceChecker {
 							movedContentDetections.length,
 						);
 
+						// Get full files list for preservation check
+						const allFilesList = resourceGroup
+							.filter((r) => r.mediaObject)
+							.map((r) => r.mediaObject!);
+
 						// Phase 3: Batch process new content downloads
 						if (newContentDetections.length > 0) {
 							try {
 								debug('Phase 3: Batch downloading %d new content files', newContentDetections.length);
-								await this.filesManager.processNewContentUpdates(newContentDetections);
+								await this.filesManager.processNewContentUpdates(newContentDetections, allFilesList);
 							} catch (error) {
 								debug('Error processing new content updates: %O', error);
 							}
@@ -115,7 +120,7 @@ export class ResourceChecker implements IResourceChecker {
 						if (movedContentDetections.length > 0) {
 							try {
 								debug('Phase 4: Batch processing %d moved content files', movedContentDetections.length);
-								await this.filesManager.processNewContentUpdates(movedContentDetections);
+								await this.filesManager.processNewContentUpdates(movedContentDetections, allFilesList);
 							} catch (error) {
 								debug('Error processing moved content updates: %O', error);
 							}

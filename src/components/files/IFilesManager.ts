@@ -68,6 +68,7 @@ export interface IFilesManager {
 		fetchStrategy: FetchStrategy,
 		forceDownload?: boolean,
 		latestRemoteValue?: number | string,
+		allFilesList?: MergedDownloadList[],
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
@@ -77,6 +78,6 @@ export interface IFilesManager {
 	collectUpdate: (fileName: string, value: string) => void;
 	commitBatch: (filesList: MergedDownloadList[]) => Promise<void>;
 	// Batch download optimization methods
-	processNewContentUpdates: (detections: UpdateDetection[]) => Promise<void>;
+	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<void>;
 	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
 }

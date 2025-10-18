@@ -499,6 +499,7 @@ export class FilesManager implements IFilesManager {
 		fetchStrategy: FetchStrategy,
 		forceDownload: boolean = false,
 		latestRemoteValue?: string,
+		allFilesList?: MergedDownloadList[], // Optional full playlist for preservation check
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -633,11 +634,14 @@ export class FilesManager implements IFilesManager {
 				if (existingValue && !isNewContent) {
 					const fileExistsLocally = await this.fileExists(fullLocalFilePath);
 					if (fileExistsLocally) {
+						// Use full playlist if provided, otherwise fall back to current batch
+						const filesForCheck = allFilesList || filesList;
 						const stillNeeded = this.isContentNeededByOtherUrls(
 							existingValue,
 							file.src,
-							filesList,
+							filesForCheck,
 							mediaInfoObject,
+							filesToUpdate, // Pass pending updates to consider future state
 						);
 						shouldPreserve = !stillNeeded;
 					}
@@ -2575,7 +2579,10 @@ export class FilesManager implements IFilesManager {
 	 * Used by resource checker for optimized batch downloading
 	 * @param detections Array of update detections that need downloads
 	 */
-	public processNewContentUpdates = async (detections: UpdateDetection[]): Promise<void> => {
+	public processNewContentUpdates = async (
+		detections: UpdateDetection[],
+		allFilesList?: MergedDownloadList[],
+	): Promise<void> => {
 		if (detections.length === 0) {
 			return;
 		}
@@ -2614,6 +2621,7 @@ export class FilesManager implements IFilesManager {
 				// Existing deduplication logic (Phase 3b/3c) will handle duplicate content
 				// Use the actual needsDownload value from detection (not hardcoded true)
 				// This ensures MOVED_CONTENT (needsDownload=false) doesn't trigger downloads
+				// Pass allFilesList for preservation check, or fall back to current batch files
 				const result = await this.parallelDownloadAllFiles(
 					files,
 					localFilePath,
@@ -2623,6 +2631,7 @@ export class FilesManager implements IFilesManager {
 					fetchStrategy,
 					groupDetections[0].needsDownload, // Use actual needsDownload value from detection
 					String(groupDetections[0].updateValue),
+					allFilesList, // Pass full files list for accurate preservation check
 				);
 
 				// Wait for all downloads to complete
@@ -2933,6 +2942,7 @@ export class FilesManager implements IFilesManager {
 		excludeUrlOrFileName: string,
 		filesList: MergedDownloadList[],
 		mediaInfoObject: MediaInfoObject,
+		pendingUpdates?: Map<string, string | number>,
 	): boolean => {
 		// Handle both URL and filename inputs
 		const excludeFileName = excludeUrlOrFileName.includes('/')
@@ -2941,7 +2951,17 @@ export class FilesManager implements IFilesManager {
 
 		return filesList.some((f) => {
 			const fileName = getFileName(f.src);
-			return fileName !== excludeFileName && mediaInfoObject[fileName] === contentValue;
+			if (fileName === excludeFileName) return false;
+
+			// Check pending updates first (future state after batch completes)
+			if (pendingUpdates && pendingUpdates.has(fileName)) {
+				// If this file will have different content after update,
+				// check if it matches the content we're evaluating
+				return pendingUpdates.get(fileName) === contentValue;
+			}
+
+			// Fall back to current state (for files not in this batch)
+			return mediaInfoObject[fileName] === contentValue;
 		});
 	};
 
