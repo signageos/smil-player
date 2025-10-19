@@ -254,6 +254,23 @@ export class FilesManager implements IFilesManager {
 		isMediaSynced: boolean,
 		errMessage: string | null = null,
 	) => {
+		// Ensure useInReportUrl has the actual Location URL from mediaInfoObject
+		// This is critical for accurate playback reports with location strategy
+		if ('src' in value) {
+			const fileName = getFileName(value.src);
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile([value]);
+			const storedLocationUrl = mediaInfoObject[fileName];
+
+			if (storedLocationUrl) {
+				value.useInReportUrl = String(storedLocationUrl);
+				debug('Using Location URL from mediaInfoObject for playback report: %s', storedLocationUrl);
+			} else {
+				debug('ERROR: Media playing but not found in mediaInfoObject: %s (fileName: %s)', value.src, fileName);
+				debug('Cannot send accurate playback report - aborting');
+				return; // Don't send report with incorrect data
+			}
+		}
+
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
 			// to create difference between download and media played
 			value.popName = 'media-playback';
