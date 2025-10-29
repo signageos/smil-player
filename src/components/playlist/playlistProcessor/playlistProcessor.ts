@@ -504,24 +504,76 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
 				const isLast = lastPlaylistElem === key;
-				const { currentIndex, previousPlayingIndex } = await this.priority.priorityBehaviour(
-					value as SMILMedia,
-					key,
-					version,
-					parent,
-					endTime,
-					priorityObject,
-				);
-				await this.playElement(
-					value as SMILMedia,
-					version,
-					key,
-					parent,
-					currentIndex,
-					previousPlayingIndex,
-					endTime,
-					isLast,
-				);
+
+				// Declare indices before try block so they're accessible in catch
+				let currentIndex = -1;
+				let previousPlayingIndex = -1;
+
+				try {
+					// Setup priority state - can throw
+					const indices = await this.priority.priorityBehaviour(
+						value as SMILMedia,
+						key,
+						version,
+						parent,
+						endTime,
+						priorityObject,
+					);
+					currentIndex = indices.currentIndex;
+					previousPlayingIndex = indices.previousPlayingIndex;
+
+					// Play element - can throw
+					await this.playElement(
+						value as SMILMedia,
+						version,
+						key,
+						parent,
+						currentIndex,
+						previousPlayingIndex,
+						endTime,
+						isLast,
+					);
+				} catch (err) {
+					const media = value as SMILMedia;
+					debug('Error playing element, skipping to next: %O, error: %O', media, err);
+
+					// Safely attempt priority cleanup - only if priority state was set up
+					if (currentIndex !== -1) {
+						try {
+							await this.priority.handlePriorityWhenDone(
+								media,
+								media.regionInfo.regionName,
+								currentIndex,
+								endTime,
+								isLast,
+								version,
+								this.playlistVersion,
+								this.triggers,
+							);
+						} catch (cleanupErr) {
+							debug('Error during priority cleanup: %O', cleanupErr);
+						}
+					}
+
+					// Safely attempt error reporting
+					try {
+						const mediaType = removeDigits(key) === 'video' ? 'video' :
+							media.localFilePath?.indexOf('widgets') > -1 ? 'ref' : 'image';
+
+						this.files.sendMediaReport(
+							media,
+							moment().toDate(),
+							mediaType,
+							!!media.syncIndex && this.synchronization.shouldSync,
+							err instanceof Error ? err.message : String(err),
+						);
+					} catch (reportErr) {
+						debug('Error sending media report: %O', reportErr);
+					}
+
+					// prevent device from dying if all the elements in playlist end up in error
+					await sleep(100);
+				}
 				continue;
 			}
 
