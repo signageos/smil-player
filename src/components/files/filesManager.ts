@@ -40,7 +40,7 @@ import {
 	SMILWidget,
 	SosHtmlElement,
 } from '../../models/mediaModels';
-import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { CustomEndpointReport, ItemType, MediaItemType, Report, SmilFileReport } from '../../models/reportingModels';
 import { IFilesManager, UpdateCheckResult } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
@@ -218,16 +218,18 @@ export class FilesManager implements IFilesManager {
 		taskStartDate: Date,
 		errMessage: string | null = null,
 	) => {
-		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
+		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
 			// to create difference between download and media played
-			value.popName = 'media-download';
+			value.popName = fileType === 'smil' ? 'playlist-download' : 'media-download';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				const reportUrl = fileType === 'smil' ? value.src : value.useInReportUrl;
+				const statusCode = errMessage ? 500 : 200;
 				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage, 'download')),
+					createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl, statusCode),
 				);
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value, errMessage, 'download'));
+				await this.sendPoPReport(createPoPMessagePayload(value));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -271,16 +273,17 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 
-		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay) && value.popName) {
+		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
 			// to create difference between download and media played
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				const statusCode = errMessage ? 500 : 200;
 				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage)),
+					createCustomEndpointMessagePayload(createPoPMessagePayload(value), value.useInReportUrl, statusCode),
 				);
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
+				await this.sendPoPReport(createPoPMessagePayload(value));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -297,13 +300,24 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
-		await this.sendReport({
-			type: 'SMIL.PlaybackStarted',
-			source: createSourceReportObject(localFilePath, src),
-			succeededAt: isNil(errMessage) ? moment().toDate() : null,
-			failedAt: isNil(errMessage) ? null : moment().toDate(),
-			errorMessage: errMessage,
-		});
+		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
+			await this.sendReport({
+				name: 'playlist-playback',
+				status: isNil(errMessage) ? 200 : 902,
+				time: Math.floor(Date.now() / 1000),
+				url: src,
+			} as SmilFileReport);
+		}
+
+		if (this.smilLogging.type?.includes(smilLogging.standard)) {
+			await this.sendReport({
+				type: 'SMIL.PlaybackStarted',
+				source: createSourceReportObject(localFilePath, src),
+				succeededAt: isNil(errMessage) ? moment().toDate() : null,
+				failedAt: isNil(errMessage) ? null : moment().toDate(),
+				errorMessage: errMessage,
+			});
+		}
 	};
 
 	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
@@ -335,23 +349,28 @@ export class FilesManager implements IFilesManager {
 		updateContentHttpStatusCodes: number[] = [],
 		fetchStrategy: FetchStrategy,
 	): Promise<UpdateCheckResult> => {
-		const currentValue = await fetchStrategy(
+		const updateCheckResult = await fetchStrategy(
 			media,
 			timeOut,
 			skipContentHttpStatusCodes,
 			updateContentHttpStatusCodes,
 			this.makeXhrRequest,
 		);
+
+		// Extract the value from UpdateCheckResult
+		const currentValue = updateCheckResult.value;
+		const statusCode = updateCheckResult.statusCode;
+
 		// file was not found
-		if (isNil(currentValue)) {
+		if (isNil(updateCheckResult) || isNil(currentValue)) {
 			debug(`File was not found on remote server: %O `, media.src);
-			return { shouldUpdate: false };
+			return { shouldUpdate: false, statusCode };
 		}
 
 		// Check if content should be skipped (set by fetch strategy)
 		if (media.expr === ConditionalExprFormat.skipContent) {
 			debug(`Content marked as skip for media: %s, not downloading`, media.src);
-			return { shouldUpdate: false };
+			return { shouldUpdate: false, statusCode };
 		}
 
 		const storedValue = mediaInfoObject[getFileName(media.src)];
@@ -361,6 +380,7 @@ export class FilesManager implements IFilesManager {
 			return {
 				shouldUpdate: true,
 				value: currentValue,
+				statusCode,
 			};
 		}
 
@@ -415,6 +435,7 @@ export class FilesManager implements IFilesManager {
 			return {
 				shouldUpdate: false,
 				value: currentValue, // Still return the value to update mediaInfoObject
+				statusCode,
 			};
 		}
 
@@ -423,6 +444,7 @@ export class FilesManager implements IFilesManager {
 			return {
 				shouldUpdate: true,
 				value: currentValue,
+				statusCode,
 			};
 		}
 
@@ -431,11 +453,12 @@ export class FilesManager implements IFilesManager {
 			return {
 				shouldUpdate: true,
 				value: currentValue,
+				statusCode,
 			};
 		}
 
 		debug(`File is already downloaded in internal storage: %O `, media.src);
-		return { shouldUpdate: false };
+		return { shouldUpdate: false, statusCode };
 	};
 
 	public writeMediaInfoFile = async (mediaInfoObject: object) => {

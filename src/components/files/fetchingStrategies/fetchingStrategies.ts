@@ -3,6 +3,7 @@ import { ConditionalExprFormat } from '../../../enums/conditionalEnums';
 import { createDownloadPath, debug } from '../tools';
 import { DEFAULT_LAST_MODIFIED } from '../../../enums/fileEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
+import { UpdateCheckResult } from '../IFilesManager';
 
 type XhrRequestFunction = (
 	method: string,
@@ -18,7 +19,7 @@ export interface FetchStrategy {
 		skipContentHttpStatusCodes: number[],
 		updateContentHttpStatusCodes: number[],
 		makeXhrRequest: XhrRequestFunction,
-	): Promise<string | null>;
+	): Promise<UpdateCheckResult>;
 	strategyType?: string;
 }
 
@@ -43,7 +44,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 		// Handle timeout specifically
 		if (err.message === 'Request timeout') {
 			debug('Request to %s was aborted due to timeout.', media.src, timeOut);
-			return media.src; // Return original URL on timeout
+			return { shouldUpdate: false, value: media.src, statusCode: 408 };
 		}
 
 		// Log other errors with more detail
@@ -56,7 +57,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 		} else {
 			debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
 		}
-		return null;
+		return { shouldUpdate: false, value: undefined, statusCode: 503 };
 	}
 
 	const resourceLocation = response?.headers?.get('location') ?? response.url;
@@ -83,7 +84,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 			debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
 		}
 
-		return media.src; // Return original URL on server error
+		return { shouldUpdate: false, value: media.src, statusCode: response.status };
 	}
 
 	// Handle skip content status codes
@@ -106,12 +107,12 @@ const locationHeaderStrategy: FetchStrategy = async (
 			updateContentHttpStatusCodes,
 		);
 		// if there is no location return url
-		return resourceLocation ?? media.src;
+		return { shouldUpdate: true, value: resourceLocation ?? media.src, statusCode: response.status };
 	}
 
 	// Return the Location header after redirects or original URL if not available
 	debug('Final Location header for media: %s, location: %s', media.src, resourceLocation);
-	return resourceLocation || media.src;
+	return { shouldUpdate: true, value: resourceLocation || media.src, statusCode: response.status };
 };
 
 const lastModifiedStrategy: FetchStrategy = async (
@@ -136,7 +137,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 		// Handle timeout specifically
 		if (err.message === 'Request timeout') {
 			debug('Request to %s was aborted due to timeout.', media.src);
-			return DEFAULT_LAST_MODIFIED;
+			return { shouldUpdate: false, value: DEFAULT_LAST_MODIFIED, statusCode: 408 };
 		}
 
 		// Log other errors
@@ -149,7 +150,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 		} else {
 			debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
 		}
-		return null;
+		return { shouldUpdate: false, value: undefined, statusCode: 503 };
 	}
 
 	debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
@@ -174,7 +175,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 			debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
 		}
 
-		return DEFAULT_LAST_MODIFIED;
+		return { shouldUpdate: false, value: DEFAULT_LAST_MODIFIED, statusCode: response.status };
 	}
 
 	// Handle skip content status codes
@@ -203,13 +204,13 @@ const lastModifiedStrategy: FetchStrategy = async (
 		const futureDateString = futureDate.toUTCString();
 
 		debug('Forcing update by returning future date: %s', futureDateString);
-		return futureDateString;
+		return { shouldUpdate: true, value: futureDateString, statusCode: response.status };
 	}
 
 	// Get last-modified header or use default
 	const newLastModified = response?.headers?.get('last-modified');
 	debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
-	return newLastModified || DEFAULT_LAST_MODIFIED;
+	return { shouldUpdate: true, value: newLastModified || DEFAULT_LAST_MODIFIED, statusCode: response.status };
 };
 
 // Add strategy type identifiers
