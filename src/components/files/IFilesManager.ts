@@ -38,7 +38,7 @@ export interface IFilesManager {
 		taskStartDate: Date,
 		itemType: MediaItemType,
 		isMediaSynced: boolean,
-		errMessage: string | null,
+		statusCode?: number,
 	) => Promise<void>;
 	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
 	currentFilesSetup: (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => Promise<void>;
