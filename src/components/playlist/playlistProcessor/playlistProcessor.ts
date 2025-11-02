@@ -565,7 +565,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							moment().toDate(),
 							mediaType,
 							!!media.syncIndex && this.synchronization.shouldSync,
-							err instanceof Error ? err.message : String(err),
+							500,
 						);
 					} catch (reportErr) {
 						debug('Error sending media report: %O', reportErr);
@@ -1437,7 +1437,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							taskStartDate,
 							value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
 							!!value.syncIndex && this.synchronization.shouldSync,
-							err.message,
+							500,
 						);
 					}
 				})(),
@@ -1453,7 +1453,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				taskStartDate,
 				value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
 				!!value.syncIndex && this.synchronization.shouldSync,
-				err.message,
+				500,
 			);
 		}
 	};
@@ -1894,7 +1894,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							taskStartDate,
 							'video',
 							!!video.syncIndex && this.synchronization.shouldSync,
-							err.message,
+							500,
 						);
 					}
 					debug(`[${debugId}] finished playing element: %O`, video);
@@ -1912,7 +1912,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				taskStartDate,
 				'video',
 				!!video.syncIndex && this.synchronization.shouldSync,
-				err.message,
+				500,
 			);
 		}
 	};
@@ -1963,7 +1963,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				moment().toDate(),
 				'video',
 				!!video.syncIndex && this.synchronization.shouldSync,
-				err.message,
+				500,
 			);
 			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
