@@ -625,6 +625,7 @@ export class FilesManager implements IFilesManager {
 				shouldPreserve: boolean;
 				existingFilePath?: string; // Path to existing file with same content (for reuse)
 				storageFilePath?: string; // Path to file in storage with same content (Step 7)
+			statusCode: number; // HTTP status code from HEAD request
 			}
 
 			const downloadTasks: DownloadTask[] = [];
@@ -633,6 +634,7 @@ export class FilesManager implements IFilesManager {
 			for (const result of validResults) {
 				const { file, updateCheck, fileName } = result;
 				const updateValue = updateCheck.value;
+			const statusCode = updateCheck.statusCode || 200;
 
 				// Store the value for later update after successful download
 				filesToUpdate.set(fileName, updateValue);
@@ -686,6 +688,7 @@ export class FilesManager implements IFilesManager {
 					actualDownloadPath,
 					downloadUrl,
 					existingValue: existingValue || undefined,
+				statusCode,
 					shouldPreserve,
 				});
 			}
