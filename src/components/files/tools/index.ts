@@ -180,17 +180,11 @@ export function isLocalFileWidget(filePath: string): boolean {
 	return filePath.includes(WidgetFullPath);
 }
 
-export function createPoPMessagePayload(
-	value: MergedDownloadList,
-	errMessage: string | null,
-	event: 'download' | undefined = undefined,
-): IRecordItemOptions {
+export function createPoPMessagePayload(value: MergedDownloadList): IRecordItemOptions {
 	return {
 		...{
 			name: value.popName!,
 		},
-		...(event !== 'download' ? { playbackSuccess: !errMessage } : {}),
-		...(errMessage ? { errorMessage: errMessage } : {}),
 		...(value.popCustomId ? { customId: value.popCustomId } : {}),
 		...(value.popType ? { type: value.popType } : {}),
 		...(value.popTags
@@ -200,10 +194,16 @@ export function createPoPMessagePayload(
 	};
 }
 
-export function createCustomEndpointMessagePayload(message: IRecordItemOptions): CustomEndpointReport {
+export function createCustomEndpointMessagePayload(
+	message: IRecordItemOptions,
+	locationUrl?: string,
+	statusCode?: number,
+): CustomEndpointReport {
 	return {
 		...message,
-		recordedAt: new Date().toISOString(),
 		...(message.tags ? { tags: removeLastArrayItem(message.tags) } : {}),
+		status: statusCode ?? 200,
+		time: Math.floor(Date.now() / 1000),
+		url: locationUrl || '',
 	};
 }

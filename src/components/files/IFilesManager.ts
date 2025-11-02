@@ -18,6 +18,7 @@ export type { FetchStrategy };
 export interface UpdateCheckResult {
 	shouldUpdate: boolean;
 	value?: string;
+	statusCode?: number;
 }
 
 export interface IFilesManager {
