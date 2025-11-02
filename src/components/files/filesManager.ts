@@ -216,7 +216,7 @@ export class FilesManager implements IFilesManager {
 		localFilePath: string,
 		value: MergedDownloadList,
 		taskStartDate: Date,
-		errMessage: string | null = null,
+		statusCode: number = 200,
 	) => {
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
 			// to create difference between download and media played
@@ -224,7 +224,6 @@ export class FilesManager implements IFilesManager {
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
 				const reportUrl = fileType === 'smil' ? value.src : value.useInReportUrl;
-				const statusCode = errMessage ? 500 : 200;
 				await this.sendCustomEndpointReport(
 					createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl, statusCode),
 				);
@@ -233,6 +232,7 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
+			const isSuccess = statusCode === 200;
 			await this.sendReport({
 				type: 'SMIL.FileDownloaded',
 				itemType: fileType,
@@ -242,9 +242,9 @@ export class FilesManager implements IFilesManager {
 					this.internalStorageUnit.type,
 				),
 				startedAt: taskStartDate,
-				succeededAt: isNil(errMessage) ? moment().toDate() : null,
-				failedAt: isNil(errMessage) ? null : moment().toDate(),
-				errorMessage: errMessage,
+				succeededAt: isSuccess ? moment().toDate() : null,
+				failedAt: isSuccess ? null : moment().toDate(),
+				errorMessage: isSuccess ? null : `HTTP ${statusCode}`,
 			});
 		}
 	};

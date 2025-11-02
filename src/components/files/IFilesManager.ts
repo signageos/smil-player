@@ -31,7 +31,7 @@ export interface IFilesManager {
 		localFilePath: string,
 		value: MergedDownloadList,
 		taskStartDate: Date,
-		errMessage: string | null,
+		statusCode?: number,
 	) => Promise<void>;
 	sendMediaReport: (
 		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement,
