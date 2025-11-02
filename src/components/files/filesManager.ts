@@ -825,7 +825,7 @@ export class FilesManager implements IFilesManager {
 							}
 
 							// Report as successful
-							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
 						} catch (err) {
 							debug('DEDUP: Failed to copy existing content: %O', err);
 							// On error, we'll fall through to normal download logic below
@@ -884,6 +884,7 @@ export class FilesManager implements IFilesManager {
 								firstTask.fullLocalFilePath,
 								firstTask.file,
 								taskStartDate,
+							firstTask.statusCode,
 							);
 
 							// Copy locally for remaining tasks in the group
@@ -930,7 +931,7 @@ export class FilesManager implements IFilesManager {
 									}
 
 									// Report as successful
-									this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+									this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
 								} catch (err) {
 									debug('DEDUP: Failed to copy restored content: %O', err);
 									// Continue trying for other tasks
@@ -993,7 +994,7 @@ export class FilesManager implements IFilesManager {
 									debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
 								}
 
-								this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate);
+								this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
 								this.sendDownloadReport(
@@ -1001,7 +1002,7 @@ export class FilesManager implements IFilesManager {
 									task.fullLocalFilePath,
 									task.file,
 									taskStartDate,
-									err.message,
+									502,
 								);
 								// Remove from filesToUpdate if download failed
 								filesToUpdate.delete(task.fileName);
@@ -1082,6 +1083,7 @@ export class FilesManager implements IFilesManager {
 									primaryTask.fullLocalFilePath,
 									primaryTask.file,
 									taskStartDate,
+									primaryTask.statusCode,
 								);
 
 								// Step 5: Copy the primary file for all other tasks in this group
@@ -1137,6 +1139,7 @@ export class FilesManager implements IFilesManager {
 											duplicateTask.fullLocalFilePath,
 											duplicateTask.file,
 											taskStartDate,
+										duplicateTask.statusCode,
 										);
 									} catch (copyErr) {
 										debug(
@@ -1150,7 +1153,7 @@ export class FilesManager implements IFilesManager {
 											duplicateTask.fullLocalFilePath,
 											duplicateTask.file,
 											taskStartDate,
-											copyErr.message,
+											502,
 										);
 										// Remove from filesToUpdate if copy failed
 										filesToUpdate.delete(duplicateTask.fileName);
@@ -1165,7 +1168,7 @@ export class FilesManager implements IFilesManager {
 									primaryTask.fullLocalFilePath,
 									primaryTask.file,
 									taskStartDate,
-									err.message,
+									502,
 								);
 								// Remove from filesToUpdate if download failed
 								filesToUpdate.delete(primaryTask.fileName);
@@ -1250,6 +1253,7 @@ export class FilesManager implements IFilesManager {
 					// check if file is already downloaded or is forcedDownload to update existing file with new version
 					if (updateCheck.shouldUpdate) {
 						const updateValue = 'value' in updateCheck ? updateCheck.value : undefined;
+					const statusCode = updateCheck.statusCode || 200;
 						if (updateValue) {
 							// Store the value for later update after successful download
 							filesToUpdate.set(getFileName(file.src), updateValue);
@@ -1323,7 +1327,7 @@ export class FilesManager implements IFilesManager {
 										debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
 									}
 
-									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
+									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, statusCode);
 								} catch (err) {
 									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 									this.sendDownloadReport(
@@ -1331,7 +1335,7 @@ export class FilesManager implements IFilesManager {
 										fullLocalFilePath,
 										file,
 										taskStartDate,
-										err.message,
+										502,
 									);
 									// Remove from filesToUpdate if download failed
 									filesToUpdate.delete(getFileName(file.src));
