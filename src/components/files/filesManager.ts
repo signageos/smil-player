@@ -254,7 +254,7 @@ export class FilesManager implements IFilesManager {
 		taskStartDate: Date,
 		itemType: MediaItemType,
 		isMediaSynced: boolean,
-		errMessage: string | null = null,
+		statusCode: number = 200,
 	) => {
 		// Ensure useInReportUrl has the actual Location URL from mediaInfoObject
 		// This is critical for accurate playback reports with location strategy
@@ -278,7 +278,6 @@ export class FilesManager implements IFilesManager {
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
-				const statusCode = errMessage ? 500 : 200;
 				await this.sendCustomEndpointReport(
 					createCustomEndpointMessagePayload(createPoPMessagePayload(value), value.useInReportUrl, statusCode),
 				);
@@ -287,14 +286,15 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
+			const isSuccess = statusCode === 200;
 			await this.sendReport({
 				type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 				itemType: itemType,
 				source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
 				startedAt: taskStartDate,
-				endedAt: isNil(errMessage) ? moment().toDate() : null,
-				failedAt: isNil(errMessage) ? null : moment().toDate(),
-				errorMessage: errMessage,
+				endedAt: isSuccess ? moment().toDate() : null,
+				failedAt: isSuccess ? null : moment().toDate(),
+				errorMessage: isSuccess ? null : `HTTP ${statusCode}`,
 			});
 		}
 	};
