@@ -2,7 +2,6 @@ import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
 import { MergedDownloadList, MediaInfoObject } from '../../../models/filesModels';
 import { FetchStrategy } from '../fetchingStrategies/fetchingStrategies';
-import { getFileName } from '../tools';
 import Debug from 'debug';
 
 const debug = Debug('@signageos/smil-player:resourceChecker');
@@ -93,15 +92,6 @@ export class ResourceChecker implements IResourceChecker {
 						}
 
 						// Phase 2: Classify detections
-						// Build complete pending updates map for ALL detections (NEW + MOVED)
-						// This is critical for deduplication to work across phases
-						const allPendingUpdates = new Map<string, string | number>();
-						for (const detection of detections) {
-							const fileName = getFileName(detection.file.src);
-							allPendingUpdates.set(fileName, detection.updateValue);
-						}
-						debug('Phase 2: Built complete pending updates map with %d entries', allPendingUpdates.size);
-
 						const newContentDetections = detections.filter((d) => d.needsDownload);
 						const movedContentDetections = detections.filter((d) => !d.needsDownload);
 
@@ -120,7 +110,7 @@ export class ResourceChecker implements IResourceChecker {
 						if (newContentDetections.length > 0) {
 							try {
 								debug('Phase 3: Batch downloading %d new content files', newContentDetections.length);
-								await this.filesManager.processNewContentUpdates(newContentDetections, allFilesList, allPendingUpdates);
+								await this.filesManager.processNewContentUpdates(newContentDetections, allFilesList);
 							} catch (error) {
 								debug('Error processing new content updates: %O', error);
 							}
@@ -130,7 +120,7 @@ export class ResourceChecker implements IResourceChecker {
 						if (movedContentDetections.length > 0) {
 							try {
 								debug('Phase 4: Batch processing %d moved content files', movedContentDetections.length);
-								await this.filesManager.processNewContentUpdates(movedContentDetections, allFilesList, allPendingUpdates);
+								await this.filesManager.processNewContentUpdates(movedContentDetections, allFilesList);
 							} catch (error) {
 								debug('Error processing moved content updates: %O', error);
 							}

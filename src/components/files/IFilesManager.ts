@@ -80,10 +80,6 @@ export interface IFilesManager {
 	collectUpdate: (fileName: string, value: string) => void;
 	commitBatch: (filesList: MergedDownloadList[]) => Promise<void>;
 	// Batch download optimization methods
-	processNewContentUpdates: (
-		detections: UpdateDetection[],
-		allFilesList?: MergedDownloadList[],
-		externalPendingUpdates?: Map<string, string | number>,
-	) => Promise<void>;
+	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<void>;
 	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
 }
