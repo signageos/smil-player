@@ -96,6 +96,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 			skipContentHttpStatusCodes,
 		);
 		media.expr = ConditionalExprFormat.skipContent;
+		return { shouldUpdate: false, value: media.src, statusCode: response.status };
 	}
 
 	// Handle update content status codes
@@ -187,6 +188,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 			skipContentHttpStatusCodes,
 		);
 		media.expr = ConditionalExprFormat.skipContent;
+		return { shouldUpdate: false, value: DEFAULT_LAST_MODIFIED, statusCode: response.status };
 	}
 
 	// Handle update content status codes
