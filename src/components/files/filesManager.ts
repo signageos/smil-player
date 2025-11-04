@@ -40,7 +40,7 @@ import {
 	SMILWidget,
 	SosHtmlElement,
 } from '../../models/mediaModels';
-import { CustomEndpointReport, ItemType, MediaItemType, Report, SmilFileReport } from '../../models/reportingModels';
+import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
 import { IFilesManager, UpdateCheckResult } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
@@ -279,7 +279,11 @@ export class FilesManager implements IFilesManager {
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
 				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value), value.useInReportUrl, statusCode),
+					createCustomEndpointMessagePayload(
+						createPoPMessagePayload(value),
+						value.useInReportUrl,
+						statusCode,
+					),
 				);
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value));
@@ -301,12 +305,12 @@ export class FilesManager implements IFilesManager {
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
-			await this.sendReport({
+			await this.sendCustomEndpointReport({
 				name: 'playlist-playback',
 				status: isNil(errMessage) ? 200 : 902,
 				time: Math.floor(Date.now() / 1000),
 				url: src,
-			} as SmilFileReport);
+			});
 		}
 
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -610,7 +614,7 @@ export class FilesManager implements IFilesManager {
 				shouldPreserve: boolean;
 				existingFilePath?: string; // Path to existing file with same content (for reuse)
 				storageFilePath?: string; // Path to file in storage with same content (Step 7)
-			statusCode: number; // HTTP status code from HEAD request
+				statusCode: number; // HTTP status code from HEAD request
 			}
 
 			const downloadTasks: DownloadTask[] = [];
@@ -619,7 +623,7 @@ export class FilesManager implements IFilesManager {
 			for (const result of validResults) {
 				const { file, updateCheck, fileName } = result;
 				const updateValue = updateCheck.value;
-			const statusCode = updateCheck.statusCode || 200;
+				const statusCode = updateCheck.statusCode || 200;
 
 				// Store the value for later update after successful download
 				filesToUpdate.set(fileName, updateValue);
@@ -673,7 +677,7 @@ export class FilesManager implements IFilesManager {
 					actualDownloadPath,
 					downloadUrl,
 					existingValue: existingValue || undefined,
-				statusCode,
+					statusCode,
 					shouldPreserve,
 				});
 			}
@@ -809,8 +813,6 @@ export class FilesManager implements IFilesManager {
 								debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
 							}
 
-							// Report as successful
-							this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
 						} catch (err) {
 							debug('DEDUP: Failed to copy existing content: %O', err);
 							// On error, we'll fall through to normal download logic below
@@ -863,14 +865,6 @@ export class FilesManager implements IFilesManager {
 								debug('Tracked restored temp file: %s -> %s', firstTask.fileName, restoredTempPath);
 							}
 
-							// Report as successful for first task
-							this.sendDownloadReport(
-								fileType,
-								firstTask.fullLocalFilePath,
-								firstTask.file,
-								taskStartDate,
-							firstTask.statusCode,
-							);
 
 							// Copy locally for remaining tasks in the group
 							for (let i = 1; i < tasks.length; i++) {
@@ -915,8 +909,6 @@ export class FilesManager implements IFilesManager {
 										debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
 									}
 
-									// Report as successful
-									this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
 								} catch (err) {
 									debug('DEDUP: Failed to copy restored content: %O', err);
 									// Continue trying for other tasks
@@ -979,7 +971,13 @@ export class FilesManager implements IFilesManager {
 									debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
 								}
 
-								this.sendDownloadReport(fileType, task.fullLocalFilePath, task.file, taskStartDate, task.statusCode);
+								this.sendDownloadReport(
+									fileType,
+									task.fullLocalFilePath,
+									task.file,
+									taskStartDate,
+									task.statusCode,
+								);
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
 								this.sendDownloadReport(
@@ -1118,27 +1116,11 @@ export class FilesManager implements IFilesManager {
 											);
 										}
 
-										// Send download report for the copied file (report as successful "download")
-										this.sendDownloadReport(
-											fileType,
-											duplicateTask.fullLocalFilePath,
-											duplicateTask.file,
-											taskStartDate,
-										duplicateTask.statusCode,
-										);
 									} catch (copyErr) {
 										debug(
 											'DEDUP: ERROR - Failed to copy for duplicate: %s, error: %O',
 											duplicateTask.file.src,
 											copyErr,
-										);
-										// Send error report for failed copy
-										this.sendDownloadReport(
-											fileType,
-											duplicateTask.fullLocalFilePath,
-											duplicateTask.file,
-											taskStartDate,
-											502,
 										);
 										// Remove from filesToUpdate if copy failed
 										filesToUpdate.delete(duplicateTask.fileName);
@@ -1238,7 +1220,7 @@ export class FilesManager implements IFilesManager {
 					// check if file is already downloaded or is forcedDownload to update existing file with new version
 					if (updateCheck.shouldUpdate) {
 						const updateValue = 'value' in updateCheck ? updateCheck.value : undefined;
-					const statusCode = updateCheck.statusCode || 200;
+						const statusCode = updateCheck.statusCode || 200;
 						if (updateValue) {
 							// Store the value for later update after successful download
 							filesToUpdate.set(getFileName(file.src), updateValue);
@@ -1312,16 +1294,16 @@ export class FilesManager implements IFilesManager {
 										debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
 									}
 
-									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, statusCode);
-								} catch (err) {
-									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 									this.sendDownloadReport(
 										fileType,
 										fullLocalFilePath,
 										file,
 										taskStartDate,
-										502,
+										statusCode,
 									);
+								} catch (err) {
+									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, 502);
 									// Remove from filesToUpdate if download failed
 									filesToUpdate.delete(getFileName(file.src));
 								}
