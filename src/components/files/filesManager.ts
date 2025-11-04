@@ -2585,6 +2585,7 @@ export class FilesManager implements IFilesManager {
 	public processNewContentUpdates = async (
 		detections: UpdateDetection[],
 		allFilesList?: MergedDownloadList[],
+		externalPendingUpdates?: Map<string, string | number>,
 	): Promise<void> => {
 		if (detections.length === 0) {
 			return;
@@ -2592,14 +2593,19 @@ export class FilesManager implements IFilesManager {
 
 		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
 
-		// Build complete pending updates map for ALL files in this batch
-		// This is critical for preservation checks to see the future state of ALL files across all phases
-		const allPendingUpdates = new Map<string, string | number>();
-		for (const detection of detections) {
-			const fileName = getFileName(detection.file.src);
-			allPendingUpdates.set(fileName, detection.updateValue);
+		// Use external pending updates map if provided (from resourceChecker with complete NEW+MOVED updates)
+		// Otherwise build from current detections only (backwards compatibility)
+		// This is critical for deduplication across NEW and MOVED phases
+		const allPendingUpdates = externalPendingUpdates || new Map<string, string | number>();
+
+		// Build from detections only if no external map provided
+		if (!externalPendingUpdates) {
+			for (const detection of detections) {
+				const fileName = getFileName(detection.file.src);
+				allPendingUpdates.set(fileName, detection.updateValue);
+			}
 		}
-		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
+		debug('processNewContentUpdates: Using pending updates map with %d entries', allPendingUpdates.size);
 
 		// Group by updateValue (content URL) and localFilePath
 		// Only files needing the same content in the same folder are batched together
