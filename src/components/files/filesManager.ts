@@ -2502,7 +2502,7 @@ export class FilesManager implements IFilesManager {
 		skipContentHttpStatusCodes: number[],
 		updateContentHttpStatusCodes: number[],
 		fetchStrategy: FetchStrategy,
-		detectedValues?: Set<string>,
+		_detectedValues?: Set<string>, // Unused - kept for backward compatibility
 	): Promise<UpdateDetection | null> => {
 		const detection = await this.detectFileUpdateInternal(
 			file,
@@ -2545,19 +2545,12 @@ export class FilesManager implements IFilesManager {
 			return null;
 		}
 
-		// Check if this content was already detected in the current cycle
-		const alreadyDetectedInCycle = detectedValues?.has(`${detection.updateCheck.value}|${localFilePath}`) ?? false;
-
-		// If already detected in this cycle and was marked as new content, change to moved content
-		let needsDownload = detection.isNewContent;
-		if (alreadyDetectedInCycle && detection.isNewContent) {
-			debug(
-				'detectUpdateOnly: Content %s already detected in cycle, changing from NEW to MOVED for %s',
-				detection.updateCheck.value,
-				file.src,
-			);
-			needsDownload = false; // Mark as MOVED_CONTENT instead of NEW_CONTENT
-		}
+		// Keep all URLs pointing to the same NEW content as NEW so they get processed
+		// together in Phase 3 where deduplication logic (Phase 3b/3c) handles them.
+		// Don't split NEW content across phases - that breaks deduplication.
+		// MOVED_CONTENT (needsDownload=false) should only be used when content already
+		// exists locally (handled by the shouldUpdate=false check above at line 2518-2545).
+		const needsDownload = detection.isNewContent;
 
 		debug(
 			'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
