@@ -4,7 +4,7 @@ import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
-import { FileStructure } from '../enums/fileEnums';
+import { FileStructure, smilLogging } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
 import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
@@ -189,6 +189,16 @@ export class SmilPlayer implements ISmilPlayer {
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
 
+		// if reportUrl present in applet config, setup logger
+		if (sos.config.reportUrl) {
+			debug('Setting up applet settings configured logger');
+			this.files.setSmiLogging({
+				enabled: true,
+				type: [smilLogging.proofOfPlay],
+				endpoint: sos.config.reportUrl,
+			});
+		}
+
 		// Download backup image if configured
 		await this.downloadBackupImage();
 
@@ -243,8 +253,9 @@ export class SmilPlayer implements ISmilPlayer {
 					smilFile.src,
 				);
 
-				// set variable to enable/disable events logs
-				if (smilObject.logger) {
+				// set variable to enable/disable events logs only if sos.config.reportUrl is not set
+				if (smilObject.logger && !sos.config.reportUrl) {
+					debug('Setting up smil file configured logger');
 					this.files.setSmiLogging(smilObject.logger);
 				}
 

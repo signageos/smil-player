@@ -1,6 +1,6 @@
 {
-  "name": "@signageos/pro-player",
-  "version": "1.1.15",
+  "name": "@signageos/smil-player",
+  "version": "9.9.9",
   "description": "SMIL player",
   "main": "dist/index.html",
   "files": [
@@ -101,7 +101,7 @@
     "xml2js": "^0.4.23"
   },
   "sos": {
-    "appletUid": "8f7c8d6e0ea740bdfc3ede7ccdf12d47d9c9a65f9456c6fa3b",
+    "appletUid": "ae831411425df581cae9d74c2a8c04386166d0cbb70ef377f2",
     "config": [
       {
         "name": "smilUrl",
@@ -156,6 +156,12 @@
         "valueType": "string",
         "description": "If player should log debug messages to console or not",
         "placeholder": "true"
+      },
+      {
+        "name": "reportUrl",
+        "valueType": "string",
+        "description": "Url where to should player send reporting events",
+        "placeholder": "https://api.report.io"
       }
     ]
   }
