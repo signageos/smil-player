@@ -3144,8 +3144,8 @@ export class FilesManager implements IFilesManager {
 
 			debug('Preserving file to storage: %s -> %s (content: %s)', filePath, storagePath, contentValue);
 
-			// Move file to storage with rename
-			await this.sos.fileSystem.moveFile(
+			// Copy file to storage with rename
+			await this.sos.fileSystem.copyFile(
 				{
 					storageUnit: this.internalStorageUnit,
 					filePath,
@@ -3153,6 +3153,9 @@ export class FilesManager implements IFilesManager {
 				{
 					storageUnit: this.internalStorageUnit,
 					filePath: storagePath,
+				},
+				{
+					overwrite: true,
 				},
 			);
 
