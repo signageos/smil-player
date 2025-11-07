@@ -518,6 +518,7 @@ export class FilesManager implements IFilesManager {
 		latestRemoteValue?: string,
 		allFilesList?: MergedDownloadList[], // Optional full playlist for preservation check
 		externalPendingUpdates?: Map<string, string | number>, // Complete pending updates across all phases
+		skipUpdateCheck: boolean = false, // Set to true when detection already done (e.g., from processNewContentUpdates) to avoid duplicate HEAD requests
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -546,7 +547,15 @@ export class FilesManager implements IFilesManager {
 					// check for local urls to files (media/file.mp4)
 					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-					const updateCheck = forceDownload
+					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
+					// This avoids duplicate HEAD requests while Phase 3b.5 still checks storage/existing content
+					const updateCheck = skipUpdateCheck && latestRemoteValue
+						? {
+								shouldUpdate: false, // Don't force download, let Phase 3b.5 check storage
+								value: latestRemoteValue,
+								statusCode: 200,
+						  }
+						: forceDownload
 						? {
 								shouldUpdate: true,
 								value: latestRemoteValue,
@@ -1202,7 +1211,14 @@ export class FilesManager implements IFilesManager {
 					// check for local urls to files (media/file.mp4)
 					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
 
-					const updateCheck = forceDownload
+					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
+					// This avoids duplicate HEAD requests
+					const updateCheck = skipUpdateCheck && latestRemoteValue
+						? {
+								shouldUpdate: false, // Don't force download, use value from detection
+								value: latestRemoteValue,
+						  }
+						: forceDownload
 						? {
 								shouldUpdate: true,
 								value: latestRemoteValue,
@@ -2627,6 +2643,7 @@ export class FilesManager implements IFilesManager {
 				// Use the actual needsDownload value from detection (not hardcoded true)
 				// This ensures MOVED_CONTENT (needsDownload=false) doesn't trigger downloads
 				// Pass allFilesList for preservation check, or fall back to current batch files
+				// Skip HEAD requests since detection already done - avoid duplicate requests
 				const result = await this.parallelDownloadAllFiles(
 					files,
 					localFilePath,
@@ -2638,6 +2655,7 @@ export class FilesManager implements IFilesManager {
 					String(groupDetections[0].updateValue),
 					allFilesList, // Pass full files list for accurate preservation check
 					allPendingUpdates, // Pass complete pending updates across all phases
+					true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
 				);
 
 				// Wait for all downloads to complete
