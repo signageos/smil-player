@@ -551,7 +551,7 @@ export class FilesManager implements IFilesManager {
 					// This avoids duplicate HEAD requests while Phase 3b.5 still checks storage/existing content
 					const updateCheck = skipUpdateCheck && latestRemoteValue
 						? {
-								shouldUpdate: false, // Don't force download, let Phase 3b.5 check storage
+								shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
 								value: latestRemoteValue,
 								statusCode: 200,
 						  }
@@ -1215,7 +1215,7 @@ export class FilesManager implements IFilesManager {
 					// This avoids duplicate HEAD requests
 					const updateCheck = skipUpdateCheck && latestRemoteValue
 						? {
-								shouldUpdate: false, // Don't force download, use value from detection
+								shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
 								value: latestRemoteValue,
 						  }
 						: forceDownload
