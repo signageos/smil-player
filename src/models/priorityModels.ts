@@ -6,3 +6,8 @@ export type PriorityObject = {
 	higher: string;
 	pauseDisplay?: string;
 };
+
+export type PriorityCoordination = {
+	version: number;
+	priority: number;
+};
