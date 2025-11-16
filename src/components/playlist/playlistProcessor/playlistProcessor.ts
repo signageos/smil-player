@@ -42,6 +42,7 @@ import { ExprTag } from '../../../enums/conditionalEnums';
 import { setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
+import { WaitStatus } from '../../../enums/priorityEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { parseSmilSchedule } from '../tools/wallclockTools';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
@@ -436,11 +437,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			let value: PlaylistElement | PlaylistElement[] | SMILMedia = loopValue;
 			debug(
-				'Processing playlist element with key: %O, value: %O, parent: %s, endTime: %s',
+				'Processing playlist element with key: %O, value: %O, parent: %s, endTime: %s, version: %s',
 				key,
 				value,
 				parent,
 				endTime,
+				version,
 			);
 			// dont play intro in the actual playlist
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
@@ -1376,7 +1378,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		version: number,
 		debugId: string,
 	): Promise<void> => {
-		debug(`[${debugId}] Starting to play element: %O`, element);
+		debug(`[${debugId}] Starting to play element wait media function: %O`, element);
 		let duration = setElementDuration(element.dur);
 		let transitionSet = false;
 
@@ -1482,6 +1484,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param isLast - if this media is last element in current playlist
 	 * @param version - smil internal version of current playlist
 	 * @param debugId
+	 * @param priorityObject - priority information for coordination during version updates
 	 */
 	private shouldWaitAndContinue = async (
 		media: SMILMedia,
@@ -1493,10 +1496,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		isLast: boolean,
 		version: number,
 		debugId: string,
-	): Promise<boolean> => {
+		priorityObject?: PriorityObject,
+	): Promise<WaitStatus> => {
 		if (isNil(this.promiseAwaiting[regionInfo.regionName])) {
 			this.promiseAwaiting[regionInfo.regionName] = cloneDeep(media);
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
+			this.promiseAwaiting[regionInfo.regionName].version = version;
+			this.promiseAwaiting[regionInfo.regionName].highestProcessingPriority = -1;
 		}
 		if (isNil(this.promiseAwaiting[regionInfo.regionName]?.promiseFunction)) {
 			this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
@@ -1504,6 +1510,33 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
 			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo>{};
+		}
+
+		// Priority coordination for new versions
+		const isNewVersion = version > this.playlistVersion;
+
+		if (isNewVersion && priorityObject) {
+			const myPriority = priorityObject.priorityLevel;
+			const currentHighest = this.promiseAwaiting[regionInfo.regionName].highestProcessingPriority ?? -1;
+
+			// If a higher priority is already processing, retry later
+			if (currentHighest > myPriority) {
+				debug(`[${debugId}] Priority ${myPriority} waiting - priority ${currentHighest} is processing`);
+				await sleep(100);
+
+				// Check if cancelled while waiting
+				if (version < this.playlistVersion || this.getCancelFunction()) {
+					return WaitStatus.SKIP;
+				}
+
+				return WaitStatus.RETRY;
+			}
+
+			// Update highest processing priority if I'm higher
+			if (myPriority > currentHighest) {
+				this.promiseAwaiting[regionInfo.regionName].highestProcessingPriority = myPriority;
+				debug(`[${debugId}] Priority ${myPriority} is now highest processing priority`);
+			}
 		}
 
 		// wait for all
@@ -1575,7 +1608,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlayingPriority,
 				media.dynamicValue!,
 			);
-			return false;
+			return WaitStatus.SKIP;
 		}
 
 		if (
@@ -1583,7 +1616,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			!this.triggers.triggersEndless[media.triggerValue as string]?.play
 		) {
 			debug(`[${debugId}] trigger was cancelled prematurely: %s`, media.triggerValue);
-			return false;
+			return WaitStatus.SKIP;
 		}
 
 		if (
@@ -1598,14 +1631,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
 			debug(`[${debugId}] dynamic playlist was cancelled prematurely: %s`, media.dynamicValue);
-			return false;
+			return WaitStatus.SKIP;
 		}
 
 		await this.triggers.handleTriggers(media);
 
 		// nothing played before ( trigger case )
 		if (isNil(this.currentlyPlayingPriority[regionInfo.regionName])) {
-			return true;
+			return WaitStatus.CONTINUE;
 		}
 		const currentIndexPriority = this.currentlyPlayingPriority[regionInfo.regionName][currentIndex];
 		// playlist was already stopped/paused during await
@@ -1619,7 +1652,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				currentIndexPriority,
 				media,
 			);
-			return false;
+			return WaitStatus.SKIP;
 		}
 
 		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) {
@@ -1638,12 +1671,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				this.triggers,
 			);
-			return false;
+			return WaitStatus.SKIP;
 		}
 
 		debug(`[${debugId}] Playlist is ready to play: %O with media: %O`, currentIndexPriority, media);
 		this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player.playing = true;
-		return true;
+		return WaitStatus.CONTINUE;
 	};
 
 	/**
