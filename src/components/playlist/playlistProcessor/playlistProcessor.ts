@@ -1552,17 +1552,23 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const promiseObj = this.promiseAwaiting[regionInfo.regionName] as any;
 			const myPriority = priorityCoord.priority;
 
-			// Set version and priority for coordination
+			// Initialize version tracking for new version
 			if (!promiseObj.version || promiseObj.version < version) {
 				promiseObj.version = version;
 				promiseObj.highestProcessingPriority = myPriority;
+				debug(`[${debugId}] Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
+			} else if (promiseObj.version === version) {
+				// For same version, track the highest priority (lowest number) currently processing
+				const currentTracked = promiseObj.highestProcessingPriority ?? myPriority;
+				promiseObj.highestProcessingPriority = Math.min(currentTracked, myPriority);
+				debug(`[${debugId}] Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`);
 			}
 
-			const currentHighest = promiseObj.highestProcessingPriority ?? -1;
+			const currentHighest = promiseObj.highestProcessingPriority ?? Number.MAX_SAFE_INTEGER;
 
-			// If a higher priority is already processing, retry later
+			// If a higher priority (lower number) is already processing, retry later
 			if (currentHighest < myPriority) {
-				debug(`[${debugId}] Priority ${myPriority} waiting - priority ${currentHighest} is processing`);
+				debug(`[${debugId}] Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`);
 				await sleep(100);
 
 				// Check if cancelled while waiting
@@ -1581,11 +1587,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				return WaitStatus.RETRY;
 			}
 
-			// Update highest processing priority if I'm higher
-			if (myPriority > currentHighest) {
-				this.promiseAwaiting[regionInfo.regionName].highestProcessingPriority = myPriority;
-				debug(`[${debugId}] Priority ${myPriority} is now highest processing priority`);
-			}
+			// Priority can proceed - no higher priority blocking
+			debug(`[${debugId}] Priority ${myPriority} proceeding - no higher priority blocking (tracked highest: ${currentHighest})`);
 		}
 
 		// wait for all
@@ -1763,18 +1766,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		const promiseObj = this.promiseAwaiting[regionName] as any;
 
-		// Reset highest processing priority if it matches
+		// Reset highest processing priority if it matches the one being cleaned up
 		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
-			// Find next highest priority that might be waiting
-			promiseObj.highestProcessingPriority = -1;
+			// Reset to high value so no priorities will wait (no higher priority blocking)
+			promiseObj.highestProcessingPriority = Number.MAX_SAFE_INTEGER;
 			debug(
-				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version}`,
+				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version} - resetting to allow lower priorities to proceed`,
 			);
 		}
 
 		// Clean up version if it's outdated
 		if (promiseObj.version && promiseObj.version < version) {
 			promiseObj.version = version;
+			debug(
+				`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`,
+			);
 		}
 	}
 
