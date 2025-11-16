@@ -453,20 +453,31 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
 				const isLast = lastPlaylistElem === key;
-				const { currentIndex, previousPlayingIndex } = await this.priority.priorityBehaviour(
-					value as SMILMedia,
-					key,
-					version,
-					parent,
-					endTime,
-					priorityObject,
-				);
 				// Retry loop for priority coordination
 				const MAX_RETRIES = 10;
 				let retryCount = 0;
 				let shouldRetry = true;
 
+				// Create priority coordination object for new version handling
+				const priorityCoord =
+					priorityObject?.priorityLevel !== undefined
+						? {
+								version,
+								priority: priorityObject.priorityLevel,
+						  }
+						: undefined;
+
 				while (shouldRetry && retryCount < MAX_RETRIES) {
+					// Call priorityBehaviour inside the loop to re-evaluate on each retry
+					const { currentIndex, previousPlayingIndex } = await this.priority.priorityBehaviour(
+						value as SMILMedia,
+						key,
+						version,
+						parent,
+						endTime,
+						priorityObject,
+					);
+
 					const result = await this.playElement(
 						value as SMILMedia,
 						version,
@@ -476,15 +487,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						previousPlayingIndex,
 						endTime,
 						isLast,
-						priorityObject,
+						priorityCoord,
 					);
 
 					if (result === 'RETRY') {
 						retryCount++;
-						debug(
-							`processPlaylist: Retrying element (attempt ${retryCount}/${MAX_RETRIES}): %O`,
-							value,
-						);
+						debug(`processPlaylist: Retrying element (attempt ${retryCount}/${MAX_RETRIES}): %O`, value);
 						// Small delay before retry
 						await sleep(100);
 					} else {
@@ -493,10 +501,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 
 				if (retryCount >= MAX_RETRIES) {
-					debug(
-						`processPlaylist: Max retries reached for element: %O`,
-						value,
-					);
+					debug(`processPlaylist: Max retries reached for element: %O`, value);
 				}
 
 				continue;
@@ -1512,7 +1517,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param isLast - if this media is last element in current playlist
 	 * @param version - smil internal version of current playlist
 	 * @param debugId
-	 * @param priorityObject - priority information for coordination during version updates
+	 * @param priorityCoord - priority information for coordination during version updates
 	 */
 	private shouldWaitAndContinue = async (
 		media: SMILMedia,
@@ -1524,7 +1529,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		isLast: boolean,
 		version: number,
 		debugId: string,
-		priorityObject?: PriorityObject,
+		priorityCoord?: { version: number; priority: number },
 	): Promise<WaitStatus> => {
 		if (isNil(this.promiseAwaiting[regionInfo.regionName])) {
 			this.promiseAwaiting[regionInfo.regionName] = cloneDeep(media);
@@ -1543,20 +1548,32 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Priority coordination for new versions
 		const isNewVersion = version > this.playlistVersion;
 
-		if (isNewVersion && priorityObject) {
-			const myPriority = priorityObject.priorityLevel;
-			const currentHighest = this.promiseAwaiting[regionInfo.regionName].highestProcessingPriority ?? -1;
+		if (isNewVersion && priorityCoord) {
+			const promiseObj = this.promiseAwaiting[regionInfo.regionName] as any;
+			const myPriority = priorityCoord.priority;
+
+			// Set version and priority for coordination
+			if (!promiseObj.version || promiseObj.version < version) {
+				promiseObj.version = version;
+				promiseObj.highestProcessingPriority = myPriority;
+			}
+
+			const currentHighest = promiseObj.highestProcessingPriority ?? -1;
 
 			// If a higher priority is already processing, retry later
-			if (currentHighest > myPriority) {
+			if (currentHighest < myPriority) {
 				debug(`[${debugId}] Priority ${myPriority} waiting - priority ${currentHighest} is processing`);
 				await sleep(100);
 
 				// Check if cancelled while waiting
 				if (version < this.playlistVersion || this.getCancelFunction()) {
 					// Clean up before skipping
-					if (priorityObject) {
-						this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+					if (priorityCoord) {
+						this.cleanupPriorityTracking(
+							regionInfo.regionName,
+							priorityCoord.version,
+							priorityCoord.priority,
+						);
 					}
 					return WaitStatus.SKIP;
 				}
@@ -1624,8 +1641,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					Date.now(),
 				);
 				// Clean up priority tracking after higher priority finishes
-				if (priorityObject) {
-					this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+				if (priorityCoord) {
+					this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 				}
 			}
 		}
@@ -1645,8 +1662,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				media.dynamicValue!,
 			);
 			// Clean up before skipping
-			if (priorityObject) {
-				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			if (priorityCoord) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
 		}
@@ -1657,8 +1674,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		) {
 			debug(`[${debugId}] trigger was cancelled prematurely: %s`, media.triggerValue);
 			// Clean up before skipping
-			if (priorityObject) {
-				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			if (priorityCoord) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
 		}
@@ -1676,8 +1693,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
 			debug(`[${debugId}] dynamic playlist was cancelled prematurely: %s`, media.dynamicValue);
 			// Clean up before skipping
-			if (priorityObject) {
-				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			if (priorityCoord) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
 		}
@@ -1701,8 +1718,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				media,
 			);
 			// Clean up before skipping
-			if (priorityObject) {
-				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			if (priorityCoord) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
 		}
@@ -1724,8 +1741,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.triggers,
 			);
 			// Clean up before skipping
-			if (priorityObject) {
-				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			if (priorityCoord) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
 		}
@@ -2175,7 +2192,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		previousPlayingIndex: number,
 		endTime: number,
 		isLast: boolean,
-		priorityObject?: { version: number; priority: number },
+		priorityCoord?: { version: number; priority: number },
 	) => {
 		const debugId = `playElement_${version}_${key}_${Date.now()}`;
 		debug(`[${debugId}] Starting to play element: %O`, value);
@@ -2256,7 +2273,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			isLast,
 			version,
 			debugId,
-			priorityObject,
+			priorityCoord,
 		);
 
 		if (waitStatus === WaitStatus.SKIP) {
