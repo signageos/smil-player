@@ -461,16 +461,44 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					endTime,
 					priorityObject,
 				);
-				await this.playElement(
-					value as SMILMedia,
-					version,
-					key,
-					parent,
-					currentIndex,
-					previousPlayingIndex,
-					endTime,
-					isLast,
-				);
+				// Retry loop for priority coordination
+				const MAX_RETRIES = 10;
+				let retryCount = 0;
+				let shouldRetry = true;
+
+				while (shouldRetry && retryCount < MAX_RETRIES) {
+					const result = await this.playElement(
+						value as SMILMedia,
+						version,
+						key,
+						parent,
+						currentIndex,
+						previousPlayingIndex,
+						endTime,
+						isLast,
+						priorityObject,
+					);
+
+					if (result === 'RETRY') {
+						retryCount++;
+						debug(
+							`processPlaylist: Retrying element (attempt ${retryCount}/${MAX_RETRIES}): %O`,
+							value,
+						);
+						// Small delay before retry
+						await sleep(100);
+					} else {
+						shouldRetry = false;
+					}
+				}
+
+				if (retryCount >= MAX_RETRIES) {
+					debug(
+						`processPlaylist: Max retries reached for element: %O`,
+						value,
+					);
+				}
+
 				continue;
 			}
 
@@ -2147,6 +2175,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		previousPlayingIndex: number,
 		endTime: number,
 		isLast: boolean,
+		priorityObject?: { version: number; priority: number },
 	) => {
 		const debugId = `playElement_${version}_${key}_${Date.now()}`;
 		debug(`[${debugId}] Starting to play element: %O`, value);
@@ -2217,20 +2246,27 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				debug('Tag not supported: %s', removeDigits(key));
 		}
 
-		if (
-			!(await this.shouldWaitAndContinue(
-				value,
-				currentRegionInfo,
-				parentRegionInfo.regionName,
-				currentIndex,
-				previousPlayingIndex,
-				endTime,
-				isLast,
-				version,
-				debugId,
-			))
-		) {
+		const waitStatus = await this.shouldWaitAndContinue(
+			value,
+			currentRegionInfo,
+			parentRegionInfo.regionName,
+			currentIndex,
+			previousPlayingIndex,
+			endTime,
+			isLast,
+			version,
+			debugId,
+			priorityObject,
+		);
+
+		if (waitStatus === WaitStatus.SKIP) {
+			debug(`[${debugId}] Element skipped based on wait status`);
 			return;
+		}
+
+		if (waitStatus === WaitStatus.RETRY) {
+			debug(`[${debugId}] Element needs retry - returning RETRY status`);
+			return 'RETRY'; // Signal to processPlaylist that retry is needed
 		}
 
 		// should sync mechanism skip current element
