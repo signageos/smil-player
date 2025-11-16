@@ -1558,16 +1558,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				promiseObj.highestProcessingPriority = myPriority;
 				debug(`[${debugId}] Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
 			} else if (promiseObj.version === version) {
-				// For same version, track the highest priority (lowest number) currently processing
+				// For same version, track the highest priority (highest number) currently processing
 				const currentTracked = promiseObj.highestProcessingPriority ?? myPriority;
-				promiseObj.highestProcessingPriority = Math.min(currentTracked, myPriority);
+				promiseObj.highestProcessingPriority = Math.max(currentTracked, myPriority);
 				debug(`[${debugId}] Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`);
 			}
 
-			const currentHighest = promiseObj.highestProcessingPriority ?? Number.MAX_SAFE_INTEGER;
+			const currentHighest = promiseObj.highestProcessingPriority ?? -1;
 
-			// If a higher priority (lower number) is already processing, retry later
-			if (currentHighest < myPriority) {
+			// If a higher priority (higher number) is already processing, retry later
+			if (currentHighest > myPriority) {
 				debug(`[${debugId}] Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`);
 				await sleep(100);
 
@@ -1768,8 +1768,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Reset highest processing priority if it matches the one being cleaned up
 		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
-			// Reset to high value so no priorities will wait (no higher priority blocking)
-			promiseObj.highestProcessingPriority = Number.MAX_SAFE_INTEGER;
+			// Reset to -1 (no priority) so lower priorities can proceed
+			promiseObj.highestProcessingPriority = -1;
 			debug(
 				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version} - resetting to allow lower priorities to proceed`,
 			);
