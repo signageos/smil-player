@@ -79,6 +79,9 @@ import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
 
+// prevent infinite lock at the sync wait function
+const SYNC_WAIT_TIMEOUT = 31000; // 31sec
+
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
 	private playingIntro: boolean = false;
@@ -557,8 +560,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 					// Safely attempt error reporting
 					try {
-						const mediaType = removeDigits(key) === 'video' ? 'video' :
-							media.localFilePath?.indexOf('widgets') > -1 ? 'ref' : 'image';
+						const mediaType =
+							removeDigits(key) === 'video'
+								? 'video'
+								: media.localFilePath?.indexOf('widgets') > -1
+								? 'ref'
+								: 'image';
 
 						this.files.sendMediaReport(
 							media,
@@ -2531,7 +2538,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());
-					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName);
+					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName, SYNC_WAIT_TIMEOUT);
 					debug(`[${debugId}] Finished sync wait for playing element, timestamp: %d`, Date.now());
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {
