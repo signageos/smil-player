@@ -1545,75 +1545,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo>{};
 		}
 
-		// Priority coordination for new versions
-		const isNewVersion = version > this.playlistVersion;
-
-		if (isNewVersion && priorityCoord) {
-			const promiseObj = this.promiseAwaiting[regionInfo.regionName] as any;
-			const myPriority = priorityCoord.priority;
-
-			// Initialize version tracking for new version
-			if (!promiseObj.version || promiseObj.version < version) {
-				promiseObj.version = version;
-				promiseObj.highestProcessingPriority = myPriority;
-				debug(`[${debugId}] Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
-			} else if (promiseObj.version === version) {
-				// For same version, track the highest priority (highest number) currently processing
-				const currentTracked = promiseObj.highestProcessingPriority ?? myPriority;
-				promiseObj.highestProcessingPriority = Math.max(currentTracked, myPriority);
-				debug(`[${debugId}] Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`);
-			}
-
-			const currentHighest = promiseObj.highestProcessingPriority ?? -1;
-
-			// If a higher priority (higher number) is already processing, retry later
-			if (currentHighest > myPriority) {
-				debug(`[${debugId}] Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`);
-				await sleep(100);
-
-				// Check if cancelled while waiting
-				if (version < this.playlistVersion || this.getCancelFunction()) {
-					// Clean up before skipping
-					if (priorityCoord) {
-						this.cleanupPriorityTracking(
-							regionInfo.regionName,
-							priorityCoord.version,
-							priorityCoord.priority,
-						);
-					}
-					return WaitStatus.SKIP;
-				}
-
-				return WaitStatus.RETRY;
-			}
-
-			// Priority can proceed - no higher priority blocking
-			debug(`[${debugId}] Priority ${myPriority} proceeding - no higher priority blocking (tracked highest: ${currentHighest})`);
-		}
-
-		// wait for all
-		if (
-			this.triggers.dynamicPlaylist[media.dynamicValue!]?.isMaster &&
-			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
-			version >= this.getPlaylistVersion()
-		) {
-			debug(
-				`[${debugId}] Master dynamic playlist is waiting for all preceding content to finish: %s, %s`,
-				media.dynamicValue,
-				Date.now(),
-			);
-			let promises: Promise<void>[] = [];
-			for (const [, promise] of Object.entries(this.promiseAwaiting)) {
-				promises = promises.concat(promise.promiseFunction!);
-			}
-			await Promise.all(promises);
-			debug(
-				`[${debugId}] Master dynamic playlist finished waiting for all preceding content to finish: %s, %s`,
-				media.dynamicValue,
-				Date.now(),
-			);
-		}
-
+		// Wait for previous promise to finish BEFORE claiming priority tracking
+		// This prevents race condition where new priority claims tracking while stuck waiting
 		if (
 			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
 			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!?.length > 0 &&
@@ -1643,11 +1576,85 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					media,
 					Date.now(),
 				);
-				// Clean up priority tracking after higher priority finishes
-				if (priorityCoord) {
-					this.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
-				}
+				// Note: Priority tracking cleanup will happen after coordination below
 			}
+		}
+
+		// Priority coordination for new versions (AFTER waiting for old promise)
+		const isNewVersion = version > this.playlistVersion;
+
+		if (isNewVersion && priorityCoord) {
+			const promiseObj = this.promiseAwaiting[regionInfo.regionName] as any;
+			const myPriority = priorityCoord.priority;
+
+			// Initialize version tracking for new version
+			if (!promiseObj.version || promiseObj.version < version) {
+				promiseObj.version = version;
+				promiseObj.highestProcessingPriority = myPriority;
+				debug(`[${debugId}] Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
+			} else if (promiseObj.version === version) {
+				// For same version, track the highest priority (highest number) currently processing
+				const currentTracked = promiseObj.highestProcessingPriority ?? myPriority;
+				promiseObj.highestProcessingPriority = Math.max(currentTracked, myPriority);
+				debug(
+					`[${debugId}] Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`,
+				);
+			}
+
+			const currentHighest = promiseObj.highestProcessingPriority ?? -1;
+
+			// If a higher priority (higher number) is already processing, retry later
+			if (currentHighest > myPriority) {
+				debug(
+					`[${debugId}] Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`,
+				);
+				await sleep(100);
+
+				// Check if cancelled while waiting
+				if (version < this.playlistVersion || this.getCancelFunction()) {
+					// Clean up before skipping
+					if (priorityCoord) {
+						this.cleanupPriorityTracking(
+							regionInfo.regionName,
+							priorityCoord.version,
+							priorityCoord.priority,
+						);
+					}
+					return WaitStatus.SKIP;
+				}
+				debug(
+					`[${debugId}] Priority ${myPriority} (lower) retrying - higher priority ${currentHighest} is currently processing`,
+				);
+				return WaitStatus.RETRY;
+			}
+
+			// Priority can proceed - no higher priority blocking
+			debug(
+				`[${debugId}] Priority ${myPriority} proceeding - no higher priority blocking (tracked highest: ${currentHighest})`,
+			);
+		}
+
+		// wait for all
+		if (
+			this.triggers.dynamicPlaylist[media.dynamicValue!]?.isMaster &&
+			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
+			version >= this.getPlaylistVersion()
+		) {
+			debug(
+				`[${debugId}] Master dynamic playlist is waiting for all preceding content to finish: %s, %s`,
+				media.dynamicValue,
+				Date.now(),
+			);
+			let promises: Promise<void>[] = [];
+			for (const [, promise] of Object.entries(this.promiseAwaiting)) {
+				promises = promises.concat(promise.promiseFunction!);
+			}
+			await Promise.all(promises);
+			debug(
+				`[${debugId}] Master dynamic playlist finished waiting for all preceding content to finish: %s, %s`,
+				media.dynamicValue,
+				Date.now(),
+			);
 		}
 
 		if (media.dynamicValue && !this.synchronization.shouldSync) {
@@ -1778,9 +1785,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Clean up version if it's outdated
 		if (promiseObj.version && promiseObj.version < version) {
 			promiseObj.version = version;
-			debug(
-				`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`,
-			);
+			debug(`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`);
 		}
 	}
 
