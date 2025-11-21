@@ -1,32 +1,69 @@
 <smil>
     <head>
+        <meta http-equiv="Refresh" content="11" onlySmilUpdate="true"/>
+        <meta log="false" type="manual"
+              endpoint="https://stage.signagelab.com/api/webhooks/device-proof-of-play/cmhulnp0z0005jq0xrr1d2765/proof-of-play-event"/>
+        <meta defaultRepeatCount="indefinite"/>
         <layout>
-            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"></root-layout>
-            <region regionName="fullscreen" left="0" top="0" width="1080" height="1920" z-index="1"
-                    backgroundColor="#000000" sync="false"></region>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="cllul8o1y284991xnt62uxvy1g" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#000000"/>
         </layout>
-        <meta http-equiv="Refresh" content="20" timeOut="5000" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
-              skipContentOnHttpStatus="404" smilFileRefresh="1200" updateMechanism="location"></meta>
-        <meta log="true" type="manual"
-              endpoint="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/pop?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab"></meta>
-        <meta defaultRepeatCount="indefinite"></meta>
     </head>
     <body>
-        <seq>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=1"
-                   popName="signagelab_event" popType="video" popTags="video1" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=2"
-                   popName="signagelab_event" popType="video" popTags="video2" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=3"
-                   popName="signagelab_event" popType="video" popTags="video3" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=4"
-                   popName="signagelab_event" popType="video" popTags="video4" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=5"
-                   popName="signagelab_event" popType="video" popTags="video5" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=6"
-                   popName="signagelab_event" popType="video" popTags="video6" region="fullscreen"></video>
-            <video src="https://api.hygh.tech/tymetable/api/v1/dooh/signageos/content?screen=3eb5fcfa-0f97-4424-8d51-37041245cbab&amp;id=7"
-                   popName="signagelab_event" popType="video" popTags="video7" region="fullscreen"></video>
-        </seq>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://1.signage-cdn.com/global/smil-placeholders/content-downloading-landcape.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <!-- [GalleryModule] priorita (cmhysenmr000wpe0xfem20nds) -->
+                                    <!-- [[[1|||cllul8o1y284991xnt62uxvy1g|||cmhysenmr000wpe0xfem20nds]]] -->
+                                    <seq repeatCount="1" begin="wallclock(2025-11-21T10:45)"
+                                         end="wallclock(2025-11-21T10:46)">
+                                        <img src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/10/cmh4hcgem00070xmu2bma7qxu.png"
+                                             dur="15s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"
+                                             popName="signagelab_event" popType="custom"
+                                             popCustomId="eyJmaWxlIjp7ImlkIjoiY21oNGhjZ2x1MDBla211MHh5MGcxcnJ0eCIsIm5hbWUiOiJUVl93ZWxjb21lIn0sImNhbXBhaWduIjp7ImlkIjoiY21oeXNlbm1yMDAwd3BlMHhmZW0yMG5kcyIsIm5hbWUiOiJwcmlvcml0YSJ9LCJkZXZpY2UiOnsiaWQiOiJjbWh1bG5wMHowMDA1anEweHJyMWQyNzY1IiwibmFtZSI6ImFhIFNMQUIgSFAgV2luIn0sInNjcmVlbiI6eyJpZCI6ImNrcm5iemlwZjI2NzMwNTF6cnVrcWdvZXdsYyIsIm5hbWUiOiJIUCBXaW4gMTAifSwiYWNjb3VudCI6eyJpZCI6ImNrcjF1NjhpZzg5MDM1MXpubnNoZW5pa2lyIiwibmFtZSI6IlNpZ25hZ2VsYWIgc3RhZ2UifX0="/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+                                    <!-- [GalleryModule] video (cmhysdmqh000gpe0xwa7buktn) -->
+                                    <!-- [[[0|||cllul8o1y284991xnt62uxvy1g|||cmhysdmqh000gpe0xwa7buktn]]] -->
+                                    <seq repeatCount="1">
+                                        <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/09/cmfzernxz00010xgu8dzl9w21.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"
+                                               popName="signagelab_event" popType="custom"
+                                               popCustomId="eyJmaWxlIjp7ImlkIjoiY21memVybzh4MDAweGd1MHgyY2prNmpsNyIsIm5hbWUiOiJDWl9EYXJrb3ZlLXBvdWthenlfdW5pdmVyemFsXzE2eDkifSwiY2FtcGFpZ24iOnsiaWQiOiJjbWh5c2RtcWgwMDBncGUweHdhN2J1a3RuIiwibmFtZSI6InZpZGVvIn0sImRldmljZSI6eyJpZCI6ImNtaHVsbnAwejAwMDVqcTB4cnIxZDI3NjUiLCJuYW1lIjoiYWEgU0xBQiBIUCBXaW4ifSwic2NyZWVuIjp7ImlkIjoiY2tybmJ6aXBmMjY3MzA1MXpydWtxZ29ld2xjIiwibmFtZSI6IkhQIFdpbiAxMCJ9LCJhY2NvdW50Ijp7ImlkIjoiY2tyMXU2OGlnODkwMzUxem5uc2hlbmlraXIiLCJuYW1lIjoiU2lnbmFnZWxhYiBzdGFnZSJ9fQ=="/>
+                                        <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/10/cmh3fgzv500010xmu0zpx9k2x.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"
+                                               popName="signagelab_event" popType="custom"
+                                               popCustomId="eyJmaWxlIjp7ImlkIjoiY21oM2ZoMHV6MDAxMm11MHhvNTB0cWo1bSIsIm5hbWUiOiJ2aWRlby10ZXN0LTA1XzE1c18xOTIweDEwODBfMGYxMTA5OTZjNTFkOGM3NzkzM2IxYWI5ZmVjZmI2MWYifSwiY2FtcGFpZ24iOnsiaWQiOiJjbWh5c2RtcWgwMDBncGUweHdhN2J1a3RuIiwibmFtZSI6InZpZGVvIn0sImRldmljZSI6eyJpZCI6ImNtaHVsbnAwejAwMDVqcTB4cnIxZDI3NjUiLCJuYW1lIjoiYWEgU0xBQiBIUCBXaW4ifSwic2NyZWVuIjp7ImlkIjoiY2tybmJ6aXBmMjY3MzA1MXpydWtxZ29ld2xjIiwibmFtZSI6IkhQIFdpbiAxMCJ9LCJhY2NvdW50Ijp7ImlkIjoiY2tyMXU2OGlnODkwMzUxem5uc2hlbmlraXIiLCJuYW1lIjoiU2lnbmFnZWxhYiBzdGFnZSJ9fQ=="/>
+                                        <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/10/cmh3fgyl500000xmuh211g1zf.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"
+                                               popName="signagelab_event" popType="custom"
+                                               popCustomId="eyJmaWxlIjp7ImlkIjoiY21oM2ZnejRmMDAweG11MHh6Y3ZsOGd3ZCIsIm5hbWUiOiJ2aWRlby10ZXN0LTAzXzE1c18xOTIweDEwODBfMmZlN2IwMzk3NTBhMTM0YWVhYzFjMGE1MTU3MTAwMDcifSwiY2FtcGFpZ24iOnsiaWQiOiJjbWh5c2RtcWgwMDBncGUweHdhN2J1a3RuIiwibmFtZSI6InZpZGVvIn0sImRldmljZSI6eyJpZCI6ImNtaHVsbnAwejAwMDVqcTB4cnIxZDI3NjUiLCJuYW1lIjoiYWEgU0xBQiBIUCBXaW4ifSwic2NyZWVuIjp7ImlkIjoiY2tybmJ6aXBmMjY3MzA1MXpydWtxZ29ld2xjIiwibmFtZSI6IkhQIFdpbiAxMCJ9LCJhY2NvdW50Ijp7ImlkIjoiY2tyMXU2OGlnODkwMzUxem5uc2hlbmlraXIiLCJuYW1lIjoiU2lnbmFnZWxhYiBzdGFnZSJ9fQ=="/>
+                                        <video src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/09/cmfzekjxe00000xgu0bct6npz.mp4"
+                                               soundLevel="0%" region="cllul8o1y284991xnt62uxvy1g"
+                                               popName="signagelab_event" popType="custom"
+                                               popCustomId="eyJmaWxlIjp7ImlkIjoiY21memVrazZmMDAwMmd1MHhoMGNydWtnbSIsIm5hbWUiOiJBTkdFTCBFRFAgMTkyMHgxMDgwIn0sImNhbXBhaWduIjp7ImlkIjoiY21oeXNkbXFoMDAwZ3BlMHh3YTdidWt0biIsIm5hbWUiOiJ2aWRlbyJ9LCJkZXZpY2UiOnsiaWQiOiJjbWh1bG5wMHowMDA1anEweHJyMWQyNzY1IiwibmFtZSI6ImFhIFNMQUIgSFAgV2luIn0sInNjcmVlbiI6eyJpZCI6ImNrcm5iemlwZjI2NzMwNTF6cnVrcWdvZXdsYyIsIm5hbWUiOiJIUCBXaW4gMTAifSwiYWNjb3VudCI6eyJpZCI6ImNrcjF1NjhpZzg5MDM1MXpubnNoZW5pa2lyIiwibmFtZSI6IlNpZ25hZ2VsYWIgc3RhZ2UifX0="/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
     </body>
 </smil>
