@@ -1580,10 +1580,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
-		// Priority coordination for new versions (AFTER waiting for old promise)
-		const isNewVersion = version > this.playlistVersion;
+		// Priority coordination for ALL elements (AFTER waiting for old promise)
+		// This runs for every element to ensure proper priority sequencing within the same version
 
-		if (isNewVersion && priorityCoord) {
+		if (priorityCoord) {
 			const promiseObj = this.promiseAwaiting[regionInfo.regionName] as any;
 			const myPriority = priorityCoord.priority;
 
@@ -2315,7 +2315,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
-			debug('not playing old version: %s, currentVersion: %s', version, this.playlistVersion);
+			debug('not playing old version: %s, currentVersion: %s, src: %s', version, this.playlistVersion, value.src);
 			await this.priority.handlePriorityWhenDone(
 				value as SMILMedia,
 				currentRegionInfo.regionName,
@@ -2329,7 +2329,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		debug('Playing element with key: %O, value: %O, parent: %s', key, value, parent);
+		debug('Playing element with key: %O, value: %O, parent: %s, version: %s', key, value, parent, version);
 		switch (removeDigits(key)) {
 			case 'video':
 				await this.playVideo(
