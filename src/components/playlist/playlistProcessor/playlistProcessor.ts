@@ -1526,6 +1526,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				// Check if cancelled while waiting
 				if (version < this.playlistVersion || this.getCancelFunction()) {
+					// Clean up before skipping
+					if (priorityObject) {
+						this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+					}
 					return WaitStatus.SKIP;
 				}
 
@@ -1591,6 +1595,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					media,
 					Date.now(),
 				);
+				// Clean up priority tracking after higher priority finishes
+				if (priorityObject) {
+					this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+				}
 			}
 		}
 
@@ -1608,6 +1616,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlayingPriority,
 				media.dynamicValue!,
 			);
+			// Clean up before skipping
+			if (priorityObject) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			}
 			return WaitStatus.SKIP;
 		}
 
@@ -1616,6 +1628,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			!this.triggers.triggersEndless[media.triggerValue as string]?.play
 		) {
 			debug(`[${debugId}] trigger was cancelled prematurely: %s`, media.triggerValue);
+			// Clean up before skipping
+			if (priorityObject) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			}
 			return WaitStatus.SKIP;
 		}
 
@@ -1631,6 +1647,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
 			debug(`[${debugId}] dynamic playlist was cancelled prematurely: %s`, media.dynamicValue);
+			// Clean up before skipping
+			if (priorityObject) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			}
 			return WaitStatus.SKIP;
 		}
 
@@ -1652,6 +1672,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				currentIndexPriority,
 				media,
 			);
+			// Clean up before skipping
+			if (priorityObject) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			}
 			return WaitStatus.SKIP;
 		}
 
@@ -1671,6 +1695,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				this.triggers,
 			);
+			// Clean up before skipping
+			if (priorityObject) {
+				this.cleanupPriorityTracking(regionInfo.regionName, priorityObject.version, priorityObject.priority);
+			}
 			return WaitStatus.SKIP;
 		}
 
@@ -1678,6 +1706,32 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player.playing = true;
 		return WaitStatus.CONTINUE;
 	};
+
+	/**
+	 * Cleans up priority tracking after an element finishes waiting or gets skipped
+	 * @param regionName - The region where priority tracking should be cleaned
+	 * @param version - Current playlist version
+	 * @param priorityLevel - The priority level to clean up
+	 */
+	private cleanupPriorityTracking(regionName: string, version: number, priorityLevel?: number): void {
+		if (!this.promiseAwaiting[regionName]) return;
+
+		const promiseObj = this.promiseAwaiting[regionName] as any;
+
+		// Reset highest processing priority if it matches
+		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
+			// Find next highest priority that might be waiting
+			promiseObj.highestProcessingPriority = -1;
+			debug(
+				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version}`,
+			);
+		}
+
+		// Clean up version if it's outdated
+		if (promiseObj.version && promiseObj.version < version) {
+			promiseObj.version = version;
+		}
+	}
 
 	/**
 	 * plays one video
