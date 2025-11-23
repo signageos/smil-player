@@ -92,7 +92,7 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
-	};
+	}
 
 	private async checkAndManageSmilMediaInfo(smilUrl: string): Promise<void> {
 		try {
@@ -364,7 +364,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 				debug('Starting to play backup image');
 				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-				const regionInfo = <SMILFileObject>getDefaultRegion();
+				const regionInfo = <SMILFileObject> getDefaultRegion();
 
 				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
 				if (isNil(sos.config.backupImageUrl)) {
@@ -374,7 +374,7 @@ export class SmilPlayer implements ISmilPlayer {
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
-	};
+	}
 
 	private fallbackToPreviousPlaylist = async (
 		internalStorageUnit: IStorageUnit,
@@ -394,6 +394,6 @@ export class SmilPlayer implements ISmilPlayer {
 				console.debug('Found valid smil file, exiting invalid smil loop');
 				clearInterval(intervalId);
 			}
-		}, interval);
-	};
+		},                             interval);
+	}
 }

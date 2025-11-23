@@ -19,7 +19,8 @@ export type Resource = {
 	url: string;
 	interval: number;
 	checkFunction: () => Promise<Promise<void>[]>;
-	detectFunction?: (detectedValues: Set<string>) => Promise<UpdateDetection | null>;  // Optional - for media files to support batch download optimization
+	// Optional - for media files to support batch download optimization
+	detectFunction?: (detectedValues: Set<string>) => Promise<UpdateDetection | null>;
 	actionOnSuccess: (data: Promise<void>[], stopChecker: () => Promise<void>) => Promise<void>;
 	mediaObject?: MergedDownloadList;  // Optional - only media resources will have this
 };
@@ -154,7 +155,7 @@ export class ResourceChecker implements IResourceChecker {
 							scheduleNext();
 						}
 					}
-				}, interval);
+				},                         interval);
 
 				this.intervalTimers.set(interval, timeout);
 				// Safely unref only if available
