@@ -403,7 +403,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 				debug('Starting to play backup image');
 				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-				const regionInfo = <SMILFileObject>getDefaultRegion();
+				const regionInfo = <SMILFileObject> getDefaultRegion();
 
 				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
 				if (isNil(sos.config.backupImageUrl)) {
@@ -426,21 +426,12 @@ export class SmilPlayer implements ISmilPlayer {
 			return;
 		}
 
-		this.isPollingForPlaylist = true;
-
-		return new Promise<void>((resolve) => {
-			const intervalId = setInterval(
-				async () => {
-					const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true);
-					if (response !== smilUpdate.invalid) {
-						console.debug('Found valid smil file, exiting invalid smil loop');
-						this.isPollingForPlaylist = false;
-						clearInterval(intervalId);
-						resolve();
-					}
-				},
-				interval,
-			);
-		});
+		const intervalId = setInterval(async () => {
+			const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true, true);
+			if (response !== smilUpdate.invalid) {
+				console.debug('Found valid smil file, exiting invalid smil loop');
+				clearInterval(intervalId);
+			}
+		},                             interval);
 	}
 }

@@ -441,8 +441,8 @@ export class FilesManager implements IFilesManager {
 
 		const isNewVersion = isLocationStrategy
 			? currentValue !== null &&
-			  stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
-			  currentValue !== storedValue
+			stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+			currentValue !== storedValue
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		// Check if we already have this content (for location strategy only)
@@ -533,7 +533,9 @@ export class FilesManager implements IFilesManager {
 		latestRemoteValue?: string,
 		allFilesList?: MergedDownloadList[], // Optional full playlist for preservation check
 		externalPendingUpdates?: Map<string, string | number>, // Complete pending updates across all phases
-		skipUpdateCheck: boolean = false, // Set to true when detection already done (e.g., from processNewContentUpdates) to avoid duplicate HEAD requests
+		// Set to true when detection already done (e.g., from processNewContentUpdates)
+		// to avoid duplicate HEAD requests
+		skipUpdateCheck: boolean = false,
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -566,16 +568,16 @@ export class FilesManager implements IFilesManager {
 					// This avoids duplicate HEAD requests while Phase 3b.5 still checks storage/existing content
 					const updateCheck = skipUpdateCheck && latestRemoteValue
 						? {
-								shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
-								value: latestRemoteValue,
-								statusCode: 200,
-						  }
+							shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
+							value: latestRemoteValue,
+							statusCode: 200,
+						}
 						: forceDownload
-						? {
+							? {
 								shouldUpdate: true,
 								value: latestRemoteValue,
-						  }
-						: await this.shouldUpdateLocalFile(
+							}
+							: await this.shouldUpdateLocalFile(
 								localFilePath,
 								file,
 								mediaInfoObject,
@@ -583,7 +585,7 @@ export class FilesManager implements IFilesManager {
 								skipContentHttpStatusCodes,
 								updateContentHttpStatusCodes,
 								fetchStrategy,
-						  );
+							);
 
 					return {
 						file,
@@ -888,7 +890,6 @@ export class FilesManager implements IFilesManager {
 								this.tempDownloads.set(firstTask.fileName, restoredTempPath);
 								debug('Tracked restored temp file: %s -> %s', firstTask.fileName, restoredTempPath);
 							}
-
 
 							// Copy locally for remaining tasks in the group
 							for (let i = 1; i < tasks.length; i++) {
@@ -1230,15 +1231,15 @@ export class FilesManager implements IFilesManager {
 					// This avoids duplicate HEAD requests
 					const updateCheck = skipUpdateCheck && latestRemoteValue
 						? {
-								shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
-								value: latestRemoteValue,
-						  }
+							shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
+							value: latestRemoteValue,
+						}
 						: forceDownload
-						? {
+							? {
 								shouldUpdate: true,
 								value: latestRemoteValue,
-						  }
-						: await this.shouldUpdateLocalFile(
+							}
+							: await this.shouldUpdateLocalFile(
 								localFilePath,
 								file,
 								mediaInfoObject,
@@ -1246,7 +1247,7 @@ export class FilesManager implements IFilesManager {
 								skipContentHttpStatusCodes,
 								updateContentHttpStatusCodes,
 								fetchStrategy,
-						  );
+							);
 
 					// check if file is already downloaded or is forcedDownload to update existing file with new version
 					if (updateCheck.shouldUpdate) {
@@ -1296,7 +1297,6 @@ export class FilesManager implements IFilesManager {
 								try {
 									debug(`Downloading file: %O`, updateValue ?? file.src);
 									// Location strategy uses strings as values, while lastModified uses timestamps
-									const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 									let downloadUrl: string;
 
 									if (isLocationStrategy && !!updateValue && isUrl(updateValue)) {
@@ -1672,6 +1672,136 @@ export class FilesManager implements IFilesManager {
 		// tempDownloads already cleared in migrateFromTempToStandard
 	};
 
+	/**
+	 * Process and batch download new content updates
+	 * Groups detections by localFilePath and fetchStrategy, then downloads in batches
+	 * Used by resource checker for optimized batch downloading
+	 * @param detections Array of update detections that need downloads
+	 * @param allFilesList
+	 */
+	public processNewContentUpdates = async (
+		detections: UpdateDetection[],
+		allFilesList?: MergedDownloadList[],
+	): Promise<void> => {
+		if (detections.length === 0) {
+			return;
+		}
+
+		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
+
+		// Build complete pending updates map for ALL files in this batch
+		// This is critical for preservation checks to see the future state of ALL files across all phases
+		const allPendingUpdates = new Map<string, string | number>();
+		for (const detection of detections) {
+			const fileName = getFileName(detection.file.src);
+			allPendingUpdates.set(fileName, detection.updateValue);
+		}
+		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
+
+		// Group by updateValue (content URL) and localFilePath
+		// Only files needing the same content in the same folder are batched together
+		const groups = new Map<string, UpdateDetection[]>();
+
+		for (const detection of detections) {
+			const key = `${detection.updateValue}|${detection.localFilePath}`;
+			if (!groups.has(key)) {
+				groups.set(key, []);
+			}
+			groups.get(key)!.push(detection);
+		}
+
+		debug('processNewContentUpdates: Grouped into %d batches', groups.size);
+
+		// Batch download each group
+		for (const [key, groupDetections] of groups) {
+			const files = groupDetections.map((d) => d.file);
+			const fetchStrategy = groupDetections[0].fetchStrategy;
+			const localFilePath = groupDetections[0].localFilePath;
+
+			debug(
+				'processNewContentUpdates: Batch downloading %d files for %s with strategy %s',
+				files.length,
+				localFilePath,
+				fetchStrategy.strategyType,
+			);
+
+			try {
+				// Use existing parallelDownloadAllFiles with multiple files
+				// Existing deduplication logic (Phase 3b/3c) will handle duplicate content
+				// Use the actual needsDownload value from detection (not hardcoded true)
+				// This ensures MOVED_CONTENT (needsDownload=false) doesn't trigger downloads
+				// Pass allFilesList for preservation check, or fall back to current batch files
+				// Skip HEAD requests since detection already done - avoid duplicate requests
+				const result = await this.parallelDownloadAllFiles(
+					files,
+					localFilePath,
+					SMILScheduleEnum.fileCheckTimeout,
+					[],
+					[],
+					fetchStrategy,
+					groupDetections[0].needsDownload, // Use actual needsDownload value from detection
+					String(groupDetections[0].updateValue),
+					allFilesList, // Pass full files list for accurate preservation check
+					allPendingUpdates, // Pass complete pending updates across all phases
+					true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
+				);
+
+				// Wait for all downloads to complete
+				await Promise.all(result.promises);
+
+				debug('processNewContentUpdates: Downloads complete for group: %s', key);
+
+				// Post-process: collectUpdate and set wasUpdated for each file
+				for (const detection of groupDetections) {
+					const fileName = getFileName(detection.file.src);
+
+					if (result.filesToUpdate.has(fileName)) {
+						const value = result.filesToUpdate.get(fileName)!;
+						debug(
+							'processNewContentUpdates: Collecting batch update for %s with value: %s',
+							fileName,
+							value,
+						);
+						this.collectUpdate(fileName, String(value));
+					}
+
+					if ('localFilePath' in detection.file) {
+						detection.file.wasUpdated = true;
+					}
+				}
+
+				debug('processNewContentUpdates: Batch processing complete for group: %s', key);
+			} catch (err) {
+				debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
+				// Continue with other groups even if one fails
+			}
+		}
+
+		debug('processNewContentUpdates: All batches processed');
+	};
+
+	/**
+	 * Handle moved content without downloading
+	 * Updates file mappings when content has moved to a new URL
+	 * Used by resource checker for files that don't need download
+	 * @param detection Update detection for moved content
+	 */
+	public handleMovedContent = async (detection: UpdateDetection): Promise<void> => {
+		debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
+
+		await this.updateLocalFilePathForMovedContent(
+			detection.file,
+			detection.updateValue,
+			detection.mediaInfoObject,
+			detection.localFilePath,
+		);
+
+		// Update mapping in mediaInfoObject
+		const fileName = getFileName(detection.file.src);
+		debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
+		this.collectUpdate(fileName, String(detection.updateValue));
+	};
+
 	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
 		if (!value) {
 			return false;
@@ -1858,7 +1988,9 @@ export class FilesManager implements IFilesManager {
 		// Estimate total space needed (rough estimate)
 		let estimatedSpace = 0;
 		for (const movement of movements.values()) {
-			if (!movement.sourceFilePath) continue;
+			if (!movement.sourceFilePath) {
+				continue;
+			}
 
 			try {
 				const fileInfo = await this.sos.fileSystem.getFile({
@@ -1891,7 +2023,9 @@ export class FilesManager implements IFilesManager {
 		debug('Creating temp copies to preserve source content...');
 
 		for (const [, movement] of movements) {
-			if (!movement.sourceFilePath) continue;
+			if (!movement.sourceFilePath) {
+				continue;
+			}
 
 			// Create temp path
 			const tempFileName = `temp_${Date.now()}_${movement.sourceFileName}`;
@@ -2600,135 +2734,6 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	/**
-	 * Process and batch download new content updates
-	 * Groups detections by localFilePath and fetchStrategy, then downloads in batches
-	 * Used by resource checker for optimized batch downloading
-	 * @param detections Array of update detections that need downloads
-	 */
-	public processNewContentUpdates = async (
-		detections: UpdateDetection[],
-		allFilesList?: MergedDownloadList[],
-	): Promise<void> => {
-		if (detections.length === 0) {
-			return;
-		}
-
-		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
-
-		// Build complete pending updates map for ALL files in this batch
-		// This is critical for preservation checks to see the future state of ALL files across all phases
-		const allPendingUpdates = new Map<string, string | number>();
-		for (const detection of detections) {
-			const fileName = getFileName(detection.file.src);
-			allPendingUpdates.set(fileName, detection.updateValue);
-		}
-		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
-
-		// Group by updateValue (content URL) and localFilePath
-		// Only files needing the same content in the same folder are batched together
-		const groups = new Map<string, UpdateDetection[]>();
-
-		for (const detection of detections) {
-			const key = `${detection.updateValue}|${detection.localFilePath}`;
-			if (!groups.has(key)) {
-				groups.set(key, []);
-			}
-			groups.get(key)!.push(detection);
-		}
-
-		debug('processNewContentUpdates: Grouped into %d batches', groups.size);
-
-		// Batch download each group
-		for (const [key, groupDetections] of groups) {
-			const files = groupDetections.map((d) => d.file);
-			const fetchStrategy = groupDetections[0].fetchStrategy;
-			const localFilePath = groupDetections[0].localFilePath;
-
-			debug(
-				'processNewContentUpdates: Batch downloading %d files for %s with strategy %s',
-				files.length,
-				localFilePath,
-				fetchStrategy.strategyType,
-			);
-
-			try {
-				// Use existing parallelDownloadAllFiles with multiple files
-				// Existing deduplication logic (Phase 3b/3c) will handle duplicate content
-				// Use the actual needsDownload value from detection (not hardcoded true)
-				// This ensures MOVED_CONTENT (needsDownload=false) doesn't trigger downloads
-				// Pass allFilesList for preservation check, or fall back to current batch files
-				// Skip HEAD requests since detection already done - avoid duplicate requests
-				const result = await this.parallelDownloadAllFiles(
-					files,
-					localFilePath,
-					SMILScheduleEnum.fileCheckTimeout,
-					[],
-					[],
-					fetchStrategy,
-					groupDetections[0].needsDownload, // Use actual needsDownload value from detection
-					String(groupDetections[0].updateValue),
-					allFilesList, // Pass full files list for accurate preservation check
-					allPendingUpdates, // Pass complete pending updates across all phases
-					true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
-				);
-
-				// Wait for all downloads to complete
-				await Promise.all(result.promises);
-
-				debug('processNewContentUpdates: Downloads complete for group: %s', key);
-
-				// Post-process: collectUpdate and set wasUpdated for each file
-				for (const detection of groupDetections) {
-					const fileName = getFileName(detection.file.src);
-
-					if (result.filesToUpdate.has(fileName)) {
-						const value = result.filesToUpdate.get(fileName)!;
-						debug(
-							'processNewContentUpdates: Collecting batch update for %s with value: %s',
-							fileName,
-							value,
-						);
-						this.collectUpdate(fileName, String(value));
-					}
-
-					if ('localFilePath' in detection.file) {
-						detection.file.wasUpdated = true;
-					}
-				}
-
-				debug('processNewContentUpdates: Batch processing complete for group: %s', key);
-			} catch (err) {
-				debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
-				// Continue with other groups even if one fails
-			}
-		}
-
-		debug('processNewContentUpdates: All batches processed');
-	};
-
-	/**
-	 * Handle moved content without downloading
-	 * Updates file mappings when content has moved to a new URL
-	 * Used by resource checker for files that don't need download
-	 * @param detection Update detection for moved content
-	 */
-	public handleMovedContent = async (detection: UpdateDetection): Promise<void> => {
-		debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
-
-		await this.updateLocalFilePathForMovedContent(
-			detection.file,
-			detection.updateValue,
-			detection.mediaInfoObject,
-			detection.localFilePath,
-		);
-
-		// Update mapping in mediaInfoObject
-		const fileName = getFileName(detection.file.src);
-		debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
-		this.collectUpdate(fileName, String(detection.updateValue));
-	};
-
 	private convertToResourcesCheckerFormat = (
 		resources: MergedDownloadList[],
 		rootFolder: string,
@@ -2774,8 +2779,8 @@ export class FilesManager implements IFilesManager {
 			},
 			detectFunction: detectFunction
 				? async (detectedValues: Set<string>) => {
-						return detectFunction(detectedValues);
-				  }
+					return detectFunction(detectedValues);
+				}
 				: undefined, // Only add if provided
 			actionOnSuccess: async (data, stopChecker) => {
 				// checker function returns an array of promises, if the array is not empty, player is updating new version of content
@@ -3032,7 +3037,9 @@ export class FilesManager implements IFilesManager {
 
 		return filesList.some((f) => {
 			const fileName = getFileName(f.src);
-			if (fileName === excludeFileName) return false;
+			if (fileName === excludeFileName) {
+				return false;
+			}
 
 			// Check pending updates first (future state after batch completes)
 			if (pendingUpdates && pendingUpdates.has(fileName)) {
