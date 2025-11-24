@@ -145,6 +145,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			currentIndexPriority.player.timesPlayed = 0;
 			currentIndexPriority.player.playing = false;
 
+			// Clean up priority tracking when this priority sequence completes
+			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
+			if (priorityLevel !== undefined) {
+				this.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
+				debug('Cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
+			}
+
 			if (!isNil(pausedIndex)) {
 				const pausedIndexPriority = this.currentlyPlayingPriority[priorityRegionName][pausedIndex];
 				debug(

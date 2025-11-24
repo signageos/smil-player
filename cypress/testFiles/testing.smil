@@ -1,6 +1,6 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="15" onlySmilUpdate="true"/>
+        <meta http-equiv="Refresh" content="10" onlySmilUpdate="true"/>
         <meta log="false" type="manual"
               endpoint="https://stage.signagelab.com/api/webhooks/device-proof-of-play/cmhulnp0z0005jq0xrr1d2765/proof-of-play-event"/>
         <meta defaultRepeatCount="indefinite"/>
@@ -28,7 +28,7 @@
                                     <!-- [GalleryModule] priorita (cmhysenmr000wpe0xfem20nds) -->
                                     <!-- [[[1|||cllul8o1y284991xnt62uxvy1g|||cmhysenmr000wpe0xfem20nds]]] -->
                                     <seq repeatCount="1" begin="wallclock(2025-11-21T13:26)"
-                                         end="wallclock(2025-11-22T22:27)">
+                                         end="wallclock(2025-11-28T10:03)">
                                         <img src="https://1.signage-cdn.com/environment/stage/accounts-data/ckr1u68ig890351znnshenikir/2025/10/cmh4hcgem00070xmu2bma7qxu.png"
                                              dur="15s" fit="fill" region="cllul8o1y284991xnt62uxvy1g"
                                              popName="signagelab_event" popType="custom"
