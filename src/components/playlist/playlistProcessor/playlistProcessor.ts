@@ -1763,33 +1763,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	/**
-	 * Cleans up priority tracking after an element finishes waiting or gets skipped
-	 * @param regionName - The region where priority tracking should be cleaned
-	 * @param version - Current playlist version
-	 * @param priorityLevel - The priority level to clean up
-	 */
-	private cleanupPriorityTracking(regionName: string, version: number, priorityLevel?: number): void {
-		if (!this.promiseAwaiting[regionName]) return;
-
-		const promiseObj = this.promiseAwaiting[regionName] as any;
-
-		// Reset highest processing priority if it matches the one being cleaned up
-		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
-			// Reset to -1 (no priority) so lower priorities can proceed
-			promiseObj.highestProcessingPriority = -1;
-			debug(
-				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version} - resetting to allow lower priorities to proceed`,
-			);
-		}
-
-		// Clean up version if it's outdated
-		if (promiseObj.version && promiseObj.version < version) {
-			promiseObj.version = version;
-			debug(`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`);
-		}
-	}
-
-	/**
 	 * plays one video
 	 * @param video - SMILVideo object
 	 * @param version - smil internal version of current playlist
