@@ -911,16 +911,20 @@ export class FilesManager implements IFilesManager {
 			return;
 		}
 
-		const arrayOfReportFiles = await this.sos.fileSystem.listFiles({
-			storageUnit: this.internalStorageUnit,
-			filePath: FileStructure.offlineReports,
-		});
+		let currentFileIndex: number;
 
-		debug('Number of custom endpoint report files', arrayOfReportFiles.length);
-
-		let currentFileIndex = arrayOfReportFiles.length === 0 ? 0 : arrayOfReportFiles.length - 1;
-
-		debug('Number of custom endpoint report files custom index', currentFileIndex);
+		// Check if this is the first save after restart (offlineReportsInfoObject is empty)
+		if (Object.keys(this.offlineReportsInfoObject).length === 0) {
+			// First save after restart - find highest existing index and start fresh
+			const highestExistingIndex = await this.initializeOfflineReportsIndex();
+			currentFileIndex = highestExistingIndex + 1; // Start with new file to avoid appending
+			debug('First save after restart, starting with new file index: %d', currentFileIndex);
+		} else {
+			// Use the highest tracked index from current session
+			const trackedIndexes = Object.keys(this.offlineReportsInfoObject).map(k => parseInt(k, 10));
+			currentFileIndex = Math.max(...trackedIndexes);
+			debug('Using highest tracked index from current session: %d', currentFileIndex);
+		}
 
 		if (!this.offlineReportsInfoObject[currentFileIndex]) {
 			this.offlineReportsInfoObject[currentFileIndex] = {
@@ -956,6 +960,44 @@ export class FilesManager implements IFilesManager {
 				`${JSON.stringify(customEndpointInfo)}\n`,
 			);
 			this.offlineReportsInfoObject[currentFileIndex].numberOfReports = 1;
+		}
+	};
+
+	/**
+	 * Find the highest index among existing offline report files.
+	 * This is used on startup to determine where to start writing new reports.
+	 * Returns -1 if no files exist (will result in starting from index 0).
+	 */
+	private initializeOfflineReportsIndex = async (): Promise<number> => {
+		try {
+			const reportFiles = await this.sos.fileSystem.listFiles({
+				storageUnit: this.internalStorageUnit,
+				filePath: FileStructure.offlineReports,
+			});
+
+			if (reportFiles.length === 0) {
+				debug('No existing offline report files found');
+				return -1; // Will start from index 0
+			}
+
+			// Extract indexes from filenames (e.g., offlineReports3.csv -> 3)
+			const indexes = reportFiles.map(file => {
+				const index = parseInt(file.filePath.split('.csv')[0].replace(/\D/g, ''), 10);
+				return isNaN(index) ? -1 : index;
+			}).filter(index => index >= 0);
+
+			if (indexes.length === 0) {
+				debug('No valid offline report indexes found');
+				return -1;
+			}
+
+			const highestIndex = Math.max(...indexes);
+			debug('Found highest offline report index: %d from %d files', highestIndex, reportFiles.length);
+
+			return highestIndex;
+		} catch (error) {
+			debug('Error finding offline report index: %O', error);
+			return -1; // Safe fallback to start from 0
 		}
 	};
 
