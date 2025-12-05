@@ -17,6 +17,7 @@ import {
 	createSourceReportObject,
 	debug,
 	getFileName,
+	getUrlWithoutQueryParams,
 	isWidgetUrl,
 	mapFileType,
 	shouldNotDownload,
@@ -700,7 +701,8 @@ export class FilesManager implements IFilesManager {
 			const taskGroups = new Map<string, DownloadTask[]>();
 
 			for (const task of downloadTasks) {
-				const contentKey = task.downloadUrl; // For location strategy, this is the actual content URL
+				// Strip query params for grouping - same content with different query params should be grouped together
+				const contentKey = getUrlWithoutQueryParams(task.downloadUrl);
 
 				if (!taskGroups.has(contentKey)) {
 					taskGroups.set(contentKey, []);
@@ -1688,7 +1690,8 @@ export class FilesManager implements IFilesManager {
 		const groups = new Map<string, UpdateDetection[]>();
 
 		for (const detection of detections) {
-			const key = `${detection.updateValue}|${detection.localFilePath}`;
+			// Strip query params for grouping - same content with different query params should be grouped together
+			const key = `${getUrlWithoutQueryParams(detection.updateValue)}|${detection.localFilePath}`;
 			if (!groups.has(key)) {
 				groups.set(key, []);
 			}
@@ -2457,9 +2460,10 @@ export class FilesManager implements IFilesManager {
 	): Promise<string | null> => {
 		debug('findExistingContentFile: Looking for existing content with value: %s', contentValue);
 
-		// Search for any file with this content value
+		// Search for any file with this content value (compare without query params)
+		const contentValueNoQuery = getUrlWithoutQueryParams(contentValue);
 		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
-			if (storedValue === contentValue) {
+			if (storedValue && getUrlWithoutQueryParams(storedValue) === contentValueNoQuery) {
 				debug('findExistingContentFile: Found matching file: %s', fileName);
 
 				// Use existing method to determine file path
@@ -3062,7 +3066,9 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
-	 * Read storage info from JSON file with error handling
+	 * Load storage info from JSON file
+	 * Storage info maps Location header URLs (keys) to storage metadata (storagePath, originalFileName, timestamp, fileSize)
+	 * Keys may include query params - use getUrlWithoutQueryParams for comparison
 	 */
 	private getStorageInfo = async (storageFolder: string): Promise<Record<string, any>> => {
 		const infoPath = `${storageFolder}/${FileStructure.storageInfoFileName}`;
@@ -3227,6 +3233,8 @@ export class FilesManager implements IFilesManager {
 			);
 
 			// Update storage info
+			// Key is the Location header URL (may include query params like campaign IDs)
+			// When looking up, we compare without query params to find matching content
 			const storageInfo = await this.getStorageInfo(storageFolder);
 			storageInfo[String(contentValue)] = {
 				storagePath,
@@ -3268,19 +3276,23 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Check storage info as backup (in case file was named differently)
+			// Storage info keys are Location header URLs (may include query params)
+			// Compare without query params to find content regardless of campaign/query variations
 			const storageInfo = await this.getStorageInfo(storageFolder);
-			const entry = storageInfo[String(contentValue)];
+			const contentValueNoQuery = getUrlWithoutQueryParams(contentValue);
 
-			if (entry && entry.storagePath) {
-				// Verify the file actually exists
-				if (await this.fileExists(entry.storagePath)) {
-					debug('Found in storage via info lookup: %s', entry.storagePath);
-					return entry.storagePath;
-				} else {
-					// File in metadata but not on disk - clean up metadata
-					debug('Storage info references missing file, cleaning up: %s', entry.storagePath);
-					delete storageInfo[String(contentValue)];
-					await this.saveStorageInfo(storageFolder, storageInfo);
+			for (const [storedKey, entry] of Object.entries(storageInfo)) {
+				if (getUrlWithoutQueryParams(storedKey) === contentValueNoQuery && entry.storagePath) {
+					// Verify the file actually exists
+					if (await this.fileExists(entry.storagePath)) {
+						debug('Found in storage via info lookup: %s', entry.storagePath);
+						return entry.storagePath;
+					} else {
+						// File in metadata but not on disk - clean up metadata
+						debug('Storage info references missing file, cleaning up: %s', entry.storagePath);
+						delete storageInfo[storedKey];
+						await this.saveStorageInfo(storageFolder, storageInfo);
+					}
 				}
 			}
 

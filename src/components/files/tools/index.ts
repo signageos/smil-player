@@ -59,6 +59,26 @@ export function getPath(filePath: string) {
 	return path.dirname(filePath);
 }
 
+/**
+ * Get URL without query parameters for comparison purposes.
+ * Used for deduplication and grouping to treat URLs with different query params
+ * (like campaign definitions) as the same content.
+ * @param url - The URL to strip query params from
+ * @returns URL without query parameters, or original value if not a valid URL
+ */
+export function getUrlWithoutQueryParams(url: string | number): string {
+	if (!url || typeof url !== 'string') {
+		return String(url);
+	}
+	try {
+		const parsedUrl = new URL(url);
+		return `${parsedUrl.origin}${parsedUrl.pathname}`;
+	} catch {
+		// If URL parsing fails, try simple split (handles relative URLs)
+		return url.split('?')[0];
+	}
+}
+
 export function createDownloadPath(sourceUrl: string): string {
 	return `${corsAnywhere}${createVersionedUrl(sourceUrl)}`;
 }
