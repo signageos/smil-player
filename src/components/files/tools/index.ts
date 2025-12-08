@@ -63,11 +63,14 @@ export function getPath(filePath: string) {
  * Get URL without query parameters for comparison purposes.
  * Used for deduplication and grouping to treat URLs with different query params
  * (like campaign definitions) as the same content.
- * @param url - The URL to strip query params from
+ * @param url - The URL to strip query params from (can be null)
  * @returns URL without query parameters, or original value if not a valid URL
  */
-export function getUrlWithoutQueryParams(url: string | number): string {
-	if (!url || typeof url !== 'string') {
+export function getUrlWithoutQueryParams(url: string | number | null | undefined): string {
+	if (url === null || url === undefined) {
+		return '';
+	}
+	if (typeof url !== 'string') {
 		return String(url);
 	}
 	try {
