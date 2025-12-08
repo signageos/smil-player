@@ -34,6 +34,7 @@ import {
 	processRandomPlayMode,
 	removeDigits,
 	sleep,
+	promiseWithTimeout,
 } from '../tools/generalTools';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
@@ -807,7 +808,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							!this.synchronization.movingForward &&
 							isNil(this.synchronization.syncValue)
 						) {
-							await this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`, 3000);
+							await promiseWithTimeout(
+								this.sos.sync.wait('', `${this.synchronization.syncGroupName}-prioritySync`),
+								3000,
+								'Priority sync wait timeout',
+							);
 						}
 
 						// wallclock has higher priority than conditional expression
@@ -2538,7 +2543,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 
 					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());
-					desiredSyncIndex = await this.sos.sync.wait(value.syncIndex, groupName, SYNC_WAIT_TIMEOUT);
+					desiredSyncIndex = await promiseWithTimeout(
+						this.sos.sync.wait(value.syncIndex, groupName),
+						SYNC_WAIT_TIMEOUT,
+						'Sync wait timeout',
+					);
 					debug(`[${debugId}] Finished sync wait for playing element, timestamp: %d`, Date.now());
 
 					if (value.dynamicValue && this.triggers.dynamicPlaylist[value.dynamicValue]?.isMaster) {

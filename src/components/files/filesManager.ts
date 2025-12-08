@@ -428,7 +428,8 @@ export class FilesManager implements IFilesManager {
 		const isNewVersion = isLocationStrategy
 			? currentValue !== null &&
 			stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
-			currentValue !== storedValue
+			// Compare without query params - same content with different query params should not trigger download
+			getUrlWithoutQueryParams(currentValue) !== getUrlWithoutQueryParams(storedValue)
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
 		// Check if we already have this content (for location strategy only)
@@ -1794,7 +1795,11 @@ export class FilesManager implements IFilesManager {
 		if (!value) {
 			return false;
 		}
-		return Object.values(mediaInfoObject).some((storedValue) => storedValue === value);
+		// Compare without query params - same content with different query params should be considered stored
+		const valueNoQuery = getUrlWithoutQueryParams(value);
+		return Object.values(mediaInfoObject).some(
+			(storedValue) => storedValue && getUrlWithoutQueryParams(storedValue) === valueNoQuery,
+		);
 	};
 
 	/**
@@ -2387,9 +2392,10 @@ export class FilesManager implements IFilesManager {
 
 		debug('findActualFileForMovedContent: Looking for files with value: %s', currentValue);
 
-		// Find which file has this content (by matching the value)
+		// Find which file has this content (by matching the value, compare without query params)
+		const currentValueNoQuery = getUrlWithoutQueryParams(currentValue);
 		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
-			if (storedValue === currentValue) {
+			if (storedValue && getUrlWithoutQueryParams(storedValue) === currentValueNoQuery) {
 				debug('findActualFileForMovedContent: Found matching file: %s with value: %s', fileName, storedValue);
 				const filePath = `${localFilePath}/${fileName}`;
 
@@ -2677,8 +2683,8 @@ export class FilesManager implements IFilesManager {
 			const fileName = getFileName(file.src);
 			const currentLocalValue = detection.mediaInfoObject[fileName];
 
-			// If file needs to point to different content
-			if (currentLocalValue !== detection.updateCheck.value) {
+			// If file needs to point to different content (compare without query params)
+			if (getUrlWithoutQueryParams(currentLocalValue) !== getUrlWithoutQueryParams(detection.updateCheck.value)) {
 				debug(
 					'MOVED_CONTENT detected: %s needs to update from %s to %s',
 					file.src,
@@ -3024,6 +3030,9 @@ export class FilesManager implements IFilesManager {
 			? getFileName(excludeUrlOrFileName) // It's a URL, convert to filename
 			: excludeUrlOrFileName; // It's already a filename
 
+		// Compare without query params - same content with different query params should be considered matching
+		const contentValueNoQuery = getUrlWithoutQueryParams(contentValue);
+
 		return filesList.some((f) => {
 			const fileName = getFileName(f.src);
 			if (fileName === excludeFileName) {
@@ -3034,11 +3043,13 @@ export class FilesManager implements IFilesManager {
 			if (pendingUpdates && pendingUpdates.has(fileName)) {
 				// If this file will have different content after update,
 				// check if it matches the content we're evaluating
-				return pendingUpdates.get(fileName) === contentValue;
+				const pendingValue = pendingUpdates.get(fileName);
+				return pendingValue && getUrlWithoutQueryParams(pendingValue) === contentValueNoQuery;
 			}
 
 			// Fall back to current state (for files not in this batch)
-			return mediaInfoObject[fileName] === contentValue;
+			const storedValue = mediaInfoObject[fileName];
+			return storedValue && getUrlWithoutQueryParams(storedValue) === contentValueNoQuery;
 		});
 	};
 

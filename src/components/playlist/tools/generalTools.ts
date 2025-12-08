@@ -280,6 +280,28 @@ export async function sleep(ms: number): Promise<void> {
 	clearTimeout(timeoutId);
 }
 
+export async function promiseWithTimeout<T>(
+	promise: Promise<T>,
+	timeoutMs: number,
+	errorMessage: string = 'Client-side timeout exceeded',
+): Promise<T> {
+	let timeoutId: ReturnType<typeof setTimeout>;
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(
+			() => {
+				reject(new Error(`${errorMessage}: ${timeoutMs}ms`));
+			},
+			timeoutMs,
+		);
+	});
+
+	try {
+		return await Promise.race([promise, timeoutPromise]);
+	} finally {
+		clearTimeout(timeoutId!);
+	}
+}
+
 export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
 	return Object.keys(jsonObject)
 		.sort()
