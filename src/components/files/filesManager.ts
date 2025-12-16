@@ -1642,10 +1642,14 @@ export class FilesManager implements IFilesManager {
 		// Always run migration to ensure localFilePath is set for all files
 		// This covers: temp downloads, content movements, and storage restorations
 		debug('Triggering migration from temp to standard folders');
-		await this.migrateFromTempToStandard(filesList, mediaInfoObject);
+		const failedFiles = await this.migrateFromTempToStandard(filesList, mediaInfoObject);
 
-		// Apply all collected updates to mediaInfoObject
+		// Apply collected updates to mediaInfoObject, skipping files that failed to migrate
 		for (const [fileName, value] of this.batchUpdates) {
+			if (failedFiles.has(fileName)) {
+				debug('Skipping mediaInfoObject update for failed file: %s', fileName);
+				continue;
+			}
 			const oldValue = mediaInfoObject[fileName];
 			mediaInfoObject[fileName] = value;
 			debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
@@ -1956,15 +1960,16 @@ export class FilesManager implements IFilesManager {
 	 * @param movements - Map of content movements to process
 	 * @param mediaInfoObject - Current media info for checking content values
 	 * @param filesList - List of files to check if content is still needed
-	 * @returns Number of successful copies
+	 * @returns Object with successfulCopies count and Set of file names that failed to copy
 	 */
 	private copyContentToNewLocations = async (
 		movements: Map<string, ContentMovement>,
 		mediaInfoObject: MediaInfoObject,
 		filesList: MergedDownloadList[],
-	): Promise<number> => {
+	): Promise<{ successfulCopies: number; failedFileNames: Set<string> }> => {
 		let successfulCopies = 0;
 		let failedCopies = 0;
+		const failedFileNames = new Set<string>();
 
 		debug('Starting content copy operations for %d movements', movements.size);
 
@@ -1973,6 +1978,11 @@ export class FilesManager implements IFilesManager {
 			const sourcePath = await this.determineFilePath(movement.sourceFileName);
 			if (!sourcePath) {
 				debug('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
+				// Track all destination files as failed since we can't copy without source
+				for (const destFileName of movement.destinationFileNames) {
+					failedFileNames.add(destFileName);
+					debug('Marking destination %s as failed due to missing source', destFileName);
+				}
 				continue;
 			}
 			movement.sourceFilePath = sourcePath;
@@ -2103,6 +2113,7 @@ export class FilesManager implements IFilesManager {
 					} else {
 						debug('Could not determine destination folder for %s', destFileName);
 						failedCopies++;
+						failedFileNames.add(destFileName);
 						continue;
 					}
 				}
@@ -2159,6 +2170,7 @@ export class FilesManager implements IFilesManager {
 					debug('  ✓ Successfully copied %s to %s', movement.sourceFileName, destFileName);
 				} catch (err) {
 					failedCopies++;
+					failedFileNames.add(destFileName);
 					debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
 					// Continue with other copies even if this one fails
 				}
@@ -2182,7 +2194,7 @@ export class FilesManager implements IFilesManager {
 
 		debug('Content copy operations complete. Successful: %d, Failed: %d', successfulCopies, failedCopies);
 
-		return successfulCopies;
+		return { successfulCopies, failedFileNames };
 	};
 
 	/**
@@ -2239,11 +2251,13 @@ export class FilesManager implements IFilesManager {
 	/**
 	 * Migrate files from temp folders to standard folders
 	 * Integrates content movement detection and copying logic
+	 * @returns Set of file names that failed to migrate
 	 */
 	private migrateFromTempToStandard = async (
 		filesList: MergedDownloadList[],
 		mediaInfoObject: MediaInfoObject,
-	): Promise<void> => {
+	): Promise<Set<string>> => {
+		const failedFileNames = new Set<string>();
 		debug('Starting migration process. Temp downloads: %d', this.tempDownloads.size);
 
 		// Step 1: Detect content movements (including batch updates)
@@ -2273,10 +2287,22 @@ export class FilesManager implements IFilesManager {
 		debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
 		if (contentMovements.size > 0 && hasSpace) {
 			debug('Starting copy operations for %d movements', contentMovements.size);
-			const successfulCopies = await this.copyContentToNewLocations(contentMovements, mediaInfoObject, filesList);
-			debug('Content copy phase complete. Successful copies: %d', successfulCopies);
+			const copyResult = await this.copyContentToNewLocations(contentMovements, mediaInfoObject, filesList);
+			for (const fileName of copyResult.failedFileNames) {
+				failedFileNames.add(fileName);
+			}
+			debug('Content copy phase complete. Successful: %d, Failed: %d', copyResult.successfulCopies, copyResult.failedFileNames.size);
+		} else if (contentMovements.size > 0 && !hasSpace) {
+			// No space available - mark all destination files as failed
+			debug('No space for content copies - marking all destinations as failed');
+			for (const movement of contentMovements.values()) {
+				for (const destFileName of movement.destinationFileNames) {
+					failedFileNames.add(destFileName);
+					debug('Marking destination %s as failed due to insufficient space', destFileName);
+				}
+			}
 		} else {
-			debug('No content copies needed (movements: %d, hasSpace: %s)', contentMovements.size, hasSpace);
+			debug('No content copies needed (movements: %d)', contentMovements.size);
 		}
 
 		// Step 4: Process temp downloads if any
@@ -2315,6 +2341,7 @@ export class FilesManager implements IFilesManager {
 
 					debug('Successfully migrated: %s', fileName);
 				} catch (err) {
+					failedFileNames.add(fileName);
 					debug('Error migrating file %s: %O', fileName, err);
 					// Continue with other files even if one fails
 				}
@@ -2377,7 +2404,8 @@ export class FilesManager implements IFilesManager {
 			this.clearTempDownloads();
 		}
 
-		debug('Migration process completed');
+		debug('Migration process completed. Failed migrations: %d', failedFileNames.size);
+		return failedFileNames;
 	};
 
 	private findActualFileForMovedContent = async (
