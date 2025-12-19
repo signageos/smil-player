@@ -17,6 +17,7 @@ import {
 	createSourceReportObject,
 	debug,
 	getFileName,
+	getReportUrlFromUpdateValue,
 	getUrlWithoutQueryParams,
 	isWidgetUrl,
 	mapFileType,
@@ -1008,6 +1009,7 @@ export class FilesManager implements IFilesManager {
 									task.file,
 									taskStartDate,
 									task.statusCode,
+									getReportUrlFromUpdateValue(task.updateValue),
 								);
 							} catch (err) {
 								debug(`Unexpected error: %O during downloading file: %s`, err, task.file.src);
@@ -1098,6 +1100,7 @@ export class FilesManager implements IFilesManager {
 									primaryTask.file,
 									taskStartDate,
 									primaryTask.statusCode,
+									getReportUrlFromUpdateValue(primaryTask.updateValue),
 								);
 
 								// Step 5: Copy the primary file for all other tasks in this group
@@ -1337,6 +1340,7 @@ export class FilesManager implements IFilesManager {
 										file,
 										taskStartDate,
 										statusCode,
+										getReportUrlFromUpdateValue(updateValue),
 									);
 								} catch (err) {
 									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);

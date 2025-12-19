@@ -21,6 +21,16 @@ import moment from 'moment';
 
 export const debug = Debug('@signageos/smil-player:filesManager');
 
+const isUrl = require('is-url-superb');
+
+/**
+ * Extracts a valid URL string from updateValue, returns undefined if not a valid URL.
+ * Used for passing explicit reportUrl to sendDownloadReport.
+ */
+export function getReportUrlFromUpdateValue(updateValue: string | number | undefined): string | undefined {
+	return typeof updateValue === 'string' && isUrl(updateValue) ? updateValue : undefined;
+}
+
 export function getRandomInt(max: number) {
 	return Math.floor(Math.random() * Math.floor(max));
 }
