@@ -62,7 +62,7 @@ import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
-import { createLocalFilePath, createSourceReportObject, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
+import { createLocalFilePath, createSourceReportObject, getFileName, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
 import { isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -2178,6 +2178,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) => {
 		const debugId = `playElement_${version}_${key}_${Date.now()}`;
 		debug(`[${debugId}] Starting to play element: %O`, value);
+
+		// Capture useInReportUrl at playback START to ensure report matches content being played
+		// This must be done BEFORE any content update can occur during playback
+		if ('src' in value) {
+			const fileName = getFileName(value.src);
+			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([value as MergedDownloadList]);
+			if (mediaInfoObject[fileName]) {
+				value.useInReportUrl = String(mediaInfoObject[fileName]);
+				debug(`[${debugId}] Set useInReportUrl at playback start: %s`, value.useInReportUrl);
+			}
+		}
 
 		// html page case
 		if ('localFilePath' in value && removeDigits(key) === 'ref' && !isWidgetUrl(value.src)) {
