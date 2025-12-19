@@ -233,15 +233,18 @@ export class FilesManager implements IFilesManager {
 		value: MergedDownloadList,
 		taskStartDate: Date,
 		statusCode: number = 200,
+		reportUrl?: string,
 	) => {
+		// For SMIL files, always use value.src. For media files, use explicit reportUrl or fall back to value.src
+		const urlForReport = fileType === 'smil' ? value.src : (reportUrl || value.src);
+
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
 			// to create difference between download and media played
 			value.popName = fileType === 'smil' ? 'playlist-download' : 'media-download';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
-				const reportUrl = fileType === 'smil' ? value.src : value.useInReportUrl;
 				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl, statusCode),
+					createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
 				);
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value));
@@ -254,7 +257,7 @@ export class FilesManager implements IFilesManager {
 				itemType: fileType,
 				source: createSourceReportObject(
 					localFilePath,
-					value.useInReportUrl || value.src,
+					urlForReport,
 					this.internalStorageUnit.type,
 				),
 				startedAt: taskStartDate,
