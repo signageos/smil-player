@@ -1925,8 +1925,7 @@ export class FilesManager implements IFilesManager {
 			const newValue = mergedMediaInfo[destFileName]; // What content this URL will have
 
 			// Skip if no change or no new value
-			// Compare base URLs - if only query params changed, content is the same (no copy needed)
-			if (!newValue || getUrlWithoutQueryParams(currentValue) === getUrlWithoutQueryParams(newValue)) {
+			if (currentValue === newValue || !newValue) {
 				continue;
 			}
 
