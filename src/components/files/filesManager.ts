@@ -583,15 +583,17 @@ export class FilesManager implements IFilesManager {
 			);
 
 			// Phase 2: Detect duplicates based on location URL
+			// Use base URL without query params to group - same content may have different campaign IDs
 			const locationGroups = new Map<string, Array<{ file: MergedDownloadList; fileName: string }>>();
 
 			for (const result of validResults) {
 				const locationUrl = String(result.updateCheck.value);
+				const locationUrlNoQuery = getUrlWithoutQueryParams(locationUrl);
 
-				if (!locationGroups.has(locationUrl)) {
-					locationGroups.set(locationUrl, []);
+				if (!locationGroups.has(locationUrlNoQuery)) {
+					locationGroups.set(locationUrlNoQuery, []);
 				}
-				locationGroups.get(locationUrl)!.push({
+				locationGroups.get(locationUrlNoQuery)!.push({
 					file: result.file,
 					fileName: result.fileName,
 				});
@@ -1908,7 +1910,8 @@ export class FilesManager implements IFilesManager {
 			const newValue = mergedMediaInfo[destFileName]; // What content this URL will have
 
 			// Skip if no change or no new value
-			if (currentValue === newValue || !newValue) {
+			// Compare base URLs - if only query params changed, content is the same (no copy needed)
+			if (!newValue || getUrlWithoutQueryParams(currentValue) === getUrlWithoutQueryParams(newValue)) {
 				continue;
 			}
 
