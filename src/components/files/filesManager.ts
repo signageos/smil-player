@@ -228,7 +228,7 @@ export class FilesManager implements IFilesManager {
 			// to create difference between download and media played
 			value.popName = fileType === 'smil' ? 'playlist-download' : 'media-download';
 			if (this.smilLogging.endpoint) {
-				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
 				await this.sendCustomEndpointReport(
 					createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
 				);
@@ -1916,13 +1916,15 @@ export class FilesManager implements IFilesManager {
 
 			// Find where this new content currently exists
 			// Simple approach: whoever has it now is the source
+			// Compare without query params - same content may have different campaign/media IDs
+			const newValueNoQuery = getUrlWithoutQueryParams(newValue);
 			for (const [sourceFileName, sourceValue] of Object.entries(currentMediaInfo)) {
-				if (sourceValue === newValue && sourceFileName !== destFileName) {
+				if (sourceValue && getUrlWithoutQueryParams(sourceValue) === newValueNoQuery && sourceFileName !== destFileName) {
 					// Found: content is moving FROM sourceFileName TO destFileName
 					debug('Content %s is moving from %s to %s', newValue, sourceFileName, destFileName);
 
-					// Track this movement
-					const contentKey = String(newValue);
+					// Track this movement - use base URL without query params as key to group movements
+					const contentKey = newValueNoQuery;
 					if (!movements.has(contentKey)) {
 						movements.set(contentKey, {
 							sourceFileName,
