@@ -2324,9 +2324,9 @@ export class FilesManager implements IFilesManager {
 					.replace(FileStructure.widgetsTmp, FileStructure.widgets);
 
 				try {
-					// Move file from temp to standard (will overwrite if exists)
-					debug('Moving file from %s to %s', tempPath, standardPath);
-					await this.sos.fileSystem.moveFile(
+					// Copy file from temp to standard location
+					debug('Copying file from %s to %s', tempPath, standardPath);
+					await this.sos.fileSystem.copyFile(
 						{
 							storageUnit: this.internalStorageUnit,
 							filePath: tempPath,
@@ -2338,6 +2338,15 @@ export class FilesManager implements IFilesManager {
 						{
 							overwrite: true,
 						},
+					);
+
+					// Delete temp file only after successful copy
+					await this.sos.fileSystem.deleteFile(
+						{
+							storageUnit: this.internalStorageUnit,
+							filePath: tempPath,
+						},
+						true,
 					);
 
 					debug('Successfully migrated: %s', fileName);
