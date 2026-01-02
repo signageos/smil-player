@@ -47,6 +47,7 @@ export interface IFilesManager {
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
 		internalStorageUnit: IStorageUnit,
 		fileStructure: string,
+		suffix?: string,
 	) => Promise<IFile | null>;
 	shouldUpdateLocalFile: (
 		localFilePath: string,

@@ -9,7 +9,7 @@ import { computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } 
 import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
-import { convertRelativePathToAbsolute, getFileName, getProtocol } from '../../files/tools';
+import { convertRelativePathToAbsolute, getProtocol } from '../../files/tools';
 import { createTickerElement } from '../tools/tickerTools';
 import { createDomElement } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
@@ -119,10 +119,12 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
-					const mediaFile = (await this.sos.fileSystem.getFile({
-						storageUnit: internalStorageUnit,
-						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
-					})) as IVideoFile;
+					const mediaFile = (await this.files.getFileDetails(
+						elem,
+						internalStorageUnit,
+						fileStructure,
+						widgetRootFile,
+					)) as IVideoFile;
 					// in case of web page as widget, leave localFilePath blank
 					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
