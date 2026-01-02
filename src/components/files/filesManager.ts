@@ -6,7 +6,7 @@ const isUrl = require('is-url-superb');
 import moment from 'moment';
 import path from 'path';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	convertRelativePathToAbsolute,
 	createCustomEndpointMessagePayload,
@@ -331,11 +331,19 @@ export class FilesManager implements IFilesManager {
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
 		internalStorageUnit: IStorageUnit,
 		fileStructure: string,
+		suffix: string = '',
 	) => {
 		debug(`Getting file details for file: %O`, media);
 		return this.sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
-			filePath: `${fileStructure}/${getFileName(media.src)}`,
+			filePath: `${fileStructure}/${getFileName(media.src)}${suffix}`,
+		});
+	};
+
+	private getFileByPath = async (filePath: string): Promise<IFile | null> => {
+		return this.sos.fileSystem.getFile({
+			storageUnit: this.internalStorageUnit,
+			filePath,
 		});
 	};
 
@@ -1997,10 +2005,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			try {
-				const fileInfo = await this.sos.fileSystem.getFile({
-					storageUnit: this.internalStorageUnit,
-					filePath: movement.sourceFilePath,
-				});
+				const fileInfo = await this.getFileByPath(movement.sourceFilePath);
 				if (fileInfo?.sizeBytes) {
 					// Space needed = file size * number of destinations + temp copies
 					estimatedSpace += fileInfo.sizeBytes * (movement.destinationFileNames.size + 1);
@@ -2378,10 +2383,7 @@ export class FilesManager implements IFilesManager {
 
 				if (actualPath) {
 					try {
-						const fileDetails = await this.sos.fileSystem.getFile({
-							storageUnit: this.internalStorageUnit,
-							filePath: actualPath,
-						});
+						const fileDetails = await this.getFileByPath(actualPath);
 						if (fileDetails) {
 							const oldPath = file.localFilePath;
 							const newPath = fileDetails.localUri;
@@ -2438,10 +2440,7 @@ export class FilesManager implements IFilesManager {
 				const filePath = `${localFilePath}/${fileName}`;
 
 				// Get the file details to get localUri
-				const fileDetails = await this.sos.fileSystem.getFile({
-					storageUnit: this.internalStorageUnit,
-					filePath: filePath,
-				});
+				const fileDetails = await this.getFileByPath(filePath);
 
 				if (fileDetails) {
 					debug(
@@ -3228,10 +3227,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Check available space before moving file
-			const fileStats = await this.sos.fileSystem.getFile({
-				storageUnit: this.internalStorageUnit,
-				filePath,
-			});
+			const fileStats = await this.getFileByPath(filePath);
 
 			// Check if file exists
 			if (!fileStats) {
@@ -3368,10 +3364,7 @@ export class FilesManager implements IFilesManager {
 	): Promise<string | null> => {
 		try {
 			// Verify the storage file exists before attempting restoration
-			const fileStats = await this.sos.fileSystem.getFile({
-				storageUnit: this.internalStorageUnit,
-				filePath: storagePath,
-			});
+			const fileStats = await this.getFileByPath(storagePath);
 
 			// Check if file exists
 			if (!fileStats) {

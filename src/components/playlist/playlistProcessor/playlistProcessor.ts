@@ -8,7 +8,7 @@ import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
 import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
-import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/filesModels';
@@ -1965,6 +1965,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		try {
+			debug(`[${debugId}] Getting media file details for: %s`, videoPath);
+
+			const mediaFile = await this.files.getFileDetails(video, this.internalStorageUnit, FileStructure.videos)
+
+			debug(`[${debugId}] media file details: %O`, mediaFile);
+
 			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
 			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			debug(`[${debugId}] After## video play function - single video: %O`, video);
@@ -2069,11 +2075,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	private setupIntroVideo = async (video: SMILVideo, region: RegionsObject) => {
-		const currentVideoDetails = <IFile>(
+		const currentVideoDetails =
 			await this.files.getFileDetails(video, this.internalStorageUnit, FileStructure.videos)
-		);
+
 		video.regionInfo = getRegionInfo(region, video.region);
-		video.localFilePath = currentVideoDetails.localUri;
+		video.localFilePath = currentVideoDetails ? currentVideoDetails.localUri : '';
 		debug('Setting-up intro video: %O', video);
 		await this.sos.video.prepare(
 			video.localFilePath,
@@ -2087,11 +2093,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	private setupIntroImage = async (image: SMILImage, region: RegionsObject, key: string): Promise<HTMLElement> => {
-		const currentImageDetails = <IFile>(
-			await this.files.getFileDetails(image, this.internalStorageUnit, FileStructure.images)
-		);
+		const currentImageDetails =
+			await this.files.getFileDetails(image, this.internalStorageUnit, FileStructure.images);
 		image.regionInfo = getRegionInfo(region, image.region);
-		image.localFilePath = currentImageDetails.localUri;
+		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		debug('Setting-up intro image: %O', image);
 		const element: HTMLElement = createHtmlElement(
 			image,
