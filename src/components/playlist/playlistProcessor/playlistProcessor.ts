@@ -1965,12 +1965,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		try {
-			debug(`[${debugId}] Getting media file details for: %s`, videoPath);
-
-			const mediaFile = await this.files.getFileDetails(video, this.internalStorageUnit, FileStructure.videos)
-
-			debug(`[${debugId}] media file details: %O`, mediaFile);
-
 			debug(`[${debugId}] Calling## video play function - single video: %O`, video);
 			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			debug(`[${debugId}] After## video play function - single video: %O`, video);
