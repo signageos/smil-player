@@ -32,7 +32,7 @@ export class SmilPlayer implements ISmilPlayer {
 	private playlist: SmilPlayerPlaylist;
 	private processor: PlaylistProcessor;
 	private dataPrepare: PlaylistDataPrepare;
-	private isPollingForPlaylist: boolean = false;
+	private isPollingForPlaylist = false;
 
 	constructor(smilUrl?: string) {
 		this.smilUrl = smilUrl;
@@ -180,7 +180,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 		debug('Starting to play backup image');
 		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-		const regionInfo = <SMILFileObject> getDefaultRegion();
+		const regionInfo = <SMILFileObject>getDefaultRegion();
 
 		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
 		if (isNil(sos.config.backupImageUrl)) {
@@ -392,24 +392,7 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
-				// pick correct image based on orientation
-				const orientedBackupImage =
-					document.documentElement.clientWidth >= document.documentElement.clientHeight
-						? backupImageLandscape
-						: backupImagePortrait;
-				const backupImageUrl = !isNil(sos.config.backupImageUrl)
-					? sos.config.backupImageUrl
-					: orientedBackupImage;
-
-				debug('Starting to play backup image');
-				const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
-				const regionInfo = <SMILFileObject> getDefaultRegion();
-
-				await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
-				if (isNil(sos.config.backupImageUrl)) {
-					backupPlaylist.seq.img.localFilePath = backupImageUrl;
-				}
-				await this.processor.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
+				await this.playBackupImage(internalStorageUnit, smilUrl);
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}
@@ -426,12 +409,18 @@ export class SmilPlayer implements ISmilPlayer {
 			return;
 		}
 
-		const intervalId = setInterval(async () => {
-			const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true, true);
-			if (response !== smilUpdate.invalid) {
-				console.debug('Found valid smil file, exiting invalid smil loop');
-				clearInterval(intervalId);
-			}
-		},                             interval);
+		this.isPollingForPlaylist = true;
+
+		return new Promise<void>((resolve) => {
+			const intervalId = setInterval(async () => {
+				const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true);
+				if (response !== smilUpdate.invalid) {
+					console.debug('Found valid smil file, exiting invalid smil loop');
+					this.isPollingForPlaylist = false;
+					clearInterval(intervalId);
+					resolve();
+				}
+			}, interval);
+		});
 	}
 }
