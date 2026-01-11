@@ -17,6 +17,7 @@ import {
 	createSourceReportObject,
 	debug,
 	getFileName,
+	getStorageFileName,
 	getReportUrlFromUpdateValue,
 	getUrlWithoutQueryParams,
 	isWidgetUrl,
@@ -3255,9 +3256,9 @@ export class FilesManager implements IFilesManager {
 			// Ensure we have space in storage (max 20 files)
 			await this.ensureStorageSpace(storageFolder);
 
-			// Generate storage filename based on content value
-			// For location strategy, contentValue is the location URL
-			const storageFileName = getFileName(String(contentValue));
+			// Generate storage filename based on content value (without query params in hash)
+			// This ensures same content with different query params gets same filename
+			const storageFileName = getStorageFileName(String(contentValue));
 			const storagePath = `${storageFolder}/${storageFileName}`;
 
 			debug('Preserving file to storage: %s -> %s (content: %s)', filePath, storagePath, contentValue);
@@ -3309,7 +3310,8 @@ export class FilesManager implements IFilesManager {
 	): Promise<string | null> => {
 		try {
 			const storageFolder = this.getStorageFolder(mediaType);
-			const expectedFileName = getFileName(String(contentValue));
+			// Use storage-specific filename (without query params in hash)
+			const expectedFileName = getStorageFileName(String(contentValue));
 			const expectedPath = `${storageFolder}/${expectedFileName}`;
 
 			debug('Checking storage for content: %s in %s', contentValue, expectedPath);
