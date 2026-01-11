@@ -65,6 +65,31 @@ export function getFileName(url: string) {
 	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
 }
 
+/**
+ * Generate filename for storage folder - hash based on host + pathname only (no query params).
+ * This ensures same content with different query params (e.g., campaign IDs) gets same filename.
+ * Different hosts still get different filenames.
+ */
+export function getStorageFileName(url: string) {
+	if (!url) {
+		return url;
+	}
+	const parsedUrl = URLVar.parse(url);
+	// Hash based on host + pathname only - NO query params
+	const filePathChecksum = parsedUrl.host
+		? `_${checksumString(parsedUrl.host + parsedUrl.pathname, 8)}`
+		: '';
+	const fileName = path.basename(parsedUrl.pathname ?? url);
+	const sanitizedExtname = path
+		.extname(parsedUrl.pathname ?? url)
+		.replace(/[^\w\.\-]+/gi, '')
+		.substr(0, 10);
+	const sanitizedFileName = decodeURIComponent(fileName.substr(0, fileName.length - sanitizedExtname.length))
+		.replace(/[^\w\.\-]+/gi, '-')
+		.substr(0, 10);
+	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
+}
+
 export function getPath(filePath: string) {
 	return path.dirname(filePath);
 }
