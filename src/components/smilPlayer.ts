@@ -290,9 +290,9 @@ export class SmilPlayer implements ISmilPlayer {
 					// download intro file before anything else
 					const introMedia = await this.processor.downloadIntro();
 
-					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
-
 					introPromises.concat(await this.processor.playIntro(introMedia));
+
+					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
 
 					introPromises.push(
 						(async () => {
