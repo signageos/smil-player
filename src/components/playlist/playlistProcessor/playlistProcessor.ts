@@ -1089,6 +1089,58 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return false;
 	};
 
+	/**
+	 * Processes a playlist version update - cancels old content and updates version tracking.
+	 * Called BEFORE waiting for old promises to prevent V2 from getting stuck waiting for V1.
+	 * This fixes a race condition where the new playlist would wait for old content's promises
+	 * before reaching the version update code, causing the update to never happen.
+	 * @param version - The new version that's starting
+	 * @returns true if an update was processed, false otherwise
+	 */
+	private processVersionUpdate = async (version: number): Promise<boolean> => {
+		// Check if this is a version update: checkFilesLoop is false (update pending) and version is newer
+		if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
+			debug(
+				'Processing version update from shouldWaitAndContinue: version: %s, playlistVersion: %s',
+				version,
+				this.getPlaylistVersion(),
+			);
+
+			// Update playlist version
+			this.setPlaylistVersion(version);
+
+			// Set cancel function for old version
+			if (this.getPlaylistVersion() > 0) {
+				debug('setting up cancel function for index %s', this.getPlaylistVersion() - 1);
+				this.setCancelFunction(true, this.getPlaylistVersion() - 1);
+			}
+
+			// Reset checkFilesLoop to indicate update was processed
+			this.setCheckFilesLoop(true);
+
+			// Reset foundNewPlaylist flag
+			this.foundNewPlaylist = false;
+
+			// Stop all currently playing content
+			await this.stopAllContent();
+
+			// Clear old promises for ALL regions since we just cancelled everything
+			for (const region in this.promiseAwaiting) {
+				if (this.promiseAwaiting[region]?.promiseFunction) {
+					debug('Clearing old promises for region %s after version update', region);
+					this.promiseAwaiting[region].promiseFunction = [];
+					// Reset priority tracking for clean state
+					if ((this.promiseAwaiting[region] as any).highestProcessingPriority !== undefined) {
+						(this.promiseAwaiting[region] as any).highestProcessingPriority = -1;
+					}
+				}
+			}
+
+			return true;
+		}
+		return false;
+	};
+
 	private checkRegionsForCancellation = async (
 		element: SMILVideo | SosHtmlElement,
 		regionInfo: RegionAttributes,
@@ -1106,9 +1158,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await this.stopAllContent(false);
 		}
 		// newer playlist starts its playback, cancel older one
+		// NOTE: This is a fallback path - version updates are now primarily handled in processVersionUpdate()
+		// called from shouldWaitAndContinue() BEFORE waiting for old promises
 		if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
 			debug(
-				'cancelling older playlist from newer updated playlist: version: %s, playlistVersion: %s',
+				'cancelling older playlist from checkRegionsForCancellation (fallback): version: %s, playlistVersion: %s',
 				version,
 				this.getPlaylistVersion(),
 			);
@@ -1562,20 +1616,38 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.foundNewPlaylist = true;
 			}
 			if (this.promiseAwaiting[regionInfo.regionName]) {
-				debug(
-					`[${debugId}] waiting for previous promise in current region: %s, %O, with timestamp : %s`,
-					regionInfo.regionName,
-					media,
-					Date.now(),
-				);
-				debug(`[${debugId}]`, this.promiseAwaiting[regionInfo.regionName]);
-				await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
-				debug(
-					`[${debugId}] waiting for previous promise in current region finished: %s, %O with timestamp: %s`,
-					regionInfo.regionName,
-					media,
-					Date.now(),
-				);
+				// Check for version update BEFORE waiting for old promises
+				// This fixes race condition where V2 gets stuck waiting for V1's content
+				const versionUpdateProcessed = await this.processVersionUpdate(version);
+
+				if (versionUpdateProcessed) {
+					debug(
+						`[${debugId}] Version update processed, skipping wait for old promises in region: %s`,
+						regionInfo.regionName,
+					);
+					// Continue without waiting - old promises were just cancelled
+				} else {
+					// Re-check after async call and use local variable for type safety
+					const promiseAwaitingRegion = this.promiseAwaiting[regionInfo.regionName];
+					const promisesToWait = promiseAwaitingRegion?.promiseFunction;
+					if (promisesToWait && promisesToWait.length > 0) {
+						// No version update - proceed with normal promise waiting
+						debug(
+							`[${debugId}] waiting for previous promise in current region: %s, %O, with timestamp : %s`,
+							regionInfo.regionName,
+							media,
+							Date.now(),
+						);
+						debug(`[${debugId}]`, promiseAwaitingRegion);
+						await Promise.all(promisesToWait);
+						debug(
+							`[${debugId}] waiting for previous promise in current region finished: %s, %O with timestamp: %s`,
+							regionInfo.regionName,
+							media,
+							Date.now(),
+						);
+					}
+				}
 				// Note: Priority tracking cleanup will happen after coordination below
 			}
 		}
