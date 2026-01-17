@@ -61,6 +61,31 @@ be sent as an array in the report.
      popTags="tag1,tag2,tag3"/>
 ```
 
+## URL Redirect Handling
+
+When content URLs redirect (e.g., through a CDN or load balancer), the SMIL player automatically captures the final URL after all redirects. This final URL is used in all proof-of-play reports.
+
+### How It Works
+
+1. When checking for updates, the player sends a HEAD request to the content URL
+2. If the server responds with a redirect (Location header) or the response URL differs from the request URL, the player captures the final URL
+3. This final URL is included in all PoP reports for that content
+
+### Benefits
+
+- **Accurate Reporting**: Reports reflect the actual URL where content was served from
+- **CDN Tracking**: Track which CDN edge served the content
+- **Dynamic Content**: Handle URLs that redirect based on device location or other factors
+
+### Example
+
+If your SMIL contains:
+```xml
+<video src="https://content.example.com/video.mp4" popName="promo" .../>
+```
+
+And the CDN redirects to `https://cdn-edge-1.example.com/video.mp4`, the PoP report will include the final CDN URL in the tags array, giving you visibility into actual content delivery paths.
+
 ## Logged events
 
 - Each media playback, successful or unsuccessful
