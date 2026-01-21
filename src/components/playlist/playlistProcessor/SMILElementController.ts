@@ -429,8 +429,8 @@ export class SMILElementController {
 				}
 			}
 
-			// Master sends ready signal
-			await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
+			// Master sends ready signal for PREPARE phase
+			await this.broadcastSyncMessage('signal-ready-prepared', regionName, syncIndex, syncGroup);
 		} else {
 			// Slave always sends ACK to not block master
 			// If in resync mode, send ACK for master's position instead
@@ -463,18 +463,18 @@ export class SMILElementController {
 				}
 			}
 
-			// Wait for signal-ready from master
-			const waitMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d';
+			// Wait for signal-ready-prepared from master
+			const waitMsg = 'Slave waiting for signal-ready-prepared from master for region=%s, syncIndex=%d';
 			if (timedDebug) {
 				timedDebug.log(waitMsg, regionName, syncIndex);
 			} else {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-prepared', timedDebug);
 			if (!receivedSignal) {
 				// Timeout occurred - trigger resync
-				console.log(`[SYNC] Signal-ready timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+				console.log(`[SYNC] Signal-ready-prepared timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
 				this.synchronization.syncingInAction = true;
 
 				// Get master's last known position
@@ -667,10 +667,11 @@ export class SMILElementController {
 						debug(ackResultMsg, ackKey);
 					}
 
-					// After receiving ACKs, broadcast signal-ready
+					// After receiving ACKs, broadcast phase-specific signal-ready
 					if (acksReceived || expectedAcks === 0) {
-						await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
-						const readyMsg = 'Master sent signal-ready for region=%s, syncIndex=%d, state=%s';
+						const signalType = state === 'prepared' ? 'signal-ready-prepared' : 'signal-ready-playing';
+						await this.broadcastSyncMessage(signalType, regionName, syncIndex, syncGroup);
+						const readyMsg = `Master sent ${signalType} for region=%s, syncIndex=%d, state=%s`;
 						if (timedDebug) {
 							timedDebug.log(readyMsg, regionName, syncIndex, state);
 						} else {
@@ -683,8 +684,9 @@ export class SMILElementController {
 				}
 			} else if (expectedAcks === 0) {
 				// No slaves, still send signal-ready for consistency
-				await this.broadcastSyncMessage('signal-ready', regionName, syncIndex, syncGroup);
-				debug('[%s] Master sent signal-ready (no slaves) for region=%s, syncIndex=%d, state=%s', getTimestamp(), regionName, syncIndex, state);
+				const signalType = state === 'prepared' ? 'signal-ready-prepared' : 'signal-ready-playing';
+				await this.broadcastSyncMessage(signalType, regionName, syncIndex, syncGroup);
+				debug('[%s] Master sent %s (no slaves) for region=%s, syncIndex=%d, state=%s', getTimestamp(), signalType, regionName, syncIndex, state);
 			}
 
 			return true; // Master always continues
@@ -724,15 +726,16 @@ export class SMILElementController {
 				await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
 				debug('[%s] Slave sent %s for region=%s, syncIndex=%d', getTimestamp(), ackType, regionName, syncIndex);
 
-				// Wait for signal-ready from master before proceeding
-				const waitReadyMsg = 'Slave waiting for signal-ready from master for region=%s, syncIndex=%d, state=%s';
+				// Wait for phase-specific signal-ready from master before proceeding
+				const signalType = state === 'prepared' ? 'signal-ready-prepared' : 'signal-ready-playing';
+				const waitReadyMsg = `Slave waiting for ${signalType} from master for region=%s, syncIndex=%d, state=%s`;
 				if (timedDebug) {
 					timedDebug.log(waitReadyMsg, regionName, syncIndex, state);
 				} else {
 					debug(waitReadyMsg, regionName, syncIndex, state);
 				}
 
-				const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, timedDebug);
+				const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, signalType, timedDebug);
 
 				if (!receivedSignal) {
 					// Timeout occurred - trigger resync
@@ -1339,25 +1342,27 @@ export class SMILElementController {
 
 	/**
 	 * Wait for signal-ready message from master (slaves only)
+	 * @param signalType The specific signal type to wait for ('signal-ready-prepared' or 'signal-ready-playing')
 	 */
 	private async waitForSignalReady(
 		regionName: string,
 		syncIndex: number,
 		syncGroup: any,
+		signalType: 'signal-ready-prepared' | 'signal-ready-playing',
 		timedDebug?: TimedDebugger,
 	): Promise<boolean> {
 		// Check for stored message first
-		const storedMsg = syncGroup.getSyncCoordinationMessage('signal-ready', regionName);
+		const storedMsg = syncGroup.getSyncCoordinationMessage(signalType, regionName);
 		if (storedMsg && storedMsg.syncIndex === syncIndex) {
 			const age = Date.now() - storedMsg.timestamp;
-			const msg = 'Found stored signal-ready for region=%s, syncIndex=%d, age=%dms';
+			const msg = `Found stored ${signalType} for region=%s, syncIndex=%d, age=%dms`;
 			if (timedDebug) {
 				timedDebug.log(msg, regionName, syncIndex, age);
 			} else {
 				debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex, age);
 			}
 			// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
-			syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
+			syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 			return true; // Continue immediately - signal received
 		}
 
@@ -1382,7 +1387,7 @@ export class SMILElementController {
 				if (resolved) {
 					return;
 				}
-				const timeoutMsg = `Timeout waiting for signal-ready from master for region=${regionName}, syncIndex=${syncIndex}`;
+				const timeoutMsg = `Timeout waiting for ${signalType} from master for region=${regionName}, syncIndex=${syncIndex}`;
 				if (timedDebug) {
 					timedDebug.log(timeoutMsg);
 				} else {
@@ -1403,18 +1408,18 @@ export class SMILElementController {
 					const message = value as SyncMessage;
 					// Check if this is the signal-ready we're waiting for
 					if (
-						message.type === 'signal-ready' &&
+						message.type === signalType &&
 						message.regionName === regionName &&
 						message.syncIndex === syncIndex
 					) {
-						const msg = `Received signal-ready for region=${regionName}, syncIndex=${syncIndex}`;
+						const msg = `Received ${signalType} for region=${regionName}, syncIndex=${syncIndex}`;
 						if (timedDebug) {
 							timedDebug.log(msg);
 						} else {
 							debug('[%s] ' + msg, getTimestamp());
 						}
 						// Clear consumed message
-						syncGroup.clearSyncCoordinationMessage('signal-ready', regionName);
+						syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 						cleanup();
 						resolve(true);
 					}
