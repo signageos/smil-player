@@ -1124,6 +1124,26 @@ export class SMILElementController {
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
 				}, 600000); // 10 minutes
+			} else {
+				// Safety timeout for network failure edge case - 5 minutes
+				// If network/server goes down, slave shouldn't wait forever for cmd-prepare/cmd-play
+				timeoutId = setTimeout(() => {
+					if (resolved) {
+						return;
+					}
+					console.log(`[SYNC] Timeout waiting for ${commandType} at syncIndex=${syncIndex} - triggering resync`);
+					this.synchronization.syncingInAction = true;
+					if (!this.synchronization.resyncTargets) {
+						this.synchronization.resyncTargets = {};
+					}
+					if (expectedState === 'prepared') {
+						this.synchronization.resyncTargets.prepare = syncIndex + 1;
+					} else {
+						this.synchronization.resyncTargets.play = syncIndex + 1;
+					}
+					cleanup();
+					resolve(ProcessAction.RESYNC);
+				}, 300000); // 5 minutes
 			}
 
 			// Monitor master changes - if slave becomes master, continue immediately
