@@ -560,6 +560,122 @@ export class SMILElementController {
 		}
 	}
 
+	/**
+	 * Coordinate the completion of play coordination (before actual playback starts)
+	 * Slaves send ack-playing, master waits for all ACKs, then signals ready
+	 */
+	public async coordinatePlayComplete(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return; // No sync needed
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('[%s] No sync group for play complete: region=%s', getTimestamp(), regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master waits for ACKs
+			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
+			if (expectedAcks > 0) {
+				const ackKey = `${regionName}-${syncIndex}-ack-playing`;
+				const msg = 'Master waiting for %d playing ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(msg, expectedAcks, ackKey);
+				} else {
+					debug(msg, expectedAcks, ackKey);
+				}
+
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const resultMsg = acksReceived
+					? 'Master received all playing ACKs for %s'
+					: 'Master timeout waiting for playing ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(resultMsg, ackKey);
+				} else {
+					debug(resultMsg, ackKey);
+				}
+			}
+
+			// Master sends ready signal for PLAY phase
+			await this.broadcastSyncMessage('signal-ready-playing', regionName, syncIndex, syncGroup);
+		} else {
+			// Slave always sends ACK to not block master
+			// If in resync mode, send ACK for master's position instead
+			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
+				// Get master's current position and send ACK for that
+				const masterPos = this.getPositions(regionName, 'playing', syncGroup).master;
+				if (masterPos > 0) {
+					await this.sendAckForPosition(regionName, masterPos, 'playing', syncGroup);
+					const msg = 'Slave in resync mode - sent ack-playing for master position=%d instead of %d';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos, syncIndex);
+					} else {
+						debug(msg, masterPos, syncIndex);
+					}
+				} else {
+					// No master position known yet, send normal ACK
+					await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+					debug('[%s] Slave in resync but no master position known - sent normal ack-playing', getTimestamp());
+				}
+				// Don't wait for signal-ready during resync - continue skipping elements
+				return;
+			} else {
+				// Normal case - send ACK for current position
+				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+				const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex);
+				} else {
+					debug(msg, regionName, syncIndex);
+				}
+			}
+
+			// Wait for signal-ready-playing from master
+			const waitMsg = 'Slave waiting for signal-ready-playing from master for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(waitMsg, regionName, syncIndex);
+			} else {
+				debug(waitMsg, regionName, syncIndex);
+			}
+
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-playing', timedDebug);
+			if (!receivedSignal) {
+				// Timeout occurred - trigger resync
+				console.log(`[SYNC] Signal-ready-playing timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+				this.synchronization.syncingInAction = true;
+
+				// Get master's last known position
+				const masterPos = this.getPositions(regionName, 'playing', syncGroup).master;
+				if (masterPos > syncIndex) {
+					if (!this.synchronization.resyncTargets) {
+						this.synchronization.resyncTargets = {};
+					}
+					this.synchronization.resyncTargets.play = masterPos + 1;
+					const msg = 'Timeout recovery: setting play resync target to %d (master at %d)';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos + 1, masterPos);
+					} else {
+						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
+					}
+				}
+			} else {
+				const readyMsg = 'Slave received signal-ready-playing, continuing for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
+			}
+		}
+	}
+
 	// COMMENTED OUT: Focusing on prepare sync only - TO BE DELETED
 	// /**
 	//  * Coordinate the start of element playing
