@@ -903,17 +903,16 @@ export class SMILElementController {
 					nextIndex,
 					value.syncIndex,
 				);
+			} else if (expectedState === 'playing') {
+				this.synchronization.resyncTargets.play = nextIndex;
+				debug(
+					'[%s] Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
+					getTimestamp(),
+					regionName,
+					nextIndex,
+					value.syncIndex,
+				);
 			}
-			// COMMENTED OUT: Focusing on prepare sync only
-			// else if (expectedState === 'playing') {
-			// 	this.synchronization.resyncTargets.play = nextIndex;
-			// 	debug(
-			// 		'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
-			// 		regionName,
-			// 		nextIndex,
-			// 		value.syncIndex,
-			// 	);
-			// }
 
 			this.synchronization.syncingInAction = true;
 			console.log(`[SYNC] Master ahead - resync to ${expectedState} at index ${nextIndex}`);
