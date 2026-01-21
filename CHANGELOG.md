@@ -11,12 +11,48 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 - fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
   previous playlist
+
+### Fixed
+
+- fixed playlist update, cancel lower version playlist instead of waiting for lower playlist element to finish
+- fixed playing cached playlist when device starts offline
+
+## [3.2.8] - 2025-12-03
+
+### Fixed
+
+- fixed offline report files exceeding 100 report limit after device restart
+- fixed priority coordination issues causing content overlap during playlist updates
+
+## [3.2.7] - 2025-09-26
+
+### Added
+
 - add option to check for media updates using location header or url instead of last-modified header in the response
 - add option to skip or update content based on the status code from response
+- add allowLocalFallback option to fall back to cached content when server returns errors
+- add useInReportUrl attribute for reporting correct URL of element in case of redirects
+- add debugEnabled configuration option to enable debug logging based on timing config
+- add option to specify multiple logging types
+
+### Fixed
+
+- fixed widget triggers not working correctly
+- fixed smilFileRefresh interval timing
+
+## [3.2.6] - 2025-03-26
+
+### Added
+
+- add configurable timeout for last-modified requests
+- choose sync-engine dynamically based on syncServerUrl param
+- add option to skip content based on server response
+- download files in parallel instead of sequential download
 
 ### Fixed
 
 - fixed handling of trigger sync groups when the playlist contains no sync
+- improved file check performance
 
 ## [3.2.4] - 2025-04-01
 

@@ -274,7 +274,7 @@ describe('Playlist tools component', () => {
 					},
 					{
 						begin: 'wallclock(2020-07-16T12:00)',
-						end: 'wallclock(2025-12-17T19:00)',
+						end: 'wallclock(2035-12-17T19:00)',
 						repeatCount: '1',
 						img: [],
 					},

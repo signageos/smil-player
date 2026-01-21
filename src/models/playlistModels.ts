@@ -88,6 +88,8 @@ export type CurrentlyPlayingRegion = {
 export type PromiseAwaiting = {
 	[regionName: string]: (SMILMedia | SosHtmlElement) & {
 		promiseFunction?: Promise<void>[];
+		version?: number;                    // Track playlist version
+		highestProcessingPriority?: number;  // Track highest priority currently processing
 	};
 };
 
