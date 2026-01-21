@@ -1426,6 +1426,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							startTickerAnimation(element, value as SMILTicker);
 						}
 
+						// Coordinate play synchronization before element becomes visible
+						if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+							const shouldContinue = await this.coordinatePlaySync(
+								currentRegionInfo.regionName,
+								value.syncIndex,
+								timedDebug,
+							);
+							if (!shouldContinue) {
+								return; // Skip this element during resync
+							}
+						}
+
 						element.style.visibility = 'visible';
 						await this.waitMediaOnScreen(
 							currentRegionInfo,
@@ -2082,43 +2094,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// Coordinate play start - master sends cmd-play, slaves wait for it
+		// Coordinate play synchronization before video playback
 		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
-			timedDebug.log('Coordinating play start for sync');
-			try {
-				const action = await this.elementController.coordinatePlayStart(
-					currentRegionInfo.regionName,
-					video.syncIndex,
-					timedDebug,
-				);
-
-				if (action === ProcessAction.RESYNC) {
-					timedDebug.log('Resync needed - skipping play coordination');
-					return; // Skip this element during resync
-				}
-
-				timedDebug.log('Play start coordination completed');
-			} catch (error) {
-				timedDebug.log('Error in coordinatePlayStart: %s - resetting sync state', error);
-				console.error('[SYNC] coordinatePlayStart failed:', error);
-				this.resetSyncState();
-			}
-		}
-
-		// Coordinate play complete - master waits for ACKs, slaves wait for signal-ready
-		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
-			timedDebug.log('Coordinating play completion for sync');
-			try {
-				await this.elementController.coordinatePlayComplete(
-					currentRegionInfo.regionName,
-					video.syncIndex,
-					timedDebug,
-				);
-				timedDebug.log('Play coordination completed - starting synchronized playback');
-			} catch (error) {
-				timedDebug.log('Error in coordinatePlayComplete: %s - resetting sync state', error);
-				console.error('[SYNC] coordinatePlayComplete failed:', error);
-				this.resetSyncState();
+			const shouldContinue = await this.coordinatePlaySync(
+				currentRegionInfo.regionName,
+				video.syncIndex,
+				timedDebug,
+			);
+			if (!shouldContinue) {
+				return; // Skip this element during resync
 			}
 		}
 
@@ -2845,6 +2829,54 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			restart,
 		);
 		resourceChecker.start();
+	}
+
+	/**
+	 * Coordinate play synchronization before element playback starts
+	 * @returns true if playback should continue, false if element should be skipped (resync)
+	 */
+	private async coordinatePlaySync(
+		regionName: string,
+		syncIndex: number,
+		timedDebug: TimedDebugger,
+	): Promise<boolean> {
+		// Coordinate play start - master sends cmd-play, slaves wait for it
+		timedDebug.log('Coordinating play start for sync');
+		try {
+			const action = await this.elementController.coordinatePlayStart(
+				regionName,
+				syncIndex,
+				timedDebug,
+			);
+
+			if (action === ProcessAction.RESYNC) {
+				timedDebug.log('Resync needed - skipping play coordination');
+				return false; // Skip this element during resync
+			}
+
+			timedDebug.log('Play start coordination completed');
+		} catch (error) {
+			timedDebug.log('Error in coordinatePlayStart: %s - resetting sync state', error);
+			console.error('[SYNC] coordinatePlayStart failed:', error);
+			this.resetSyncState();
+		}
+
+		// Coordinate play complete - master waits for ACKs, slaves wait for signal-ready
+		timedDebug.log('Coordinating play completion for sync');
+		try {
+			await this.elementController.coordinatePlayComplete(
+				regionName,
+				syncIndex,
+				timedDebug,
+			);
+			timedDebug.log('Play coordination completed - starting synchronized playback');
+		} catch (error) {
+			timedDebug.log('Error in coordinatePlayComplete: %s - resetting sync state', error);
+			console.error('[SYNC] coordinatePlayComplete failed:', error);
+			this.resetSyncState();
+		}
+
+		return true; // Continue with playback
 	}
 
 	/**
