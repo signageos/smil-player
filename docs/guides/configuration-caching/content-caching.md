@@ -133,6 +133,46 @@ This is particularly useful for:
 - APIs that signal updates through HTTP status
 - Servers that don't properly set last-modified headers
 
+## Per-Media Update Control
+
+For fine-grained control over update behavior, you can add attributes directly to individual media elements (`<img>`, `<video>`, `<ref>`):
+
+### Available Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `updateCheckUrl` | string | same as `src` | Alternative URL for checking updates |
+| `updateCheckInterval` | number | from meta tag | Custom update interval in seconds |
+| `allowLocalFallback` | boolean | true | Use cached content when server errors occur |
+
+### Example Usage
+
+```xml
+<img dur="5s"
+     src="https://cdn.example.com/content/banner.jpg"
+     updateCheckUrl="https://api.example.com/check/banner"
+     updateCheckInterval="30"
+     allowLocalFallback="true"
+     region="main" fit="fill"/>
+```
+
+### Use Cases
+
+**updateCheckUrl**
+- Content served from CDN but update checks go to origin server
+- API endpoints that return update status for content
+- Separate update monitoring infrastructure from content delivery
+
+**updateCheckInterval**
+- Critical content that needs frequent updates (e.g., live data)
+- Static content that rarely changes (reduce server load)
+- Different update frequencies for different content within the same playlist
+
+**allowLocalFallback**
+- Set to `false` to skip content when server is unreachable (ensures fresh content only)
+- Set to `true` (default) to play cached version during connectivity issues
+- Useful for time-sensitive content that shouldn't display outdated versions when stale
+
 ## URLs with Query Parameters
 
 The SMIL Player treats URLs with different query parameters as separate files for caching purposes. This means that each unique combination of URL and query parameters will be cached independently.
