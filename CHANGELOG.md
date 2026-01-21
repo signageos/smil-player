@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-01-21
+
 ### Added
 
 - fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
