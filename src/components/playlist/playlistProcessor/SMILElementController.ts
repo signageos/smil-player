@@ -502,7 +502,65 @@ export class SMILElementController {
 		}
 	}
 
-	// COMMENTED OUT: Focusing on prepare sync only
+	/**
+	 * Coordinate the start of element playing
+	 * Master broadcasts cmd-play, slaves wait for it
+	 * @returns ProcessActionType indicating whether to continue or resync
+	 */
+	public async coordinatePlayStart(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<ProcessActionType> {
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('[%s] No sync group for play start: region=%s', getTimestamp(), regionName);
+			return ProcessAction.CONTINUE;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master broadcasts play command
+			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
+			const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+			return ProcessAction.CONTINUE; // Master always continues
+		} else {
+			// Slave waits for cmd-play from master
+			const waitMsg = 'Slave waiting for cmd-play from master for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(waitMsg, regionName, syncIndex);
+			} else {
+				debug(waitMsg, regionName, syncIndex);
+			}
+
+			const action = await this.waitForPlayCommand(regionName, syncIndex, syncGroup, timedDebug);
+
+			if (action === ProcessAction.CONTINUE) {
+				const readyMsg = 'Slave received cmd-play, starting play coordination for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
+			} else if (action === ProcessAction.RESYNC) {
+				const resyncMsg = 'Slave detected resync needed during play start for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(resyncMsg, regionName, syncIndex);
+				} else {
+					debug(resyncMsg, regionName, syncIndex);
+				}
+			}
+
+			return action; // Return the action for the caller to handle
+		}
+	}
+
+	// COMMENTED OUT: Focusing on prepare sync only - TO BE DELETED
 	// /**
 	//  * Coordinate the start of element playing
 	//  * Master broadcasts cmd-play, slaves wait for it
