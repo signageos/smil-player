@@ -2082,6 +2082,46 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
+		// Coordinate play start - master sends cmd-play, slaves wait for it
+		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
+			timedDebug.log('Coordinating play start for sync');
+			try {
+				const action = await this.elementController.coordinatePlayStart(
+					currentRegionInfo.regionName,
+					video.syncIndex,
+					timedDebug,
+				);
+
+				if (action === ProcessAction.RESYNC) {
+					timedDebug.log('Resync needed - skipping play coordination');
+					return; // Skip this element during resync
+				}
+
+				timedDebug.log('Play start coordination completed');
+			} catch (error) {
+				timedDebug.log('Error in coordinatePlayStart: %s - resetting sync state', error);
+				console.error('[SYNC] coordinatePlayStart failed:', error);
+				this.resetSyncState();
+			}
+		}
+
+		// Coordinate play complete - master waits for ACKs, slaves wait for signal-ready
+		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
+			timedDebug.log('Coordinating play completion for sync');
+			try {
+				await this.elementController.coordinatePlayComplete(
+					currentRegionInfo.regionName,
+					video.syncIndex,
+					timedDebug,
+				);
+				timedDebug.log('Play coordination completed - starting synchronized playback');
+			} catch (error) {
+				timedDebug.log('Error in coordinatePlayComplete: %s - resetting sync state', error);
+				console.error('[SYNC] coordinatePlayComplete failed:', error);
+				this.resetSyncState();
+			}
+		}
+
 		try {
 			timedDebug.log('Calling## video play function - single video: %O', video);
 			await sosVideoObject.play(...params);
