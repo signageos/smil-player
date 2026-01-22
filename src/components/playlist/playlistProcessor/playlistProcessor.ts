@@ -2467,20 +2467,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return 'RETRY'; // Signal to processPlaylist that retry is needed
 		}
 
-		// NEW: Event-based sync coordination for play phase
-		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			timedDebug.log('Checking if should play element for sync coordination');
-			const shouldPlay = await this.elementController.shouldPlayElement(
-				currentRegionInfo.regionName,
-				value.syncIndex,
-				timedDebug,
-			);
-			if (!shouldPlay) {
-				timedDebug.log('Element sync coordination indicates skip');
-				return;
-			}
-			timedDebug.log('Element sync coordination passed - will play');
-		}
+		// COMMENTED OUT: Duplicate play sync path - coordinatePlaySync in element handlers is sufficient
+		// This was calling coordinateElementTransition which has a bug where signal-ready isn't sent on ACK timeout
+		// if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+		// 	timedDebug.log('Checking if should play element for sync coordination');
+		// 	const shouldPlay = await this.elementController.shouldPlayElement(
+		// 		currentRegionInfo.regionName,
+		// 		value.syncIndex,
+		// 		timedDebug,
+		// 	);
+		// 	if (!shouldPlay) {
+		// 		timedDebug.log('Element sync coordination indicates skip');
+		// 		return;
+		// 	}
+		// 	timedDebug.log('Element sync coordination passed - will play');
+		// }
 
 		if (!isNil(value.triggerValue)) {
 			this.promiseAwaiting[currentRegionInfo.regionName].triggerValue = value.triggerValue;
