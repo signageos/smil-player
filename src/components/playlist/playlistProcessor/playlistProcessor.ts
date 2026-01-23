@@ -2881,6 +2881,54 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	}
 
 	/**
+	 * Coordinate finish synchronization after element playback completes
+	 * @returns true if should continue, false if element should be skipped (resync)
+	 */
+	private async coordinateFinishSync(
+		regionName: string,
+		syncIndex: number,
+		timedDebug: TimedDebugger,
+	): Promise<boolean> {
+		// Coordinate finish start - master sends cmd-finish, slaves wait for it
+		timedDebug.log('Coordinating finish start for sync');
+		try {
+			const action = await this.elementController.coordinateFinishStart(
+				regionName,
+				syncIndex,
+				timedDebug,
+			);
+
+			if (action === ProcessAction.RESYNC) {
+				timedDebug.log('Resync needed - skipping finish coordination');
+				return false;
+			}
+
+			timedDebug.log('Finish start coordination completed');
+		} catch (error) {
+			timedDebug.log('Error in coordinateFinishStart: %s - resetting sync state', error);
+			console.error('[SYNC] coordinateFinishStart failed:', error);
+			this.resetSyncState();
+		}
+
+		// Coordinate finish complete - master waits for ACKs, slaves wait for signal-ready
+		timedDebug.log('Coordinating finish completion for sync');
+		try {
+			await this.elementController.coordinateFinishComplete(
+				regionName,
+				syncIndex,
+				timedDebug,
+			);
+			timedDebug.log('Finish coordination completed - all devices synchronized');
+		} catch (error) {
+			timedDebug.log('Error in coordinateFinishComplete: %s - resetting sync state', error);
+			console.error('[SYNC] coordinateFinishComplete failed:', error);
+			this.resetSyncState();
+		}
+
+		return true;
+	}
+
+	/**
 	 * Reset sync state to safe defaults after an error
 	 * This prevents corrupted state from affecting subsequent elements
 	 */
@@ -2891,6 +2939,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (this.synchronization.resyncTargets) {
 			delete this.synchronization.resyncTargets.prepare;
 			delete this.synchronization.resyncTargets.play;
+			delete this.synchronization.resyncTargets.finish;
 		}
 	}
 
