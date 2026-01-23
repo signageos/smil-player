@@ -740,6 +740,121 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Coordinate the completion of finish synchronization
+	 * Slaves send ack-finished, master waits for all ACKs, then signals ready
+	 */
+	public async coordinateFinishComplete(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return;
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('[%s] No sync group for finish complete: region=%s', getTimestamp(), regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master waits for ACKs
+			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
+			if (expectedAcks > 0) {
+				const ackKey = `${regionName}-${syncIndex}-ack-finished`;
+				const msg = 'Master waiting for %d finished ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(msg, expectedAcks, ackKey);
+				} else {
+					debug(msg, expectedAcks, ackKey);
+				}
+
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const resultMsg = acksReceived
+					? 'Master received all finished ACKs for %s'
+					: 'Master timeout waiting for finished ACKs for %s';
+				if (timedDebug) {
+					timedDebug.log(resultMsg, ackKey);
+				} else {
+					debug(resultMsg, ackKey);
+				}
+			}
+
+			// Master sends ready signal for FINISH phase - ALWAYS (even on timeout)
+			await this.broadcastSyncMessage('signal-ready-finished', regionName, syncIndex, syncGroup);
+		} else {
+			// Slave handling - same pattern as prepare/play
+			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.finish) {
+				// Get master's current position and send ACK for that
+				const masterPos = this.getPositions(regionName, 'finished', syncGroup).master;
+				if (masterPos > 0) {
+					await this.sendAckForPosition(regionName, masterPos, 'finished', syncGroup);
+					const msg = 'Slave in resync mode - sent ack-finished for master position=%d instead of %d';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos, syncIndex);
+					} else {
+						debug(msg, masterPos, syncIndex);
+					}
+				} else {
+					// No master position known yet, send normal ACK
+					await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup);
+					debug('[%s] Slave in resync but no master position known - sent normal ack-finished', getTimestamp());
+				}
+				// Don't wait for signal-ready during resync - continue skipping elements
+				return;
+			} else {
+				// Normal case - send ACK for current position
+				await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup);
+				const msg = 'Slave sent ack-finished for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex);
+				} else {
+					debug(msg, regionName, syncIndex);
+				}
+			}
+
+			// Wait for signal-ready-finished from master
+			const waitMsg = 'Slave waiting for signal-ready-finished from master for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(waitMsg, regionName, syncIndex);
+			} else {
+				debug(waitMsg, regionName, syncIndex);
+			}
+
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-finished', timedDebug);
+			if (!receivedSignal) {
+				// Timeout occurred - trigger resync
+				console.log(`[SYNC] Signal-ready-finished timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+				this.synchronization.syncingInAction = true;
+
+				// Get master's last known position
+				const masterPos = this.getPositions(regionName, 'finished', syncGroup).master;
+				if (masterPos > syncIndex) {
+					if (!this.synchronization.resyncTargets) {
+						this.synchronization.resyncTargets = {};
+					}
+					this.synchronization.resyncTargets.finish = masterPos + 1;
+					const msg = 'Timeout recovery: setting finish resync target to %d (master at %d)';
+					if (timedDebug) {
+						timedDebug.log(msg, masterPos + 1, masterPos);
+					} else {
+						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
+					}
+				}
+			} else {
+				const readyMsg = 'Slave received signal-ready-finished, continuing for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
+			}
+		}
+	}
+
+	/**
 	 * Coordinate element state transition across devices
 	 */
 	private async coordinateElementTransition(
