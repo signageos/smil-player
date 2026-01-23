@@ -678,6 +678,68 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Coordinate the start of element finish synchronization
+	 * Master broadcasts cmd-finish, slaves wait for it
+	 * @returns ProcessActionType indicating whether to continue or resync
+	 */
+	public async coordinateFinishStart(
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+	): Promise<ProcessActionType> {
+		if (!this.synchronization.shouldSync) {
+			return ProcessAction.CONTINUE;
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			debug('[%s] No sync group for finish start: region=%s', getTimestamp(), regionName);
+			return ProcessAction.CONTINUE;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			// Master broadcasts finish command
+			await this.broadcastSyncMessage('cmd-finish', regionName, syncIndex, syncGroup);
+			const msg = 'Master sent cmd-finish for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(msg, regionName, syncIndex);
+			} else {
+				debug(msg, regionName, syncIndex);
+			}
+			return ProcessAction.CONTINUE; // Master always continues
+		} else {
+			// Slave waits for cmd-finish from master
+			const waitMsg = 'Slave waiting for cmd-finish from master for region=%s, syncIndex=%d';
+			if (timedDebug) {
+				timedDebug.log(waitMsg, regionName, syncIndex);
+			} else {
+				debug(waitMsg, regionName, syncIndex);
+			}
+
+			const action = await this.waitForFinishCommand(regionName, syncIndex, syncGroup, timedDebug);
+
+			if (action === ProcessAction.CONTINUE) {
+				const readyMsg = 'Slave received cmd-finish, starting finish coordination for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(readyMsg, regionName, syncIndex);
+				} else {
+					debug(readyMsg, regionName, syncIndex);
+				}
+			} else if (action === ProcessAction.RESYNC) {
+				const resyncMsg = 'Slave detected resync needed during finish start for region=%s, syncIndex=%d';
+				if (timedDebug) {
+					timedDebug.log(resyncMsg, regionName, syncIndex);
+				} else {
+					debug(resyncMsg, regionName, syncIndex);
+				}
+			}
+
+			return action; // Return the action for the caller to handle
+		}
+	}
+
+	/**
 	 * Coordinate element state transition across devices
 	 */
 	private async coordinateElementTransition(
