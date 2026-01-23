@@ -241,6 +241,7 @@ export class SMILElementController {
 		slavePosition: {
 			prepare: new Map<string, number>(), // regionName -> syncIndex
 			play: new Map<string, number>(),     // regionName -> syncIndex for play state
+			finish: new Map<string, number>(),   // regionName -> syncIndex for finish state
 		},
 		// Master position now tracked via latest cmd-prepare messages in SyncGroup
 		pendingAcks: new Set<string>(), // "region-index-state" keys to avoid duplicates
