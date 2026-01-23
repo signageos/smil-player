@@ -1484,6 +1484,26 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Wait for finish command from master, detecting resync if needed
+	 */
+	private async waitForFinishCommand(
+		regionName: string,
+		syncIndex: number,
+		syncGroup: any,
+		timedDebug?: TimedDebugger,
+	): Promise<ProcessActionType> {
+		// Use unified method to wait for command and check sync
+		return await this.waitForCommandAndCheckSync(
+			'cmd-finish',
+			'finished',
+			regionName,
+			syncIndex,
+			syncGroup,
+			timedDebug,
+		);
+	}
+
+	/**
 	 * Wait for signal-ready message from master (slaves only)
 	 * @param signalType The specific signal type to wait for ('signal-ready-prepared', 'signal-ready-playing', or 'signal-ready-finished')
 	 */
