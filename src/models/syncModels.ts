@@ -28,10 +28,13 @@ export interface SyncNavigationEvent {
 export type SyncMessageType =
 	| 'cmd-prepare'           // Master commands slaves to prepare
 	| 'cmd-play'              // Master commands slaves to play
+	| 'cmd-finish'            // Master commands slaves to finish
 	| 'signal-ready-prepared' // Master signals all devices ready after prepare phase
 	| 'signal-ready-playing'  // Master signals all devices ready after play phase
+	| 'signal-ready-finished' // Master signals all devices ready after finish phase
 	| 'ack-prepared'          // Slave acknowledges preparation complete
-	| 'ack-playing';          // Slave acknowledges playing started
+	| 'ack-playing'           // Slave acknowledges playing started
+	| 'ack-finished';         // Slave acknowledges element finished
 
 export interface SyncMessage {
 	type: SyncMessageType;
@@ -51,6 +54,7 @@ export type Synchronization = {
 	resyncTargets?: {
 		prepare?: number;  // Target syncIndex for preparation phase
 		play?: number;     // Target syncIndex for playing phase
+		finish?: number;   // Target syncIndex for finish phase
 	};
 	maxSyncIndexPerRegion?: { [regionName: string]: number };
 };
