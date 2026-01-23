@@ -2552,6 +2552,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			default:
 				timedDebug.log(`Sorry, we are out of ${key}.`);
 		}
+
+		// Coordinate finish synchronization after element playback completes
+		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			await this.coordinateFinishSync(
+				currentRegionInfo.regionName,
+				value.syncIndex,
+				timedDebug,
+			);
+		}
 	};
 
 	private handleVideoPrepare = async (
