@@ -998,6 +998,15 @@ export class SMILElementController {
 					nextIndex,
 					value.syncIndex,
 				);
+			} else if (expectedState === 'finished') {
+				this.synchronization.resyncTargets.finish = nextIndex;
+				debug(
+					'[%s] Setting resync target for FINISH: region=%s, targetIndex=%d (master at %d)',
+					getTimestamp(),
+					regionName,
+					nextIndex,
+					value.syncIndex,
+				);
 			}
 
 			this.synchronization.syncingInAction = true;
@@ -1115,7 +1124,9 @@ export class SMILElementController {
 		// Use state-specific resync target based on expected state
 		const resyncTarget = expectedState === 'prepared'
 			? this.synchronization.resyncTargets?.prepare
-			: this.synchronization.resyncTargets?.play;
+			: expectedState === 'playing'
+				? this.synchronization.resyncTargets?.play
+				: this.synchronization.resyncTargets?.finish;
 
 		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
 			debug(
@@ -1186,7 +1197,9 @@ export class SMILElementController {
 			// Check if we're at resync target - use 10 minute timeout to prevent indefinite waiting
 			const resyncTargetCheck = expectedState === 'prepared'
 				? this.synchronization.resyncTargets?.prepare
-				: this.synchronization.resyncTargets?.play;
+				: expectedState === 'playing'
+					? this.synchronization.resyncTargets?.play
+					: this.synchronization.resyncTargets?.finish;
 			const isAtResyncTarget =
 				this.synchronization.syncingInAction && resyncTargetCheck !== undefined && syncIndex === resyncTargetCheck;
 
@@ -1221,8 +1234,10 @@ export class SMILElementController {
 					}
 					if (expectedState === 'prepared') {
 						this.synchronization.resyncTargets.prepare = syncIndex + 1;
-					} else {
+					} else if (expectedState === 'playing') {
 						this.synchronization.resyncTargets.play = syncIndex + 1;
+					} else {
+						this.synchronization.resyncTargets.finish = syncIndex + 1;
 					}
 					cleanup();
 					resolve(ProcessAction.RESYNC);
