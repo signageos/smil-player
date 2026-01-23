@@ -117,7 +117,7 @@ class AckTracker {
 					const message = value as SyncMessage;
 
 					// Check if this is an ACK message
-					if (message.type === 'ack-prepared' || message.type === 'ack-playing') {
+					if (message.type === 'ack-prepared' || message.type === 'ack-playing' || message.type === 'ack-finished') {
 						// Build the ACK key from the message
 						const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
 
@@ -1101,8 +1101,8 @@ export class SMILElementController {
 	 * Returns action to take: CONTINUE, RESYNC, or keeps waiting if WAIT
 	 */
 	private async waitForCommandAndCheckSync(
-		commandType: 'cmd-prepare' | 'cmd-play',
-		expectedState: 'prepared' | 'playing',
+		commandType: 'cmd-prepare' | 'cmd-play' | 'cmd-finish',
+		expectedState: 'prepared' | 'playing' | 'finished',
 		regionName: string,
 		syncIndex: number,
 		syncGroup: any,
@@ -1366,10 +1366,10 @@ export class SMILElementController {
 	private async sendAckForPosition(
 		regionName: string,
 		syncIndex: number,
-		state: 'prepared' | 'playing',
+		state: 'prepared' | 'playing' | 'finished',
 		syncGroup: any,
 	): Promise<void> {
-		const ackType = state === 'prepared' ? 'ack-prepared' : 'ack-playing';
+		const ackType = state === 'prepared' ? 'ack-prepared' : state === 'playing' ? 'ack-playing' : 'ack-finished';
 		const ackKey = `${regionName}-${syncIndex}-${ackType}`;
 
 		// Avoid duplicate ACKs
@@ -1389,29 +1389,34 @@ export class SMILElementController {
 	/**
 	 * Update slave position tracking
 	 */
-	private updateSlavePosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing'): void {
+	private updateSlavePosition(regionName: string, syncIndex: number, state: 'prepared' | 'playing' | 'finished'): void {
 		if (state === 'prepared') {
 			this.syncState.slavePosition.prepare.set(regionName, syncIndex);
 			debug('[%s] Updated slave prepare position: region=%s, syncIndex=%d', getTimestamp(), regionName, syncIndex);
 		} else if (state === 'playing') {
 			this.syncState.slavePosition.play.set(regionName, syncIndex);
 			debug('[%s] Updated slave play position: region=%s, syncIndex=%d', getTimestamp(), regionName, syncIndex);
+		} else if (state === 'finished') {
+			this.syncState.slavePosition.finish.set(regionName, syncIndex);
+			debug('[%s] Updated slave finish position: region=%s, syncIndex=%d', getTimestamp(), regionName, syncIndex);
 		}
 	}
 
 	/**
 	 * Get current positions for debugging
 	 */
-	private getPositions(regionName: string, state: 'prepared' | 'playing', syncGroup?: any): { slave: number; master: number } {
+	private getPositions(regionName: string, state: 'prepared' | 'playing' | 'finished', syncGroup?: any): { slave: number; master: number } {
 		// Get slave position from local tracking based on state
 		const slavePos = state === 'prepared'
 			? (this.syncState.slavePosition.prepare.get(regionName) || 0)
-			: (this.syncState.slavePosition.play.get(regionName) || 0);
+			: state === 'playing'
+				? (this.syncState.slavePosition.play.get(regionName) || 0)
+				: (this.syncState.slavePosition.finish.get(regionName) || 0);
 
 		// Get master position from the latest command message in SyncGroup
 		let masterPos = 0;
 		if (syncGroup) {
-			const commandType = state === 'prepared' ? 'cmd-prepare' : 'cmd-play';
+			const commandType = state === 'prepared' ? 'cmd-prepare' : state === 'playing' ? 'cmd-play' : 'cmd-finish';
 			const latestCommand = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 			if (latestCommand && latestCommand.syncIndex) {
 				masterPos = latestCommand.syncIndex;
@@ -1465,13 +1470,13 @@ export class SMILElementController {
 
 	/**
 	 * Wait for signal-ready message from master (slaves only)
-	 * @param signalType The specific signal type to wait for ('signal-ready-prepared' or 'signal-ready-playing')
+	 * @param signalType The specific signal type to wait for ('signal-ready-prepared', 'signal-ready-playing', or 'signal-ready-finished')
 	 */
 	private async waitForSignalReady(
 		regionName: string,
 		syncIndex: number,
 		syncGroup: any,
-		signalType: 'signal-ready-prepared' | 'signal-ready-playing',
+		signalType: 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished',
 		timedDebug?: TimedDebugger,
 	): Promise<boolean> {
 		// Check for stored message first
