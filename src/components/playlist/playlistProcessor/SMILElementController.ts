@@ -349,7 +349,7 @@ export class SMILElementController {
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			// Master broadcasts prepare command
-			await this.broadcastSyncMessage('cmd-prepare', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('cmd-prepare', regionName, syncIndex, syncGroup, priorityLevel);
 			const msg = 'Master sent cmd-prepare for region=%s, syncIndex=%d';
 			if (timedDebug) {
 				timedDebug.log(msg, regionName, syncIndex);
@@ -524,7 +524,7 @@ export class SMILElementController {
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			// Master broadcasts play command
-			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup, priorityLevel);
 			const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
 			if (timedDebug) {
 				timedDebug.log(msg, regionName, syncIndex);
@@ -703,7 +703,7 @@ export class SMILElementController {
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			// Master broadcasts finish command
-			await this.broadcastSyncMessage('cmd-finish', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('cmd-finish', regionName, syncIndex, syncGroup, priorityLevel);
 			const msg = 'Master sent cmd-finish for region=%s, syncIndex=%d';
 			if (timedDebug) {
 				timedDebug.log(msg, regionName, syncIndex);
@@ -1265,12 +1265,14 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		syncGroup?: any,
+		priorityLevel?: number,
 	): Promise<void> {
 		const message: SyncMessage = {
 			type,
 			regionName,
 			syncIndex,
 			timestamp: Date.now(),
+			priorityLevel,
 		};
 
 		// Use provided sync group or get it
