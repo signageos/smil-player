@@ -245,9 +245,39 @@ export class SMILElementController {
 		},
 		// Master position now tracked via latest cmd-prepare messages in SyncGroup
 		pendingAcks: new Set<string>(), // "region-index-state" keys to avoid duplicates
+		// Track priority level per region to detect priority changes
+		priorityLevel: new Map<string, number>(), // regionName -> priorityLevel
 	};
 
 	constructor(private synchronization: Synchronization) {}
+
+	/**
+	 * Check for priority level changes from incoming sync messages.
+	 * If priority changed, clear stale resync state from different priority context.
+	 */
+	private checkAndUpdatePriorityLevel(regionName: string, messagePriority: number | undefined): void {
+		if (messagePriority === undefined) {
+			return; // No priority in message (simple playlist without priorityClass)
+		}
+
+		const storedPriority = this.syncState.priorityLevel.get(regionName);
+		if (storedPriority !== undefined && storedPriority !== messagePriority) {
+			// Priority changed - clear stale resync state
+			debug('[%s] Priority changed from %d to %d - clearing resync state', getTimestamp(), storedPriority, messagePriority);
+			console.log(`[SYNC] Priority changed from ${storedPriority} to ${messagePriority} - clearing resync state`);
+
+			if (this.synchronization.resyncTargets) {
+				delete this.synchronization.resyncTargets.prepare;
+				delete this.synchronization.resyncTargets.play;
+				delete this.synchronization.resyncTargets.finish;
+			}
+			this.synchronization.syncingInAction = false;
+			this.synchronization.movingForward = false;
+		}
+
+		// Update stored priority
+		this.syncState.priorityLevel.set(regionName, messagePriority);
+	}
 
 	/**
 	 * Check if element should be played - handles resync logic for playback phase
@@ -1339,6 +1369,10 @@ export class SMILElementController {
 			const age = Date.now() - storedMsg.timestamp;
 			debug('[%s] Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms', getTimestamp(),
 				commandType, regionName, storedMsg.syncIndex, syncIndex, age);
+
+			// Check for priority level changes and clear stale resync state if needed
+			this.checkAndUpdatePriorityLevel(regionName, storedMsg.priorityLevel);
+
 			// Create virtual elementState from stored command
 			const virtualElementState = {
 				state: expectedState,
@@ -1459,6 +1493,9 @@ export class SMILElementController {
 
 					// Check if this is a command message for our region
 					if (message.type === commandType && message.regionName === regionName) {
+						// Check for priority level changes and clear stale resync state if needed
+						this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
+
 						// Create virtual elementState from command
 						const virtualElementState = {
 							state: expectedState,
