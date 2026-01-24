@@ -1428,10 +1428,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						// Coordinate play synchronization before element becomes visible
 						if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+							const playPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[currentIndex]?.priority?.priorityLevel;
 							const shouldContinue = await this.coordinatePlaySync(
 								currentRegionInfo.regionName,
 								value.syncIndex,
 								timedDebug,
+								playPriorityLevel,
 							);
 							if (!shouldContinue) {
 								return; // Skip this element during resync
@@ -2096,10 +2098,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate play synchronization before video playback
 		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
+			const playPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[arrayIndex]?.priority?.priorityLevel;
 			const shouldContinue = await this.coordinatePlaySync(
 				currentRegionInfo.regionName,
 				video.syncIndex,
 				timedDebug,
+				playPriorityLevel,
 			);
 			if (!shouldContinue) {
 				return; // Skip this element during resync
@@ -2376,12 +2380,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			const priorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
 			timedDebug.log('Coordinating preparation start for sync');
 			try {
 				const action = await this.elementController.coordinatePrepareStart(
 					currentRegionInfo.regionName,
 					value.syncIndex,
 					timedDebug,
+					priorityLevel,
 				);
 
 				if (action === ProcessAction.RESYNC) {
@@ -2555,10 +2561,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate finish synchronization after element playback completes
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			const finishPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
 			await this.coordinateFinishSync(
 				currentRegionInfo.regionName,
 				value.syncIndex,
 				timedDebug,
+				finishPriorityLevel,
 			);
 		}
 	};
@@ -2849,6 +2857,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		regionName: string,
 		syncIndex: number,
 		timedDebug: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<boolean> {
 		// Coordinate play start - master sends cmd-play, slaves wait for it
 		timedDebug.log('Coordinating play start for sync');
@@ -2857,6 +2866,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionName,
 				syncIndex,
 				timedDebug,
+				priorityLevel,
 			);
 
 			if (action === ProcessAction.RESYNC) {
@@ -2897,6 +2907,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		regionName: string,
 		syncIndex: number,
 		timedDebug: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<boolean> {
 		// Coordinate finish start - master sends cmd-finish, slaves wait for it
 		timedDebug.log('Coordinating finish start for sync');
@@ -2905,6 +2916,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionName,
 				syncIndex,
 				timedDebug,
+				priorityLevel,
 			);
 
 			if (action === ProcessAction.RESYNC) {
