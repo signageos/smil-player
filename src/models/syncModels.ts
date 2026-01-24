@@ -41,6 +41,7 @@ export interface SyncMessage {
 	regionName: string;
 	syncIndex: number;
 	timestamp: number;
+	priorityLevel?: number;  // Priority level of current content (optional for playlists without priorityClass)
 }
 
 export type Synchronization = {
