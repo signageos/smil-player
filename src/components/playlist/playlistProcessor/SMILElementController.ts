@@ -338,6 +338,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<ProcessActionType> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
@@ -512,6 +513,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<ProcessActionType> {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 		if (!syncGroup) {
@@ -686,6 +688,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<ProcessActionType> {
 		if (!this.synchronization.shouldSync) {
 			return ProcessAction.CONTINUE;
