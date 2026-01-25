@@ -396,7 +396,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const action = await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug);
+			const action = await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
 
 			if (action === ProcessAction.CONTINUE) {
 				const readyMsg = 'Slave received cmd-prepare, starting preparation for region=%s, syncIndex=%d';
@@ -571,7 +571,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const action = await this.waitForPlayCommand(regionName, syncIndex, syncGroup, timedDebug);
+			const action = await this.waitForPlayCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
 
 			if (action === ProcessAction.CONTINUE) {
 				const readyMsg = 'Slave received cmd-play, starting play coordination for region=%s, syncIndex=%d';
@@ -750,7 +750,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const action = await this.waitForFinishCommand(regionName, syncIndex, syncGroup, timedDebug);
+			const action = await this.waitForFinishCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
 
 			if (action === ProcessAction.CONTINUE) {
 				const readyMsg = 'Slave received cmd-finish, starting finish coordination for region=%s, syncIndex=%d';
@@ -1328,11 +1328,44 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
 	): Promise<ProcessActionType> {
 		// Update slave position tracking
 		this.updateSlavePosition(regionName, syncIndex, expectedState);
 
-		// Check if actively resyncing and not at target yet - skip immediately
+		// FIRST: Check stored message for priority level changes BEFORE resync skip check
+		// This allows priority change to clear stale resync state before we check it
+		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+		if (storedMsg) {
+			// Primary: Check if message priority differs from last received priority
+			this.checkAndUpdatePriorityLevel(regionName, storedMsg.priorityLevel);
+
+			// Backup: If expected priority differs from stored message priority, clear resync state
+			// This handles case where master's new message hasn't arrived yet
+			if (expectedPriorityLevel !== undefined &&
+				storedMsg.priorityLevel !== undefined &&
+				storedMsg.priorityLevel !== expectedPriorityLevel) {
+				debug('[%s] Expected priority %d differs from stored message priority %d - clearing resync state (backup)',
+					getTimestamp(), expectedPriorityLevel, storedMsg.priorityLevel);
+				console.log(`[SYNC] Expected priority ${expectedPriorityLevel} differs from stored message priority ${storedMsg.priorityLevel} - clearing resync state (backup)`);
+
+				if (this.synchronization.resyncTargets) {
+					delete this.synchronization.resyncTargets.prepare;
+					delete this.synchronization.resyncTargets.play;
+					delete this.synchronization.resyncTargets.finish;
+				}
+				this.synchronization.syncingInAction = false;
+				this.synchronization.movingForward = false;
+
+				// Clear the stale message - it's from a different priority context
+				syncGroup.clearSyncCoordinationMessage(commandType, regionName);
+				debug('[%s] Cleared stale %s message from priority %d context',
+					getTimestamp(), commandType, storedMsg.priorityLevel);
+			}
+		}
+
+		// THEN: Check if actively resyncing and not at target yet - skip immediately
+		// This check now happens AFTER priority check may have cleared stale state
 		// Use state-specific resync target based on expected state
 		const resyncTarget = expectedState === 'prepared'
 			? this.synchronization.resyncTargets?.prepare
@@ -1363,22 +1396,19 @@ export class SMILElementController {
 			positions.master,
 		);
 
-		// Check for stored command message first
-		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
-		if (storedMsg) {
-			const age = Date.now() - storedMsg.timestamp;
+		// Re-fetch stored message (will be null if we cleared it above due to priority mismatch)
+		const currentStoredMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+		if (currentStoredMsg) {
+			const age = Date.now() - currentStoredMsg.timestamp;
 			debug('[%s] Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms', getTimestamp(),
-				commandType, regionName, storedMsg.syncIndex, syncIndex, age);
-
-			// Check for priority level changes and clear stale resync state if needed
-			this.checkAndUpdatePriorityLevel(regionName, storedMsg.priorityLevel);
+				commandType, regionName, currentStoredMsg.syncIndex, syncIndex, age);
 
 			// Create virtual elementState from stored command
 			const virtualElementState = {
 				state: expectedState,
-				regionName: storedMsg.regionName,
-				syncIndex: storedMsg.syncIndex,
-				timestamp: storedMsg.timestamp,
+				regionName: currentStoredMsg.regionName,
+				syncIndex: currentStoredMsg.syncIndex,
+				timestamp: currentStoredMsg.timestamp,
 			};
 
 			// Use processElementState to determine action
@@ -1389,6 +1419,7 @@ export class SMILElementController {
 				return action;
 			}
 		}
+		// If no stored message (cleared due to priority mismatch or never existed), fall through to Promise listener
 
 		// Create promise with active listener
 		return new Promise<ProcessActionType>((resolve) => {
@@ -1670,6 +1701,7 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
 	): Promise<ProcessActionType> {
 		// Use unified method to wait for command and check sync
 		return await this.waitForCommandAndCheckSync(
@@ -1679,6 +1711,7 @@ export class SMILElementController {
 			syncIndex,
 			syncGroup,
 			timedDebug,
+			expectedPriorityLevel,
 		);
 	}
 
@@ -1690,6 +1723,7 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
 	): Promise<ProcessActionType> {
 		// Use unified method to wait for command and check sync
 		return await this.waitForCommandAndCheckSync(
@@ -1699,6 +1733,7 @@ export class SMILElementController {
 			syncIndex,
 			syncGroup,
 			timedDebug,
+			expectedPriorityLevel,
 		);
 	}
 
@@ -1710,6 +1745,7 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup: any,
 		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
 	): Promise<ProcessActionType> {
 		// Use unified method to wait for command and check sync
 		return await this.waitForCommandAndCheckSync(
@@ -1719,6 +1755,7 @@ export class SMILElementController {
 			syncIndex,
 			syncGroup,
 			timedDebug,
+			expectedPriorityLevel,
 		);
 	}
 
