@@ -42,6 +42,8 @@ export interface SyncMessage {
 	syncIndex: number;
 	timestamp: number;
 	priorityLevel?: number;  // Priority level of current content (optional for playlists without priorityClass)
+	priorityMinSyncIndex?: number;  // First syncIndex in current priority playlist (for wraparound)
+	priorityMaxSyncIndex?: number;  // Last syncIndex in current priority playlist (for wraparound)
 }
 
 export type Synchronization = {
@@ -58,4 +60,10 @@ export type Synchronization = {
 		finish?: number;   // Target syncIndex for finish phase
 	};
 	maxSyncIndexPerRegion?: { [regionName: string]: number };
+	// Maps regionName -> priorityLevel -> {min, max} syncIndex bounds for that priority playlist
+	syncIndexBoundsPerPriority?: {
+		[regionName: string]: {
+			[priorityLevel: number]: { min: number; max: number };
+		};
+	};
 };
