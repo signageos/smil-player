@@ -258,6 +258,92 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	/**
+	 * Recursively extracts all syncIndex values from a playlist element tree.
+	 * Used to determine the min/max syncIndex bounds for a priority playlist.
+	 * @param elem - The playlist element to traverse
+	 * @returns Array of {syncIndex, regionName} objects found in the element tree
+	 */
+	private extractSyncIndicesFromElement = (
+		elem: PlaylistElement | PlaylistElement[],
+	): Array<{ syncIndex: number; regionName: string }> => {
+		const indices: Array<{ syncIndex: number; regionName: string }> = [];
+
+		if (Array.isArray(elem)) {
+			for (const child of elem) {
+				indices.push(...this.extractSyncIndicesFromElement(child));
+			}
+			return indices;
+		}
+
+		// Check if this element has a syncIndex and regionInfo (it's a media element)
+		// Cast to Record for property check since PlaylistElement doesn't include media properties
+		const record = elem as Record<string, unknown>;
+		if ('syncIndex' in record && 'regionInfo' in record) {
+			const syncIndex = record.syncIndex as number;
+			const regionInfo = record.regionInfo as { regionName?: string };
+			if (syncIndex !== undefined && regionInfo?.regionName) {
+				indices.push({
+					syncIndex,
+					regionName: regionInfo.regionName,
+				});
+			}
+		}
+
+		// Recursively check all object properties for nested elements
+		for (const value of Object.values(elem)) {
+			if (isObject(value)) {
+				indices.push(...this.extractSyncIndicesFromElement(value as PlaylistElement));
+			}
+		}
+
+		return indices;
+	};
+
+	/**
+	 * Extracts and stores the syncIndex bounds (min/max) for a priority playlist.
+	 * Called during processPriorityTag to populate syncIndexBoundsPerPriority.
+	 * @param elem - The priority class element containing media elements
+	 * @param priorityLevel - The priority level for this element
+	 */
+	private storePriorityBounds = (elem: PlaylistElement, priorityLevel: number): void => {
+		const indices = this.extractSyncIndicesFromElement(elem);
+		if (indices.length === 0) {
+			return;
+		}
+
+		// Group indices by region
+		const indicesByRegion: { [regionName: string]: number[] } = {};
+		for (const { syncIndex, regionName } of indices) {
+			if (!indicesByRegion[regionName]) {
+				indicesByRegion[regionName] = [];
+			}
+			indicesByRegion[regionName].push(syncIndex);
+		}
+
+		// Store min/max for each region
+		for (const [regionName, regionIndices] of Object.entries(indicesByRegion)) {
+			const min = Math.min(...regionIndices);
+			const max = Math.max(...regionIndices);
+
+			if (!this.synchronization.syncIndexBoundsPerPriority) {
+				this.synchronization.syncIndexBoundsPerPriority = {};
+			}
+			if (!this.synchronization.syncIndexBoundsPerPriority[regionName]) {
+				this.synchronization.syncIndexBoundsPerPriority[regionName] = {};
+			}
+
+			this.synchronization.syncIndexBoundsPerPriority[regionName][priorityLevel] = { min, max };
+			debug(
+				'Stored priority bounds for region=%s, priority=%d: min=%d, max=%d',
+				regionName,
+				priorityLevel,
+				min,
+				max,
+			);
+		}
+	};
+
+	/**
 	 * excl and priorityClass are not supported in this version, they are processed as seq tags
 	 * @param value - JSON object or array of objects
 	 * @param version - smil internal version of current playlist
@@ -296,6 +382,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			const priorityObject = createPriorityObject(elem as PriorityObject, arrayIndex, value?.length - 1);
+
+			// Extract and store sync index bounds for this priority level
+			this.storePriorityBounds(elem, priorityObject.priorityLevel);
 
 			promises.push(
 				(async () => {
