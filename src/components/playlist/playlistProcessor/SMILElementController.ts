@@ -1582,12 +1582,20 @@ export class SMILElementController {
 					if (!this.synchronization.resyncTargets) {
 						this.synchronization.resyncTargets = {};
 					}
+
+					// Use global max for timeout recovery
+					const globalMax = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+					let nextIndex = syncIndex + 1;
+					if (globalMax !== undefined && nextIndex > globalMax) {
+						nextIndex = 1;
+					}
+
 					if (expectedState === 'prepared') {
-						this.synchronization.resyncTargets.prepare = syncIndex + 1;
+						this.synchronization.resyncTargets.prepare = nextIndex;
 					} else if (expectedState === 'playing') {
-						this.synchronization.resyncTargets.play = syncIndex + 1;
+						this.synchronization.resyncTargets.play = nextIndex;
 					} else {
-						this.synchronization.resyncTargets.finish = syncIndex + 1;
+						this.synchronization.resyncTargets.finish = nextIndex;
 					}
 					cleanup();
 					resolve(ProcessAction.RESYNC);
