@@ -289,6 +289,23 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Get priority bounds for a region and priority level from stored data.
+	 * Used by master to include bounds in sync messages.
+	 * @param regionName The region name
+	 * @param priorityLevel The priority level (undefined for non-priority playlists)
+	 * @returns The min/max bounds or undefined if not available
+	 */
+	private getPriorityBounds(
+		regionName: string,
+		priorityLevel: number | undefined,
+	): { min: number; max: number } | undefined {
+		if (priorityLevel === undefined) {
+			return undefined;
+		}
+		return this.synchronization.syncIndexBoundsPerPriority?.[regionName]?.[priorityLevel];
+	}
+
+	/**
 	 * Check for priority level changes from incoming sync messages.
 	 * If priority changed, clear stale resync state from different priority context.
 	 * Handles three transition cases:
@@ -1354,12 +1371,20 @@ export class SMILElementController {
 		syncGroup?: any,
 		priorityLevel?: number,
 	): Promise<void> {
+		// Look up priority bounds for this region and priority level
+		const bounds = this.getPriorityBounds(regionName, priorityLevel);
+
 		const message: SyncMessage = {
 			type,
 			regionName,
 			syncIndex,
 			timestamp: Date.now(),
 			priorityLevel,
+			// Only include bounds if they exist (priority playlists only)
+			...(bounds && {
+				priorityMinSyncIndex: bounds.min,
+				priorityMaxSyncIndex: bounds.max,
+			}),
 		};
 
 		// Use provided sync group or get it
@@ -1370,7 +1395,8 @@ export class SMILElementController {
 		}
 
 		await group.broadcastValue('sync-coordination', message);
-		debug('[%s] Broadcasted sync message: type=%s, region=%s, syncIndex=%d', getTimestamp(), type, regionName, syncIndex);
+		debug('[%s] Broadcasted sync message: type=%s, region=%s, syncIndex=%d, priorityBounds=%s',
+			getTimestamp(), type, regionName, syncIndex, bounds ? `[${bounds.min}-${bounds.max}]` : 'none');
 	}
 
 	/**
