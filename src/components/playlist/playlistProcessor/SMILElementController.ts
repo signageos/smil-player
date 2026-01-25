@@ -534,7 +534,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-prepared', timedDebug);
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-prepared', timedDebug, priorityLevel);
 			if (!receivedSignal) {
 				// Timeout occurred - trigger resync
 				console.log(`[SYNC] Signal-ready-prepared timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
@@ -710,7 +710,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-playing', timedDebug);
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-playing', timedDebug, priorityLevel);
 			if (!receivedSignal) {
 				// Timeout occurred - trigger resync
 				console.log(`[SYNC] Signal-ready-playing timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
@@ -889,7 +889,7 @@ export class SMILElementController {
 				debug(waitMsg, regionName, syncIndex);
 			}
 
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-finished', timedDebug);
+			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-finished', timedDebug, priorityLevel);
 			if (!receivedSignal) {
 				// Timeout occurred - trigger resync
 				console.log(`[SYNC] Signal-ready-finished timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
@@ -1812,6 +1812,7 @@ export class SMILElementController {
 	/**
 	 * Wait for signal-ready message from master (slaves only)
 	 * @param signalType The specific signal type to wait for ('signal-ready-prepared', 'signal-ready-playing', or 'signal-ready-finished')
+	 * @param expectedPriorityLevel Optional priority level to validate against incoming signals
 	 */
 	private async waitForSignalReady(
 		regionName: string,
@@ -1819,20 +1820,34 @@ export class SMILElementController {
 		syncGroup: any,
 		signalType: 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished',
 		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
 	): Promise<boolean> {
 		// Check for stored message first
 		const storedMsg = syncGroup.getSyncCoordinationMessage(signalType, regionName);
 		if (storedMsg && storedMsg.syncIndex === syncIndex) {
-			const age = Date.now() - storedMsg.timestamp;
-			const msg = `Found stored ${signalType} for region=%s, syncIndex=%d, age=%dms`;
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex, age);
+			// Validate priority if both are defined
+			if (expectedPriorityLevel !== undefined &&
+				storedMsg.priorityLevel !== undefined &&
+				storedMsg.priorityLevel !== expectedPriorityLevel) {
+				// Stale signal from different priority context - discard and wait for new one
+				debug('[%s] Discarding stale %s with priority %d (expected %d)',
+					getTimestamp(), signalType, storedMsg.priorityLevel, expectedPriorityLevel);
+				console.log(`[SYNC] Discarding stale ${signalType} with priority ${storedMsg.priorityLevel} (expected ${expectedPriorityLevel})`);
+				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
+				// Fall through to active listener to wait for correct signal
 			} else {
-				debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex, age);
+				// Priority matches or not checking - accept the signal
+				const age = Date.now() - storedMsg.timestamp;
+				const msg = `Found stored ${signalType} for region=%s, syncIndex=%d, age=%dms`;
+				if (timedDebug) {
+					timedDebug.log(msg, regionName, syncIndex, age);
+				} else {
+					debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex, age);
+				}
+				// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
+				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
+				return true; // Continue immediately - signal received
 			}
-			// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
-			syncGroup.clearSyncCoordinationMessage(signalType, regionName);
-			return true; // Continue immediately - signal received
 		}
 
 		// Create promise with active listener
@@ -1881,6 +1896,16 @@ export class SMILElementController {
 						message.regionName === regionName &&
 						message.syncIndex === syncIndex
 					) {
+						// Validate priority if both are defined
+						if (expectedPriorityLevel !== undefined &&
+							message.priorityLevel !== undefined &&
+							message.priorityLevel !== expectedPriorityLevel) {
+							// Wrong priority - keep waiting for correct signal
+							debug('[%s] Ignoring %s with priority %d (expected %d)',
+								getTimestamp(), signalType, message.priorityLevel, expectedPriorityLevel);
+							return; // Don't resolve, keep waiting
+						}
+
 						const msg = `Received ${signalType} for region=${regionName}, syncIndex=${syncIndex}`;
 						if (timedDebug) {
 							timedDebug.log(msg);
