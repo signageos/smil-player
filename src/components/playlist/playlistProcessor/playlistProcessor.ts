@@ -2432,12 +2432,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
 		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
+			const preparePriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
 			timedDebug.log('Coordinating preparation completion for sync');
 			try {
 				await this.elementController.coordinatePrepareComplete(
 					currentRegionInfo.regionName,
 					value.syncIndex,
 					timedDebug,
+					preparePriorityLevel,
 				);
 				timedDebug.log('Preparation coordination completed');
 			} catch (error) {
@@ -2888,6 +2890,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionName,
 				syncIndex,
 				timedDebug,
+				priorityLevel,
 			);
 			timedDebug.log('Play coordination completed - starting synchronized playback');
 		} catch (error) {
@@ -2938,6 +2941,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionName,
 				syncIndex,
 				timedDebug,
+				priorityLevel,
 			);
 			timedDebug.log('Finish coordination completed - all devices synchronized');
 		} catch (error) {
