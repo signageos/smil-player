@@ -1563,6 +1563,17 @@ export class SMILElementController {
 							this.clearResyncState();
 						}
 
+						// Recompute isAtResyncTarget after priority check may have cleared state
+						const currentResyncTarget = expectedState === 'prepared'
+							? this.synchronization.resyncTargets?.prepare
+							: expectedState === 'playing'
+								? this.synchronization.resyncTargets?.play
+								: this.synchronization.resyncTargets?.finish;
+						const currentIsAtResyncTarget =
+							this.synchronization.syncingInAction &&
+							currentResyncTarget !== undefined &&
+							syncIndex === currentResyncTarget;
+
 						// Create virtual elementState from command
 						const virtualElementState = {
 							state: expectedState,
@@ -1572,7 +1583,7 @@ export class SMILElementController {
 						};
 
 						// Special handling if we're at resync target and master has passed us
-						if (isAtResyncTarget && message.syncIndex > syncIndex) {
+						if (currentIsAtResyncTarget && message.syncIndex > syncIndex) {
 							// Master has moved past our resync target
 							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
 							let newTarget = message.syncIndex + 1;
