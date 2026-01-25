@@ -456,6 +456,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<void> {
 		if (!this.synchronization.shouldSync) {
 			return; // No sync needed
@@ -492,7 +493,7 @@ export class SMILElementController {
 			}
 
 			// Master sends ready signal for PREPARE phase
-			await this.broadcastSyncMessage('signal-ready-prepared', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('signal-ready-prepared', regionName, syncIndex, syncGroup, priorityLevel);
 		} else {
 			// Slave always sends ACK to not block master
 			// If in resync mode, send ACK for master's position instead
@@ -509,14 +510,14 @@ export class SMILElementController {
 					}
 				} else {
 					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup, priorityLevel);
 					debug('[%s] Slave in resync but no master position known - sent normal ack-prepared', getTimestamp());
 				}
 				// Don't wait for signal-ready during resync - continue skipping elements
 				return;
 			} else {
 				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup);
+				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup, priorityLevel);
 				const msg = 'Slave sent ack-prepared for region=%s, syncIndex=%d';
 				if (timedDebug) {
 					timedDebug.log(msg, regionName, syncIndex);
@@ -631,6 +632,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<void> {
 		if (!this.synchronization.shouldSync) {
 			return; // No sync needed
@@ -667,7 +669,7 @@ export class SMILElementController {
 			}
 
 			// Master sends ready signal for PLAY phase
-			await this.broadcastSyncMessage('signal-ready-playing', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('signal-ready-playing', regionName, syncIndex, syncGroup, priorityLevel);
 		} else {
 			// Slave always sends ACK to not block master
 			// If in resync mode, send ACK for master's position instead
@@ -684,14 +686,14 @@ export class SMILElementController {
 					}
 				} else {
 					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+					await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup, priorityLevel);
 					debug('[%s] Slave in resync but no master position known - sent normal ack-playing', getTimestamp());
 				}
 				// Don't wait for signal-ready during resync - continue skipping elements
 				return;
 			} else {
 				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup);
+				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup, priorityLevel);
 				const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
 				if (timedDebug) {
 					timedDebug.log(msg, regionName, syncIndex);
@@ -810,6 +812,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<void> {
 		if (!this.synchronization.shouldSync) {
 			return;
@@ -846,7 +849,7 @@ export class SMILElementController {
 			}
 
 			// Master sends ready signal for FINISH phase - ALWAYS (even on timeout)
-			await this.broadcastSyncMessage('signal-ready-finished', regionName, syncIndex, syncGroup);
+			await this.broadcastSyncMessage('signal-ready-finished', regionName, syncIndex, syncGroup, priorityLevel);
 		} else {
 			// Slave handling - same pattern as prepare/play
 			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.finish) {
@@ -862,14 +865,14 @@ export class SMILElementController {
 					}
 				} else {
 					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup);
+					await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup, priorityLevel);
 					debug('[%s] Slave in resync but no master position known - sent normal ack-finished', getTimestamp());
 				}
 				// Don't wait for signal-ready during resync - continue skipping elements
 				return;
 			} else {
 				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup);
+				await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup, priorityLevel);
 				const msg = 'Slave sent ack-finished for region=%s, syncIndex=%d';
 				if (timedDebug) {
 					timedDebug.log(msg, regionName, syncIndex);
