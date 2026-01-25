@@ -31,6 +31,7 @@ class AckTracker {
 	 * @param expectedCount Number of ACKs expected (excluding master)
 	 * @param syncGroup The sync group to listen for ACK messages
 	 * @param timeoutMs Timeout in milliseconds (default 500ms)
+	 * @param expectedPriorityLevel Optional priority level to validate against incoming ACKs
 	 * @returns Promise that resolves to true if all ACKs received, false if timeout
 	 */
 	public async waitForAcks(
@@ -38,6 +39,7 @@ class AckTracker {
 		expectedCount: number,
 		syncGroup: any,
 		timeoutMs: number = 500,
+		expectedPriorityLevel?: number,
 	): Promise<boolean> {
 		debug('[%s] Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', getTimestamp(), key, expectedCount, timeoutMs);
 
@@ -63,18 +65,30 @@ class AckTracker {
 		debug('[%s] Checking for stored ACKs for %s', getTimestamp(), key);
 		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName);
 		if (storedAck && storedAck.syncIndex === syncIndex) {
-			const age = Date.now() - storedAck.timestamp;
-			debug('[%s] Found stored ACK for %s, age=%dms', getTimestamp(), key, age);
-			this.recordAck(key);
+			// Validate priority if both are defined
+			if (expectedPriorityLevel !== undefined &&
+				storedAck.priorityLevel !== undefined &&
+				storedAck.priorityLevel !== expectedPriorityLevel) {
+				// Stale ACK from different priority context - discard
+				debug('[%s] Discarding stale ACK for %s with priority %d (expected %d)',
+					getTimestamp(), key, storedAck.priorityLevel, expectedPriorityLevel);
+				syncGroup.clearSyncCoordinationMessage(ackType, regionName);
+				// Don't record this ACK, continue to listener
+			} else {
+				// Priority matches or not checking - accept the ACK
+				const age = Date.now() - storedAck.timestamp;
+				debug('[%s] Found stored ACK for %s, age=%dms', getTimestamp(), key, age);
+				this.recordAck(key);
 
-			// Clear consumed message immediately
-			syncGroup.clearSyncCoordinationMessage(ackType, regionName);
+				// Clear consumed message immediately
+				syncGroup.clearSyncCoordinationMessage(ackType, regionName);
 
-			// Check if this completes all ACKs
-			if (round.isComplete()) {
-				debug('[%s] All ACKs already received from storage for %s', getTimestamp(), key);
-				this.cleanupRound(key);
-				return true;
+				// Check if this completes all ACKs
+				if (round.isComplete()) {
+					debug('[%s] All ACKs already received from storage for %s', getTimestamp(), key);
+					this.cleanupRound(key);
+					return true;
+				}
 			}
 		}
 
@@ -123,6 +137,16 @@ class AckTracker {
 
 						// Check if this ACK is for our round
 						if (ackKey === key) {
+							// Validate priority if both are defined
+							if (expectedPriorityLevel !== undefined &&
+								message.priorityLevel !== undefined &&
+								message.priorityLevel !== expectedPriorityLevel) {
+								// Wrong priority - ignore this ACK
+								debug('[%s] Ignoring ACK for %s with priority %d (expected %d)',
+									getTimestamp(), key, message.priorityLevel, expectedPriorityLevel);
+								return; // Don't record, keep waiting
+							}
+
 							debug('[%s] Received ACK for %s', getTimestamp(), key);
 							this.recordAck(key);
 
@@ -481,7 +505,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
 				const resultMsg = acksReceived
 					? 'Master received all prepared ACKs for %s'
 					: 'Master timeout waiting for prepared ACKs for %s';
@@ -657,7 +681,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
 				const resultMsg = acksReceived
 					? 'Master received all playing ACKs for %s'
 					: 'Master timeout waiting for playing ACKs for %s';
@@ -837,7 +861,7 @@ export class SMILElementController {
 					debug(msg, expectedAcks, ackKey);
 				}
 
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500);
+				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
 				const resultMsg = acksReceived
 					? 'Master received all finished ACKs for %s'
 					: 'Master timeout waiting for finished ACKs for %s';
