@@ -252,30 +252,60 @@ export class SMILElementController {
 	constructor(private synchronization: Synchronization) {}
 
 	/**
+	 * Clear all resync state - used when priority context changes
+	 */
+	private clearResyncState(): void {
+		if (this.synchronization.resyncTargets) {
+			delete this.synchronization.resyncTargets.prepare;
+			delete this.synchronization.resyncTargets.play;
+			delete this.synchronization.resyncTargets.finish;
+		}
+		this.synchronization.syncingInAction = false;
+		this.synchronization.movingForward = false;
+	}
+
+	/**
 	 * Check for priority level changes from incoming sync messages.
 	 * If priority changed, clear stale resync state from different priority context.
+	 * Handles three transition cases:
+	 * 1. Priority → Non-priority (undefined): Clear stored priority and resync state
+	 * 2. Non-priority → Priority: Clear resync state, set new priority
+	 * 3. Priority → Different priority: Clear resync state, update priority
 	 */
 	private checkAndUpdatePriorityLevel(regionName: string, messagePriority: number | undefined): void {
+		const storedPriority = this.syncState.priorityLevel.get(regionName);
+
+		// Case 1: Transitioning TO non-priority playlist (messagePriority is undefined)
 		if (messagePriority === undefined) {
-			return; // No priority in message (simple playlist without priorityClass)
+			if (storedPriority !== undefined) {
+				// Was in priority context, now leaving - clear stored priority and resync state
+				debug('[%s] Leaving priority context (was %d) - clearing resync state', getTimestamp(), storedPriority);
+				console.log(`[SYNC] Leaving priority context (was ${storedPriority}) - clearing resync state`);
+				this.syncState.priorityLevel.delete(regionName);
+				this.clearResyncState();
+			}
+			// If storedPriority was already undefined, nothing to do
+			return;
 		}
 
-		const storedPriority = this.syncState.priorityLevel.get(regionName);
-		if (storedPriority !== undefined && storedPriority !== messagePriority) {
-			// Priority changed - clear stale resync state
+		// Case 2: Transitioning FROM non-priority TO priority (storedPriority is undefined)
+		if (storedPriority === undefined) {
+			// Entering priority context - clear any stale resync state from previous context
+			debug('[%s] Entering priority context (now %d) - clearing resync state', getTimestamp(), messagePriority);
+			console.log(`[SYNC] Entering priority context (now ${messagePriority}) - clearing resync state`);
+			this.clearResyncState();
+			this.syncState.priorityLevel.set(regionName, messagePriority);
+			return;
+		}
+
+		// Case 3: Priority changed between different defined values
+		if (storedPriority !== messagePriority) {
 			debug('[%s] Priority changed from %d to %d - clearing resync state', getTimestamp(), storedPriority, messagePriority);
 			console.log(`[SYNC] Priority changed from ${storedPriority} to ${messagePriority} - clearing resync state`);
-
-			if (this.synchronization.resyncTargets) {
-				delete this.synchronization.resyncTargets.prepare;
-				delete this.synchronization.resyncTargets.play;
-				delete this.synchronization.resyncTargets.finish;
-			}
-			this.synchronization.syncingInAction = false;
-			this.synchronization.movingForward = false;
+			this.clearResyncState();
 		}
 
-		// Update stored priority
+		// Update stored priority (only reached if messagePriority is defined)
 		this.syncState.priorityLevel.set(regionName, messagePriority);
 	}
 
@@ -1349,13 +1379,7 @@ export class SMILElementController {
 					getTimestamp(), expectedPriorityLevel, storedMsg.priorityLevel);
 				console.log(`[SYNC] Expected priority ${expectedPriorityLevel} differs from stored message priority ${storedMsg.priorityLevel} - clearing resync state (backup)`);
 
-				if (this.synchronization.resyncTargets) {
-					delete this.synchronization.resyncTargets.prepare;
-					delete this.synchronization.resyncTargets.play;
-					delete this.synchronization.resyncTargets.finish;
-				}
-				this.synchronization.syncingInAction = false;
-				this.synchronization.movingForward = false;
+				this.clearResyncState();
 
 				// Clear the stale message - it's from a different priority context
 				syncGroup.clearSyncCoordinationMessage(commandType, regionName);
