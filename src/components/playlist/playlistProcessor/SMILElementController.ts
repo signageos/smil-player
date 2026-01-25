@@ -306,6 +306,42 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Calculate wrapped sync index for resync target.
+	 * CASE 1: Priority playlist - use priority-specific bounds from message
+	 * CASE 2: Simple playlist (no priorityClass) - use global maxSyncIndexPerRegion
+	 *
+	 * @param nextIndex The calculated next index (before wraparound check)
+	 * @param regionName The region name for global max lookup
+	 * @param priorityMaxSyncIndex Max syncIndex from message (undefined for non-priority)
+	 * @param priorityMinSyncIndex Min syncIndex from message (undefined for non-priority)
+	 * @returns The wrapped sync index
+	 */
+	private getWrappedSyncIndex(
+		nextIndex: number,
+		regionName: string,
+		priorityMaxSyncIndex?: number,
+		priorityMinSyncIndex?: number,
+	): number {
+		// CASE 1: Priority playlist - use priority-specific bounds from message
+		if (priorityMaxSyncIndex !== undefined && nextIndex > priorityMaxSyncIndex) {
+			const minIndex = priorityMinSyncIndex ?? 1;
+			debug('[%s] Wrapping resync target from %d to %d (priority max=%d)',
+				getTimestamp(), nextIndex, minIndex, priorityMaxSyncIndex);
+			return minIndex;
+		}
+
+		// CASE 2: Simple playlist (no priorityClass) - use global max
+		const globalMax = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+		if (globalMax !== undefined && nextIndex > globalMax) {
+			debug('[%s] Wrapping resync target from %d to 1 (global max=%d)',
+				getTimestamp(), nextIndex, globalMax);
+			return 1;
+		}
+
+		return nextIndex;
+	}
+
+	/**
 	 * Check for priority level changes from incoming sync messages.
 	 * If priority changed, clear stale resync state from different priority context.
 	 * Handles three transition cases:
@@ -1215,16 +1251,12 @@ export class SMILElementController {
 			);
 
 			// Set target to prepare for the NEXT element after what master is playing
-			let nextIndex = value.syncIndex + 1;
-
-			// Check if we need to wrap around
-			if (maxIndex !== undefined && nextIndex > maxIndex) {
-				console.log('reseting index');
-				// Wrap to first element
-				nextIndex = 1;
-			} else {
-				console.log('increasing index');
-			}
+			const nextIndex = this.getWrappedSyncIndex(
+				value.syncIndex + 1,
+				regionName,
+				value.priorityMaxSyncIndex,
+				value.priorityMinSyncIndex,
+			);
 
 			// Set state-specific resync target for preparation
 			if (!this.synchronization.resyncTargets) {
@@ -1246,17 +1278,13 @@ export class SMILElementController {
 			// Master ahead with same state
 			debug('[%s] Master ahead - need resync. Master at %d, we are at %d', getTimestamp(), value.syncIndex, syncIndex);
 
-			// Handle wraparound for playlist looping
-			let nextIndex = value.syncIndex + 1;
-
-			// Check if we need to wrap around
-			if (maxIndex !== undefined && nextIndex > maxIndex) {
-				console.log('reseting index');
-				// Wrap to first element
-				nextIndex = 1;
-			} else {
-				console.log('increasing index');
-			}
+			// Handle wraparound for playlist looping using priority bounds if available
+			const nextIndex = this.getWrappedSyncIndex(
+				value.syncIndex + 1,
+				regionName,
+				value.priorityMaxSyncIndex,
+				value.priorityMinSyncIndex,
+			);
 
 			// Set state-specific resync target based on expected state
 			if (!this.synchronization.resyncTargets) {
@@ -1313,17 +1341,13 @@ export class SMILElementController {
 					syncIndex,
 				);
 
-				// Handle wraparound for playlist looping
-				let nextIndex = syncIndex + 1;
-
-				// Check if we need to wrap around
-				if (maxIndex !== undefined && nextIndex > maxIndex) {
-					console.log('reseting index');
-					// Wrap to first element
-					nextIndex = 1;
-				} else {
-					console.log('increasing index');
-				}
+				// Handle wraparound for playlist looping using priority bounds if available
+				const nextIndex = this.getWrappedSyncIndex(
+					syncIndex + 1,
+					regionName,
+					value.priorityMaxSyncIndex,
+					value.priorityMinSyncIndex,
+				);
 
 				// Set state-specific resync target for preparation
 				if (!this.synchronization.resyncTargets) {
@@ -1480,12 +1504,14 @@ export class SMILElementController {
 			debug('[%s] Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms', getTimestamp(),
 				commandType, regionName, currentStoredMsg.syncIndex, syncIndex, age);
 
-			// Create virtual elementState from stored command
+			// Create virtual elementState from stored command, including priority bounds
 			const virtualElementState = {
 				state: expectedState,
 				regionName: currentStoredMsg.regionName,
 				syncIndex: currentStoredMsg.syncIndex,
 				timestamp: currentStoredMsg.timestamp,
+				priorityMinSyncIndex: currentStoredMsg.priorityMinSyncIndex,
+				priorityMaxSyncIndex: currentStoredMsg.priorityMaxSyncIndex,
 			};
 
 			// Use processElementState to determine action
@@ -1627,25 +1653,25 @@ export class SMILElementController {
 							currentResyncTarget !== undefined &&
 							syncIndex === currentResyncTarget;
 
-						// Create virtual elementState from command
+						// Create virtual elementState from command, including priority bounds
 						const virtualElementState = {
 							state: expectedState,
 							regionName: message.regionName,
 							syncIndex: message.syncIndex,
 							timestamp: message.timestamp,
+							priorityMinSyncIndex: message.priorityMinSyncIndex,
+							priorityMaxSyncIndex: message.priorityMaxSyncIndex,
 						};
 
 						// Special handling if we're at resync target and master has passed us
 						if (currentIsAtResyncTarget && message.syncIndex > syncIndex) {
-							// Master has moved past our resync target
-							const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-							let newTarget = message.syncIndex + 1;
-
-							// Check if we need to wrap around
-							if (maxIndex !== undefined && newTarget > maxIndex) {
-								debug('[%s] Wrapping resync target from %d to 1 (max=%d)', getTimestamp(), newTarget, maxIndex);
-								newTarget = 1; // Wrap to first element
-							}
+							// Master has moved past our resync target - use priority bounds for wraparound
+							const newTarget = this.getWrappedSyncIndex(
+								message.syncIndex + 1,
+								regionName,
+								message.priorityMaxSyncIndex,
+								message.priorityMinSyncIndex,
+							);
 
 							// Set state-specific resync target based on command type
 							if (commandType === 'cmd-prepare') {
