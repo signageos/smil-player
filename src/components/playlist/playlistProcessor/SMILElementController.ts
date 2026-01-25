@@ -1551,6 +1551,18 @@ export class SMILElementController {
 						// Check for priority level changes and clear stale resync state if needed
 						this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
 
+						// Backup: If expected priority differs from message priority, clear resync state
+						// This handles case where checkAndUpdatePriorityLevel didn't detect change
+						// (e.g., stored priority matches message, but expected differs)
+						if (expectedPriorityLevel !== undefined &&
+							message.priorityLevel !== undefined &&
+							message.priorityLevel !== expectedPriorityLevel) {
+							debug('[%s] Expected priority %d differs from message priority %d - clearing resync state (listener backup)',
+								getTimestamp(), expectedPriorityLevel, message.priorityLevel);
+							console.log(`[SYNC] Expected priority ${expectedPriorityLevel} differs from message priority ${message.priorityLevel} - clearing resync state (listener backup)`);
+							this.clearResyncState();
+						}
+
 						// Create virtual elementState from command
 						const virtualElementState = {
 							state: expectedState,
