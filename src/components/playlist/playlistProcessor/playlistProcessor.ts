@@ -2481,6 +2481,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				if (action === ProcessAction.RESYNC) {
 					timedDebug.log('Resync needed - skipping element preparation');
+					// Ensure priority handling runs even when skipping due to resync
+					await this.priority.handlePriorityWhenDone(
+						value,
+						currentRegionInfo.regionName,
+						currentIndex,
+						endTime,
+						isLast,
+						version,
+						this.playlistVersion,
+						this.triggers,
+					);
 					return; // Skip this element during resync
 				}
 
