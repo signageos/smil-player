@@ -135,7 +135,22 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		const smilFileUpdated: boolean = this.getCancelFunction();
 		const expiredVersion: boolean = version < currentVersion;
 
+		debug(
+			'[PRIORITY-DONE] Checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
+			priorityRegionName,
+			endTimeExpired,
+			repeatCountExpired,
+			isLastElement,
+			smilFileUpdated,
+			expiredVersion,
+		);
+
 		if (((endTimeExpired || repeatCountExpired) && isLastElement) || smilFileUpdated || expiredVersion) {
+			debug(
+				'[PRIORITY-DONE] Unlocking playlist for region: %s, setting playing=false for src: %s',
+				priorityRegionName,
+				currentIndexPriority.media.src,
+			);
 			debug(
 				'Finished playing playlist: %O for region: %s and element: %s',
 				currentIndexPriority,
@@ -178,6 +193,14 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					value.dynamicValue!,
 				);
 			}
+		} else {
+			debug(
+				'[PRIORITY-DONE] NOT unlocking playlist for region: %s - conditions not met (isLast=%s, endTimeExpired=%s, repeatCountExpired=%s)',
+				priorityRegionName,
+				isLastElement,
+				endTimeExpired,
+				repeatCountExpired,
+			);
 		}
 	};
 
@@ -607,6 +630,13 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				await Promise.all(this.promiseAwaiting[priorityRegionName].promiseFunction!);
 			}
 		}
+
+		debug(
+			'[PRIORITY-WAIT] Exited defer/stop wait loop for region: %s after %d iterations (~%ds)',
+			priorityRegionName,
+			waitIterations,
+			Math.round((waitIterations * 25) / 1000),
+		);
 
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
