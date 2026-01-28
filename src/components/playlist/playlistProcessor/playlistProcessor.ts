@@ -1516,8 +1516,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						}
 
 						// Coordinate play synchronization before element becomes visible
-						if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-							const playPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[currentIndex]?.priority?.priorityLevel;
+						if (this.shouldCoordinateSync(value.syncIndex)) {
+							const playPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 							const shouldContinue = await this.coordinatePlaySync(
 								currentRegionInfo.regionName,
 								value.syncIndex,
@@ -1547,6 +1547,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
+						// Coordinate finish synchronization after element playback completes
+						if (this.shouldCoordinateSync(value.syncIndex)) {
+							const finishPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, arrayIndex);
+							await this.coordinateFinishSync(
+								currentRegionInfo.regionName,
+								value.syncIndex,
+								timedDebug,
+								finishPriorityLevel,
+							);
+						}
+
 						await handlePriorityWhenDone();
 						timedDebug.log(
 							'Finished checking iteration of playlist: %O',
@@ -1566,6 +1577,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							err,
 							value.localFilePath,
 						);
+
+						// Coordinate finish synchronization even on error to maintain sync consistency
+						if (this.shouldCoordinateSync(value.syncIndex)) {
+							const finishPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, arrayIndex);
+							await this.coordinateFinishSync(
+								currentRegionInfo.regionName,
+								value.syncIndex,
+								timedDebug,
+								finishPriorityLevel,
+							);
+						}
 
 						await handlePriorityWhenDone();
 
@@ -2123,9 +2145,31 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex],
 						);
 
+						// Coordinate finish synchronization after video playback completes
+						if (this.shouldCoordinateSync(video.syncIndex)) {
+							const finishPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, arrayIndex);
+							await this.coordinateFinishSync(
+								currentRegionInfo.regionName,
+								video.syncIndex,
+								timedDebug,
+								finishPriorityLevel,
+							);
+						}
+
 						await handlePriorityWhenDone();
 					} catch (err) {
 						timedDebug.log('Unexpected error: %O occurred during single video playback: %O', err, video);
+
+						// Coordinate finish synchronization even on error to maintain sync consistency
+						if (this.shouldCoordinateSync(video.syncIndex)) {
+							const finishPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, arrayIndex);
+							await this.coordinateFinishSync(
+								currentRegionInfo.regionName,
+								video.syncIndex,
+								timedDebug,
+								finishPriorityLevel,
+							);
+						}
 
 						await handlePriorityWhenDone();
 
@@ -2186,8 +2230,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Coordinate play synchronization before video playback
-		if (this.synchronization.shouldSync && video.syncIndex !== undefined) {
-			const playPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[arrayIndex]?.priority?.priorityLevel;
+		if (this.shouldCoordinateSync(video.syncIndex)) {
+			const playPriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, arrayIndex);
 			const shouldContinue = await this.coordinatePlaySync(
 				currentRegionInfo.regionName,
 				video.syncIndex,
@@ -2468,8 +2512,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
 
 		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
-		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			const priorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
+		if (this.shouldCoordinateSync(value.syncIndex)) {
+			const priorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, index);
 			timedDebug.log('Coordinating preparation start for sync');
 			try {
 				const action = await this.elementController.coordinatePrepareStart(
@@ -2540,8 +2584,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
-		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			const preparePriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
+		if (this.shouldCoordinateSync(value.syncIndex)) {
+			const preparePriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, index);
 			timedDebug.log('Coordinating preparation completion for sync');
 			try {
 				await this.elementController.coordinatePrepareComplete(
@@ -2668,17 +2712,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// 	break;
 			default:
 				timedDebug.log(`Sorry, we are out of ${key}.`);
-		}
-
-		// Coordinate finish synchronization after element playback completes
-		if (this.synchronization.shouldSync && value.syncIndex !== undefined) {
-			const finishPriorityLevel = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[index]?.priority?.priorityLevel;
-			await this.coordinateFinishSync(
-				currentRegionInfo.regionName,
-				value.syncIndex,
-				timedDebug,
-				finishPriorityLevel,
-			);
 		}
 	};
 
@@ -3075,6 +3108,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			delete this.synchronization.resyncTargets.play;
 			delete this.synchronization.resyncTargets.finish;
 		}
+	}
+
+	/**
+	 * Checks if sync coordination should be performed for an element.
+	 * Returns true if sync is enabled and the element has a valid syncIndex.
+	 */
+	private shouldCoordinateSync(syncIndex: number | undefined): boolean {
+		return this.synchronization.shouldSync && syncIndex !== undefined;
+	}
+
+	/**
+	 * Gets the priority level for the currently playing element in a region.
+	 */
+	private getSyncPriorityLevel(regionName: string, index: number): number | undefined {
+		return this.currentlyPlayingPriority[regionName]?.[index]?.priority?.priorityLevel;
 	}
 
 	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
