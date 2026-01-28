@@ -1947,10 +1947,11 @@ export class SMILElementController {
 			if (expectedPriorityLevel !== undefined &&
 				storedMsg.priorityLevel !== undefined &&
 				storedMsg.priorityLevel !== expectedPriorityLevel) {
-				// Signal from different priority context - ignore and wait for correct one
-				// Don't clear - the signal belongs to a different priority context
-				debug('[%s] Ignoring stored %s with priority %d (expected %d) - waiting for correct signal',
+				// Stale signal from different priority context - discard and wait for new one
+				debug('[%s] Discarding stale %s with priority %d (expected %d)',
 					getTimestamp(), signalType, storedMsg.priorityLevel, expectedPriorityLevel);
+				console.log(`[SYNC] Discarding stale ${signalType} with priority ${storedMsg.priorityLevel} (expected ${expectedPriorityLevel})`);
+				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 				// Fall through to active listener to wait for correct signal
 			} else {
 				// Priority matches or not checking - accept the signal
@@ -1961,8 +1962,8 @@ export class SMILElementController {
 				} else {
 					debug('[%s] ' + msg, getTimestamp(), regionName, syncIndex, age);
 				}
-				// Don't clear signal-ready - let it be overwritten by newer signals
-				// This allows multiple concurrent contexts to receive the same signal
+				// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
+				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 				return true; // Continue immediately - signal received
 			}
 		}
@@ -2029,7 +2030,8 @@ export class SMILElementController {
 						} else {
 							debug('[%s] ' + msg, getTimestamp());
 						}
-						// Don't clear signal-ready - allow other contexts to also receive it
+						// Clear consumed message
+						syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 						cleanup();
 						resolve(true);
 					}
