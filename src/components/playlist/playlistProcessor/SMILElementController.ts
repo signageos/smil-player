@@ -342,6 +342,40 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Detects if slave wrapping to start of range while master message is from end of range.
+	 * This happens when slave checks for a new command before master's new command arrives.
+	 *
+	 * @param slaveIndex - The syncIndex the slave is waiting for
+	 * @param masterIndex - The syncIndex from the master's stored/received message
+	 * @param priorityMin - The minimum syncIndex in the current priority range (from message)
+	 * @param priorityMax - The maximum syncIndex in the current priority range (from message)
+	 * @param globalMax - The global maximum syncIndex for the region (fallback)
+	 * @returns true if this is a wraparound scenario where slave should wait
+	 */
+	private isWraparoundScenario(
+		slaveIndex: number,
+		masterIndex: number,
+		priorityMin: number | undefined,
+		priorityMax: number | undefined,
+		globalMax: number | undefined,
+	): boolean {
+		// Use priority bounds if available, otherwise fall back to global max
+		const minIndex = priorityMin ?? 1;
+		const maxIndex = priorityMax ?? globalMax;
+
+		if (!maxIndex) {
+			return false;
+		}
+
+		// Wraparound: slave at start of range, master message from end of range
+		// Allow some tolerance (slave within first 2 indices of range, master within last 2)
+		const slaveAtStart = slaveIndex <= minIndex + 1;
+		const masterAtEnd = masterIndex >= maxIndex - 1;
+
+		return slaveAtStart && masterAtEnd;
+	}
+
+	/**
 	 * Check for priority level changes from incoming sync messages.
 	 * If priority changed, clear stale resync state from different priority context.
 	 * Handles three transition cases:
@@ -1227,10 +1261,10 @@ export class SMILElementController {
 			}
 
 			return ProcessAction.CONTINUE; // In sync, continue normally
-		} else if (value.syncIndex < syncIndex || (maxIndex && syncIndex <= 2 && value.syncIndex >= (maxIndex - 1))) {
+		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex)) {
 			// Slave is ahead of master - wait for master to catch up
 			// Includes wraparound: slave at start of new iteration, master at end of previous
-			const isWraparound = maxIndex && syncIndex <= 2 && value.syncIndex >= (maxIndex - 1);
+			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex);
 			debug(
 				'[%s] Slave ahead of master %s- slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
 				getTimestamp(),
