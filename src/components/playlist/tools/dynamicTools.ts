@@ -1,5 +1,6 @@
 import { CurrentlyPlaying, CurrentlyPlayingPriority } from '../../../models/playlistModels';
 import { debug } from './generalTools';
+import { resolvePlayingDeferred } from './deferredTools';
 import set = require('lodash/set');
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
@@ -52,12 +53,14 @@ export async function cancelDynamicPlaylistMaster(
 
 	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
 		elem.player.playing = false;
+		resolvePlayingDeferred(elem.player);
 	}
 
 	currentDynamicPlaylist.play = false;
 	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
 		if (elem.media.dynamicValue) {
 			elem.player.playing = false;
+			resolvePlayingDeferred(elem.player);
 		}
 	}
 }
