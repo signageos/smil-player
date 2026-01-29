@@ -186,6 +186,9 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 	) => {
+		// Reset sync index for fresh playlist processing
+		this.globalRegionSyncIndex = {};
+
 		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
