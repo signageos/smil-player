@@ -1,6 +1,7 @@
 import { PriorityObject } from './priorityModels';
 import { SMILMedia, SMILVideo, SosHtmlElement } from './mediaModels';
 import { Synchronization } from './syncModels';
+import { Deferred } from '../components/playlist/tools/Deferred';
 
 export type PrefetchObject = {
 	prefetch: {
@@ -77,6 +78,7 @@ export type CurrentlyPlayingRegion = {
 		endTime: number;
 		playing: boolean;
 		timesPlayed: number;
+		playingCompletionDeferred?: Deferred<void>;
 	};
 	parent: string;
 	behaviour: string;

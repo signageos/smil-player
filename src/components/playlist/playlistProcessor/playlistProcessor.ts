@@ -70,6 +70,7 @@ import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamic
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { broadcastSyncValue, cancelDynamicPlaylistMaster, joinSyncGroup } from '../tools/dynamicTools';
+import { ensurePlayingDeferred, resolvePlayingDeferred } from '../tools/deferredTools';
 import {
 	broadcastEndActionToAllDynamics,
 	connectSyncSafe,
@@ -1136,6 +1137,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			}
 
+			// Resolve all playing deferreds to unblock any waiters
+			for (const region in this.currentlyPlayingPriority) {
+				for (const entry of this.currentlyPlayingPriority[region]) {
+					resolvePlayingDeferred(entry.player);
+				}
+			}
+
 			return true;
 		}
 		return false;
@@ -1770,6 +1778,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			for (const elem of this.currentlyPlayingPriority[parentRegionName]) {
 				if (elem.media.dynamicValue) {
 					elem.player.playing = false;
+					resolvePlayingDeferred(elem.player);
 				}
 			}
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
@@ -1831,6 +1840,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		debug(`[${debugId}] Playlist is ready to play: %O with media: %O`, currentIndexPriority, media);
 		this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player.playing = true;
+		ensurePlayingDeferred(this.currentlyPlayingPriority[regionInfo.regionName][currentIndex].player);
 		return WaitStatus.CONTINUE;
 	};
 
@@ -2621,6 +2631,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					if (suffix === 'before') {
 						debug(`[${debugId}] Setting player as playing for current priority`);
 						this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player.playing = true;
+						ensurePlayingDeferred(this.currentlyPlayingPriority[currentRegionInfo.regionName][currentIndex].player);
 					}
 
 					debug(`[${debugId}] Starting sync wait for playing element, timestamp: %d`, Date.now());

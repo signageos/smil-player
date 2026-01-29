@@ -31,6 +31,7 @@ import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from 
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { joinSyncGroup } from '../tools/dynamicTools';
+import { resolvePlayingDeferred } from '../tools/deferredTools';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
@@ -191,6 +192,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
 					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
 					elem.player.playing = false;
+					resolvePlayingDeferred(elem.player);
 				}
 			}
 		}
@@ -200,6 +202,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
 					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
 					elem.player.playing = false;
+					resolvePlayingDeferred(elem.player);
 				}
 			}
 		}
@@ -402,6 +405,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 								currentDynamicPlaylist.dynamicConfig.data,
 							);
 							elem.player.playing = false;
+							resolvePlayingDeferred(elem.player);
 						}
 					}
 				}
@@ -414,6 +418,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 								currentDynamicPlaylist.dynamicConfig.data,
 							);
 							elem.player.playing = false;
+							resolvePlayingDeferred(elem.player);
 						}
 					}
 				}
