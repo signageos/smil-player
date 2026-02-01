@@ -27,6 +27,7 @@ import {
 import {
 	debug,
 	generateParentId,
+	getConfigString,
 	getDefaultVideoParams,
 	getIndexOfPlayingMedia,
 	getLastArrayItem,
@@ -130,8 +131,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		super(sos, files, options);
 		this.triggers = new PlaylistTriggers(sos, files, options, this.processPlaylist);
 		this.priority = new PlaylistPriority(sos, files, options);
-		this.playerName = (this.sos.config?.playerName as string) ?? '';
-		this.playerId = (this.sos.config?.playerId as string) ?? '';
+		this.playerName = getConfigString(this.sos.config, 'playerName') ?? '';
+		this.playerId = getConfigString(this.sos.config, 'playerId') ?? '';
 		this.elementController = new SMILElementController(this.synchronization);
 	}
 
@@ -1803,8 +1804,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				const versionUpdateProcessed = await this.processVersionUpdate(version);
 
 				if (versionUpdateProcessed) {
-					debug(
-						`[${debugId}] Version update processed, skipping wait for old promises in region: %s`,
+					timedDebug.log(
+						'Version update processed, skipping wait for old promises in region: %s',
 						regionInfo.regionName,
 					);
 					// Continue without waiting - old promises were just cancelled
@@ -1814,16 +1815,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					const promisesToWait = promiseAwaitingRegion?.promiseFunction;
 					if (promisesToWait && promisesToWait.length > 0) {
 						// No version update - proceed with normal promise waiting
-						debug(
-							`[${debugId}] waiting for previous promise in current region: %s, %O, with timestamp : %s`,
+						timedDebug.log(
+							'waiting for previous promise in current region: %s, %O, with timestamp : %s',
 							regionInfo.regionName,
 							media,
 							Date.now(),
 						);
-						debug(`[${debugId}]`, promiseAwaitingRegion);
+						timedDebug.log('promiseAwaitingRegion: %O', promiseAwaitingRegion);
 						await Promise.all(promisesToWait);
-						debug(
-							`[${debugId}] waiting for previous promise in current region finished: %s, %O with timestamp: %s`,
+						timedDebug.log(
+							'waiting for previous promise in current region finished: %s, %O with timestamp: %s',
 							regionInfo.regionName,
 							media,
 							Date.now(),
@@ -1845,13 +1846,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (!promiseObj.version || promiseObj.version < version) {
 				promiseObj.version = version;
 				promiseObj.highestProcessingPriority = myPriority;
-				debug(`[${debugId}] Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
+				timedDebug.log(`Initialized priority tracking - version: ${version}, priority: ${myPriority}`);
 			} else if (promiseObj.version === version) {
 				// For same version, track the highest priority (highest number) currently processing
 				const currentTracked = promiseObj.highestProcessingPriority ?? myPriority;
 				promiseObj.highestProcessingPriority = Math.max(currentTracked, myPriority);
-				debug(
-					`[${debugId}] Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`,
+				timedDebug.log(
+					`Updated highest priority tracking to: ${promiseObj.highestProcessingPriority} (current: ${currentTracked}, new: ${myPriority})`,
 				);
 			}
 
@@ -1859,8 +1860,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			// If a higher priority (higher number) is already processing, retry later
 			if (currentHighest > myPriority) {
-				debug(
-					`[${debugId}] Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`,
+				timedDebug.log(
+					`Priority ${myPriority} (lower) waiting - higher priority ${currentHighest} is currently processing`,
 				);
 				await sleep(100);
 
@@ -1876,15 +1877,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					}
 					return WaitStatus.SKIP;
 				}
-				debug(
-					`[${debugId}] Priority ${myPriority} (lower) retrying - higher priority ${currentHighest} is currently processing`,
+				timedDebug.log(
+					`Priority ${myPriority} (lower) retrying - higher priority ${currentHighest} is currently processing`,
 				);
 				return WaitStatus.RETRY;
 			}
 
 			// Priority can proceed - no higher priority blocking
-			debug(
-				`[${debugId}] Priority ${myPriority} proceeding - no higher priority blocking (tracked highest: ${currentHighest})`,
+			timedDebug.log(
+				`Priority ${myPriority} proceeding - no higher priority blocking (tracked highest: ${currentHighest})`,
 			);
 		}
 
@@ -1894,8 +1895,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
 			version >= this.getPlaylistVersion()
 		) {
-			debug(
-				`[${debugId}] Master dynamic playlist is waiting for all preceding content to finish: %s, %s`,
+			timedDebug.log(
+				'Master dynamic playlist is waiting for all preceding content to finish: %s, %s',
 				media.dynamicValue,
 				Date.now(),
 			);
@@ -1904,8 +1905,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				promises = promises.concat(promise.promiseFunction!);
 			}
 			await Promise.all(promises);
-			debug(
-				`[${debugId}] Master dynamic playlist finished waiting for all preceding content to finish: %s, %s`,
+			timedDebug.log(
+				'Master dynamic playlist finished waiting for all preceding content to finish: %s, %s',
 				media.dynamicValue,
 				Date.now(),
 			);
@@ -2613,7 +2614,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			endTime,
 			isLast,
 			version,
-			debugId,
+			timedDebug,
 			priorityCoord,
 		);
 

@@ -352,3 +352,32 @@ export function processRandomPlayMode(
 			return playlist;
 	}
 }
+
+/**
+ * Extracts a string value from config, returning undefined if not a string
+ */
+export function getConfigString(
+	config: Record<string, number | string | boolean>,
+	key: string,
+): string | undefined {
+	const value = config[key];
+	return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * Extracts a boolean value from config, handling string 'true'/'false'
+ */
+export function getConfigBoolean(
+	config: Record<string, number | string | boolean>,
+	key: string,
+	defaultValue: boolean = false,
+): boolean {
+	const value = config[key];
+	if (typeof value === 'boolean') {
+		return value;
+	}
+	if (typeof value === 'string') {
+		return value.toLowerCase() === 'true';
+	}
+	return defaultValue;
+}
