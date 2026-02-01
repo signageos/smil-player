@@ -1,7 +1,7 @@
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
-import { debug, sleep } from './generalTools';
+import { debug, getConfigString, sleep } from './generalTools';
 import { isArray, isNil } from 'lodash';
 import { broadcastSyncValue } from './dynamicTools';
 import { SMILFileObject } from '../../../models/filesModels';
@@ -53,9 +53,9 @@ export async function joinAllSyncGroupsOnSmilStart(
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ): Promise<void> {
-	synchronization.syncGroupName = sos.config.syncGroupName as string;
-	synchronization.syncGroupIds = (sos.config.syncGroupIds as string)?.split(',') ?? [];
-	synchronization.syncDeviceId = sos.config.syncDeviceId as string;
+	synchronization.syncGroupName = getConfigString(sos.config, 'syncGroupName') ?? '';
+	synchronization.syncGroupIds = getConfigString(sos.config, 'syncGroupIds')?.split(',') ?? [];
+	synchronization.syncDeviceId = getConfigString(sos.config, 'syncDeviceId') ?? '';
 	synchronization.syncGroupIds.sort();
 
 	const triggerSync = await createTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
@@ -156,7 +156,7 @@ export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) 
 		const options = sos.config.syncServerUrl
 			? {
 					engine: SyncEngine.SyncServer,
-					uri: sos.config.syncServerUrl as string,
+					uri: getConfigString(sos.config, 'syncServerUrl')!,
 					config: {
 						allowSlaveBroadcast: true,
 					},

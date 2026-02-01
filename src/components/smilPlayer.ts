@@ -11,7 +11,7 @@ import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './p
 import backupImageLandscape from '../../public/backupImage/backupImage.jpg';
 // @ts-ignore
 import backupImagePortrait from '../../public/backupImage/backupImage.jpg';
-import { generateBackupImagePlaylist, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
+import { generateBackupImagePlaylist, getConfigBoolean, getConfigString, getDefaultRegion, removeWhitespace, sleep } from './playlist/tools/generalTools';
 import { debug } from './smilPlayerTools';
 import { SMILScheduleEnum } from '../enums/scheduleEnums';
 import { SMILEnums, smilUpdate } from '../enums/generalEnums';
@@ -60,7 +60,10 @@ export class SmilPlayer implements ISmilPlayer {
 			throw new Error('No valid smil url provided');
 		}
 
-		smilUrl = removeWhitespace(smilUrl as string);
+		if (typeof smilUrl !== 'string') {
+			throw new Error('smilUrl must be a string');
+		}
+		smilUrl = removeWhitespace(smilUrl);
 
 		debug('Smil file url is: %s', smilUrl);
 
@@ -139,7 +142,7 @@ export class SmilPlayer implements ISmilPlayer {
 		}
 
 		const backupImageObject: SMILFile = {
-			src: sos.config.backupImageUrl as string,
+			src: getConfigString(sos.config, 'backupImageUrl')!,
 		};
 
 		try {
@@ -200,9 +203,7 @@ export class SmilPlayer implements ISmilPlayer {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
-		config.videoOptions.background = (sos.config.videoBackground ||
-			sos.config.videoBackground === 'true' ||
-			false) as boolean;
+		config.videoOptions.background = getConfigBoolean(sos.config, 'videoBackground', false);
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};
