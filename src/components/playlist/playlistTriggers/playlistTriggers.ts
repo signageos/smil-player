@@ -1,6 +1,6 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
 import { SMILMedia } from '../../../models/mediaModels';
-import { sleep } from '../tools/generalTools';
+import { getConfigString, sleep } from '../tools/generalTools';
 import { FunctionKeys, SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { isNil, isObject } from 'lodash';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
@@ -27,12 +27,12 @@ import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels
 import { BinaryOperatorChar } from '../../../enums/conditionalEnums';
 import { IPlaylistTriggers } from './IPlaylistTriggers';
 import { PriorityObject } from '../../../models/priorityModels';
-import { DynamicPlaylist, DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-// import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-// import { joinSyncGroup } from '../tools/dynamicTools';
 import { resolvePlayingDeferred } from '../tools/deferredTools';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
+import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
+import { joinSyncGroup } from '../tools/dynamicTools';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
 
@@ -553,7 +553,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 
 			serialPort = await this.sos.hardware.openSerialPort({
-				device: (this.sos.config.serialPortDevice as string) ?? SMILTriggersEnum.nexmoDevice,
+				device: getConfigString(this.sos.config, 'serialPortDevice') ?? SMILTriggersEnum.nexmoDevice,
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
 			});
 		} catch (err) {

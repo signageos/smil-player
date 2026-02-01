@@ -631,12 +631,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			}
 		}
 
-		debug(
-			'[PRIORITY-WAIT] Exited defer/stop wait loop for region: %s after %d iterations (~%ds)',
-			priorityRegionName,
-			waitIterations,
-			Math.round((waitIterations * 25) / 1000),
-		);
 
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
