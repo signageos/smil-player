@@ -7,12 +7,15 @@ import { removeDigits } from './generalTools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 
 export function getDynamicPlaylistAndId(
-	dynamicPlaylistConfig: DynamicPlaylist,
+	dynamicPlaylistConfig: Partial<DynamicPlaylist>,
 	smilObject: SMILFileObject,
 ): {
 	dynamicPlaylistId: string | undefined;
 	dynamicMedia: DynamicPlaylistObject | undefined;
 } {
+	if (!dynamicPlaylistConfig?.data) {
+		return { dynamicPlaylistId: undefined, dynamicMedia: undefined };
+	}
 	const dynamicConfigArray = dynamicPlaylistConfig.data.split(',');
 	let dynamicPlaylistId = undefined;
 	let dynamicMedia = undefined;

@@ -16,7 +16,7 @@ export type DynamicPlaylistElement = {
 	parentRegion: string;
 	syncId: string;
 	isMaster: boolean;
-	dynamicConfig: DynamicPlaylist;
+	dynamicConfig?: DynamicPlaylist;
 	intervalId: Timeout;
 	version: number;
 	dynamicPlaylistId: string;
