@@ -1,6 +1,7 @@
 import { debug } from '../tools/generalTools';
-import { Synchronization, SyncElementState, SyncMessage, SyncMessageType } from '../../../models/syncModels';
+import { Synchronization, SyncElementState, SyncMessage, SyncMessageType, SyncPhase, SyncPhaseConfig, SYNC_PHASE_CONFIG, VirtualElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
+import { SyncGroup } from '../tools/SyncGroup';
 import { TimedDebugger } from './playlistProcessor';
 
 // Process actions for element state handling
@@ -37,7 +38,7 @@ class AckTracker {
 	public async waitForAcks(
 		key: string,
 		expectedCount: number,
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		timeoutMs: number = 500,
 		expectedPriorityLevel?: number,
 	): Promise<boolean> {
@@ -511,52 +512,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<ProcessActionType> {
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for prepare start: region=%s', getTimestamp(), regionName);
-			return ProcessAction.CONTINUE;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master broadcasts prepare command
-			await this.broadcastSyncMessage('cmd-prepare', regionName, syncIndex, syncGroup, priorityLevel);
-			const msg = 'Master sent cmd-prepare for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-			return ProcessAction.CONTINUE; // Master always continues
-		} else {
-			// Slave waits for cmd-prepare from master
-			const waitMsg = 'Slave waiting for cmd-prepare from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const action = await this.waitForPrepareCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
-
-			if (action === ProcessAction.CONTINUE) {
-				const readyMsg = 'Slave received cmd-prepare, starting preparation for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			} else if (action === ProcessAction.RESYNC) {
-				const resyncMsg = 'Slave detected resync needed during prepare start for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(resyncMsg, regionName, syncIndex);
-				} else {
-					debug(resyncMsg, regionName, syncIndex);
-				}
-			}
-
-			return action; // Return the action for the caller to handle
-		}
+		return this.coordinatePhaseStart('prepare', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
@@ -569,111 +525,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No sync needed
-		}
-
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for prepare complete: region=%s', getTimestamp(), regionName);
-			return;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0) {
-				const ackKey = `${regionName}-${syncIndex}-ack-prepared`;
-				const msg = 'Master waiting for %d prepared ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(msg, expectedAcks, ackKey);
-				} else {
-					debug(msg, expectedAcks, ackKey);
-				}
-
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
-				const resultMsg = acksReceived
-					? 'Master received all prepared ACKs for %s'
-					: 'Master timeout waiting for prepared ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(resultMsg, ackKey);
-				} else {
-					debug(resultMsg, ackKey);
-				}
-			}
-
-			// Master sends ready signal for PREPARE phase
-			await this.broadcastSyncMessage('signal-ready-prepared', regionName, syncIndex, syncGroup, priorityLevel);
-		} else {
-			// Slave always sends ACK to not block master
-			// If in resync mode, send ACK for master's position instead
-			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.prepare) {
-				// Get master's current position and send ACK for that
-				const masterPos = this.getPositions(regionName, 'prepared', syncGroup).master;
-				if (masterPos > 0) {
-					await this.sendAckForPosition(regionName, masterPos, 'prepared', syncGroup);
-					const msg = 'Slave in resync mode - sent ack-prepared for master position=%d instead of %d';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos, syncIndex);
-					} else {
-						debug(msg, masterPos, syncIndex);
-					}
-				} else {
-					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup, priorityLevel);
-					debug('[%s] Slave in resync but no master position known - sent normal ack-prepared', getTimestamp());
-				}
-				// Don't wait for signal-ready during resync - continue skipping elements
-				return;
-			} else {
-				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-prepared', regionName, syncIndex, syncGroup, priorityLevel);
-				const msg = 'Slave sent ack-prepared for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex);
-				} else {
-					debug(msg, regionName, syncIndex);
-				}
-			}
-
-			// Wait for signal-ready-prepared from master
-			const waitMsg = 'Slave waiting for signal-ready-prepared from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-prepared', timedDebug, priorityLevel);
-			if (!receivedSignal) {
-				// Timeout occurred - trigger resync
-				console.log(`[SYNC] Signal-ready-prepared timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
-				this.synchronization.syncingInAction = true;
-
-				// Get master's last known position
-				const masterPos = this.getPositions(regionName, 'prepared', syncGroup).master;
-				if (masterPos > syncIndex) {
-					if (!this.synchronization.resyncTargets) {
-						this.synchronization.resyncTargets = {};
-					}
-					this.synchronization.resyncTargets.prepare = masterPos + 1;
-					const msg = 'Timeout recovery: setting resync target to %d (master at %d)';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos + 1, masterPos);
-					} else {
-						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
-					}
-				}
-			} else {
-				const readyMsg = 'Slave received signal-ready, continuing for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			}
-		}
+		return this.coordinatePhaseComplete('prepare', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
@@ -687,52 +539,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<ProcessActionType> {
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for play start: region=%s', getTimestamp(), regionName);
-			return ProcessAction.CONTINUE;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master broadcasts play command
-			await this.broadcastSyncMessage('cmd-play', regionName, syncIndex, syncGroup, priorityLevel);
-			const msg = 'Master sent cmd-play for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-			return ProcessAction.CONTINUE; // Master always continues
-		} else {
-			// Slave waits for cmd-play from master
-			const waitMsg = 'Slave waiting for cmd-play from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const action = await this.waitForPlayCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
-
-			if (action === ProcessAction.CONTINUE) {
-				const readyMsg = 'Slave received cmd-play, starting play coordination for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			} else if (action === ProcessAction.RESYNC) {
-				const resyncMsg = 'Slave detected resync needed during play start for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(resyncMsg, regionName, syncIndex);
-				} else {
-					debug(resyncMsg, regionName, syncIndex);
-				}
-			}
-
-			return action; // Return the action for the caller to handle
-		}
+		return this.coordinatePhaseStart('play', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
@@ -745,111 +552,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return; // No sync needed
-		}
-
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for play complete: region=%s', getTimestamp(), regionName);
-			return;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0) {
-				const ackKey = `${regionName}-${syncIndex}-ack-playing`;
-				const msg = 'Master waiting for %d playing ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(msg, expectedAcks, ackKey);
-				} else {
-					debug(msg, expectedAcks, ackKey);
-				}
-
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
-				const resultMsg = acksReceived
-					? 'Master received all playing ACKs for %s'
-					: 'Master timeout waiting for playing ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(resultMsg, ackKey);
-				} else {
-					debug(resultMsg, ackKey);
-				}
-			}
-
-			// Master sends ready signal for PLAY phase
-			await this.broadcastSyncMessage('signal-ready-playing', regionName, syncIndex, syncGroup, priorityLevel);
-		} else {
-			// Slave always sends ACK to not block master
-			// If in resync mode, send ACK for master's position instead
-			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.play) {
-				// Get master's current position and send ACK for that
-				const masterPos = this.getPositions(regionName, 'playing', syncGroup).master;
-				if (masterPos > 0) {
-					await this.sendAckForPosition(regionName, masterPos, 'playing', syncGroup);
-					const msg = 'Slave in resync mode - sent ack-playing for master position=%d instead of %d';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos, syncIndex);
-					} else {
-						debug(msg, masterPos, syncIndex);
-					}
-				} else {
-					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup, priorityLevel);
-					debug('[%s] Slave in resync but no master position known - sent normal ack-playing', getTimestamp());
-				}
-				// Don't wait for signal-ready during resync - continue skipping elements
-				return;
-			} else {
-				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-playing', regionName, syncIndex, syncGroup, priorityLevel);
-				const msg = 'Slave sent ack-playing for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex);
-				} else {
-					debug(msg, regionName, syncIndex);
-				}
-			}
-
-			// Wait for signal-ready-playing from master
-			const waitMsg = 'Slave waiting for signal-ready-playing from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-playing', timedDebug, priorityLevel);
-			if (!receivedSignal) {
-				// Timeout occurred - trigger resync
-				console.log(`[SYNC] Signal-ready-playing timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
-				this.synchronization.syncingInAction = true;
-
-				// Get master's last known position
-				const masterPos = this.getPositions(regionName, 'playing', syncGroup).master;
-				if (masterPos > syncIndex) {
-					if (!this.synchronization.resyncTargets) {
-						this.synchronization.resyncTargets = {};
-					}
-					this.synchronization.resyncTargets.play = masterPos + 1;
-					const msg = 'Timeout recovery: setting play resync target to %d (master at %d)';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos + 1, masterPos);
-					} else {
-						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
-					}
-				}
-			} else {
-				const readyMsg = 'Slave received signal-ready-playing, continuing for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			}
-		}
+		return this.coordinatePhaseComplete('play', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
@@ -863,56 +566,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<ProcessActionType> {
-		if (!this.synchronization.shouldSync) {
-			return ProcessAction.CONTINUE;
-		}
-
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for finish start: region=%s', getTimestamp(), regionName);
-			return ProcessAction.CONTINUE;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master broadcasts finish command
-			await this.broadcastSyncMessage('cmd-finish', regionName, syncIndex, syncGroup, priorityLevel);
-			const msg = 'Master sent cmd-finish for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(msg, regionName, syncIndex);
-			} else {
-				debug(msg, regionName, syncIndex);
-			}
-			return ProcessAction.CONTINUE; // Master always continues
-		} else {
-			// Slave waits for cmd-finish from master
-			const waitMsg = 'Slave waiting for cmd-finish from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const action = await this.waitForFinishCommand(regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
-
-			if (action === ProcessAction.CONTINUE) {
-				const readyMsg = 'Slave received cmd-finish, starting finish coordination for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			} else if (action === ProcessAction.RESYNC) {
-				const resyncMsg = 'Slave detected resync needed during finish start for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(resyncMsg, regionName, syncIndex);
-				} else {
-					debug(resyncMsg, regionName, syncIndex);
-				}
-			}
-
-			return action; // Return the action for the caller to handle
-		}
+		return this.coordinatePhaseStart('finish', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
@@ -925,117 +579,14 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<void> {
-		if (!this.synchronization.shouldSync) {
-			return;
-		}
-
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
-		if (!syncGroup) {
-			debug('[%s] No sync group for finish complete: region=%s', getTimestamp(), regionName);
-			return;
-		}
-
-		const isMaster = await syncGroup.isMaster();
-		if (isMaster) {
-			// Master waits for ACKs
-			const expectedAcks = syncGroup.getConnectedPeersCount() - 1; // Exclude master itself
-			if (expectedAcks > 0) {
-				const ackKey = `${regionName}-${syncIndex}-ack-finished`;
-				const msg = 'Master waiting for %d finished ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(msg, expectedAcks, ackKey);
-				} else {
-					debug(msg, expectedAcks, ackKey);
-				}
-
-				const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
-				const resultMsg = acksReceived
-					? 'Master received all finished ACKs for %s'
-					: 'Master timeout waiting for finished ACKs for %s';
-				if (timedDebug) {
-					timedDebug.log(resultMsg, ackKey);
-				} else {
-					debug(resultMsg, ackKey);
-				}
-			}
-
-			// Master sends ready signal for FINISH phase - ALWAYS (even on timeout)
-			await this.broadcastSyncMessage('signal-ready-finished', regionName, syncIndex, syncGroup, priorityLevel);
-		} else {
-			// Slave handling - same pattern as prepare/play
-			if (this.synchronization.syncingInAction && this.synchronization.resyncTargets?.finish) {
-				// Get master's current position and send ACK for that
-				const masterPos = this.getPositions(regionName, 'finished', syncGroup).master;
-				if (masterPos > 0) {
-					await this.sendAckForPosition(regionName, masterPos, 'finished', syncGroup);
-					const msg = 'Slave in resync mode - sent ack-finished for master position=%d instead of %d';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos, syncIndex);
-					} else {
-						debug(msg, masterPos, syncIndex);
-					}
-				} else {
-					// No master position known yet, send normal ACK
-					await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup, priorityLevel);
-					debug('[%s] Slave in resync but no master position known - sent normal ack-finished', getTimestamp());
-				}
-				// Don't wait for signal-ready during resync - continue skipping elements
-				return;
-			} else {
-				// Normal case - send ACK for current position
-				await this.broadcastSyncMessage('ack-finished', regionName, syncIndex, syncGroup, priorityLevel);
-				const msg = 'Slave sent ack-finished for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(msg, regionName, syncIndex);
-				} else {
-					debug(msg, regionName, syncIndex);
-				}
-			}
-
-			// Wait for signal-ready-finished from master
-			const waitMsg = 'Slave waiting for signal-ready-finished from master for region=%s, syncIndex=%d';
-			if (timedDebug) {
-				timedDebug.log(waitMsg, regionName, syncIndex);
-			} else {
-				debug(waitMsg, regionName, syncIndex);
-			}
-
-			const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, 'signal-ready-finished', timedDebug, priorityLevel);
-			if (!receivedSignal) {
-				// Timeout occurred - trigger resync
-				console.log(`[SYNC] Signal-ready-finished timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
-				this.synchronization.syncingInAction = true;
-
-				// Get master's last known position
-				const masterPos = this.getPositions(regionName, 'finished', syncGroup).master;
-				if (masterPos > syncIndex) {
-					if (!this.synchronization.resyncTargets) {
-						this.synchronization.resyncTargets = {};
-					}
-					this.synchronization.resyncTargets.finish = masterPos + 1;
-					const msg = 'Timeout recovery: setting finish resync target to %d (master at %d)';
-					if (timedDebug) {
-						timedDebug.log(msg, masterPos + 1, masterPos);
-					} else {
-						debug('[%s] ' + msg, getTimestamp(), masterPos + 1, masterPos);
-					}
-				}
-			} else {
-				const readyMsg = 'Slave received signal-ready-finished, continuing for region=%s, syncIndex=%d';
-				if (timedDebug) {
-					timedDebug.log(readyMsg, regionName, syncIndex);
-				} else {
-					debug(readyMsg, regionName, syncIndex);
-				}
-			}
-		}
+		return this.coordinatePhaseComplete('finish', regionName, syncIndex, timedDebug, priorityLevel);
 	}
 
 	/**
 	 * Coordinate element state transition across devices
 	 */
 	private async coordinateElementTransition(
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		state: SyncElementState,
 		regionName: string,
 		syncIndex: number,
@@ -1226,7 +777,7 @@ export class SMILElementController {
 	 * - WAIT: Keep waiting for the correct broadcast
 	 */
 	private processElementState(
-		value: any,
+		value: VirtualElementState,
 		expectedState: SyncElementState,
 		syncIndex: number,
 		regionName: string,
@@ -1426,7 +977,7 @@ export class SMILElementController {
 		type: SyncMessageType,
 		regionName: string,
 		syncIndex: number,
-		syncGroup?: any,
+		syncGroup?: SyncGroup,
 		priorityLevel?: number,
 	): Promise<void> {
 		// Look up priority bounds for this region and priority level
@@ -1467,7 +1018,7 @@ export class SMILElementController {
 		expectedState: 'prepared' | 'playing' | 'finished',
 		regionName: string,
 		syncIndex: number,
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		timedDebug?: TimedDebugger,
 		expectedPriorityLevel?: number,
 	): Promise<ProcessActionType> {
@@ -1800,7 +1351,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		state: 'prepared' | 'playing' | 'finished',
-		syncGroup: any,
+		syncGroup: SyncGroup,
 	): Promise<void> {
 		const ackType = state === 'prepared' ? 'ack-prepared' : state === 'playing' ? 'ack-playing' : 'ack-finished';
 		const ackKey = `${regionName}-${syncIndex}-${ackType}`;
@@ -1838,7 +1389,7 @@ export class SMILElementController {
 	/**
 	 * Get current positions for debugging
 	 */
-	private getPositions(regionName: string, state: 'prepared' | 'playing' | 'finished', syncGroup?: any): { slave: number; master: number } {
+	private getPositions(regionName: string, state: 'prepared' | 'playing' | 'finished', syncGroup?: SyncGroup): { slave: number; master: number } {
 		// Get slave position from local tracking based on state
 		const slavePos = state === 'prepared'
 			? (this.syncState.slavePosition.prepare.get(regionName) || 0)
@@ -1861,70 +1412,211 @@ export class SMILElementController {
 	}
 
 	/**
-	 * Wait for cmd-prepare message from master (slaves only)
-	 * Returns the action to take based on sync state
+	 * Helper to log debug messages, using TimedDebugger if available
 	 */
-	private async waitForPrepareCommand(
-		regionName: string,
-		syncIndex: number,
-		syncGroup: any,
-		timedDebug?: TimedDebugger,
-		expectedPriorityLevel?: number,
-	): Promise<ProcessActionType> {
-		// Use unified method to wait for command and check sync
-		return await this.waitForCommandAndCheckSync(
-			'cmd-prepare',
-			'prepared',
-			regionName,
-			syncIndex,
-			syncGroup,
-			timedDebug,
-			expectedPriorityLevel,
-		);
+	private logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
+		if (timedDebug) {
+			timedDebug.log(message, ...args);
+		} else {
+			debug('[%s] ' + message, getTimestamp(), ...args);
+		}
 	}
 
 	/**
-	 * Wait for play command from master, detecting resync if needed
+	 * Handle master's phase completion: wait for ACKs and send signal-ready
 	 */
-	private async waitForPlayCommand(
+	private async handleMasterPhaseComplete(
+		phase: SyncPhase,
+		config: SyncPhaseConfig,
 		regionName: string,
 		syncIndex: number,
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		timedDebug?: TimedDebugger,
-		expectedPriorityLevel?: number,
-	): Promise<ProcessActionType> {
-		// Use unified method to wait for command and check sync
-		return await this.waitForCommandAndCheckSync(
-			'cmd-play',
-			'playing',
-			regionName,
-			syncIndex,
-			syncGroup,
-			timedDebug,
-			expectedPriorityLevel,
-		);
+		priorityLevel?: number,
+	): Promise<void> {
+		const expectedAcks = syncGroup.getConnectedPeersCount() - 1;
+
+		if (expectedAcks > 0) {
+			const ackKey = `${regionName}-${syncIndex}-${config.ackType}`;
+			this.logDebug(timedDebug, 'Master waiting for %d %s ACKs for %s', expectedAcks, phase, ackKey);
+
+			const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
+			this.logDebug(timedDebug, acksReceived
+				? 'Master received all %s ACKs for %s'
+				: 'Master timeout waiting for %s ACKs for %s', phase, ackKey);
+		}
+
+		await this.broadcastSyncMessage(config.signalType, regionName, syncIndex, syncGroup, priorityLevel);
 	}
 
 	/**
-	 * Wait for finish command from master, detecting resync if needed
+	 * Handle slave's phase completion: send ACK and wait for signal-ready
 	 */
-	private async waitForFinishCommand(
+	private async handleSlavePhaseComplete(
+		phase: SyncPhase,
+		config: SyncPhaseConfig,
 		regionName: string,
 		syncIndex: number,
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		timedDebug?: TimedDebugger,
-		expectedPriorityLevel?: number,
+		priorityLevel?: number,
+	): Promise<void> {
+		const resyncTarget = this.synchronization.resyncTargets?.[config.resyncField];
+
+		// Handle resync mode - send ACK for master's position
+		if (this.synchronization.syncingInAction && resyncTarget) {
+			await this.sendSlaveResyncAck(config, regionName, syncIndex, syncGroup, timedDebug);
+			return; // Don't wait for signal-ready during resync
+		}
+
+		// Normal flow - send ACK for current position
+		await this.broadcastSyncMessage(config.ackType, regionName, syncIndex, syncGroup, priorityLevel);
+		this.logDebug(timedDebug, 'Slave sent %s for region=%s, syncIndex=%d', config.ackType, regionName, syncIndex);
+
+		// Wait for signal-ready from master
+		this.logDebug(timedDebug, 'Slave waiting for %s from master for region=%s, syncIndex=%d',
+			config.signalType, regionName, syncIndex);
+
+		const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, config.signalType, timedDebug, priorityLevel);
+
+		if (!receivedSignal) {
+			await this.handleSignalReadyTimeout(phase, config, regionName, syncIndex, syncGroup, timedDebug);
+		} else {
+			this.logDebug(timedDebug, 'Slave received %s, continuing for region=%s, syncIndex=%d',
+				config.signalType, regionName, syncIndex);
+		}
+	}
+
+	/**
+	 * Send ACK for master's position during resync mode
+	 */
+	private async sendSlaveResyncAck(
+		config: SyncPhaseConfig,
+		regionName: string,
+		syncIndex: number,
+		syncGroup: SyncGroup,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		const masterPos = this.getPositions(regionName, config.state, syncGroup).master;
+
+		if (masterPos > 0) {
+			await this.sendAckForPosition(regionName, masterPos, config.state, syncGroup);
+			this.logDebug(timedDebug, 'Slave in resync mode - sent %s for master position=%d instead of %d',
+				config.ackType, masterPos, syncIndex);
+		} else {
+			await this.broadcastSyncMessage(config.ackType, regionName, syncIndex, syncGroup);
+			debug('[%s] Slave in resync but no master position known - sent normal %s', getTimestamp(), config.ackType);
+		}
+	}
+
+	/**
+	 * Handle signal-ready timeout: trigger resync and set target
+	 */
+	private async handleSignalReadyTimeout(
+		phase: SyncPhase,
+		config: SyncPhaseConfig,
+		regionName: string,
+		syncIndex: number,
+		syncGroup: SyncGroup,
+		timedDebug?: TimedDebugger,
+	): Promise<void> {
+		console.log(`[SYNC] ${config.signalType} timeout for region=${regionName}, syncIndex=${syncIndex} - triggering resync`);
+		this.synchronization.syncingInAction = true;
+
+		const masterPos = this.getPositions(regionName, config.state, syncGroup).master;
+		if (masterPos > syncIndex) {
+			if (!this.synchronization.resyncTargets) {
+				this.synchronization.resyncTargets = {};
+			}
+			this.synchronization.resyncTargets[config.resyncField] = masterPos + 1;
+			this.logDebug(timedDebug, 'Timeout recovery: setting %s resync target to %d (master at %d)',
+				phase, masterPos + 1, masterPos);
+		}
+	}
+
+	/**
+	 * Unified method to coordinate the start of any sync phase
+	 * Master broadcasts command, slaves wait for it
+	 * @returns ProcessActionType indicating whether to continue or resync
+	 */
+	public async coordinatePhaseStart(
+		phase: SyncPhase,
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
 	): Promise<ProcessActionType> {
-		// Use unified method to wait for command and check sync
-		return await this.waitForCommandAndCheckSync(
-			'cmd-finish',
-			'finished',
-			regionName,
-			syncIndex,
-			syncGroup,
-			timedDebug,
-			expectedPriorityLevel,
-		);
+		if (!this.synchronization.shouldSync) {
+			return ProcessAction.CONTINUE;
+		}
+
+		const config = SYNC_PHASE_CONFIG[phase];
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+
+		if (!syncGroup) {
+			debug('[%s] No sync group for %s start: region=%s', getTimestamp(), phase, regionName);
+			return ProcessAction.CONTINUE;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			await this.broadcastSyncMessage(config.commandType, regionName, syncIndex, syncGroup, priorityLevel);
+			this.logDebug(timedDebug, 'Master sent %s for region=%s, syncIndex=%d', config.commandType, regionName, syncIndex);
+			return ProcessAction.CONTINUE;
+		} else {
+			this.logDebug(timedDebug, 'Slave waiting for %s from master for region=%s, syncIndex=%d', config.commandType, regionName, syncIndex);
+
+			const action = await this.waitForCommandAndCheckSync(
+				config.commandType,
+				config.state,
+				regionName,
+				syncIndex,
+				syncGroup,
+				timedDebug,
+				priorityLevel,
+			);
+
+			if (action === ProcessAction.CONTINUE) {
+				this.logDebug(timedDebug, 'Slave received %s, starting %s coordination for region=%s, syncIndex=%d',
+					config.commandType, phase, regionName, syncIndex);
+			} else if (action === ProcessAction.RESYNC) {
+				this.logDebug(timedDebug, 'Slave detected resync needed during %s start for region=%s, syncIndex=%d',
+					phase, regionName, syncIndex);
+			}
+
+			return action;
+		}
+	}
+
+	/**
+	 * Unified method to coordinate the completion of any sync phase
+	 * Slaves send ACK, master waits for all ACKs, then signals ready
+	 */
+	public async coordinatePhaseComplete(
+		phase: SyncPhase,
+		regionName: string,
+		syncIndex: number,
+		timedDebug?: TimedDebugger,
+		priorityLevel?: number,
+	): Promise<void> {
+		if (!this.synchronization.shouldSync) {
+			return;
+		}
+
+		const config = SYNC_PHASE_CONFIG[phase];
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+
+		if (!syncGroup) {
+			debug('[%s] No sync group for %s complete: region=%s', getTimestamp(), phase, regionName);
+			return;
+		}
+
+		const isMaster = await syncGroup.isMaster();
+		if (isMaster) {
+			await this.handleMasterPhaseComplete(phase, config, regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
+		} else {
+			await this.handleSlavePhaseComplete(phase, config, regionName, syncIndex, syncGroup, timedDebug, priorityLevel);
+		}
 	}
 
 	/**
@@ -1935,7 +1627,7 @@ export class SMILElementController {
 	private async waitForSignalReady(
 		regionName: string,
 		syncIndex: number,
-		syncGroup: any,
+		syncGroup: SyncGroup,
 		signalType: 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished',
 		timedDebug?: TimedDebugger,
 		expectedPriorityLevel?: number,

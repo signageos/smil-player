@@ -12,6 +12,16 @@ export interface SyncStateEvent {
 	elementId?: string;
 }
 
+/** Virtual element state used for processing sync coordination messages */
+export interface VirtualElementState {
+	state: SyncElementState;
+	regionName: string;
+	syncIndex: number;
+	timestamp: number;
+	priorityMinSyncIndex?: number;
+	priorityMaxSyncIndex?: number;
+}
+
 export interface SyncNavigationEvent {
 	regionName: string;
 	syncIndex: number;
@@ -66,4 +76,46 @@ export type Synchronization = {
 			[priorityLevel: number]: { min: number; max: number };
 		};
 	};
+};
+
+/** The three synchronization phases */
+export type SyncPhase = 'prepare' | 'play' | 'finish';
+
+/** Specific message type subsets for type safety */
+export type SyncCommandType = 'cmd-prepare' | 'cmd-play' | 'cmd-finish';
+export type SyncAckType = 'ack-prepared' | 'ack-playing' | 'ack-finished';
+export type SyncSignalReadyType = 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished';
+
+/** Configuration for each sync phase mapping to existing message types */
+export interface SyncPhaseConfig {
+	commandType: SyncCommandType;
+	ackType: SyncAckType;
+	signalType: SyncSignalReadyType;
+	state: Exclude<SyncElementState, 'idle'>;  // prepared, playing, finished
+	resyncField: keyof NonNullable<Synchronization['resyncTargets']>;  // prepare, play, finish
+}
+
+/** Phase configuration lookup table */
+export const SYNC_PHASE_CONFIG: Record<SyncPhase, SyncPhaseConfig> = {
+	prepare: {
+		commandType: 'cmd-prepare',
+		ackType: 'ack-prepared',
+		signalType: 'signal-ready-prepared',
+		state: 'prepared',
+		resyncField: 'prepare',
+	},
+	play: {
+		commandType: 'cmd-play',
+		ackType: 'ack-playing',
+		signalType: 'signal-ready-playing',
+		state: 'playing',
+		resyncField: 'play',
+	},
+	finish: {
+		commandType: 'cmd-finish',
+		ackType: 'ack-finished',
+		signalType: 'signal-ready-finished',
+		state: 'finished',
+		resyncField: 'finish',
+	},
 };
