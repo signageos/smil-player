@@ -6,7 +6,6 @@ import { isArray, isNil } from 'lodash';
 import { broadcastSyncValue } from './dynamicTools';
 import { SMILFileObject } from '../../../models/filesModels';
 import { getDynamicTagsFromPlaylist } from './dynamicPlaylistTools';
-import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { ParsedTriggerInfo } from '../../../models/triggerModels';
 import { SyncGroup } from './SyncGroup';
 
@@ -35,9 +34,7 @@ export async function broadcastEndActionToAllDynamics(
 			debug('Dynamic tag %s is in playlist, sending end event', dynamicId);
 			await broadcastSyncValue(
 				sos,
-				{
-					data: dynamicId,
-				} as DynamicPlaylist,
+				{ data: dynamicId },
 				`${synchronization.syncGroupName}-fullScreenTrigger`,
 				'end',
 			);
