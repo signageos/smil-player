@@ -357,9 +357,12 @@ export function processRandomPlayMode(
  * Extracts a string value from config, returning undefined if not a string
  */
 export function getConfigString(
-	config: Record<string, number | string | boolean>,
+	config: Record<string, number | string | boolean> | undefined,
 	key: string,
 ): string | undefined {
+	if (!config) {
+		return undefined;
+	}
 	const value = config[key];
 	return typeof value === 'string' ? value : undefined;
 }
@@ -368,10 +371,13 @@ export function getConfigString(
  * Extracts a boolean value from config, handling string 'true'/'false'
  */
 export function getConfigBoolean(
-	config: Record<string, number | string | boolean>,
+	config: Record<string, number | string | boolean> | undefined,
 	key: string,
 	defaultValue: boolean = false,
 ): boolean {
+	if (!config) {
+		return defaultValue;
+	}
 	const value = config[key];
 	if (typeof value === 'boolean') {
 		return value;
