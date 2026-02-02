@@ -449,6 +449,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) => {
 		try {
 			debug('Dynamic playlist detected: %O with version: %s', dynamicPlaylistConfig, version);
+			if (!dynamicPlaylistConfig?.data) {
+				debug('Dynamic playlist config data is undefined, skipping');
+				return;
+			}
+
 			if (version < this.getPlaylistVersion()) {
 				debug('Dynamic playlist version is older than current playlist version, skipping');
 				await sleep(SMILScheduleEnum.defaultAwait);
@@ -474,14 +479,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			this.triggers.dynamicPlaylist[dynamicPlaylistId].isMaster = true;
 
-			const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-			await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
-			debug(
-				'Master dynamic playlist: %O is joining sync group: %s with timestamp: %s',
-				dynamicPlaylistConfig,
-				syncGroupName,
-				Date.now(),
-			);
+			if (dynamicPlaylistConfig.syncId) {
+				const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
+				await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
+				debug(
+					'Master dynamic playlist: %O is joining sync group: %s with timestamp: %s',
+					dynamicPlaylistConfig,
+					syncGroupName,
+					Date.now(),
+				);
+			}
 			await broadcastSyncValue(
 				this.sos,
 				dynamicPlaylistConfig,
