@@ -1,5 +1,5 @@
 import { logDebug } from '../tools/generalTools';
-import { Synchronization, SyncElementState, SyncMessage, SyncMessageType, SyncPhase, SyncPhaseConfig, SYNC_PHASE_CONFIG, VirtualElementState } from '../../../models/syncModels';
+import { Synchronization, SyncElementState, SyncMessage, SyncMessageType, SyncPhase, SyncPhaseConfig, SYNC_PHASE_CONFIG, SYNC_TIMEOUTS, VirtualElementState } from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 import { SyncGroup } from '../tools/SyncGroup';
 import { TimedDebugger } from './TimedDebugger';
@@ -32,7 +32,7 @@ class AckTracker {
 		key: string,
 		expectedCount: number,
 		syncGroup: SyncGroup,
-		timeoutMs: number = 500,
+		timeoutMs: number = SYNC_TIMEOUTS.ackTimeout,
 		expectedPriorityLevel?: number,
 	): Promise<boolean> {
 		logDebug(undefined, 'Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
@@ -863,9 +863,9 @@ export class SMILElementController {
 					logDebug(timedDebug, timeoutMsg);
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
-				}, 600000); // 10 minutes
+				}, SYNC_TIMEOUTS.resyncTargetTimeout);
 			} else {
-				// Safety timeout for network failure edge case - 5 minutes
+				// Safety timeout for network failure edge case - 60 seconds
 				// If network/server goes down, slave shouldn't wait forever for cmd-prepare/cmd-play
 				timeoutId = setTimeout(() => {
 					if (resolved) {
@@ -893,7 +893,7 @@ export class SMILElementController {
 					}
 					cleanup();
 					resolve(ProcessAction.RESYNC);
-				}, 300000); // 5 minutes
+				}, SYNC_TIMEOUTS.networkFailureTimeout);
 			}
 
 			// Monitor master changes - if slave becomes master, continue immediately
@@ -1065,7 +1065,7 @@ export class SMILElementController {
 			// Clean up after a delay
 			setTimeout(() => {
 				this.syncState.pendingAcks.delete(ackKey);
-			}, 2000);
+			}, SYNC_TIMEOUTS.ackCleanupDelay);
 		}
 	}
 
@@ -1128,7 +1128,7 @@ export class SMILElementController {
 			const ackKey = `${regionName}-${syncIndex}-${config.ackType}`;
 			logDebug(timedDebug, 'Master waiting for %d %s ACKs for %s', expectedAcks, phase, ackKey);
 
-			const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, 500, priorityLevel);
+			const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, SYNC_TIMEOUTS.ackTimeout, priorityLevel);
 			logDebug(timedDebug, acksReceived
 				? 'Master received all %s ACKs for %s'
 				: 'Master timeout waiting for %s ACKs for %s', phase, ackKey);
@@ -1367,7 +1367,7 @@ export class SMILElementController {
 				logDebug(timedDebug, timeoutMsg);
 				cleanup();
 				resolve(false);
-			}, 500);
+			}, SYNC_TIMEOUTS.signalReadyTimeout);
 
 			// Set up active listener
 			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
