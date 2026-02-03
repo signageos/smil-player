@@ -32,6 +32,7 @@ import {
 	getIndexOfPlayingMedia,
 	getLastArrayItem,
 	getRegionInfo,
+	logDebug,
 	processRandomPlayMode,
 	removeDigits,
 	sleep,
@@ -81,38 +82,7 @@ import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
 import { SMILElementController, ProcessAction } from './SMILElementController';
-
-/**
- * TimedDebugger - A debug logger that tracks timing information
- * Used to identify where time is spent during element playback
- * This is for debugging purposes only and has no functional impact
- */
-export class TimedDebugger {
-	private startTime: number;
-	private lastLogTime: number;
-	private debugId: string;
-	private debugFn: any;
-
-	constructor(debugId: string, debugFn: any) {
-		this.debugId = debugId;
-		this.debugFn = debugFn;
-		this.startTime = Date.now();
-		this.lastLogTime = this.startTime;
-	}
-
-	/**
-	 * Log a message with timing information
-	 * Shows time elapsed since last log and total time since start
-	 */
-	public log(message: string, ...args: any[]) {
-		const now = Date.now();
-		const totalElapsed = now - this.startTime;
-		const deltaFromLast = now - this.lastLogTime;
-
-		this.debugFn(`[${this.debugId}_${now} +${deltaFromLast}ms total:${totalElapsed}ms] ${message}`, ...args);
-		this.lastLogTime = now;
-	}
-}
+import { TimedDebugger } from './TimedDebugger';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
@@ -1393,11 +1363,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		regionName: string,
 		timedDebug?: TimedDebugger,
 	) => {
-		if (timedDebug) {
-			timedDebug.log('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
-		} else {
-			debug('Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
-		}
+		logDebug(timedDebug, 'Setting currently playing: %O for region: %s with tag: %s', element, regionName, tag);
 		const nextElement = cloneDeep(this.currentlyPlaying[regionName]?.nextElement);
 		this.currentlyPlaying[regionName] = <PlayingInfo>cloneDeep(element);
 		this.currentlyPlaying[regionName].media = tag;
@@ -1405,11 +1371,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.currentlyPlaying[regionName].nextElement = nextElement;
 		// dynamic playlist
 		if (element.dynamicValue) {
-			if (timedDebug) {
-				timedDebug.log('setting dynamic value: %s', element.dynamicValue);
-			} else {
-				debug('setting dynamic value: %s', element.dynamicValue);
-			}
+			logDebug(timedDebug, 'setting dynamic value: %s', element.dynamicValue);
 			this.currentlyPlaying[regionName].dynamicValue = element.dynamicValue;
 			this.currentlyPlaying[regionName].syncGroupName = element.syncGroupName;
 		} else {
