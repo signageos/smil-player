@@ -639,14 +639,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 
 		// wait for new potential playlist to appear
 		if (!currentIndexPriority.media.dynamicValue) {
-			// debug(
-			// 	'sleeping defer priority interval: %s',
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-			// await sleep(
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-
 			debug(
 				'sleeping defer/stop priority interval: %s',
 				(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
@@ -667,19 +659,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		) {
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
-			// debug(
-			// 	'sleeping defer priority interval for exceeded priority: %s',
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-			// await sleep(
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-
-			// debug(
-			// 	'sleeping defer/stop priority interval for exceeded priority: %s',
-			// 	(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
-			// );
-			// await sleep((priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100);
 
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return false;
