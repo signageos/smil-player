@@ -331,8 +331,6 @@ export class SmilPlayer implements ISmilPlayer {
 						false,
 						smilObject.refresh.fallbackToPreviousPlaylist,
 					);
-				// if smil has dynamic playlist, refresh is done using applet.refresh and hence its always first iteration
-				// const firstIteration = hasDynamicContent(smilObject);
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
 			} catch (err) {
 				if (err instanceof EmptyPlaylistError) {
