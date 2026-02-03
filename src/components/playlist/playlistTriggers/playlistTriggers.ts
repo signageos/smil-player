@@ -232,7 +232,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					await sleep(5e3);
 					await this.sos.management.power.appRestart();
 				} catch (e) {
-					console.log('error while restarting', e);
+					debug('error while restarting: %O', e);
 				}
 			}
 		});
