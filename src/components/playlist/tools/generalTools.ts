@@ -16,6 +16,7 @@ import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
+import { TimedDebugger } from '../playlistProcessor/TimedDebugger';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
@@ -386,4 +387,22 @@ export function getConfigBoolean(
 		return value.toLowerCase() === 'true';
 	}
 	return defaultValue;
+}
+
+/**
+ * Get ISO timestamp for debug logs
+ */
+function getTimestamp(): string {
+	return new Date().toISOString();
+}
+
+/**
+ * Helper to log debug messages, using TimedDebugger if available
+ */
+export function logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
+	if (timedDebug) {
+		timedDebug.log(message, ...args);
+	} else {
+		debug('[%s] ' + message, getTimestamp(), ...args);
+	}
 }
