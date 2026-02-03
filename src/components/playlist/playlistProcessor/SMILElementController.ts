@@ -536,6 +536,7 @@ export class SMILElementController {
 				if (this.synchronization.resyncTargets) {
 					delete this.synchronization.resyncTargets.prepare;
 					delete this.synchronization.resyncTargets.play;
+					delete this.synchronization.resyncTargets.finish;
 				}
 				this.synchronization.syncingInAction = false;
 			}
