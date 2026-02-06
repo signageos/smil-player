@@ -36,6 +36,10 @@ export const parentGenerationRemove = [
 	'parent',
 	'syncGroupName',
 	'transitionInfo',
+	'localFilePath',
+	'regionInfo',
+	'fullVideoDuration',
+	'id',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
