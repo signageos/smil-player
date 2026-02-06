@@ -1,8 +1,11 @@
 import { logDebug } from '../tools/generalTools';
-import { Synchronization, SyncElementState, SyncMessage, SyncMessageType, SyncPhase, SyncPhaseConfig, SYNC_PHASE_CONFIG, SYNC_TIMEOUTS, VirtualElementState } from '../../../models/syncModels';
+import { Synchronization, SyncElementState, SyncMessage, SyncMessageType, SyncPhase, SyncPhaseConfig, SyncSignalReadyType, SYNC_PHASE_CONFIG, SYNC_TIMEOUTS, VirtualElementState,
+	SyncCommandType
+} from '../../../models/syncModels';
 import { getSyncGroup } from '../tools/syncTools';
 import { SyncGroup } from '../tools/SyncGroup';
 import { TimedDebugger } from './TimedDebugger';
+import { RandomPlaylist } from '../../../models/playlistModels';
 
 // Process actions for element state handling
 export const ProcessAction = {
@@ -123,7 +126,7 @@ class AckTracker {
 					const message = value as SyncMessage;
 
 					// Check if this is an ACK message
-					if (message.type === 'ack-prepared' || message.type === 'ack-playing' || message.type === 'ack-finished') {
+					if (message.type === 'ack-prepared' || message.type === 'ack-playing' || message.type === 'ack-finished' || message.type === 'ack-playMode') {
 						// Build the ACK key from the message
 						const ackKey = `${message.regionName}-${message.syncIndex}-${message.type}`;
 
@@ -694,6 +697,7 @@ export class SMILElementController {
 		syncIndex: number,
 		syncGroup?: SyncGroup,
 		priorityLevel?: number,
+		previousIndex?: number,
 	): Promise<void> {
 		// Look up priority bounds for this region and priority level
 		const bounds = this.getPriorityBounds(regionName, priorityLevel);
@@ -704,6 +708,7 @@ export class SMILElementController {
 			syncIndex,
 			timestamp: Date.now(),
 			priorityLevel,
+			previousIndex,
 			// Only include bounds if they exist (priority playlists only)
 			...(bounds && {
 				priorityMinSyncIndex: bounds.min,
@@ -729,7 +734,7 @@ export class SMILElementController {
 	 * Returns action to take: CONTINUE, RESYNC, or keeps waiting if WAIT
 	 */
 	private async waitForCommandAndCheckSync(
-		commandType: 'cmd-prepare' | 'cmd-play' | 'cmd-finish',
+		commandType: SyncCommandType,
 		expectedState: 'prepared' | 'playing' | 'finished',
 		regionName: string,
 		syncIndex: number,
@@ -1316,7 +1321,7 @@ export class SMILElementController {
 		regionName: string,
 		syncIndex: number,
 		syncGroup: SyncGroup,
-		signalType: 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished',
+		signalType: SyncSignalReadyType,
 		timedDebug?: TimedDebugger,
 		expectedPriorityLevel?: number,
 	): Promise<boolean> {
@@ -1398,6 +1403,122 @@ export class SMILElementController {
 						syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 						cleanup();
 						resolve(true);
+					}
+				}
+			});
+		});
+	}
+
+	// ==================== playMode=one synchronization ====================
+
+	/**
+	 * Coordinate playMode=one element selection across synced devices.
+	 * Master broadcasts its previousIndex; slaves override their local index.
+	 *
+	 * @param regionName - Region name used to look up the existing sync group
+	 * @param parentId - Deterministic hash ID of the seq element (from generateParentId)
+	 * @param currentPreviousIndex - Master's current previousIndex for this playlist
+	 * @param randomPlaylist - Reference to the randomPlaylist record for overriding slave index
+	 * @returns The previousIndex to use (master's own or received from master)
+	 */
+	public async coordinatePlayModeSync(
+		regionName: string,
+		parentId: string,
+		currentPreviousIndex: number,
+		randomPlaylist: RandomPlaylist,
+	): Promise<number> {
+		if (!this.synchronization.shouldSync) {
+			return currentPreviousIndex;
+		}
+
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		if (!syncGroup) {
+			logDebug(undefined, 'No sync group available for playMode sync, region: %s', regionName);
+			return currentPreviousIndex;
+		}
+
+		const config = SYNC_PHASE_CONFIG['playMode'];
+		const isMaster = await syncGroup.isMaster();
+
+		if (isMaster) {
+			// Broadcast cmd-playMode with previousIndex, then wait for ACKs + signal-ready
+			await this.broadcastSyncMessage(config.commandType, parentId, 0, syncGroup, undefined, currentPreviousIndex);
+			logDebug(undefined, 'Master sent cmd-playMode for parent=%s, previousIndex=%d', parentId, currentPreviousIndex);
+			await this.handleMasterPhaseComplete('playMode', config, parentId, 0, syncGroup);
+			return currentPreviousIndex;
+		}
+
+		// Slave: wait for master's index, override local state, then ACK + signal-ready
+		const receivedIndex = await this.waitForPlayModeCommand(parentId, syncGroup);
+
+		if (receivedIndex === undefined) {
+			logDebug(undefined, 'Slave timeout waiting for cmd-playMode for %s, using local index', parentId);
+			return randomPlaylist[parentId]?.previousIndex ?? 0;
+		}
+
+		if (!randomPlaylist[parentId]) {
+			randomPlaylist[parentId] = { previousIndex: 0 };
+		}
+		randomPlaylist[parentId].previousIndex = receivedIndex;
+		logDebug(undefined, 'Slave overrode previousIndex to %d for parent=%s', receivedIndex, parentId);
+
+		await this.handleSlavePhaseComplete('playMode', config, parentId, 0, syncGroup);
+		return receivedIndex;
+	}
+
+	/**
+	 * Slave waits for cmd-playMode from master, returns the previousIndex or undefined on timeout
+	 */
+	private async waitForPlayModeCommand(
+		parentId: string,
+		syncGroup: SyncGroup,
+	): Promise<number | undefined> {
+		// Check stored message first
+		const stored = syncGroup.getSyncCoordinationMessage('cmd-playMode', parentId);
+		if (stored && stored.previousIndex !== undefined) {
+			logDebug(undefined, 'Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
+			syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+			return stored.previousIndex;
+		}
+
+		return new Promise<number | undefined>((resolve) => {
+			let resolved = false;
+			let unsubscribe: (() => void) | undefined;
+			let unsubscribeMasterChange: (() => void) | undefined;
+			let timeoutId: NodeJS.Timeout | undefined;
+
+			const cleanup = () => {
+				resolved = true;
+				if (unsubscribe) unsubscribe();
+				if (unsubscribeMasterChange) unsubscribeMasterChange();
+				if (timeoutId) clearTimeout(timeoutId);
+			};
+
+			timeoutId = setTimeout(() => {
+				if (resolved) return;
+				logDebug(undefined, 'Timeout waiting for cmd-playMode for %s', parentId);
+				cleanup();
+				resolve(undefined);
+			}, SYNC_TIMEOUTS.playModeCmdTimeout);
+
+			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
+				if (resolved) return;
+				if (isMaster) {
+					logDebug(undefined, 'Slave became master while waiting for cmd-playMode');
+					cleanup();
+					resolve(undefined);
+				}
+			});
+
+			unsubscribe = syncGroup.onValue(({ key, value }: { key: string; value?: any }) => {
+				if (resolved) return;
+				if (key === 'sync-coordination' && value) {
+					const msg = value as SyncMessage;
+					if (msg.type === 'cmd-playMode' && msg.regionName === parentId && msg.previousIndex !== undefined) {
+						logDebug(undefined, 'Received cmd-playMode for %s, previousIndex=%d', parentId, msg.previousIndex);
+						syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+						cleanup();
+						resolve(msg.previousIndex);
 					}
 				}
 			});
