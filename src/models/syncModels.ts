@@ -39,12 +39,15 @@ export type SyncMessageType =
 	| 'cmd-prepare'           // Master commands slaves to prepare
 	| 'cmd-play'              // Master commands slaves to play
 	| 'cmd-finish'            // Master commands slaves to finish
+	| 'cmd-playMode'          // Master commands slaves with playMode=one element index
 	| 'signal-ready-prepared' // Master signals all devices ready after prepare phase
 	| 'signal-ready-playing'  // Master signals all devices ready after play phase
 	| 'signal-ready-finished' // Master signals all devices ready after finish phase
+	| 'signal-ready-playMode' // Master signals all devices ready after playMode phase
 	| 'ack-prepared'          // Slave acknowledges preparation complete
 	| 'ack-playing'           // Slave acknowledges playing started
-	| 'ack-finished';         // Slave acknowledges element finished
+	| 'ack-finished'          // Slave acknowledges element finished
+	| 'ack-playMode';         // Slave acknowledges playMode index received
 
 export interface SyncMessage {
 	type: SyncMessageType;
@@ -54,6 +57,7 @@ export interface SyncMessage {
 	priorityLevel?: number;  // Priority level of current content (optional for playlists without priorityClass)
 	priorityMinSyncIndex?: number;  // First syncIndex in current priority playlist (for wraparound)
 	priorityMaxSyncIndex?: number;  // Last syncIndex in current priority playlist (for wraparound)
+	previousIndex?: number;  // playMode=one: element index to synchronize across devices
 }
 
 export type Synchronization = {
@@ -134,4 +138,8 @@ export const SYNC_TIMEOUTS = {
 	networkFailureTimeout: 60000,
 	/** Cleanup pending ACK tracking state */
 	ackCleanupDelay: 2000,
+	/** Master waits for slave ACKs in playMode phase */
+	playModeAckTimeout: 2000,
+	/** Slave waits for cmd-playMode from master */
+	playModeCmdTimeout: 10000,
 } as const;
