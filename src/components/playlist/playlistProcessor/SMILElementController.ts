@@ -1213,6 +1213,11 @@ export class SMILElementController {
 		syncGroup: SyncGroup,
 		timedDebug?: TimedDebugger,
 	): Promise<void> {
+		if (phase === 'playMode') {
+			logDebug(timedDebug, 'Signal-ready timeout for playMode phase - no resync needed');
+			return;
+		}
+
 		logDebug(timedDebug, '%s timeout for region=%s, syncIndex=%d - triggering resync', config.signalType, regionName, syncIndex);
 		this.synchronization.syncingInAction = true;
 
@@ -1442,6 +1447,9 @@ export class SMILElementController {
 
 		if (isMaster) {
 			// Broadcast cmd-playMode with previousIndex, then wait for ACKs + signal-ready
+			// syncIndex is always 0 for playMode - element position is tracked via previousIndex,
+			// not syncIndex. Clear stale ACKs from previous rounds since the key never changes.
+			syncGroup.clearSyncCoordinationMessage(config.ackType, parentId);
 			await this.broadcastSyncMessage(config.commandType, parentId, 0, syncGroup, undefined, currentPreviousIndex);
 			logDebug(undefined, 'Master sent cmd-playMode for parent=%s, previousIndex=%d', parentId, currentPreviousIndex);
 			await this.handleMasterPhaseComplete('playMode', config, parentId, 0, syncGroup);
