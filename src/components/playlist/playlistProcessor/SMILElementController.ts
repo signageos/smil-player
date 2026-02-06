@@ -337,6 +337,24 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Compute the next effective syncIndex after the given master position.
+	 * If masterIndex is within a playMode=one range, skips past remaining
+	 * siblings to the first syncIndex of the next seq element.
+	 * Falls back to masterIndex + 1 when no playMode ranges exist (backwards compatible).
+	 */
+	private getNextEffectiveSyncIndex(masterIndex: number, regionName: string): number {
+		const ranges = this.synchronization.playModeSyncRanges?.[regionName];
+		if (ranges) {
+			for (const range of ranges) {
+				if (masterIndex >= range.start && masterIndex <= range.end) {
+					return range.end + 1;
+				}
+			}
+		}
+		return masterIndex + 1;
+	}
+
+	/**
 	 * Detects if slave wrapping to start of range while master message is from end of range.
 	 * This happens when slave checks for a new command before master's new command arrives.
 	 *
@@ -562,7 +580,7 @@ export class SMILElementController {
 
 			// Set target to prepare for the NEXT element after what master is playing
 			const nextIndex = this.getWrappedSyncIndex(
-				value.syncIndex + 1,
+				this.getNextEffectiveSyncIndex(value.syncIndex, regionName),
 				regionName,
 				value.priorityMaxSyncIndex,
 				value.priorityMinSyncIndex,
@@ -589,7 +607,7 @@ export class SMILElementController {
 
 			// Handle wraparound for playlist looping using priority bounds if available
 			const nextIndex = this.getWrappedSyncIndex(
-				value.syncIndex + 1,
+				this.getNextEffectiveSyncIndex(value.syncIndex, regionName),
 				regionName,
 				value.priorityMaxSyncIndex,
 				value.priorityMinSyncIndex,
@@ -651,7 +669,7 @@ export class SMILElementController {
 
 				// Handle wraparound for playlist looping using priority bounds if available
 				const nextIndex = this.getWrappedSyncIndex(
-					syncIndex + 1,
+					this.getNextEffectiveSyncIndex(syncIndex, regionName),
 					regionName,
 					value.priorityMaxSyncIndex,
 					value.priorityMinSyncIndex,
@@ -882,12 +900,11 @@ export class SMILElementController {
 						this.synchronization.resyncTargets = {};
 					}
 
-					// Use global max for timeout recovery
-					const globalMax = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-					let nextIndex = syncIndex + 1;
-					if (globalMax !== undefined && nextIndex > globalMax) {
-						nextIndex = 1;
-					}
+					// Use range-aware computation + wraparound for timeout recovery
+					const nextIndex = this.getWrappedSyncIndex(
+						this.getNextEffectiveSyncIndex(syncIndex, regionName),
+						regionName,
+					);
 
 					if (expectedState === 'prepared') {
 						this.synchronization.resyncTargets.prepare = nextIndex;
@@ -970,9 +987,9 @@ export class SMILElementController {
 
 						// Special handling if we're at resync target and master has passed us
 						if (currentIsAtResyncTarget && message.syncIndex > syncIndex) {
-							// Master has moved past our resync target - use priority bounds for wraparound
+							// Master has moved past our resync target - use range-aware computation + priority bounds
 							const newTarget = this.getWrappedSyncIndex(
-								message.syncIndex + 1,
+								this.getNextEffectiveSyncIndex(message.syncIndex, regionName),
 								regionName,
 								message.priorityMaxSyncIndex,
 								message.priorityMinSyncIndex,
@@ -1226,9 +1243,13 @@ export class SMILElementController {
 			if (!this.synchronization.resyncTargets) {
 				this.synchronization.resyncTargets = {};
 			}
-			this.synchronization.resyncTargets[config.resyncField] = masterPos + 1;
+			const nextTarget = this.getWrappedSyncIndex(
+				this.getNextEffectiveSyncIndex(masterPos, regionName),
+				regionName,
+			);
+			this.synchronization.resyncTargets[config.resyncField] = nextTarget;
 			logDebug(timedDebug, 'Timeout recovery: setting %s resync target to %d (master at %d)',
-				phase, masterPos + 1, masterPos);
+				phase, nextTarget, masterPos);
 		}
 	}
 
