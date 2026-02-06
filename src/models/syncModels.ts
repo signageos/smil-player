@@ -80,6 +80,10 @@ export type Synchronization = {
 			[priorityLevel: number]: { min: number; max: number };
 		};
 	};
+	/** Maps regionName → sorted array of playMode syncIndex ranges (for resync target computation) */
+	playModeSyncRanges?: {
+		[regionName: string]: Array<{ start: number; end: number }>;
+	};
 };
 
 /** Synchronization phases */

@@ -50,6 +50,14 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		let fileStructure: string = '';
 		let htmlElement: string = '';
 		let localRegionSyncIndex: { [key: string]: number } = {};
+
+		// Track playMode=one syncIndex ranges for resync target computation
+		const isPlayModeParent = !isNil((playlist as any)?.playMode)
+			&& String((playlist as any).playMode).toLowerCase() === 'one';
+		let playModeRangeStart: number | undefined;
+		let playModeRangeEnd: number | undefined;
+		let playModeRegionName: string | undefined;
+
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			specialName =
 				key === 'begin' &&
@@ -117,6 +125,15 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 							elem.regionInfo.regionName,
 						);
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
+
+						// Track playMode=one syncIndex range
+						if (isPlayModeParent) {
+							if (playModeRangeStart === undefined) {
+								playModeRangeStart = elem.syncIndex;
+								playModeRegionName = elem.regionInfo.regionName;
+							}
+							playModeRangeEnd = elem.syncIndex;
+						}
 					}
 
 					const mediaFile = (await this.sos.fileSystem.getFile({
@@ -173,6 +190,23 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName);
 			}
 		}
+
+		// Store completed playMode range
+		if (isPlayModeParent && playModeRangeStart !== undefined
+			&& playModeRangeEnd !== undefined && playModeRegionName
+			&& this.synchronization) {
+			if (!this.synchronization.playModeSyncRanges) {
+				this.synchronization.playModeSyncRanges = {};
+			}
+			if (!this.synchronization.playModeSyncRanges[playModeRegionName]) {
+				this.synchronization.playModeSyncRanges[playModeRegionName] = [];
+			}
+			this.synchronization.playModeSyncRanges[playModeRegionName].push({
+				start: playModeRangeStart,
+				end: playModeRangeEnd,
+			});
+			debug('Stored playMode range for region=%s: [%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
+		}
 	};
 
 	/**
@@ -188,6 +222,9 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	) => {
 		// Reset sync index for fresh playlist processing
 		this.globalRegionSyncIndex = {};
+		if (this.synchronization) {
+			this.synchronization.playModeSyncRanges = {};
+		}
 
 		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
 

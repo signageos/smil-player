@@ -830,7 +830,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						debug('Processing random play mode: %O with parent: %s', valueElement, playModeParentId);
 
 						// Coordinate playMode=one index BEFORE element selection
-						if (valueElement.playMode.toLowerCase() === 'one' && this.synchronization.shouldSync) {
+						if (valueElement.playMode.toLowerCase() === 'one' && this.synchronization.shouldSync && !this.synchronization.syncingInAction) {
 							// Extract region from first playable child for sync group lookup
 							const playableKey = Object.keys(valueElement).find((k) => randomPlaylistPlayableTagsRegex.test(k));
 							const firstChild = playableKey ? valueElement[playableKey] : undefined;
