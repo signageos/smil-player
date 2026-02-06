@@ -82,13 +82,13 @@ export type Synchronization = {
 	};
 };
 
-/** The three synchronization phases */
-export type SyncPhase = 'prepare' | 'play' | 'finish';
+/** Synchronization phases */
+export type SyncPhase = 'prepare' | 'play' | 'finish' | 'playMode';
 
 /** Specific message type subsets for type safety */
-export type SyncCommandType = 'cmd-prepare' | 'cmd-play' | 'cmd-finish';
-export type SyncAckType = 'ack-prepared' | 'ack-playing' | 'ack-finished';
-export type SyncSignalReadyType = 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished';
+export type SyncCommandType = 'cmd-prepare' | 'cmd-play' | 'cmd-finish' | 'cmd-playMode';
+export type SyncAckType = 'ack-prepared' | 'ack-playing' | 'ack-finished' | 'ack-playMode';
+export type SyncSignalReadyType = 'signal-ready-prepared' | 'signal-ready-playing' | 'signal-ready-finished' | 'signal-ready-playMode';
 
 /** Configuration for each sync phase mapping to existing message types */
 export interface SyncPhaseConfig {
@@ -121,6 +121,13 @@ export const SYNC_PHASE_CONFIG: Record<SyncPhase, SyncPhaseConfig> = {
 		signalType: 'signal-ready-finished',
 		state: 'finished',
 		resyncField: 'finish',
+	},
+	playMode: {
+		commandType: 'cmd-playMode',
+		ackType: 'ack-playMode',
+		signalType: 'signal-ready-playMode',
+		state: 'prepared',     // not used in playMode context (resync doesn't apply)
+		resyncField: 'prepare', // not used in playMode context (resync doesn't apply)
 	},
 };
 
