@@ -37,7 +37,7 @@ import {
 	removeDigits,
 	sleep,
 } from '../tools/generalTools';
-import { SMILEnums } from '../../../enums/generalEnums';
+import { SMILEnums, randomPlaylistPlayableTagsRegex } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
@@ -826,11 +826,34 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					debug('processing seq element: %O', valueElement);
 
 					if (valueElement.playMode) {
-						debug('Processing random play mode: %O with parent: %s', valueElement, parent);
+						const playModeParentId = generateParentId('seq', valueElement);
+						debug('Processing random play mode: %O with parent: %s', valueElement, playModeParentId);
+
+						// Coordinate playMode=one index BEFORE element selection
+						if (valueElement.playMode.toLowerCase() === 'one' && this.synchronization.shouldSync) {
+							// Extract region from first playable child for sync group lookup
+							const playableKey = Object.keys(valueElement).find((k) => randomPlaylistPlayableTagsRegex.test(k));
+							const firstChild = playableKey ? valueElement[playableKey] : undefined;
+							const regionName = (Array.isArray(firstChild) ? firstChild[0] : firstChild)?.regionInfo?.regionName;
+
+							if (regionName) {
+								if (!this.randomPlaylist[playModeParentId]) {
+									this.randomPlaylist[playModeParentId] = { previousIndex: 0 };
+								}
+								const syncedIndex = await this.elementController.coordinatePlayModeSync(
+									regionName,
+									playModeParentId,
+									this.randomPlaylist[playModeParentId].previousIndex,
+									this.randomPlaylist,
+								);
+								this.randomPlaylist[playModeParentId].previousIndex = syncedIndex;
+							}
+						}
+
 						valueElement = processRandomPlayMode(
 							valueElement,
 							this.randomPlaylist,
-							generateParentId('seq', valueElement),
+							playModeParentId,
 						);
 					}
 
