@@ -145,8 +145,6 @@ export const SYNC_TIMEOUTS = {
 	networkFailureTimeout: 60000,
 	/** Cleanup pending ACK tracking state */
 	ackCleanupDelay: 2000,
-	/** Master waits for slave ACKs in playMode phase */
-	playModeAckTimeout: 2000,
 	/** Slave waits for cmd-playMode from master */
 	playModeCmdTimeout: 10000,
 } as const;
