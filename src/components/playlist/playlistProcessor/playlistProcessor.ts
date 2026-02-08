@@ -840,8 +840,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								if (!this.randomPlaylist[playModeParentId]) {
 									this.randomPlaylist[playModeParentId] = { previousIndex: 0 };
 								}
+
+								// Build deterministic sync key from first child's syncIndex (identical on all devices)
+								// Hash-based playModeParentId can differ across devices due to runtime mutations
+								const firstChildSyncIndex = (Array.isArray(firstChild) ? firstChild[0] : firstChild)?.syncIndex;
+								const syncParentId = firstChildSyncIndex !== undefined
+									? `seq-playMode-${regionName}-${firstChildSyncIndex}`
+									: playModeParentId;
+
 								const syncedIndex = await this.elementController.coordinatePlayModeSync(
 									regionName,
+									syncParentId,
 									playModeParentId,
 									this.randomPlaylist[playModeParentId].previousIndex,
 									this.randomPlaylist,
