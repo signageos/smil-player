@@ -38,7 +38,6 @@
     "libs/chrome/chrome-plugin.d.ts"
   ],
   "exclude": [
-    "src/webWorker.ts",
-    "cypress/**/*.ts"
+    "src/webWorker.ts"
   ]
 }
