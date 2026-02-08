@@ -5,8 +5,6 @@
 /.idea/
 /cache/
 /src/testing/
-/cypress/videos/
-/cypress/screenshots/
-/cypress/testFiles/testing.smil
-/cypress/testFiles/testing.smil2
+/test-results/
 CLAUDE.md
+CODE.MD

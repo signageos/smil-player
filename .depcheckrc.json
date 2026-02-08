@@ -25,7 +25,6 @@
     "@signageos/codestyle",
     "mockdate",
     "@signageos/front-applet",
-    "cypress",
     "file-loader",
     "webpack-cli",
     "@babel/preset-env",
