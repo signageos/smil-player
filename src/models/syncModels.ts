@@ -142,7 +142,7 @@ export const SYNC_TIMEOUTS = {
 	/** Master waits for slave ACKs before sending signal-ready */
 	ackTimeout: 1000,
 	/** Slave waits for signal-ready from master after sending ACK */
-	signalReadyTimeout: 1000,
+	signalReadyTimeout: 2000,
 	/** Wait at resync target for master command (10 minutes) */
 	resyncTargetTimeout: 600000,
 	/** Network failure detection - triggers resync if no command received (60 seconds) */
