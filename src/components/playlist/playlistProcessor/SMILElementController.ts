@@ -1484,6 +1484,15 @@ export class SMILElementController {
 			return currentPreviousIndex;
 		}
 
+		// During active resync, skip waiting to avoid 10s timeout — the cmd-playMode
+		// for this element has likely already fired while we were catching up
+		if (this.synchronization.syncingInAction) {
+			logDebug(undefined, 'Slave in active resync, skipping playMode coordination for %s', syncParentId);
+			// Send ACK so master doesn't wait 1s for us
+			await this.broadcastSyncMessage(config.ackType, syncParentId, 0, syncGroup);
+			return randomPlaylist[localParentId]?.previousIndex ?? 0;
+		}
+
 		// Slave: wait for master's index, override local state, then ACK + signal-ready
 		const receivedIndex = await this.waitForPlayModeCommand(syncParentId, syncGroup, regionName);
 
