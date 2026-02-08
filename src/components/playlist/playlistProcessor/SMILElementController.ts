@@ -363,6 +363,7 @@ export class SMILElementController {
 	 * @param priorityMin - The minimum syncIndex in the current priority range (from message)
 	 * @param priorityMax - The maximum syncIndex in the current priority range (from message)
 	 * @param globalMax - The global maximum syncIndex for the region (fallback)
+	 * @param regionName - The region name, used to look up playMode=one sync ranges
 	 * @returns true if this is a wraparound scenario where slave should wait
 	 */
 	private isWraparoundScenario(
@@ -371,6 +372,7 @@ export class SMILElementController {
 		priorityMin: number | undefined,
 		priorityMax: number | undefined,
 		globalMax: number | undefined,
+		regionName: string,
 	): boolean {
 		// Use priority bounds if available, otherwise fall back to global max
 		const minIndex = priorityMin ?? 1;
@@ -383,7 +385,10 @@ export class SMILElementController {
 		// Wraparound: slave at start of range, master message from end of range
 		// Allow some tolerance (slave within first 2 indices of range, master within last 2)
 		const slaveAtStart = slaveIndex <= minIndex + 1;
-		const masterAtEnd = masterIndex >= maxIndex - 1;
+		// Account for playMode=one ranges: if the master's effective next index
+		// would exceed maxIndex, the master is at the effective end of the playlist
+		const effectiveNext = this.getNextEffectiveSyncIndex(masterIndex, regionName);
+		const masterAtEnd = masterIndex >= maxIndex - 1 || effectiveNext > maxIndex;
 
 		return slaveAtStart && masterAtEnd;
 	}
@@ -555,10 +560,10 @@ export class SMILElementController {
 			}
 
 			return ProcessAction.CONTINUE; // In sync, continue normally
-		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex)) {
+		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName)) {
 			// Slave is ahead of master - wait for master to catch up
 			// Includes wraparound: slave at start of new iteration, master at end of previous
-			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex);
+			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName);
 			logDebug(
 				undefined,
 				'Slave ahead of master %s- slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
@@ -1442,14 +1447,16 @@ export class SMILElementController {
 	 * Master broadcasts its previousIndex; slaves override their local index.
 	 *
 	 * @param regionName - Region name used to look up the existing sync group
-	 * @param parentId - Deterministic hash ID of the seq element (from generateParentId)
+	 * @param syncParentId - Deterministic key for cross-device matching (based on syncIndex)
+	 * @param localParentId - Hash-based key for local randomPlaylist state lookups
 	 * @param currentPreviousIndex - Master's current previousIndex for this playlist
 	 * @param randomPlaylist - Reference to the randomPlaylist record for overriding slave index
 	 * @returns The previousIndex to use (master's own or received from master)
 	 */
 	public async coordinatePlayModeSync(
 		regionName: string,
-		parentId: string,
+		syncParentId: string,
+		localParentId: string,
 		currentPreviousIndex: number,
 		randomPlaylist: RandomPlaylist,
 	): Promise<number> {
@@ -1470,28 +1477,28 @@ export class SMILElementController {
 			// Broadcast cmd-playMode with previousIndex, then wait for ACKs + signal-ready
 			// syncIndex is always 0 for playMode - element position is tracked via previousIndex,
 			// not syncIndex. Clear stale ACKs from previous rounds since the key never changes.
-			syncGroup.clearSyncCoordinationMessage(config.ackType, parentId);
-			await this.broadcastSyncMessage(config.commandType, parentId, 0, syncGroup, undefined, currentPreviousIndex);
-			logDebug(undefined, 'Master sent cmd-playMode for parent=%s, previousIndex=%d', parentId, currentPreviousIndex);
-			await this.handleMasterPhaseComplete('playMode', config, parentId, 0, syncGroup);
+			syncGroup.clearSyncCoordinationMessage(config.ackType, syncParentId);
+			await this.broadcastSyncMessage(config.commandType, syncParentId, 0, syncGroup, undefined, currentPreviousIndex);
+			logDebug(undefined, 'Master sent cmd-playMode for syncParent=%s, previousIndex=%d', syncParentId, currentPreviousIndex);
+			await this.handleMasterPhaseComplete('playMode', config, syncParentId, 0, syncGroup);
 			return currentPreviousIndex;
 		}
 
 		// Slave: wait for master's index, override local state, then ACK + signal-ready
-		const receivedIndex = await this.waitForPlayModeCommand(parentId, syncGroup);
+		const receivedIndex = await this.waitForPlayModeCommand(syncParentId, syncGroup, regionName);
 
 		if (receivedIndex === undefined) {
-			logDebug(undefined, 'Slave timeout waiting for cmd-playMode for %s, using local index', parentId);
-			return randomPlaylist[parentId]?.previousIndex ?? 0;
+			logDebug(undefined, 'Slave timeout waiting for cmd-playMode for %s, using local index', syncParentId);
+			return randomPlaylist[localParentId]?.previousIndex ?? 0;
 		}
 
-		if (!randomPlaylist[parentId]) {
-			randomPlaylist[parentId] = { previousIndex: 0 };
+		if (!randomPlaylist[localParentId]) {
+			randomPlaylist[localParentId] = { previousIndex: 0 };
 		}
-		randomPlaylist[parentId].previousIndex = receivedIndex;
-		logDebug(undefined, 'Slave overrode previousIndex to %d for parent=%s', receivedIndex, parentId);
+		randomPlaylist[localParentId].previousIndex = receivedIndex;
+		logDebug(undefined, 'Slave overrode previousIndex to %d for syncParent=%s', receivedIndex, syncParentId);
 
-		await this.handleSlavePhaseComplete('playMode', config, parentId, 0, syncGroup);
+		await this.handleSlavePhaseComplete('playMode', config, syncParentId, 0, syncGroup);
 		return receivedIndex;
 	}
 
@@ -1501,13 +1508,25 @@ export class SMILElementController {
 	private async waitForPlayModeCommand(
 		parentId: string,
 		syncGroup: SyncGroup,
+		regionName: string,
 	): Promise<number | undefined> {
 		// Check stored message first
 		const stored = syncGroup.getSyncCoordinationMessage('cmd-playMode', parentId);
 		if (stored && stored.previousIndex !== undefined) {
-			logDebug(undefined, 'Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
-			syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
-			return stored.previousIndex;
+			// Check if stored message is stale by comparing against latest cmd-play timestamp.
+			// Master sends cmd-play and cmd-playMode at the same time, so a cmd-playMode
+			// older than the latest cmd-play is from a previous cycle.
+			const latestCmdPlay = syncGroup.getSyncCoordinationMessage('cmd-play', regionName);
+			if (latestCmdPlay && stored.timestamp < latestCmdPlay.timestamp) {
+				logDebug(undefined, 'Discarding stale cmd-playMode for %s: message timestamp %d < latest cmd-play timestamp %d',
+					parentId, stored.timestamp, latestCmdPlay.timestamp);
+				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+				// Fall through to wait for fresh message via listener
+			} else {
+				logDebug(undefined, 'Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
+				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+				return stored.previousIndex;
+			}
 		}
 
 		return new Promise<number | undefined>((resolve) => {
