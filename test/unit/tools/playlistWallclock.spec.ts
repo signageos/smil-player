@@ -7,6 +7,11 @@ import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 
 const expect = chai.expect;
 
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+
 describe('Playlist tools component parseSmilSchedule tests', () => {
 	beforeEach(() => {
 		// Use 10:00 instead of 12:00 to ensure -w weekday constraint tests work
@@ -17,118 +22,141 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 	afterEach(() => {
 		MockDate.reset();
 	});
-	it('Should return correct times for how long to wait and how long to play', async () => {
-		let testStartString = moment().format('YYYY-MM-DD');
-		let testEndString = moment().add(1, 'days').format('YYYY-MM-DD');
-		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+
+	it('should return correct times for active schedule (start = now)', async () => {
+		const testStartString = moment().format('YYYY-MM-DD');
+		const testEndString = moment().add(1, 'days').format('YYYY-MM-DD');
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
 		expect(responseTimeObject.timeToStart).to.eql(0);
 		expect(responseTimeObject.timeToEnd).to.eql(
 			moment(`${testEndString}T${SMILScheduleEnum.defaultTime}`).valueOf(),
 		);
+	});
 
-		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01T07:00:00/P1D)
-		testStartString = `wallclock(R/${formatDate(moment())}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		// parse 2011-01-01T07:00:00 from wallclock(R/2011-01-01T07:00:00/P1D)
+	it('should return correct times for repeating schedule starting now', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment())}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().subtract(2, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+	it('should return correct times for repeating schedule that started 2 hours ago', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().subtract(2, 'hours'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().add(4, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().add(1, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(2, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(3600000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+	it('should return correct times for schedule starting in 1 hour', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().add(1, 'hours'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().add(2, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(MS_PER_HOUR - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().add(1, 'day'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(2, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		// schedule start for tommorow 24hours
-		expect(Math.abs(86400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+	it('should return correct times for schedule starting tomorrow', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().add(1, 'day'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().add(1, 'day').add(2, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).valueOf());
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().subtract(7, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().subtract(4, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		// schedule start for tommorow 17hours
-		expect(Math.abs(61200000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+	it('should return correct times for past daily schedule ending before now (reschedules to tomorrow)', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().subtract(7, 'hours'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().subtract(4, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		// schedule start for tomorrow 17 hours
+		expect(Math.abs(17 * MS_PER_HOUR - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(testEndString.split('/')[1]).add(1, 'day').valueOf());
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().subtract(15, 'days').subtract(7, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().subtract(15, 'days').subtract(4, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		// schedule start for tommorow 17hours
-		expect(Math.abs(61200000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+	it('should return correct times for past daily schedule started 15 days ago ending before now', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().subtract(15, 'days').subtract(7, 'hours'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().subtract(15, 'days').subtract(4, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		// schedule start for tomorrow 17 hours
+		expect(Math.abs(17 * MS_PER_HOUR - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(responseTimeObject.timeToEnd - moment().add(1, 'day').subtract(4, 'hours').valueOf()),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
+	});
 
-		testStartString = `wallclock(R/${formatDate(moment().subtract(15, 'days').add(7, 'hours'))}/P1D)`;
-		testEndString = `wallclock(R/${formatDate(moment().subtract(15, 'days').add(12, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+	it('should return correct times for past daily schedule started 15 days ago starting in the future today', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().subtract(15, 'days').add(7, 'hours'))}/P1D)`;
+		const testEndString = `wallclock(R/${formatDate(moment().subtract(15, 'days').add(12, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// schedule start in 7 hours
-		expect(Math.abs(25200000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		expect(Math.abs(responseTimeObject.timeToEnd - moment().add(12, 'hours').valueOf())).to.be.lessThan(1000);
+		expect(Math.abs(7 * MS_PER_HOUR - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
+		expect(Math.abs(responseTimeObject.timeToEnd - moment().add(12, 'hours').valueOf())).to.be.lessThan(MS_PER_SECOND);
+	});
 
-		// no endTime specified tomorrow start
-		testStartString = `wallclock(R/${formatDate(moment().subtract(7, 'hours'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString);
+	it('should return correct times for repeating schedule with no end time (past start)', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().subtract(7, 'hours'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString);
 		// play immediately
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment(`${moment().format('YYYY-MM-DD')}T23:59:59`).valueOf());
+	});
 
-		// no endTime specified in the future start startN
-		testStartString = `wallclock(R/${formatDate(moment().add(7, 'days'))}/P1D)`;
-		responseTimeObject = parseSmilSchedule(testStartString);
+	it('should return correct times for repeating schedule with no end time (future start)', async () => {
+		const testStartString = `wallclock(R/${formatDate(moment().add(7, 'days'))}/P1D)`;
+		const responseTimeObject = parseSmilSchedule(testStartString);
 		// schedule start in 7 days from now
-		expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(7 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(
 			moment(`${moment().add(7, 'days').format('YYYY-MM-DD')}T23:59:59`).valueOf(),
 		);
+	});
 
-		// no endTime specified tomorrow start
-		testStartString = `wallclock(${formatDate(moment().subtract(7, 'hours'))})`;
-		responseTimeObject = parseSmilSchedule(testStartString);
+	it('should return correct times for non-repeating schedule with no end time (past start)', async () => {
+		const testStartString = `wallclock(${formatDate(moment().subtract(7, 'hours'))})`;
+		const responseTimeObject = parseSmilSchedule(testStartString);
 		// play immediately
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T23:59:59').valueOf());
+	});
 
-		// no endTime specified in the future start startN
-		testStartString = `wallclock(${formatDate(moment().add(7, 'days'))})`;
-		responseTimeObject = parseSmilSchedule(testStartString);
+	it('should return correct times for non-repeating schedule with no end time (future start)', async () => {
+		const testStartString = `wallclock(${formatDate(moment().add(7, 'days'))})`;
+		const responseTimeObject = parseSmilSchedule(testStartString);
 		// schedule start in 7 days from now
-		expect(Math.abs(604800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(7 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.eql(moment('2100-01-01T23:59:59').valueOf());
+	});
 
-		testStartString = `wallclock(2020-07-16T12:00)`;
-		testEndString = `wallclock(2020-07-17T19:00)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+	it('should return never-play for non-repeating past schedule', async () => {
+		const testStartString = `wallclock(2020-07-16T12:00)`;
+		const testEndString = `wallclock(2020-07-17T19:00)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// should be never played
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		// timeToEnd = -3600000, value of 1970-01-01T00:00:00 in millis
 		expect(responseTimeObject.timeToEnd.valueOf()).to.be.lessThan(0);
-
-		testStartString = `wallclock(2020-01-01T09:00)`;
-		testEndString = `wallclock(2020-12-01T12:00)`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		// timeToEnd = value of 2020-12-01T12:00:00 should return -3600000 ( default value for playlists in the past )
-		expect(responseTimeObject.timeToEnd).to.eql(-3600000);
-
-		testStartString = `wallclock(2020-01-01T09:00)`;
-		testEndString = `wallclock(${formatDate(moment().add(7, 'minutes'))})`;
-		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		// timeToEnd value should be 7 minutes from now
-		expect(Math.abs(responseTimeObject.timeToEnd - moment().add(7, 'minutes').valueOf())).to.be.lessThan(1000);
 	});
+
+	it('should return never-play for non-repeating past schedule with wider range', async () => {
+		const testStartString = `wallclock(2020-01-01T09:00)`;
+		const testEndString = `wallclock(2020-12-01T12:00)`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
+		// timeToEnd = value of 2020-12-01T12:00:00 should return -3600000 ( default value for playlists in the past )
+		expect(responseTimeObject.timeToEnd).to.eql(-MS_PER_HOUR);
+	});
+
+	it('should return correct end time for schedule ending in 7 minutes', async () => {
+		const testStartString = `wallclock(2020-01-01T09:00)`;
+		const testEndString = `wallclock(${formatDate(moment().add(7, 'minutes'))})`;
+		const responseTimeObject = parseSmilSchedule(testStartString, testEndString);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
+		// timeToEnd value should be 7 minutes from now
+		expect(Math.abs(responseTimeObject.timeToEnd - moment().add(7, 'minutes').valueOf())).to.be.lessThan(MS_PER_SECOND);
+	});
+
 	it('Should return correct times for how long to wait and how long to play - weekdays specified after', async () => {
 		let mediaDuration = 3;
 		let dayOfWeek = (moment().isoWeekday() + 3) % 7;
@@ -140,10 +168,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// scheduled in 3 days
-		expect(Math.abs(259199003 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(3 * MS_PER_DAY - MS_PER_SECOND + 3 - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(3, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		mediaDuration = 2;
 		dayOfWeek = moment().isoWeekday() - 1;
@@ -155,10 +183,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// scheduled in  days 6
-		expect(Math.abs(518400000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(6 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(6, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		mediaDuration = 4;
 		dayOfWeek = moment().isoWeekday();
@@ -170,15 +198,15 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// scheduled immediately
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(Math.abs(moment().add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(
-			1000,
+			MS_PER_SECOND,
 		);
 
 		mediaDuration = 3;
 		dayOfWeek = Math.abs(moment().isoWeekday() - 5);
 		let waitMilis = computeWaitInterval(moment().isoWeekday(), dayOfWeek);
-		let waitDays = waitMilis / 86400000;
+		let waitDays = waitMilis / MS_PER_DAY;
 		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01+w3T07:00:00/P1D)
 		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment())}/P1D)`, `+w${dayOfWeek}`);
 		testEndString = formatWeekDate(
@@ -186,12 +214,12 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 			`+w${dayOfWeek}`,
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(
 				moment().add(waitDays, 'day').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd,
 			),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		mediaDuration = 3;
 		dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
@@ -203,10 +231,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// scheduled in  days 5
-		expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(5 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		dayOfWeek = moment().isoWeekday();
 		mediaDuration = 50;
@@ -217,10 +245,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 			`+w${dayOfWeek}`,
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		dayOfWeek = moment().isoWeekday();
 		mediaDuration = 50;
@@ -234,10 +262,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 			`+w${dayOfWeek}`,
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		dayOfWeek = moment().isoWeekday();
 		mediaDuration = 50;
@@ -251,10 +279,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 			`+w${dayOfWeek}`,
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(600000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(10 * MS_PER_MINUTE - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(mediaDuration, 'minutes').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 	});
 
 	it('Should return correct times for how long to wait and how long to play - weekdays specified before', async () => {
@@ -271,9 +299,9 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// should play immediately
-		expect(responseTimeObject.timeToStart <= 0).to.be.eql(true);
+		expect(responseTimeObject.timeToStart).to.be.at.most(0);
 		expect(Math.abs(moment().add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd)).to.be.lessThan(
-			1000,
+			MS_PER_SECOND,
 		);
 
 		mediaDuration = 4;
@@ -286,16 +314,16 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// should play in 2 days
-		expect(Math.abs(172800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
-		expect(Math.abs(172800000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(2 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
+		expect(Math.abs(2 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(2, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		mediaDuration = 2;
 		dayOfWeek = Math.abs(moment().isoWeekday() - 5);
 		let waitMilis = computeWaitInterval(moment().isoWeekday(), dayOfWeek);
-		let waitDays = waitMilis / 86400000;
+		let waitDays = waitMilis / MS_PER_DAY;
 		// convert date to ISO format, remove milliseconds => format to this string wallclock(R/2011-01-01-w3T07:00:00/P1D)
 		testStartString = formatWeekDate(`wallclock(R/${formatDate(moment().add(28, 'days'))}/P1D)`, `-w${dayOfWeek}`);
 		testEndString = formatWeekDate(
@@ -303,12 +331,12 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 			`-w${dayOfWeek}`,
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
-		expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(waitMilis - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(
 				moment().add(waitDays, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd,
 			),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 
 		mediaDuration = 3;
 		dayOfWeek = Math.abs(moment().isoWeekday() + 5) % 7;
@@ -320,10 +348,10 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		);
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 		// should play in 5 days
-		expect(Math.abs(432000000 - responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(5 * MS_PER_DAY - responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(
 			Math.abs(moment().add(5, 'days').add(mediaDuration, 'hours').valueOf() - responseTimeObject.timeToEnd),
-		).to.be.lessThan(1000);
+		).to.be.lessThan(MS_PER_SECOND);
 	});
 
 	it('should return correct times for specific weekdays with repeating logic', async () => {
@@ -341,7 +369,7 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 
 		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
 
 		// Test a schedule that started 2 days ago and ended 1 day ago (with today's weekday constraint)
@@ -357,7 +385,7 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.eql(SMILScheduleEnum.neverPlay);
 
 		// Use a start time slightly in the past to avoid edge case with exact "now" time
@@ -372,7 +400,7 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
 	});
 
@@ -389,7 +417,7 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 
 		let responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.eql(SMILScheduleEnum.neverPlay);
 
 		testStartString = formatWeekDate(
@@ -404,7 +432,7 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 
 		responseTimeObject = parseSmilSchedule(testStartString, testEndString);
 
-		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(1000);
+		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
 	});
 });

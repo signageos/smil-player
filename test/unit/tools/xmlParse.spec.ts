@@ -1,6 +1,7 @@
 import { promises as fsPromise } from 'fs';
+import * as path from 'path';
 import { XmlParser } from '../../../src/components/xmlParser/xmlParser';
-import { parseNestedRegions } from '../../../src/components/xmlParser/tools';
+import { parseNestedRegions, containsElement, extractRegionInfo, extractTransitionsInfo } from '../../../src/components/xmlParser/tools';
 import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
 import { mockSMILFileParsed99 } from '../../mocks/playlistMock/mock99';
 import { mockSMILFileParsedRegionAlias } from '../../mocks/playlistMock/mockRegionAlias';
@@ -12,10 +13,12 @@ import * as chai from 'chai';
 
 const expect = chai.expect;
 const xmlParser = new XmlParser();
+const FIXTURES = path.join(__dirname, '../../mocks/xmlParserMock');
+
 describe('XmlParse tools component', () => {
 	describe('XmlParse tools component tests', () => {
 		it('Should parse whole xml file correctly file broken smil', async () => {
-			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/broken.smil', 'utf8');
+			const xmlFile: string = await fsPromise.readFile(path.join(FIXTURES, 'broken.smil'), 'utf8');
 			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(2);
@@ -32,7 +35,7 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file triggers', async () => {
-			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/triggers.smil', 'utf8');
+			const xmlFile: string = await fsPromise.readFile(path.join(FIXTURES, 'triggers.smil'), 'utf8');
 			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(4);
@@ -51,7 +54,7 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file 234', async () => {
-			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/234.smil', 'utf8');
+			const xmlFile: string = await fsPromise.readFile(path.join(FIXTURES, '234.smil'), 'utf8');
 			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(1);
@@ -68,7 +71,7 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file regionAlias', async () => {
-			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/regionAlias.smil', 'utf8');
+			const xmlFile: string = await fsPromise.readFile(path.join(FIXTURES, 'regionAlias.smil'), 'utf8');
 			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(1);
@@ -85,7 +88,7 @@ describe('XmlParse tools component', () => {
 		});
 
 		it('Should parse whole xml file correctly file 99', async () => {
-			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/99.smil', 'utf8');
+			const xmlFile: string = await fsPromise.readFile(path.join(FIXTURES, '99.smil'), 'utf8');
 			const smilObject = await xmlParser.processSmilXml(xmlFile);
 			// checking file arrays for download
 			expect(smilObject.video.length).to.be.eql(4);
@@ -332,6 +335,127 @@ describe('XmlParse tools component', () => {
 			expect(testingRegion.region[1].left).to.be.eql(650);
 			expect(testingRegion.region[1].width).to.be.eql(640);
 			expect(testingRegion.region[1].height).to.be.eql(360);
+		});
+	});
+
+	describe('containsElement', () => {
+		it('Should return true when element with matching src exists', () => {
+			const arr: any[] = [
+				{ src: 'https://example.com/video1.mp4' },
+				{ src: 'https://example.com/video2.mp4' },
+			];
+			expect(containsElement(arr, 'https://example.com/video1.mp4')).to.be.true;
+		});
+
+		it('Should return false when no match', () => {
+			const arr: any[] = [
+				{ src: 'https://example.com/video1.mp4' },
+			];
+			expect(containsElement(arr, 'https://example.com/notfound.mp4')).to.be.false;
+		});
+
+		it('Should return false for empty array', () => {
+			expect(containsElement([], 'https://example.com/video.mp4')).to.be.false;
+		});
+	});
+
+	describe('extractRegionInfo', () => {
+		it('Should extract single region with regionName', () => {
+			const xmlObject: any = {
+				region: {
+					regionName: 'video',
+					left: 0,
+					top: 0,
+					width: 1920,
+					height: 1080,
+				},
+			};
+			const result = extractRegionInfo(xmlObject);
+			expect(result.region).to.have.property('video');
+			expect(result.region.video.regionName).to.equal('video');
+		});
+
+		it('Should extract multiple regions (array) with regionName', () => {
+			const xmlObject: any = {
+				region: [
+					{ regionName: 'video', left: 0, top: 0, width: 960, height: 1080 },
+					{ regionName: 'widget', left: 960, top: 0, width: 960, height: 1080 },
+				],
+			};
+			const result = extractRegionInfo(xmlObject);
+			expect(result.region).to.have.property('video');
+			expect(result.region).to.have.property('widget');
+		});
+
+		it('Should extract region using xml:id alias instead of regionName', () => {
+			const xmlObject: any = {
+				region: {
+					'xml:id': 'aliasRegion',
+					left: 0,
+					top: 0,
+					width: 1920,
+					height: 1080,
+				},
+			};
+			const result = extractRegionInfo(xmlObject);
+			expect(result.region).to.have.property('aliasRegion');
+		});
+
+		it('Should extract rootLayout with default top, left, and regionName', () => {
+			const xmlObject: any = {
+				'root-layout': {
+					width: '1920',
+					height: '1080',
+					backgroundColor: '#000000',
+				},
+			};
+			const result = extractRegionInfo(xmlObject);
+			expect(result.rootLayout).to.exist;
+			expect(result.rootLayout!.top).to.equal('0');
+			expect(result.rootLayout!.left).to.equal('0');
+			expect(result.rootLayout!.regionName).to.equal('rootLayout');
+		});
+	});
+
+	describe('extractTransitionsInfo', () => {
+		it('Should extract single transition with transitionName', () => {
+			const xmlObject: any = {
+				transition: {
+					transitionName: 'fadeIn',
+					type: 'fade',
+					subtype: 'crossfade',
+					dur: '1s',
+				},
+			};
+			const result = extractTransitionsInfo(xmlObject);
+			expect(result.transition).to.have.property('fadeIn');
+			expect(result.transition.fadeIn.type).to.equal('fade');
+		});
+
+		it('Should extract multiple transitions (array)', () => {
+			const xmlObject: any = {
+				transition: [
+					{ transitionName: 'fadeIn', type: 'fade', subtype: 'crossfade', dur: '1s' },
+					{ transitionName: 'wipeLeft', type: 'wipe', subtype: 'leftToRight', dur: '2s' },
+				],
+			};
+			const result = extractTransitionsInfo(xmlObject);
+			expect(result.transition).to.have.property('fadeIn');
+			expect(result.transition).to.have.property('wipeLeft');
+			expect(result.transition.wipeLeft.dur).to.equal('2s');
+		});
+
+		it('Should extract transition using xml:id alias', () => {
+			const xmlObject: any = {
+				transition: {
+					'xml:id': 'aliasTrans',
+					type: 'fade',
+					subtype: 'crossfade',
+					dur: '1s',
+				},
+			};
+			const result = extractTransitionsInfo(xmlObject);
+			expect(result.transition).to.have.property('aliasTrans');
 		});
 	});
 });
