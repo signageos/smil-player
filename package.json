@@ -18,6 +18,7 @@
     "test:headless": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
+    "test:manual": "playwright test testing --headed --timeout 0",
     "lint": "npm run lint:tslint && npm run lint:docs",
     "lint:fix": "npm run lint:tslint-fix && npm run lint:docs -- --fix",
     "lint:tslint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test}/**/*.{ts,tsx}\"",
