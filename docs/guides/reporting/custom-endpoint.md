@@ -61,6 +61,50 @@ be sent as an array in the report.
      popTags="tag1,tag2,tag3"/>
 ```
 
+## Report Mode
+
+By default, reports are sent immediately via HTTP POST as each media event occurs. The `reportMode` attribute lets you override this on a per-element basis, choosing between immediate delivery and batched offline storage.
+
+### Values
+
+- **`immediate`** (default) — Reports are sent via HTTP POST to the configured endpoint as they occur. This is the default behavior when `reportMode` is omitted.
+- **`batch`** — Reports are saved to local CSV storage and uploaded in bulk every 10 minutes. This reduces network traffic and is useful for high-frequency playlists or unreliable connections.
+
+### Usage
+
+Add the `reportMode` attribute directly to any media element in your SMIL playlist. You can mix modes within the same playlist:
+
+```xml
+<seq>
+    <!-- This video's reports are batched to CSV and uploaded every 10 minutes -->
+    <video src="https://example.com/video.mp4"
+           region="main"
+           popName="promo-video"
+           reportMode="batch"/>
+
+    <!-- This image's reports are sent immediately (explicit) -->
+    <img src="https://example.com/banner.jpg"
+         dur="10s"
+         region="main"
+         popName="banner"
+         reportMode="immediate"/>
+
+    <!-- This image's reports are also sent immediately (default when omitted) -->
+    <img src="https://example.com/logo.jpg"
+         dur="5s"
+         region="main"
+         popName="logo"/>
+</seq>
+```
+
+### Batch file limit
+
+When using `reportMode="batch"`, the `reportFileLimit` attribute on the `<meta>` tag controls how many reports are stored per batch file before a new file is created. The default is 100.
+
+```xml
+<meta log="true" type="manual" endpoint="https://example.com/reports" reportFileLimit="50"/>
+```
+
 ## URL Redirect Handling
 
 When content URLs redirect (e.g., through a CDN or load balancer), the SMIL player automatically captures the final URL after all redirects. This final URL is used in all proof-of-play reports.
