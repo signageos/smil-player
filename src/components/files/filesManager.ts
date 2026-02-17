@@ -239,9 +239,13 @@ export class FilesManager implements IFilesManager {
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
-				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage)),
-				);
+				const payload = createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage));
+				if (value.reportMode === 'batch') {
+					debug('Report mode is batch, saving to offline storage');
+					await this.saveCustomEndpointInfo(payload);
+				} else {
+					await this.sendCustomEndpointReport(payload);
+				}
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
 			}
