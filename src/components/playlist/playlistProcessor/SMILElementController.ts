@@ -266,6 +266,9 @@ export class SMILElementController {
 		pendingAcks: new Set<string>(), // "region-index-state" keys to avoid duplicates
 		// Track priority level per region to detect priority changes
 		priorityLevel: new Map<string, number>(), // regionName -> priorityLevel
+		// Slave's observed max syncIndex per region (resets each cycle, excludes wallclock-skipped elements)
+		slaveMaxSyncIndex: new Map<string, number>(),
+		slavePreviousSyncIndex: new Map<string, number>(),
 	};
 
 	constructor(private synchronization: Synchronization) {}
@@ -323,6 +326,14 @@ export class SMILElementController {
 			logDebug(undefined, 'Wrapping resync target from %d to %d (priority max=%d)',
 				nextIndex, minIndex, priorityMaxSyncIndex);
 			return minIndex;
+		}
+
+		// CASE 1.5: Use slave's observed max (excludes wallclock-skipped elements)
+		const slaveMax = this.syncState.slaveMaxSyncIndex.get(regionName);
+		if (slaveMax !== undefined && nextIndex > slaveMax) {
+			logDebug(undefined, 'Wrapping resync target from %d to 1 (slaveMaxSyncIndex=%d)',
+				nextIndex, slaveMax);
+			return 1;
 		}
 
 		// CASE 2: Simple playlist (no priorityClass) - use global max
@@ -1110,6 +1121,20 @@ export class SMILElementController {
 			this.syncState.slavePosition.finish.set(regionName, syncIndex);
 			logDebug(undefined, 'Updated slave finish position: region=%s, syncIndex=%d', regionName, syncIndex);
 		}
+
+		// Track the slave's actual processed syncIndex range for correct resync wrapping
+		// Reset max on wrap (syncIndex went from high to low = new playlist cycle)
+		const prevSync = this.syncState.slavePreviousSyncIndex.get(regionName);
+		if (prevSync !== undefined && syncIndex < prevSync) {
+			// Slave wrapped — reset max for new cycle
+			this.syncState.slaveMaxSyncIndex.set(regionName, syncIndex);
+		} else {
+			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName) ?? 0;
+			if (syncIndex > currentMax) {
+				this.syncState.slaveMaxSyncIndex.set(regionName, syncIndex);
+			}
+		}
+		this.syncState.slavePreviousSyncIndex.set(regionName, syncIndex);
 	}
 
 	/**
