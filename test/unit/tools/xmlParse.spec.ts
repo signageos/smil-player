@@ -101,6 +101,21 @@ describe('XmlParse tools component', () => {
 			expect(smilObject).to.be.eql(mockSMILFileParsed99);
 		});
 
+		it('Should parse reportFileLimit from meta tag', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/reportFileLimit.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.reportFileLimit).to.be.eql(50);
+			expect(smilObject.logger.enabled).to.be.eql(true);
+			expect(smilObject.logger.endpoint).to.be.eql('https://example.com/report');
+			expect(smilObject.logger.type).to.be.eql(['manual']);
+		});
+
+		it('Should default reportFileLimit to 100 when not specified', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/triggers.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.reportFileLimit).to.be.eql(100);
+		});
+
 		it('Should parse nested regions correctly -  single region fixed values', async () => {
 			let testingRegion: any = {
 				regionName: 'video',

@@ -29,6 +29,7 @@ export type SmilLogger = {
 	enabled: boolean;
 	type?: (smilLogging.standard | smilLogging.proofOfPlay)[];
 	endpoint?: string;
+	reportFileLimit: number;
 };
 
 export type TransitionsObject = {
@@ -77,6 +78,7 @@ export type SMILMetaObject = {
 	log: boolean | string;
 	type?: smilLogging.standard | smilLogging.proofOfPlay;
 	endpoint?: string;
+	reportFileLimit?: string;
 	onlySmilUpdate: boolean | string;
 	expr?: string;
 	timeOut?: string;

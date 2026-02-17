@@ -67,6 +67,7 @@ export class FilesManager implements IFilesManager {
 	} = {};
 	private smilLogging: SmilLogger = {
 		enabled: false,
+		reportFileLimit: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 	};
 
 	constructor(sos: FrontApplet) {
@@ -928,7 +929,7 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 		// -1 because its indexed from 0
-		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > CUSTOM_ENDPOINT_REPORT_FILE_LIMIT - 1) {
+		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > this.smilLogging.reportFileLimit - 1) {
 			debug('File number of records exceeded ', currentFileIndex);
 			currentFileIndex += 1;
 			this.offlineReportsInfoObject[currentFileIndex] = {
