@@ -16,5 +16,4 @@ function getSmilUrlFromParams(): string | undefined {
 }
 
 const smilUrl = getSmilUrlFromParams();
-console.log('[SMIL-PLAYER] index.ts loaded, smilUrl from params:', smilUrl);
 new SmilPlayer(smilUrl).start();
