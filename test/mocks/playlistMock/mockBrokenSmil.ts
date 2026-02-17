@@ -67,6 +67,7 @@ export const mockBrokenSmil = {
 	logger: {
 		enabled: false,
 		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: false,
 	playlist: {
