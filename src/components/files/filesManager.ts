@@ -130,6 +130,16 @@ export class FilesManager implements IFilesManager {
 						})
 						.filter((item): item is CustomEndpointReport => item !== undefined);
 
+					// Skip the currently active file if it hasn't reached reportFileLimit yet
+					if (
+						this.offlineReportsInfoObject[fileIndex] &&
+						arrayOfReports.length < this.smilLogging.reportFileLimit
+					) {
+						debug('Skipping active batch file %d (%d/%d reports)',
+							fileIndex, arrayOfReports.length, this.smilLogging.reportFileLimit);
+						continue;
+					}
+
 					debug('Sending custom endpoint report file: %s', file.filePath);
 					const start = Date.now();
 
