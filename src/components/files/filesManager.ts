@@ -135,8 +135,12 @@ export class FilesManager implements IFilesManager {
 						this.offlineReportsInfoObject[fileIndex] &&
 						arrayOfReports.length < this.smilLogging.reportFileLimit
 					) {
-						debug('Skipping active batch file %d (%d/%d reports)',
-							fileIndex, arrayOfReports.length, this.smilLogging.reportFileLimit);
+						debug(
+							'Skipping active batch file %d (%d/%d reports)',
+							fileIndex,
+							arrayOfReports.length,
+							this.smilLogging.reportFileLimit,
+						);
 						continue;
 					}
 
