@@ -7,6 +7,7 @@ export type PoPAttributes = {
 	popType?: 'video' | 'image' | 'html' | 'custom';
 	popTags?: string;
 	popFileName?: string;
+	reportMode?: 'immediate' | 'batch';
 };
 
 export type UpdateChecks = {

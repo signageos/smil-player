@@ -29,6 +29,7 @@ export const mockSMILFileParsedRegionAlias = {
 	logger: {
 		enabled: false,
 		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: true,
 	playlist: {

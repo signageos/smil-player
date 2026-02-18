@@ -65,6 +65,7 @@ export const mockSMILFileParsed99 = {
 	logger: {
 		enabled: false,
 		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: false,
 	playlist: {

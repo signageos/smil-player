@@ -67,6 +67,7 @@ export class FilesManager implements IFilesManager {
 	} = {};
 	private smilLogging: SmilLogger = {
 		enabled: false,
+		reportFileLimit: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 	};
 
 	constructor(sos: FrontApplet) {
@@ -128,6 +129,20 @@ export class FilesManager implements IFilesManager {
 							}
 						})
 						.filter((item): item is CustomEndpointReport => item !== undefined);
+
+					// Skip the currently active file if it hasn't reached reportFileLimit yet
+					if (
+						this.offlineReportsInfoObject[fileIndex] &&
+						arrayOfReports.length < this.smilLogging.reportFileLimit
+					) {
+						debug(
+							'Skipping active batch file %d (%d/%d reports)',
+							fileIndex,
+							arrayOfReports.length,
+							this.smilLogging.reportFileLimit,
+						);
+						continue;
+					}
 
 					debug('Sending custom endpoint report file: %s', file.filePath);
 					const start = Date.now();
@@ -238,9 +253,13 @@ export class FilesManager implements IFilesManager {
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
-				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage)),
-				);
+				const payload = createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage));
+				if (value.reportMode === 'batch') {
+					debug('Report mode is batch, saving to offline storage');
+					await this.saveCustomEndpointInfo(payload);
+				} else {
+					await this.sendCustomEndpointReport(payload);
+				}
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value, errMessage));
 			}
@@ -928,7 +947,7 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 		// -1 because its indexed from 0
-		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > CUSTOM_ENDPOINT_REPORT_FILE_LIMIT - 1) {
+		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > this.smilLogging.reportFileLimit - 1) {
 			debug('File number of records exceeded ', currentFileIndex);
 			currentFileIndex += 1;
 			this.offlineReportsInfoObject[currentFileIndex] = {
