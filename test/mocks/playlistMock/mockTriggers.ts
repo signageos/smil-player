@@ -68,6 +68,7 @@ export const mockSMILFileTriggers = {
 		enabled: true,
 		endpoint: undefined,
 		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: false,
 	playlist: {

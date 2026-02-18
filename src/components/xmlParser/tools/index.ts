@@ -35,7 +35,7 @@ import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
 import { isRelativePath } from '../../files/tools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-import { smilLogging } from '../../../enums/fileEnums';
+import { smilLogging, CUSTOM_ENDPOINT_REPORT_FILE_LIMIT } from '../../../enums/fileEnums';
 import cloneDeep = require('lodash/cloneDeep');
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 
@@ -384,6 +384,9 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 				enabled: metaRecord.log === true,
 				type: result,
 				endpoint: metaRecord.endpoint,
+				reportFileLimit: metaRecord.reportFileLimit
+					? parseInt(metaRecord.reportFileLimit, 10)
+					: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 			};
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
@@ -477,6 +480,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		logger: {
 			enabled: false,
 			type: [smilLogging.standard],
+			reportFileLimit: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 		},
 	};
 	Object.keys(xmlObject).forEach((rootKey: any) => {
