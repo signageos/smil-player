@@ -269,6 +269,8 @@ export class SMILElementController {
 		// Slave's observed max syncIndex per region (resets each cycle, excludes wallclock-skipped elements)
 		slaveMaxSyncIndex: new Map<string, number>(),
 		slavePreviousSyncIndex: new Map<string, number>(),
+		// Previous cycle's max syncIndex (saved before reset on wrap) — used by isWraparoundScenario
+		slavePreviousCycleMax: new Map<string, number>(),
 	};
 
 	constructor(private synchronization: Synchronization) {}
@@ -384,10 +386,12 @@ export class SMILElementController {
 		priorityMax: number | undefined,
 		globalMax: number | undefined,
 		regionName: string,
+		slaveEffectiveMax?: number,
 	): boolean {
-		// Use priority bounds if available, otherwise fall back to global max
+		// Use priority bounds if available, otherwise prefer slave's observed max
+		// (excludes wallclock-skipped elements) over the potentially inflated global max
 		const minIndex = priorityMin ?? 1;
-		const maxIndex = priorityMax ?? globalMax;
+		const maxIndex = priorityMax ?? slaveEffectiveMax ?? globalMax;
 
 		if (!maxIndex) {
 			return false;
@@ -554,6 +558,9 @@ export class SMILElementController {
 
 		// Get maxIndex for wraparound detection
 		const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+		// Use slave's observed max (previous cycle or current) to avoid inflated globalMax
+		// from wallclock-skipped elements
+		const slaveEffectiveMax = this.syncState.slavePreviousCycleMax.get(regionName);
 
 		if (value.state === expectedState && value.syncIndex === syncIndex) {
 			// Normal case: exact match
@@ -571,10 +578,10 @@ export class SMILElementController {
 			}
 
 			return ProcessAction.CONTINUE; // In sync, continue normally
-		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName)) {
+		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName, slaveEffectiveMax)) {
 			// Slave is ahead of master - wait for master to catch up
 			// Includes wraparound: slave at start of new iteration, master at end of previous
-			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName);
+			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName, slaveEffectiveMax);
 			logDebug(
 				undefined,
 				'Slave ahead of master %s- slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
@@ -1126,7 +1133,11 @@ export class SMILElementController {
 		// Reset max on wrap (syncIndex went from high to low = new playlist cycle)
 		const prevSync = this.syncState.slavePreviousSyncIndex.get(regionName);
 		if (prevSync !== undefined && syncIndex < prevSync) {
-			// Slave wrapped — reset max for new cycle
+			// Slave wrapped — save previous cycle's max before resetting
+			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName);
+			if (currentMax !== undefined) {
+				this.syncState.slavePreviousCycleMax.set(regionName, currentMax);
+			}
 			this.syncState.slaveMaxSyncIndex.set(regionName, syncIndex);
 		} else {
 			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName) ?? 0;
