@@ -481,6 +481,21 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 
+		// For location strategy: if a redirect happened and only query params changed
+		// (same base URL, different full URL), return value to update mapping for reporting.
+		// Guard: stripSmilVersion check ensures a redirect actually occurred —
+		// without it, "no redirect" (server echoes webhook URL) would wrongly overwrite the stored CDN URL.
+		if (
+			isLocationStrategy &&
+			currentValue &&
+			storedValue &&
+			stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
+			currentValue !== storedValue
+		) {
+			debug('Location URL query params changed for %s, returning value for mapping update', media.src);
+			return { shouldUpdate: false, value: currentValue, statusCode };
+		}
+
 		debug(`File is already downloaded in internal storage: %O `, media.src);
 		return { shouldUpdate: false, statusCode };
 	};
@@ -2754,6 +2769,26 @@ export class FilesManager implements IFilesManager {
 					fetchStrategy,
 				};
 			}
+
+			// Query params changed but base URL is the same — update mapping for reporting, no download needed
+			if (currentLocalValue !== detection.updateCheck.value) {
+				debug(
+					'QUERY_PARAMS_CHANGED detected: %s needs mapping update from %s to %s',
+					file.src,
+					currentLocalValue,
+					detection.updateCheck.value,
+				);
+
+				return {
+					file,
+					localFilePath,
+					updateValue: detection.updateCheck.value,
+					needsDownload: false,
+					mediaInfoObject: detection.mediaInfoObject,
+					fetchStrategy,
+				};
+			}
+
 			// Content mapping is already correct, no action needed
 			return null;
 		}
