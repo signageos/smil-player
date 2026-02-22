@@ -2374,6 +2374,28 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
+		// Pre-play content check: verify element freshness before playback
+		if (this.smilObject.checkBeforePlay && 'src' in value && 'localFilePath' in value) {
+			const mediaType = removeDigits(key);
+			const filePath = getFileStructureForMediaType(mediaType);
+			if (filePath) {
+				debug(`[${debugId}] Pre-play check for: %s`, value.src);
+				const checkResult = await this.files.prePlayCheck(
+					value as SMILVideo | SMILImage | SMILWidget,
+					filePath,
+					this.smilObject,
+				);
+				if (checkResult.updated) {
+					value.localFilePath = checkResult.newLocalFilePath;
+					value.wasUpdated = true;
+					debug(`[${debugId}] Pre-play: content updated, new path: %s`, checkResult.newLocalFilePath);
+				}
+				if (checkResult.newReportUrl) {
+					value.useInReportUrl = checkResult.newReportUrl;
+				}
+			}
+		}
+
 		let sosVideoObject: Video | Stream = this.sos.video;
 		let params: VideoParams = getDefaultVideoParams();
 		let element = document.getElementById(value.id ?? '') as HTMLElement;
