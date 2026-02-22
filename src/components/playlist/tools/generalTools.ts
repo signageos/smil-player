@@ -13,6 +13,7 @@ import {
 	RandomPlaylist,
 } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
+import { FileStructure } from '../../../enums/fileEnums';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
@@ -372,5 +373,15 @@ export function processRandomPlayMode(
 		default:
 			debug('No valid playMode specified, returning original object, playMode: %s', playlist.playmode);
 			return playlist;
+	}
+}
+
+export function getFileStructureForMediaType(mediaType: string): string | undefined {
+	switch (mediaType) {
+		case 'video': return FileStructure.videos;
+		case 'img': return FileStructure.images;
+		case 'ref': return FileStructure.widgets;
+		case 'audio': return FileStructure.audios;
+		default: return undefined;
 	}
 }

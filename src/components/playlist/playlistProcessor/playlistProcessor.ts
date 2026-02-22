@@ -35,6 +35,7 @@ import {
 	removeDigits,
 	sleep,
 	promiseWithTimeout,
+	getFileStructureForMediaType,
 } from '../tools/generalTools';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
@@ -977,10 +978,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
 		// In checkBeforePlay mode, skip interval-based media checking
-		const effectiveSmilObject = this.smilObject.checkBeforePlay
-			? { ...this.smilObject, onlySmilFileUpdate: true }
-			: this.smilObject;
-		const resources = await this.files.prepareLastModifiedSetup(effectiveSmilObject, smilFile);
+		if (this.smilObject.checkBeforePlay) {
+			this.smilObject.onlySmilFileUpdate = true;
+		}
+		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
 		const resourceChecker = new ResourceChecker(
 			resources,
 			this.files,
