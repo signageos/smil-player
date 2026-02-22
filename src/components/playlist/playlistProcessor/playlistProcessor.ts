@@ -2380,10 +2380,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const filePath = getFileStructureForMediaType(mediaType);
 			if (filePath) {
 				debug(`[${debugId}] Pre-play check for: %s`, value.src);
+				const allMedia: MergedDownloadList[] = [
+					...this.smilObject.video,
+					...this.smilObject.img,
+					...this.smilObject.ref,
+					...this.smilObject.audio,
+				];
 				const checkResult = await this.files.prePlayCheck(
 					value as SMILVideo | SMILImage | SMILWidget,
 					filePath,
 					this.smilObject,
+					allMedia,
 				);
 				if (checkResult.updated) {
 					value.localFilePath = checkResult.newLocalFilePath;
@@ -2569,6 +2576,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			regionInfo.height,
 			options as keyof typeof StreamProtocol,
 		];
+
+		// Reset wasUpdated after consuming localFilePath, mirroring handleHtmlElementPrepare
+		value.wasUpdated = false;
 
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
 			debug(`[${debugId}] Currently playing video exists, waiting 50ms`);
