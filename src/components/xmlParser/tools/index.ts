@@ -398,6 +398,10 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 		if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
 			regions.defaultTransition = metaRecord.defaultTransition;
 		}
+		if (metaRecord.hasOwnProperty(SMILEnums.checkBeforePlay)) {
+			regions.checkBeforePlay = metaRecord.checkBeforePlay === true
+				|| metaRecord.checkBeforePlay === 'true';
+		}
 	}
 
 	if (!smilFileRefreshSet) {
