@@ -478,6 +478,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 			fallbackToPreviousPlaylist: false,
 		},
 		onlySmilFileUpdate: false,
+		checkBeforePlay: false,
 		skipContentOnHttpStatus: [],
 		updateContentOnHttpStatus: [],
 		updateMechanism: SMILEnums.lastModified,
