@@ -86,6 +86,8 @@ export class FilesManager implements IFilesManager {
 	private batchUpdates: Map<string, string | number> = new Map();
 	// Track files downloaded to temp folders: filename -> temp path
 	private tempDownloads: Map<string, string> = new Map();
+	// Serialize prePlayCheck batch operations across concurrent regions
+	private prePlayLock: Promise<void> = Promise.resolve();
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -1834,9 +1836,10 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public prePlayCheck = async (
-		media: SMILVideo | SMILImage | SMILAudio | SMILWidget,
+		media: SMILVideo | SMILImage | SMILWidget,
 		localFilePath: string,
 		smilObject: SMILFileObject,
+		allMediaList: MergedDownloadList[],
 	): Promise<{ updated: boolean; newLocalFilePath: string; newReportUrl?: string }> => {
 		const currentPath = media.localFilePath || '';
 		try {
@@ -1855,12 +1858,15 @@ export class FilesManager implements IFilesManager {
 				return { updated: false, newLocalFilePath: currentPath };
 			}
 
-			// Phases 3-4: Processing (same as ResourceChecker Phases 3-4)
-			this.startBatch();
-			await this.processNewContentUpdates([detection]);
+			// Downloads run concurrently (no lock, no startBatch)
+			await this.processNewContentUpdates([detection], allMediaList);
 
-			// Phase 6: Commit (same as ResourceChecker Phase 6)
-			await this.commitBatch([media]);
+			// Serialize only the commit phase (filesystem migration + JSON write)
+			const commit = this.prePlayLock.then(async () => {
+				await this.commitBatch([media]);
+			});
+			this.prePlayLock = commit.catch(() => {});
+			await commit;
 
 			const newLocalFilePath = media.localFilePath || currentPath;
 			return {
