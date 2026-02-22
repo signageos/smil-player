@@ -22,6 +22,7 @@ export type RegionsObject = {
 	skipContentOnHttpStatus: number[];
 	updateContentOnHttpStatus: number[];
 	updateMechanism: 'location' | 'last-modified';
+	checkBeforePlay: boolean;
 	[key: string]: any;
 };
 
@@ -89,6 +90,7 @@ export type SMILMetaObject = {
 	updateContentOnHttpStatus?: string;
 	fallbackToPreviousPlaylist?: boolean;
 	updateMechanism?: string;
+	checkBeforePlay?: boolean | string;
 };
 
 export type RegionAttributes = {
