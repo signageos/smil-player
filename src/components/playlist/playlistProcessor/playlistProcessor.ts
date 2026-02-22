@@ -976,7 +976,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
-		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
+		// In checkBeforePlay mode, skip interval-based media checking
+		const effectiveSmilObject = this.smilObject.checkBeforePlay
+			? { ...this.smilObject, onlySmilFileUpdate: true }
+			: this.smilObject;
+		const resources = await this.files.prepareLastModifiedSetup(effectiveSmilObject, smilFile);
 		const resourceChecker = new ResourceChecker(
 			resources,
 			this.files,
