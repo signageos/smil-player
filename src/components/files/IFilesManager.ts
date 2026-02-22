@@ -85,7 +85,7 @@ export interface IFilesManager {
 	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<void>;
 	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
 	prePlayCheck: (
-		media: MergedDownloadList,
+		media: SMILVideo | SMILImage | SMILAudio | SMILWidget,
 		localFilePath: string,
 		smilObject: SMILFileObject,
 	) => Promise<{ updated: boolean; newLocalFilePath: string; newReportUrl?: string }>;

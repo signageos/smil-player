@@ -1833,6 +1833,47 @@ export class FilesManager implements IFilesManager {
 		this.collectUpdate(fileName, String(detection.updateValue));
 	};
 
+	public prePlayCheck = async (
+		media: SMILVideo | SMILImage | SMILAudio | SMILWidget,
+		localFilePath: string,
+		smilObject: SMILFileObject,
+	): Promise<{ updated: boolean; newLocalFilePath: string; newReportUrl?: string }> => {
+		const currentPath = media.localFilePath || '';
+		try {
+			const fetchStrategy = getStrategy(smilObject.updateMechanism);
+
+			// Phase 1: Detection (same as ResourceChecker Phase 1)
+			const detection = await this.detectUpdateOnly(
+				media, localFilePath,
+				smilObject.refresh.timeOut,
+				smilObject.skipContentOnHttpStatus,
+				smilObject.updateContentOnHttpStatus,
+				fetchStrategy,
+			);
+
+			if (!detection) {
+				return { updated: false, newLocalFilePath: currentPath };
+			}
+
+			// Phases 3-4: Processing (same as ResourceChecker Phases 3-4)
+			this.startBatch();
+			await this.processNewContentUpdates([detection]);
+
+			// Phase 6: Commit (same as ResourceChecker Phase 6)
+			await this.commitBatch([media]);
+
+			const newLocalFilePath = media.localFilePath || currentPath;
+			return {
+				updated: true,
+				newLocalFilePath,
+				newReportUrl: String(detection.updateValue),
+			};
+		} catch (error) {
+			debug('Pre-play check failed for %s, using cached version: %O', media.src, error);
+			return { updated: false, newLocalFilePath: currentPath };
+		}
+	};
+
 	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
 		if (!value) {
 			return false;
