@@ -96,6 +96,8 @@ synchronized.
 `onlySmilUpdate="true"`.
 * Its possible to specify conditional expression. Smil player will check for updates only if expression evaluates to true.
 `expr="adapi-weekday()&lt;=4"`
+* Its possible to check each media file for updates right before playback instead of polling on a timer.
+`checkBeforePlay="true"`. See the [Check Before Play guide](guides/configuration-caching/check-before-play.md) for details.
 
 #### Example
 ```
