@@ -3,6 +3,7 @@
 SMIL player has the option to turn on logging of major events which are happening during the playlist lifecycle.
 
 The advantage of this feature is that you can track what is happening with your content, how it is being used, and
+gather proof-of-play data for reporting and billing purposes.
 
 ## Setup
 
@@ -15,11 +16,16 @@ To turn logs on, you have to specify `<meta>` tag with log value in smil header.
 </head>
 ```
 
-### PoP attributes for each element you want reports for in smil playlist
+### PoP attributes
 
-### PoP attributes for each element you want reports for in smil playlist
+Each element you want reports for must have PoP attributes defined in the SMIL playlist. The `popName` attribute is
+mandatory — if it is not present, the report will not be sent. All other attributes are optional.
 
-separated by comma which will
+- `popName` — (mandatory) identifier for the media item in reports. Without this attribute, no PoP report is generated.
+- `popType` — type label included in the report (e.g., `"video"`, `"image"`).
+- `popCustomId` — custom identifier passed through to the report as `customId`.
+- `popFileName` — file name included in the report.
+- `popTags` — comma-separated list of tags. Sent as an array in the report payload.
 
 ```xml
 
@@ -40,9 +46,14 @@ separated by comma which will
 
 ## Payload of messages
 
-### Download
+PoP reports contain the fields derived from the `pop*` attributes on each media element. The `tags` array includes
+the `popTags` values followed by the report URL and an ISO timestamp.
 
-#### Success
+> **Note:** PoP reports (`type="manual"`) do not include success/failure distinction or HTTP status codes. If you need
+> download status codes or playback success/failure information, use [Custom Endpoint Reporting](custom-endpoint.md)
+> or [Standard Event Reporting](event-reporting.md).
+
+### Download
 
 ```json
 {
@@ -60,33 +71,11 @@ separated by comma which will
 }
 ```
 
-#### Fail
-
-```json
-{
-  "name": "media-download",
-  "customId": "customId",
-  "type": "video",
-  "tags": [
-    "ckr1u68ig890351znnshenikir",
-    "cm0w686jl009si1l4jcxhhiey",
-    "cm2x29v78001y48p4xfpi97cu",
-    "cm2x1xfz2001t48p43qqoiav0",
-    "2024-11-19T21:48:08.633Z"
-  ],
-  "fileName": "video.mp4",
-  "errorMessage": "File not found"
-}
-```
-
 ### Playback
-
-#### Success
 
 ```json
 {
   "name": "media-playback",
-  "playbackSuccess": true,
   "customId": "customId",
   "type": "image",
   "tags": [
@@ -97,36 +86,6 @@ separated by comma which will
     "2024-11-19T21:48:08.633Z"
   ],
   "fileName": "video.mp4"
-}
-```
-
-#### Fail
-
-```json
-{
-  "name": "media-playback",
-  "playbackSuccess": false,
-  "customId": "customId",
-  "type": "video",
-  "tags": [
-    "ckr1u68ig890351znnshenikir",
-    "cm0w686jl009si1l4jcxhhiey",
-    "cm2x29v78001y48p4xfpi97cu",
-    "cm2x1xfz2001t48p43qqoiav0",
-    "2024-11-19T21:48:08.633Z"
-  ],
-  "fileName": "video.mp4",
-  "errorMessage": "Unsupported video type"
-}
-```
-
-### General error
-
-```json
-{
-  "type": "SMIL.Error",
-  "failedAt": "2024-11-19T21:18:31.996Z",
-  "errorMessage": "No sensors specified for nexmosphere triggers: []"
 }
 ```
 

@@ -10,7 +10,7 @@ To turn logs on, you have to specify `<meta>` tag with log value in the SMIL hea
 </head>
 ```
 
-its also possible to specify multiple logging types at the same time:
+It's also possible to specify multiple logging types at the same time:
 
 ```xml
 
@@ -26,6 +26,9 @@ its also possible to specify multiple logging types at the same time:
 ## Payload of messages
 
 ### Download
+
+When a download fails, `errorMessage` contains the HTTP status code (e.g., `"HTTP 404"`). On success, `errorMessage`
+is `null`.
 
 #### Success
 
@@ -65,7 +68,7 @@ its also possible to specify multiple logging types at the same time:
   "startedAt": "2024-11-19T21:18:28.781Z",
   "succeededAt": null,
   "failedAt": "2024-11-19T21:18:29.483Z",
-  "errorMessage": "File not found"
+  "errorMessage": "HTTP 404"
 }
 ```
 

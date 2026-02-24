@@ -16,7 +16,7 @@ fetch("https://stage.customEndpoint.com/api/webhooks/device-proof-of-play/cm0w68
 	"headers": {
 		"content-type": "application/json",
 	},
-	"body": "[{\"name\":\"media-playback\",\"playbackSuccess\":true,\"type\":\"video\",\"tags\":[\"ckr1u68ig890351znnshenikir\",\"cm0w686jl009si1l4jcxhhiey\",\"cm34j6ldy0035ib6ryzevjwsi\",\"clumdj8st57992mn0dc1umbna\"],\"recordedAt\":\"2024-11-20T22:55:02.599Z\"}]",
+	"body": "[{\"name\":\"media-playback\",\"playbackSuccess\":true,\"type\":\"video\",\"tags\":[\"ckr1u68ig890351znnshenikir\",\"cm0w686jl009si1l4jcxhhiey\",\"cm34j6ldy0035ib6ryzevjwsi\",\"clumdj8st57992mn0dc1umbna\"],\"status\":200,\"time\":1732146902,\"url\":\"https://cdn.example.com/video.mp4\"}]",
 	"method": "POST"
 });
 ```
@@ -27,14 +27,13 @@ local storage and send them in bulk, 100 reports at a time, when the device goes
 ## Setup
 
 To enable logging, you must specify a `<meta>` tag with a log value in the SMIL header.
-To turn logs on, you have to specify `<meta>` tag with log value in smil header.
 
 ```xml
 
 <meta log="true" type="manual" endpoint="customUrlEndpoint"/>
 ```
 
-its also possible to specify multiple logging types at the same time:
+It's also possible to specify multiple logging types at the same time:
 
 ```xml
 
@@ -132,9 +131,56 @@ And the CDN redirects to `https://cdn-edge-1.example.com/video.mp4`, the PoP rep
 
 ## Logged events
 
+- Each file download, successful or unsuccessful
 - Each media playback, successful or unsuccessful
 
 ## Payload of messages
+
+All custom endpoint reports include a `status` field containing the HTTP status code and a `time` field with a Unix
+timestamp. The `url` field contains the content URL used for the report (which may differ from `src` if
+`useInReportUrl` is set or a redirect occurred).
+
+### Download
+
+#### Success
+
+```json
+{
+  "name": "media-download",
+  "customId": "customId",
+  "type": "video",
+  "tags": [
+    "ckr1u68ig890351znnshenikir",
+    "cm0w686jl009si1l4jcxhhiey",
+    "cm34j6ldy0035ib6ryzevjwsi",
+    "clumdj8st57992mn0dc1umbna"
+  ],
+  "fileName": "video.mp4",
+  "status": 200,
+  "time": 1732060768,
+  "url": "https://cdn.example.com/video.mp4"
+}
+```
+
+#### Fail
+
+```json
+{
+  "name": "media-download",
+  "customId": "customId",
+  "type": "video",
+  "tags": [
+    "ckr1u68ig890351znnshenikir",
+    "cm0w686jl009si1l4jcxhhiey",
+    "cm2x29v78001y48p4xfpi97cu",
+    "cm2x1xfz2001t48p43qqoiav0"
+  ],
+  "fileName": "video.mp4",
+  "status": 404,
+  "time": 1732060088,
+  "url": "https://cdn.example.com/video.mp4"
+}
+```
 
 ### Playback
 
@@ -153,7 +199,9 @@ And the CDN redirects to `https://cdn-edge-1.example.com/video.mp4`, the PoP rep
     "cm2x1xfz2001t48p43qqoiav0"
   ],
   "fileName": "video.mp4",
-  "recordedAt": "2024-11-19T21:59:28.977Z"
+  "status": 200,
+  "time": 1732060768,
+  "url": "https://cdn.example.com/image.jpg"
 }
 ```
 
@@ -173,6 +221,8 @@ And the CDN redirects to `https://cdn-edge-1.example.com/video.mp4`, the PoP rep
   ],
   "fileName": "video.mp4",
   "errorMessage": "Unsupported video type",
-  "recordedAt": "2024-11-19T21:59:28.977Z"
+  "status": 200,
+  "time": 1732060768,
+  "url": "https://cdn.example.com/video.mp4"
 }
 ```

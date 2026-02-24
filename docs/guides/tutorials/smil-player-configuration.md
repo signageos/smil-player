@@ -8,36 +8,9 @@ You can configure certain parameters of the SMIL Player using Timing Configurati
 - `backupImageUrl` is used for defining a failover image that will be shown in case the smil file is corrupted or fatal error occurs during playback, default built-in image
 - `serialPortDevice` is used for defining custom device address used for serial communication (like Nexmosphere sensors), default is /device/ttyUSB0
 - `videoBackground` this value accepts True and False values, resulting in a video content playing in the background
-- `debugEnabled` enables detailed debug logging to console for troubleshooting purposes, accepts "true" or "false" values (default: false)
+- `reportUrl` custom reporting endpoint URL. When set, the player sends PoP reports to this endpoint regardless of the logging configuration in the SMIL file. Takes precedence over SMIL-configured logging. See [Custom Endpoint Reporting](../reporting/custom-endpoint.md)
+- `syncGroupName` identifies which devices should be synchronised together. Can also be set via the SMIL `<meta>` tag, but this config value takes precedence
+- `syncServerUrl` URL of the synchronisation server. Can also be set via the SMIL `<meta>` tag, but this config value takes precedence
+- `debugEnabled` set to `true` to enable debug logging output (disabled by default)
 
 ![SMIL Applet configuration via timing config](config.png)
-
-## Debug Logging
-
-The `debugEnabled` parameter controls debug logging output:
-
-### When to Enable Debug Logs
-- Troubleshooting playback issues
-- Diagnosing content loading problems
-- Understanding playlist sequencing
-- Investigating update check behavior
-- Debugging trigger and conditional playback
-
-### Important Considerations
-- **Performance**: Debug logging can impact performance, especially on lower-end devices
-- **Storage**: Extensive logs may consume browser console memory
-- **Production**: Disable debug logs in production unless actively troubleshooting
-
-### Example Configuration
-To enable debug logging, set `debugEnabled` to "true" in your timing configuration:
-
-```
-debugEnabled: "true"
-```
-
-Debug logs will then appear in the browser console with detailed information about:
-- File downloads and caching
-- Playlist processing
-- Content updates
-- Playback state changes
-- Error conditions

@@ -7,54 +7,47 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
-## [3.2.9] - 2026-01-21
-
 ### Added
 
-- fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
-  previous playlist
-
-### Fixed
-
-- fixed playlist update, cancel lower version playlist instead of waiting for lower playlist element to finish
-- fixed playing cached playlist when device starts offline
-
-## [3.2.8] - 2025-12-03
-
-### Fixed
-
-- fixed offline report files exceeding 100 report limit after device restart
-- fixed priority coordination issues causing content overlap during playlist updates
-
-## [3.2.7] - 2025-09-26
-
-### Added
-
-- add option to check for media updates using location header or url instead of last-modified header in the response
-- add option to skip or update content based on the status code from response
-- add allowLocalFallback option to fall back to cached content when server returns errors
-- add useInReportUrl attribute for reporting correct URL of element in case of redirects
-- add debugEnabled configuration option to enable debug logging based on timing config
-- add option to specify multiple logging types
-
-### Fixed
-
-- fixed widget triggers not working correctly
-- fixed smilFileRefresh interval timing
-
-## [3.2.6] - 2025-03-26
-
-### Added
-
-- add configurable timeout for last-modified requests
-- choose sync-engine dynamically based on syncServerUrl param
-- add option to skip content based on server response
-- download files in parallel instead of sequential download
+- `checkBeforePlay` meta attribute to check each media file for updates right before playback instead of periodic
+  polling
+- `fallbackToPreviousPlaylist` meta attribute to continue playing previous valid playlist when a new SMIL file is
+  invalid or empty
+- `updateMechanism` meta attribute with `location` strategy — check for media updates using the Location
+  header/redirect URL instead of Last-Modified
+- `skipContentOnHttpStatus` and `updateContentOnHttpStatus` meta attributes to skip or force-update content based on
+  HTTP status codes
+- `contentRefresh` and `smilFileRefresh` meta attributes for separate SMIL file and media content refresh intervals
+- per-element update attributes: `updateCheckUrl`, `updateCheckInterval`, `allowLocalFallback`
+- `useInReportUrl` per-element attribute to control which URL appears in reports
+- `timeOut` meta attribute for configurable HEAD request timeout (default 2000ms)
+- `reportUrl` applet configuration option for custom reporting endpoint
+- `syncGroupName` and `syncServerUrl` applet configuration options (also settable via `<meta>` tag)
+- `debugEnabled` applet configuration option
+- landscape and portrait backup image support with automatic orientation detection
+- HTTP status codes in custom endpoint and standard event download reports
+- support for multiple logging types simultaneously (e.g., `type="manual,standard"`)
+- parallel file downloads instead of sequential
+- batch download optimization with content deduplication for location header strategy
+- storage preservation system for content movement detection — avoids re-downloading when content moves to a new URL
+- dynamic sync engine selection based on `syncServerUrl`
 
 ### Fixed
 
 - fixed handling of trigger sync groups when the playlist contains no sync
-- improved file check performance
+- play cached playlist when device starts offline
+- prevent promise-chain mutex from breaking on rejected batch commit
+- add client-side timeout for sync.wait to prevent device from hanging indefinitely
+- isolate playlist element errors to prevent cascade failures across regions
+- replace moveFile with copyFile during storage preservation to prevent playback errors during updates
+- fix offline report index tracking on startup to avoid overwriting existing reports
+- deduplicate downloads for URLs differing only in query parameters
+- prevent duplicate HEAD requests when detection has already been performed
+- fix SMIL file refresh interval not being applied separately from content refresh
+- fix widget trigger handling
+- fix AbortController compatibility for older devices
+- respect forceDownload flag when skipUpdateCheck is true
+- prevent SMIL files from being preserved to storage
 
 ## [3.2.4] - 2025-04-01
 

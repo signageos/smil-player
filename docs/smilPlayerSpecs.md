@@ -98,10 +98,20 @@ synchronized.
 `expr="adapi-weekday()&lt;=4"`
 * Its possible to check each media file for updates right before playback instead of polling on a timer.
 `checkBeforePlay="true"`. See the [Check Before Play guide](guides/configuration-caching/check-before-play.md) for details.
+* Split refresh intervals: `contentRefresh` sets a separate refresh interval (in seconds) for media content, and
+`smilFileRefresh` sets a separate interval for the SMIL file itself. When set, these take precedence over the
+`content` value. See the [Updating SMIL Playlist guide](guides/configuration-caching/updating-smil-playlist.md).
+* `fallbackToPreviousPlaylist="true"` — the player continues playing the previous valid playlist if a newly downloaded
+SMIL file is invalid or empty.
+* Per-element update attributes (`updateCheckUrl`, `updateCheckInterval`, `allowLocalFallback`) and global status-code
+handling (`skipContentOnHttpStatus`, `updateContentOnHttpStatus`) allow fine-grained control over media updates.
+See the [Media Update Configuration guide](guides/configuration-caching/media-update-configuration.md).
+* `timeOut` sets the timeout in milliseconds for HEAD update-check requests (default `2000`).
 
 #### Example
 ```
 <meta http-equiv="Refresh" content="10" onlySmilUpdate="true" expr="adapi-weekday()&lt;=4"/>
+<meta http-equiv="Refresh" content="60" contentRefresh="120" smilFileRefresh="30" fallbackToPreviousPlaylist="true"/>
 ```
 
 ### Prefetch
@@ -111,10 +121,15 @@ synchronized.
 ### Reporting
 [A-smil reference](https://www.a-smil.org/index.php/Reporting)
 * We use our FrontApplet `command.dispatch` for reporting. It has to be allowed in smil file.
+* A custom reporting endpoint can be configured via the `reportUrl` applet config option or the `endpoint` attribute
+on the `<meta>` tag. When a custom endpoint is set, PoP reports are sent as POST requests. See the
+[Custom Endpoint Reporting guide](guides/reporting/custom-endpoint.md).
+* Download reports include HTTP status codes. See the [Event Reporting guide](guides/reporting/event-reporting.md).
 
 #### Example
 ```
 <meta log="true" />
+<meta log="true" type="manual" endpoint="https://custom.endpoint.com/reports"/>
 ```
 
 ### Wallclock
