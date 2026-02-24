@@ -200,6 +200,7 @@ export const mockBrokenSmil = {
 	img: [],
 	ref: [],
 	audio: [],
+	checkBeforePlay: false,
 	dynamic: {},
 	intro: [
 		{

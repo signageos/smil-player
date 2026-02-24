@@ -251,6 +251,7 @@ export const mockSMILFileParsed99 = {
 		{ dur: 'indefinite', src: 'adapi:blankScreen' },
 	],
 	audio: [],
+	checkBeforePlay: false,
 	dynamic: {},
 	intro: [
 		{

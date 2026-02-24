@@ -4,7 +4,7 @@ import { defaults as config } from '../../config/parameters';
 import sos from '@signageos/front-applet';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
-import { FileStructure, smilLogging } from '../enums/fileEnums';
+import { CUSTOM_ENDPOINT_REPORT_FILE_LIMIT, FileStructure, smilLogging } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
 import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
@@ -216,6 +216,7 @@ export class SmilPlayer implements ISmilPlayer {
 				enabled: true,
 				type: [smilLogging.proofOfPlay],
 				endpoint: sos.config.reportUrl,
+				reportFileLimit: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 			});
 		}
 

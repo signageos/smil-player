@@ -292,6 +292,7 @@ export const mockSMILFileParsedRegionAlias = {
 		},
 	],
 	audio: [{ src: 'http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3', dur: '20' }],
+	checkBeforePlay: false,
 	dynamic: {},
 	intro: [
 		{

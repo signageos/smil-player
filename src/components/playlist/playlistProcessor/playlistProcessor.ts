@@ -458,79 +458,111 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				const lastPlaylistElem: string = getLastArrayItem(Object.entries(playlist))[0];
 				const isLast = lastPlaylistElem === key;
+				// Retry loop for priority coordination
+				const MAX_RETRIES = 10;
+				let retryCount = 0;
+				let shouldRetry = true;
 
-				// Declare indices before try block so they're accessible in catch
-				let currentIndex = -1;
-				let previousPlayingIndex = -1;
-
-				try {
-					// Setup priority state - can throw
-					const indices = await this.priority.priorityBehaviour(
-						value as SMILMedia,
-						key,
-						version,
-						parent,
-						endTime,
-						priorityObject,
-					);
-					currentIndex = indices.currentIndex;
-					previousPlayingIndex = indices.previousPlayingIndex;
-
-					// Play element - can throw
-					await this.playElement(
-						value as SMILMedia,
-						version,
-						key,
-						parent,
-						currentIndex,
-						previousPlayingIndex,
-						endTime,
-						isLast,
-					);
-				} catch (err) {
-					const media = value as SMILMedia;
-					debug('Error playing element, skipping to next: %O, error: %O', media, err);
-
-					// Safely attempt priority cleanup - only if priority state was set up
-					if (currentIndex !== -1) {
-						try {
-							await this.priority.handlePriorityWhenDone(
-								media,
-								media.regionInfo.regionName,
-								currentIndex,
-								endTime,
-								isLast,
+				// Create priority coordination object for new version handling
+				const priorityCoord =
+					priorityObject?.priorityLevel !== undefined
+						? {
 								version,
-								this.playlistVersion,
-								this.triggers,
-							);
-						} catch (cleanupErr) {
-							debug('Error during priority cleanup: %O', cleanupErr);
-						}
-					}
+								priority: priorityObject.priorityLevel,
+						  }
+						: undefined;
 
-					// Safely attempt error reporting
+				while (shouldRetry && retryCount < MAX_RETRIES) {
+					// Declare indices before try block so they're accessible in catch
+					let currentIndex = -1;
+					let previousPlayingIndex = -1;
+
 					try {
-						const mediaType =
-							removeDigits(key) === 'video'
-								? 'video'
-								: media.localFilePath?.indexOf('widgets') > -1
-								? 'ref'
-								: 'image';
-
-						this.files.sendMediaReport(
-							media,
-							moment().toDate(),
-							mediaType,
-							!!media.syncIndex && this.synchronization.shouldSync,
-							500,
+						// Setup priority state - can throw
+						// Call priorityBehaviour inside the loop to re-evaluate on each retry
+						const indices = await this.priority.priorityBehaviour(
+							value as SMILMedia,
+							key,
+							version,
+							parent,
+							endTime,
+							priorityObject,
 						);
-					} catch (reportErr) {
-						debug('Error sending media report: %O', reportErr);
-					}
+						currentIndex = indices.currentIndex;
+						previousPlayingIndex = indices.previousPlayingIndex;
 
-					// prevent device from dying if all the elements in playlist end up in error
-					await sleep(100);
+						// Play element - can throw
+						const result = await this.playElement(
+							value as SMILMedia,
+							version,
+							key,
+							parent,
+							currentIndex,
+							previousPlayingIndex,
+							endTime,
+							isLast,
+							priorityCoord,
+						);
+
+						if (result === 'RETRY') {
+							retryCount++;
+							debug(`processPlaylist: Retrying element (attempt ${retryCount}/${MAX_RETRIES}): %O`, value);
+							// Small delay before retry
+							await sleep(100);
+						} else {
+							shouldRetry = false;
+						}
+					} catch (err) {
+						const media = value as SMILMedia;
+						debug('Error playing element, skipping to next: %O, error: %O', media, err);
+
+						// Safely attempt priority cleanup - only if priority state was set up
+						if (currentIndex !== -1) {
+							try {
+								await this.priority.handlePriorityWhenDone(
+									media,
+									media.regionInfo.regionName,
+									currentIndex,
+									endTime,
+									isLast,
+									version,
+									this.playlistVersion,
+									this.triggers,
+								);
+							} catch (cleanupErr) {
+								debug('Error during priority cleanup: %O', cleanupErr);
+							}
+						}
+
+						// Safely attempt error reporting
+						try {
+							const mediaType =
+								removeDigits(key) === 'video'
+									? 'video'
+									: media.localFilePath?.indexOf('widgets') > -1
+									? 'ref'
+									: 'image';
+
+							this.files.sendMediaReport(
+								media,
+								moment().toDate(),
+								mediaType,
+								!!media.syncIndex && this.synchronization.shouldSync,
+								500,
+							);
+						} catch (reportErr) {
+							debug('Error sending media report: %O', reportErr);
+						}
+
+						// prevent device from dying if all the elements in playlist end up in error
+						await sleep(100);
+						// Break out of retry loop on error
+						shouldRetry = false;
+					}
+				}
+
+				if (retryCount >= MAX_RETRIES) {
+					debug(`processPlaylist: Max retries reached for element: %O`, value);
 				}
 				continue;
 			}
@@ -2825,55 +2857,4 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return true;
 	};
 
-	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
-		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
-		const resourceChecker = new ResourceChecker(
-			resources,
-			this.synchronization.shouldSync,
-			() => this.setCheckFilesLoop(false),
-			restart,
-		);
-		resourceChecker.start();
-	}
-
-	private async handleSyncSetup(firstIteration: boolean): Promise<void> {
-		try {
-			if (this.sos.config.syncGroupName) {
-				debug('SyncGroupName is defined, starting sync setup');
-				if (firstIteration) {
-					await connectSyncSafe(this.sos);
-				}
-
-				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
-
-				if (firstIteration && hasDynamicContent(this.smilObject)) {
-					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
-				}
-			} else {
-				debug('No syncGroupName is defined, skipping sync setup');
-			}
-		} catch (error) {
-			debug('Error during playlist processing sync setup: %O', error);
-			console.error(error);
-		}
-	}
-
-	private async handlePlaylistProcessing(version: number): Promise<void> {
-		try {
-			const dateTimeBegin = Date.now();
-			await this.processPlaylist(this.smilObject.playlist, version);
-			debug('One smil playlist iteration finished ' + version + ' ' + JSON.stringify(this.cancelFunction));
-			const dateTimeEnd = Date.now();
-			if (dateTimeEnd - dateTimeBegin < SMILScheduleEnum.defaultAwait) {
-				await sleep(2000);
-			}
-		} catch (err) {
-			debug('Unexpected error processing during playlist processing: %O', err);
-			await sleep(SMILScheduleEnum.defaultAwait);
-		}
-	}
-
-	private async handlePlaylistLoop(version: number): Promise<void> {
-		await this.runEndlessLoop(async () => await this.handlePlaylistProcessing(version), version);
-	}
 }
