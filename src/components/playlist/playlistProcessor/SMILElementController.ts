@@ -1132,13 +1132,22 @@ export class SMILElementController {
 		// Track the slave's actual processed syncIndex range for correct resync wrapping
 		// Reset max on wrap (syncIndex went from high to low = new playlist cycle)
 		const prevSync = this.syncState.slavePreviousSyncIndex.get(regionName);
-		if (prevSync !== undefined && syncIndex < prevSync) {
+		if (state === 'prepared' && prevSync !== undefined && syncIndex < prevSync) {
 			// Slave wrapped — save previous cycle's max before resetting
 			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName);
 			if (currentMax !== undefined) {
 				this.syncState.slavePreviousCycleMax.set(regionName, currentMax);
 			}
 			this.syncState.slaveMaxSyncIndex.set(regionName, syncIndex);
+
+			// Clear stale stored commands from previous cycle to prevent false resync
+			const group = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+			if (group) {
+				group.clearSyncCoordinationMessage('cmd-prepare', regionName);
+				group.clearSyncCoordinationMessage('cmd-play', regionName);
+				group.clearSyncCoordinationMessage('cmd-finish', regionName);
+				logDebug(undefined, 'Cleared stale stored commands on cycle wrap: region=%s, prevSync=%d, newSync=%d', regionName, prevSync, syncIndex);
+			}
 		} else {
 			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName) ?? 0;
 			if (syncIndex > currentMax) {
