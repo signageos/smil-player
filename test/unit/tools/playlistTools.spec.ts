@@ -34,6 +34,7 @@ import {
 } from '../../../src/components/playlist/tools/generalTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
 import {
+	areAllWallclocksPermanentlyExpired,
 	setDefaultAwait,
 	setElementDuration,
 	findDuration,
@@ -292,6 +293,82 @@ describe('Playlist tools component', () => {
 				const response = setDefaultAwait(schedule);
 				expect(response).to.be.equal(awaitTimes[i]);
 			});
+		});
+
+		it('should return playImmediately for element with no begin and no expr', () => {
+			const elements = [
+				{ dur: '5s', video: [] },
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+		});
+
+		it('should return playImmediately when bare element follows expired wallclock', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+					repeatCount: '1',
+					video: [],
+				},
+				{ dur: '5s', img: [] },
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+		});
+
+		it('should return playImmediately for active wallclock with active conditional expr', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2035-12-01T12:00)',
+					expr: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
+					video: [],
+				},
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+		});
+
+		it('should return defaultAwait for active wallclock with expired conditional expr', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2035-12-01T12:00)',
+					expr: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
+					video: [],
+				},
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+		});
+
+		it('should return playImmediately for expr-only element (no wallclock) with active expr', () => {
+			const elements = [
+				{
+					expr: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
+					video: [],
+				},
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+		});
+
+		it('should return defaultAwait for expr-only element (no wallclock) with expired expr', () => {
+			const elements = [
+				{
+					expr: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
+					video: [],
+				},
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+		});
+
+		it('should return defaultAwait for single element with all-expired wallclock', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+					repeatCount: '1',
+					video: [],
+				},
+			];
+			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 	});
 
@@ -713,6 +790,98 @@ describe('Playlist tools component', () => {
 			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
+		});
+	});
+
+	describe('areAllWallclocksPermanentlyExpired', () => {
+		it('should return true when all elements have expired one-time wallclocks', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+				},
+				{
+					begin: 'wallclock(2021-03-01T08:00)',
+					end: 'wallclock(2021-12-01T18:00)',
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(true);
+		});
+
+		it('should return false when mix of expired and future wallclocks', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+				},
+				{
+					begin: 'wallclock(2030-01-01T09:00)',
+					end: 'wallclock(2030-12-01T18:00)',
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(false);
+		});
+
+		it('should return false when element has no wallclock begin', () => {
+			const elements = [
+				{
+					dur: '5s',
+					img: { src: 'test.jpg' },
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(false);
+		});
+
+		it('should return false for empty array', () => {
+			expect(areAllWallclocksPermanentlyExpired([])).to.be.equal(false);
+		});
+
+		it('should return false for recurring wallclock (P1D)', () => {
+			const elements = [
+				{
+					begin: 'wallclock(R/2020-01-01T09:00/P1D)',
+					end: 'wallclock(R/2020-01-01T18:00/P1D)',
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(false);
+		});
+
+		it('should return true for single expired one-time wallclock', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(true);
+		});
+
+		it('should return false for mix of expired one-time and recurring wallclocks', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+				},
+				{
+					begin: 'wallclock(R/2020-01-01T09:00/P1D)',
+					end: 'wallclock(R/2020-01-01T18:00/P1D)',
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(false);
+		});
+
+		it('should return false when one element lacks wallclock begin among expired ones', () => {
+			const elements = [
+				{
+					begin: 'wallclock(2020-01-01T09:00)',
+					end: 'wallclock(2020-06-01T12:00)',
+				},
+				{
+					dur: '5s',
+					img: { src: 'test.jpg' },
+				},
+			];
+			expect(areAllWallclocksPermanentlyExpired(elements as PlaylistElement[])).to.be.equal(false);
 		});
 	});
 });

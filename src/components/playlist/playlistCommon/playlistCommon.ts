@@ -19,6 +19,7 @@ import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { stopTickerAnimation } from '../tools/tickerTools';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
+import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
 
@@ -77,7 +78,11 @@ export class PlaylistCommon implements IPlaylistCommon {
 				dynamicPlaylist[dynamicPlaylistId]?.play === true)
 		) {
 			try {
-				await fn();
+				const result = await fn();
+				if (result === SMILScheduleEnum.allExpired) {
+					debug('Breaking endless loop - all wallclock content permanently expired');
+					break;
+				}
 			} catch (err) {
 				debug('Error: %O occurred during processing function %s', err, fn.name);
 				throw err;

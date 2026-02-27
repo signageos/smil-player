@@ -3,6 +3,7 @@ export enum SMILScheduleEnum {
 	endDateAndTimePast = '1970-01-01T00:00:00',
 	defaultTime = '00:00:00',
 	endDatePast = '1970-01-01',
+	allExpired = 'allExpired',
 	neverPlay = -3600000,
 	playImmediately = 0,
 	defaultAwait = 200,
