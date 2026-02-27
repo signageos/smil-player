@@ -26,5 +26,5 @@ export interface IPlaylistProcessor {
 		endTime: number,
 		priorityObject: PriorityObject,
 		conditionalExpr: string,
-	) => Promise<void>;
+	) => Promise<string | void>;
 }

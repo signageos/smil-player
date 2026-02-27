@@ -109,6 +109,28 @@ export function setElementDuration(dur: string | undefined): number {
 	return parseFloat(dur) * 1000;
 }
 
+/**
+ * checks if all elements in array have wallclock begin and all are permanently expired (neverPlay)
+ * @param elements - array of playlist elements to check
+ */
+export function areAllWallclocksPermanentlyExpired(elements: PlaylistElement[]): boolean {
+	if (!Array.isArray(elements) || elements.length === 0) {
+		return false;
+	}
+
+	for (const elem of elements) {
+		if (!elem.hasOwnProperty('begin') || !elem.begin || elem.begin.indexOf('wallclock') === -1) {
+			return false;
+		}
+		const { timeToEnd } = parseSmilSchedule(elem.begin, elem.end);
+		if (timeToEnd !== SMILScheduleEnum.neverPlay) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 export function findDuration(elem: PlaylistElement): string | undefined {
 	for (let [key, value] of Object.entries(elem)) {
 		if (key === 'dur') {

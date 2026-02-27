@@ -41,7 +41,7 @@ import { SMILEnums, randomPlaylistPlayableTagsRegex } from '../../../enums/gener
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
-import { setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
+import { areAllWallclocksPermanentlyExpired, setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
 import { WaitStatus } from '../../../enums/priorityEnums';
@@ -522,7 +522,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		endTime: number = 0,
 		priorityObject: PriorityObject = {} as PriorityObject,
 		conditionalExpr: string = '',
-	) => {
+	): Promise<string | void> => {
+		let processedAnyContent = false;
+		let allNeverPlay = true;
+
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
@@ -599,6 +602,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					debug(`processPlaylist: Max retries reached for element: %O`, value);
 				}
 
+				processedAnyContent = true;
+				allNeverPlay = false;
 				continue;
 			}
 
@@ -618,6 +623,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					conditionalExpr,
 				);
 
+				processedAnyContent = true;
+				allNeverPlay = false;
 				// promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
@@ -629,6 +636,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					endTime,
 					conditionalExpr,
 				);
+
+				processedAnyContent = true;
+				allNeverPlay = false;
 			}
 
 			if (
@@ -644,6 +654,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					priorityObject,
 					conditionalExpr,
 				);
+				processedAnyContent = true;
+				allNeverPlay = false;
 				continue;
 			}
 
@@ -654,6 +666,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!this.synchronization.shouldSync
 			) {
 				await sleep(1000);
+				processedAnyContent = true;
+				allNeverPlay = false;
 				continue;
 			}
 
@@ -672,6 +686,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								conditionalExpr,
 							);
 						}
+						processedAnyContent = true;
+						allNeverPlay = false;
 						continue;
 					}
 
@@ -692,12 +708,23 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						);
 					}
 					await Promise.all(promises);
+					processedAnyContent = true;
+					allNeverPlay = false;
 					continue;
 				}
 
 				if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
 					const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
-					if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+					if (timeToEnd === SMILScheduleEnum.neverPlay) {
+						processedAnyContent = true;
+						continue;
+					}
+
+					// All non-neverPlay wallclock par paths set these flags
+					processedAnyContent = true;
+					allNeverPlay = false;
+
+					if (timeToEnd < Date.now()) {
 						if (
 							setDefaultAwait(<PlaylistElement[]>value, this.playerName, this.playerId) ===
 							SMILScheduleEnum.defaultAwait
@@ -772,6 +799,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					await Promise.all(promises);
 					continue;
 				}
+
+				// All non-wallclock par paths set these flags
+				processedAnyContent = true;
+				allNeverPlay = false;
 
 				// wallclock has higher priority than conditional expression
 				if (await this.checkConditionalDefaultAwait(value)) {
@@ -876,7 +907,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (
 							arrayIndex === value?.length - 1 &&
-							setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait
+							setDefaultAwait(value, this.playerName, this.playerId) === SMILScheduleEnum.defaultAwait &&
+							!areAllWallclocksPermanentlyExpired(value)
 						) {
 							debug(
 								'No active sequence find in wallclock schedule, setting default await: %s',
@@ -885,7 +917,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							await sleep(SMILScheduleEnum.defaultAwait);
 						}
 
-						if (timeToEnd === SMILScheduleEnum.neverPlay || timeToEnd < Date.now()) {
+						if (timeToEnd === SMILScheduleEnum.neverPlay) {
+							processedAnyContent = true;
+							arrayIndex += 1;
+							continue;
+						}
+
+						// All non-neverPlay wallclock seq paths set these flags
+						processedAnyContent = true;
+						allNeverPlay = false;
+
+						if (timeToEnd < Date.now()) {
 							arrayIndex += 1;
 							continue;
 						}
@@ -978,6 +1020,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						continue;
 					}
 
+					// All non-wallclock seq paths set these flags
+					processedAnyContent = true;
+					allNeverPlay = false;
+
 					// wallclock has higher priority than conditional expression
 					if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
 						arrayIndex += 1;
@@ -1045,6 +1091,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			await Promise.all(promises);
+		}
+
+		if (processedAnyContent && allNeverPlay) {
+			return SMILScheduleEnum.allExpired;
 		}
 	};
 
@@ -1119,7 +1169,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 				await this.runEndlessLoop(
 					async () => {
-						await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
+						return await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 					},
 					version,
 					conditionalExpr,
