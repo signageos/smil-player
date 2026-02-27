@@ -1143,10 +1143,18 @@ export class SMILElementController {
 			// Clear stale stored commands from previous cycle to prevent false resync
 			const group = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
 			if (group) {
-				group.clearSyncCoordinationMessage('cmd-prepare', regionName);
+				// Selectively clear cmd-prepare: only if stale (syncIndex doesn't match new cycle start)
+				// This preserves a fresh cmd-prepare that arrived before the slave wrapped
+				const storedPrepare = group.getSyncCoordinationMessage('cmd-prepare', regionName);
+				if (storedPrepare && storedPrepare.syncIndex !== syncIndex) {
+					group.clearSyncCoordinationMessage('cmd-prepare', regionName);
+					logDebug(undefined, 'Cleared stale cmd-prepare on cycle wrap: region=%s, storedIndex=%d, newCycleIndex=%d',
+						regionName, storedPrepare.syncIndex, syncIndex);
+				}
+				// Always clear cmd-play and cmd-finish — at wrap time these are always stale
+				// (master sends play/finish only after slave ACKs prepare, which hasn't happened yet)
 				group.clearSyncCoordinationMessage('cmd-play', regionName);
 				group.clearSyncCoordinationMessage('cmd-finish', regionName);
-				logDebug(undefined, 'Cleared stale stored commands on cycle wrap: region=%s, prevSync=%d, newSync=%d', regionName, prevSync, syncIndex);
 			}
 		} else {
 			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName) ?? 0;
