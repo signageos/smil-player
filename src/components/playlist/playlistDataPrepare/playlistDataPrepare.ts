@@ -23,10 +23,12 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
+	protected sos: FrontApplet;
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
+		this.sos = sos;
 	}
 
 	/**
