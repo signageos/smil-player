@@ -13,7 +13,7 @@ import { SMILTicker } from '../../../models/mediaModels';
 import { debug } from '../tools/generalTools';
 import { isNil } from 'lodash';
 import { SMILVideo } from '../../../models/mediaModels';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { stopTickerAnimation } from '../tools/tickerTools';
@@ -24,7 +24,7 @@ import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
 
 export class PlaylistCommon implements IPlaylistCommon {
-	protected sos: FrontApplet;
+	protected sos: ISos;
 	protected files: FilesManager;
 	protected cancelFunction: boolean[] = [];
 	protected currentlyPlaying: CurrentlyPlaying = {};
@@ -34,7 +34,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected videoPreparing: VideoPreparing = {};
 	protected randomPlaylist: RandomPlaylist = {};
 
-	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
 		this.sos = sos;
 		this.files = files;
 		this.cancelFunction = options.cancelFunction;
