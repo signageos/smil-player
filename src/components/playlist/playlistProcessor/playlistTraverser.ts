@@ -349,7 +349,7 @@ export class PlaylistTraverser {
 
 					if (timeToEnd < Date.now()) {
 						if (
-							setDefaultAwait(<PlaylistElement[]>value, this.config.playerName, this.config.playerId) ===
+							setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
 							SMILScheduleEnum.defaultAwait
 						) {
 							debug(
@@ -922,7 +922,7 @@ export class PlaylistTraverser {
 			if (isConditionalExpExpired(value, this.config.playerName, this.config.playerId)) {
 				debug('Conditional expression : %s, for value: %O is false', value[ExprTag]!, value);
 				if (
-					setDefaultAwait(<PlaylistElement[]>value, this.config.playerName, this.config.playerId) ===
+					setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
 					SMILScheduleEnum.defaultAwait
 				) {
 					debug(
@@ -938,7 +938,7 @@ export class PlaylistTraverser {
 				debug('Conditional expression: %s, for value: %O is false', value[ExprTag]!, value);
 				if (
 					arrayIndex === length - 1 &&
-					setDefaultAwait(<PlaylistElement[]>value, this.config.playerName, this.config.playerId) ===
+					setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
 						SMILScheduleEnum.defaultAwait
 				) {
 					debug(
