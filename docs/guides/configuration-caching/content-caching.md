@@ -98,9 +98,9 @@ The `updateContentOnHttpStatus` attribute provides an additional update trigger 
 ```
 
 How update detection works:
-1. **Primary mechanism**: Last-modified headers are checked
+1. **Primary mechanism**: The `Last-Modified` header is compared against the previously stored value. Any change triggers a re-download — not just newer timestamps, but also rollbacks to older versions. If the server does not send a `Last-Modified` header, the file is treated as unchanged to avoid false re-downloads.
 2. **Additional mechanism**: Status codes can force updates
-3. When a configured status code is returned, content is re-downloaded regardless of last-modified
+3. When a configured status code is returned, content is re-downloaded regardless of `Last-Modified`
 
 This dual mechanism ensures:
 - Standard HTTP caching works normally with last-modified headers
