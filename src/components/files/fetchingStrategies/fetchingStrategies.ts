@@ -136,7 +136,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 		// Handle timeout specifically
 		if (err.message === 'Request timeout') {
 			debug('Request to %s was aborted due to timeout.', media.src);
-			return DEFAULT_LAST_MODIFIED;
+			return null;
 		}
 
 		// Log other errors
@@ -174,7 +174,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 			debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
 		}
 
-		return DEFAULT_LAST_MODIFIED;
+		return null;
 	}
 
 	// Handle skip content status codes

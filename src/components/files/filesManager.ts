@@ -25,6 +25,7 @@ import {
 import {
 	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
 	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+	DEFAULT_LAST_MODIFIED,
 	FileStructure,
 	MINIMAL_STORAGE_FREE_SPACE,
 	smilLogging,
@@ -387,7 +388,10 @@ export class FilesManager implements IFilesManager {
 			? currentValue !== null &&
 				stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
 				currentValue !== storedValue
-			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
+			// Skip update when server returns no Last-Modified header (DEFAULT_LAST_MODIFIED is returned as fallback).
+		// Without this guard, the epoch fallback value would differ from any real stored date, causing false re-downloads.
+		: currentValue !== DEFAULT_LAST_MODIFIED
+			&& moment(storedValue).valueOf() !== moment(currentValue).valueOf();
 
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
