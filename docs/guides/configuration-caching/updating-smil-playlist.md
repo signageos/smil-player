@@ -17,8 +17,9 @@ from the server. The syntax is as follows:
 </smil>
 ```
 
-The SMIL player reaches the SMIL playlist URL and checks the Last-modified header. Once a new version of the playlist is
-uploaded, it is recognized, downloaded, and played.
+The SMIL player reaches the SMIL playlist URL and checks the `Last-Modified` header. Any change to the `Last-Modified`
+value triggers a re-download — this includes both newer versions and rollbacks to older versions. If the server does not
+provide a `Last-Modified` header, the player treats the file as unchanged and continues using the cached version.
 
 ### Update Check Intervals
 
