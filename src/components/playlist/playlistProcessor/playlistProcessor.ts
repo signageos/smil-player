@@ -2376,20 +2376,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				...this.smilObject.ref,
 				...this.smilObject.audio,
 			];
-			const checkResult = await this.files.prePlayCheck(
+			await this.files.prePlayCheck(
 				value as SMILVideo | SMILImage | SMILWidget,
 				filePath,
 				this.smilObject,
 				allMedia,
 			);
-			if (checkResult.updated) {
-				value.localFilePath = checkResult.newLocalFilePath;
-				value.wasUpdated = true;
-				debug(`[${debugId}] Pre-play: content updated, new path: %s`, checkResult.newLocalFilePath);
-			}
-			if (checkResult.newReportUrl) {
-				value.useInReportUrl = checkResult.newReportUrl;
-			}
 		}
 
 		// After prePlayCheck, if localFilePath is still empty the content is not available yet
