@@ -2357,6 +2357,51 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param endTime - when should playlist end, specified either in date in millis or how many times should playlist play
 	 * @param isLast - if this media is last element in current playlist
 	 */
+	/**
+	 * Runs pre-play content check when checkBeforePlay is enabled.
+	 * Downloads newly available content and returns true if the element should be skipped.
+	 */
+	private async runPrePlayCheck(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
+		if (!this.smilObject.checkBeforePlay || !('src' in value) || !('localFilePath' in value)) {
+			return false;
+		}
+
+		const mediaType = removeDigits(key);
+		const filePath = getFileStructureForMediaType(mediaType);
+		if (filePath) {
+			debug(`[${debugId}] Pre-play check for: %s`, value.src);
+			const allMedia: MergedDownloadList[] = [
+				...this.smilObject.video,
+				...this.smilObject.img,
+				...this.smilObject.ref,
+				...this.smilObject.audio,
+			];
+			const checkResult = await this.files.prePlayCheck(
+				value as SMILVideo | SMILImage | SMILWidget,
+				filePath,
+				this.smilObject,
+				allMedia,
+			);
+			if (checkResult.updated) {
+				value.localFilePath = checkResult.newLocalFilePath;
+				value.wasUpdated = true;
+				debug(`[${debugId}] Pre-play: content updated, new path: %s`, checkResult.newLocalFilePath);
+			}
+			if (checkResult.newReportUrl) {
+				value.useInReportUrl = checkResult.newReportUrl;
+			}
+		}
+
+		// After prePlayCheck, if localFilePath is still empty the content is not available yet
+		if (value.localFilePath === '' && isNil((value as SMILVideo).isStream) && mediaType !== HtmlEnum.ticker) {
+			debug(`[${debugId}] Element still has empty localFilepath after pre-play check: %O`, value);
+			await sleep(100);
+			return true;
+		}
+
+		return false;
+	}
+
 	private playElement = async (
 		value: SMILMedia,
 		version: number,
@@ -2395,9 +2440,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			isNil((value as SMILVideo).isStream) &&
 			removeDigits(key) !== HtmlEnum.ticker
 		) {
-			debug(`[${debugId}] Element has empty localFilepath: %O`, value);
-			await sleep(100);
-			return;
+			// When checkBeforePlay is enabled, allow through to prePlayCheck
+			// so it can detect content that became available after initial 404
+			if (!(this.smilObject.checkBeforePlay && 'src' in value)) {
+				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
+				await sleep(100);
+				return;
+			}
 		}
 
 		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
@@ -2407,32 +2456,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Pre-play content check: verify element freshness before playback
-		if (this.smilObject.checkBeforePlay && 'src' in value && 'localFilePath' in value) {
-			const mediaType = removeDigits(key);
-			const filePath = getFileStructureForMediaType(mediaType);
-			if (filePath) {
-				debug(`[${debugId}] Pre-play check for: %s`, value.src);
-				const allMedia: MergedDownloadList[] = [
-					...this.smilObject.video,
-					...this.smilObject.img,
-					...this.smilObject.ref,
-					...this.smilObject.audio,
-				];
-				const checkResult = await this.files.prePlayCheck(
-					value as SMILVideo | SMILImage | SMILWidget,
-					filePath,
-					this.smilObject,
-					allMedia,
-				);
-				if (checkResult.updated) {
-					value.localFilePath = checkResult.newLocalFilePath;
-					value.wasUpdated = true;
-					debug(`[${debugId}] Pre-play: content updated, new path: %s`, checkResult.newLocalFilePath);
-				}
-				if (checkResult.newReportUrl) {
-					value.useInReportUrl = checkResult.newReportUrl;
-				}
-			}
+		if (await this.runPrePlayCheck(value, key, debugId)) {
+			return;
 		}
 
 		// Re-check conditional expression after prePlayCheck.
