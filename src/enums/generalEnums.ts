@@ -21,6 +21,7 @@ export enum SMILEnums {
 	updateContentOnHttpStatus = 'updateContentOnHttpStatus',
 	updateMechanism = 'updateMechanism',
 	checkBeforePlay = 'checkBeforePlay',
+	checkAheadCount = 'checkAheadCount',
 	location = 'location',
 	lastModified = 'last-modified',
 }
