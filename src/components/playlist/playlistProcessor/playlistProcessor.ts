@@ -2358,6 +2358,51 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param isLast - if this media is last element in current playlist
 	 */
 	/**
+	 * Fires non-blocking prePlayCheck for the next N media elements in the playlist.
+	 * Gives slow networks more time to download updated content before playback.
+	 */
+	private prefetchAheadElements(
+		entries: [string, unknown][],
+		currentIndex: number,
+		version: number,
+	): void {
+		const count = this.smilObject.checkAheadCount || 0;
+		if (!this.smilObject.checkBeforePlay || count < 1) return;
+		if (version < this.getPlaylistVersion()) return;
+
+		const allMedia: MergedDownloadList[] = [
+			...this.smilObject.video,
+			...this.smilObject.img,
+			...this.smilObject.ref,
+			...this.smilObject.audio,
+		];
+
+		let found = 0;
+		for (let offset = 1; found < count && offset < entries.length; offset++) {
+			const nextIndex = (currentIndex + offset) % entries.length;
+			const [nextKey, nextValue] = entries[nextIndex];
+
+			if (!isObject(nextValue)) continue;
+			if (!XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(nextKey))) continue;
+
+			const media = nextValue as SMILMedia;
+			if (!('src' in media) || !('localFilePath' in media)) continue;
+
+			const mediaType = removeDigits(nextKey);
+			const filePath = getFileStructureForMediaType(mediaType);
+			if (!filePath) continue;
+
+			debug('Prefetching ahead: %s (offset +%d from current)', media.src, offset);
+
+			this.files.prePlayCheck(media as SMILVideo | SMILImage | SMILWidget, filePath, this.smilObject, allMedia)
+				.catch((err: unknown) => {
+					debug('Prefetch ahead failed for %s: %O', media.src, err);
+				});
+			found++;
+		}
+	}
+
+	/**
 	 * Runs pre-play content check when checkBeforePlay is enabled.
 	 * Downloads newly available content and returns true if the element should be skipped.
 	 */
