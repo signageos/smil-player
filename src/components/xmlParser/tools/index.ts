@@ -402,6 +402,9 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.checkBeforePlay = metaRecord.checkBeforePlay === true
 				|| metaRecord.checkBeforePlay === 'true';
 		}
+		if (metaRecord.hasOwnProperty(SMILEnums.checkAheadCount)) {
+			regions.checkAheadCount = parseInt(metaRecord.checkAheadCount!) || 0;
+		}
 	}
 
 	if (!smilFileRefreshSet) {
@@ -479,6 +482,7 @@ export function extractRegionInfo(xmlObject: RegionsObject): RegionsObject {
 		},
 		onlySmilFileUpdate: false,
 		checkBeforePlay: false,
+		checkAheadCount: 0,
 		skipContentOnHttpStatus: [],
 		updateContentOnHttpStatus: [],
 		updateMechanism: SMILEnums.lastModified,
