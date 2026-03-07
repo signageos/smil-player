@@ -2435,6 +2435,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
+		// Re-check conditional expression after prePlayCheck.
+		// The fetch strategy inside detectUpdateOnly may have set media.expr = 'skipContent'
+		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
+		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
+			await sleep(100);
+			return;
+		}
+
 		let sosVideoObject: Video | Stream = this.sos.video;
 		let params: VideoParams = getDefaultVideoParams();
 		let element = document.getElementById(value.id ?? '') as HTMLElement;
