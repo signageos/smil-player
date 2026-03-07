@@ -1849,7 +1849,7 @@ export class FilesManager implements IFilesManager {
 		try {
 			const fetchStrategy = getStrategy(smilObject.updateMechanism);
 
-			// Phase 1: Detection (same as ResourceChecker Phase 1)
+			// Phase 1: Detection (HEAD request) — runs concurrently across regions.
 			const detection = await this.detectUpdateOnly(
 				media, localFilePath,
 				smilObject.refresh.timeOut,
@@ -1862,12 +1862,61 @@ export class FilesManager implements IFilesManager {
 				return { updated: false, newLocalFilePath: currentPath };
 			}
 
-			// Downloads run concurrently (no lock, no startBatch)
+			// Phase 2: Download — runs concurrently across regions.
+			// processNewContentUpdates writes to shared Maps (this.batchUpdates, this.tempDownloads)
+			// as a side effect. We capture and remove our entries immediately after (Phase 3).
 			await this.processNewContentUpdates([detection], allMediaList);
 
-			// Serialize only the commit phase (filesystem migration + JSON write)
+			// Phase 3: Capture our file's data from shared Maps and remove it.
+			// This block is synchronous — it runs as a microtask continuation of the resolved
+			// processNewContentUpdates promise. No setTimeout (e.g., ResourceChecker timer)
+			// or other region's microtask can interleave here.
+			const fileName = getFileName(media.src);
+			const ourTempPath = this.tempDownloads.get(fileName);
+			const ourBatchValue = this.batchUpdates.get(fileName);
+			this.tempDownloads.delete(fileName);
+			this.batchUpdates.delete(fileName);
+
+			// Phase 4: Commit — serialized via prePlayLock (promise-chain mutex).
+			// Bypasses batch infrastructure (no commitBatch/migrateFromTempToStandard/clearTempFolders)
+			// so other regions' temp files are untouched.
 			const commit = this.prePlayLock.then(async () => {
-				await this.commitBatch([media]);
+				const mediaInfoObject = await this.getOrCreateMediaInfoFile(allMediaList);
+
+				// Step 4a: Migrate our single temp file to the standard folder.
+				if (ourTempPath) {
+					const standardPath = ourTempPath
+						.replace(FileStructure.videosTmp, FileStructure.videos)
+						.replace(FileStructure.imagesTmp, FileStructure.images)
+						.replace(FileStructure.audiosTmp, FileStructure.audios)
+						.replace(FileStructure.widgetsTmp, FileStructure.widgets);
+					await this.sos.fileSystem.copyFile(
+						{ storageUnit: this.internalStorageUnit, filePath: ourTempPath },
+						{ storageUnit: this.internalStorageUnit, filePath: standardPath },
+						{ overwrite: true },
+					);
+					await this.sos.fileSystem.deleteFile(
+						{ storageUnit: this.internalStorageUnit, filePath: ourTempPath },
+						true,
+					);
+				}
+
+				// Step 4b: Resolve the new localFilePath from the filesystem.
+				if ('localFilePath' in media) {
+					const actualPath = await this.determineFilePath(fileName);
+					if (actualPath) {
+						const fileDetails = await this.getFileByPath(actualPath);
+						if (fileDetails) {
+							media.localFilePath = fileDetails.localUri;
+						}
+					}
+				}
+
+				// Step 4c: Persist the update in mediaInfoObject.
+				if (ourBatchValue !== undefined) {
+					mediaInfoObject[fileName] = ourBatchValue;
+				}
+				await this.writeMediaInfoFile(mediaInfoObject);
 			});
 			this.prePlayLock = commit.catch(() => {});
 			await commit;
