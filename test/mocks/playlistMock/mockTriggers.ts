@@ -164,6 +164,7 @@ export const mockSMILFileTriggers = {
 	ref: [],
 	audio: [],
 	checkBeforePlay: false,
+	checkAheadCount: 0,
 	dynamic: {},
 	intro: [
 		{

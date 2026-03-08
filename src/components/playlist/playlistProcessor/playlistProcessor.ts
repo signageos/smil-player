@@ -433,7 +433,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		priorityObject: PriorityObject = {} as PriorityObject,
 		conditionalExpr: string = '',
 	) => {
-		for (let [key, loopValue] of Object.entries(playlist)) {
+		const allEntries = Object.entries(playlist);
+		let entryIdx = 0;
+		for (let [key, loopValue] of allEntries) {
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
 				debug('Skipping playlist element with key: %O is not object. value: %O', key, loopValue);
@@ -490,6 +492,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						);
 						currentIndex = indices.currentIndex;
 						previousPlayingIndex = indices.previousPlayingIndex;
+
+						// Fire lookahead prefetches — priority confirmed this element will play
+						this.prefetchAheadElements(allEntries, entryIdx, version);
 
 						// Play element - can throw
 						const result = await this.playElement(
@@ -1005,6 +1010,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			await Promise.all(promises);
+			entryIdx++;
 		}
 	};
 

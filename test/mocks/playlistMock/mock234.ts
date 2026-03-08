@@ -293,6 +293,7 @@ export const mockSMILFileParsed234 = {
 	],
 	audio: [{ src: 'http://butikstv.centrumkanalen.com/play/render/widgets/hktorslanda/music.mp3', dur: '20' }],
 	checkBeforePlay: false,
+	checkAheadCount: 0,
 	dynamic: {},
 	intro: [
 		{

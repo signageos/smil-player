@@ -252,6 +252,7 @@ export const mockSMILFileParsed99 = {
 	],
 	audio: [],
 	checkBeforePlay: false,
+	checkAheadCount: 0,
 	dynamic: {},
 	intro: [
 		{
