@@ -353,6 +353,8 @@ export const mockSMILFileTriggersNoTopLeft = {
 		},
 	],
 	audio: [],
+	checkBeforePlay: false,
+	checkAheadCount: 0,
 	intro: [
 		{
 			repeatCount: 'indefinite',

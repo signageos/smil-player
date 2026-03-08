@@ -1842,17 +1842,18 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public prePlayCheck = async (
-		media: SMILVideo | SMILImage | SMILWidget,
-		localFilePath: string,
+		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
+		mediaFolder: string,
 		smilObject: SMILFileObject,
 		allMediaList: MergedDownloadList[],
 	): Promise<void> => {
 		try {
+			debug('prePlayCheck: Checking %s in folder %s', media.src, mediaFolder);
 			const fetchStrategy = getStrategy(smilObject.updateMechanism);
 
 			// Phase 1: Detection (HEAD request) — runs concurrently across regions.
 			const detection = await this.detectUpdateOnly(
-				media, localFilePath,
+				media, mediaFolder,
 				smilObject.refresh.timeOut,
 				smilObject.skipContentOnHttpStatus,
 				smilObject.updateContentOnHttpStatus,
@@ -1860,16 +1861,19 @@ export class FilesManager implements IFilesManager {
 			);
 
 			if (!detection) {
+				debug('prePlayCheck: No update detected for %s', media.src);
 				return;
 			}
 
 			// Check if a background download is already in progress for this file
 			const fileName = getFileName(media.src);
 			if (this.activePrePlayDownloads.has(fileName)) {
+				debug('prePlayCheck: Download already in progress for %s, skipping', fileName);
 				return;
 			}
 
 			// Fire-and-forget: download and commit in the background so playback is not blocked.
+			debug('prePlayCheck: Starting background download for %s', fileName);
 			const backgroundDownload = (async () => {
 				try {
 					// Phase 2: Download (no longer blocks the caller)
@@ -1901,6 +1905,7 @@ export class FilesManager implements IFilesManager {
 								{ storageUnit: this.internalStorageUnit, filePath: ourTempPath },
 								true,
 							);
+							debug('prePlayCheck: Migrated temp file to standard folder for %s', fileName);
 						}
 
 						// Step 4b: Resolve the new localFilePath from the filesystem.
@@ -1910,6 +1915,7 @@ export class FilesManager implements IFilesManager {
 								const fileDetails = await this.getFileByPath(actualPath);
 								if (fileDetails) {
 									media.localFilePath = fileDetails.localUri;
+									debug('prePlayCheck: Updated localFilePath for %s to %s', fileName, fileDetails.localUri);
 								}
 							}
 						}
@@ -1919,6 +1925,7 @@ export class FilesManager implements IFilesManager {
 							mediaInfoObject[fileName] = ourBatchValue;
 						}
 						await this.writeMediaInfoFile(mediaInfoObject);
+						debug('prePlayCheck: Commit complete for %s', fileName);
 					});
 					this.prePlayLock = commit.catch(() => {});
 					await commit;
@@ -2844,6 +2851,7 @@ export class FilesManager implements IFilesManager {
 		);
 
 		if (!detection || !detection.updateCheck.value) {
+			debug('detectUpdateOnly: No update found for %s', file.src);
 			return null; // No update at all
 		}
 
@@ -2892,6 +2900,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Content mapping is already correct, no action needed
+			debug('detectUpdateOnly: Content already up-to-date for %s', file.src);
 			return null;
 		}
 

@@ -475,6 +475,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						  }
 						: undefined;
 
+				// Fire lookahead prefetches before retry loop (dedup prevents re-downloads)
+				this.prefetchAheadElements(allEntries, currentEntryIdx, version);
+
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Declare indices before try block so they're accessible in catch
 					let currentIndex = -1;
@@ -493,9 +496,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						);
 						currentIndex = indices.currentIndex;
 						previousPlayingIndex = indices.previousPlayingIndex;
-
-						// Fire lookahead prefetches — priority confirmed this element will play
-						this.prefetchAheadElements(allEntries, currentEntryIdx, version);
 
 						// Play element - can throw
 						const result = await this.playElement(
@@ -1017,6 +1017,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private async handleFileChecking(smilFile: SMILFile, restart: () => void): Promise<void> {
 		// In checkBeforePlay mode, skip interval-based media checking
 		if (this.smilObject.checkBeforePlay) {
+			debug('checkBeforePlay enabled: disabling interval-based media checking, checkAheadCount=%d', this.smilObject.checkAheadCount || 0);
 			this.smilObject.onlySmilFileUpdate = true;
 		}
 		const resources = await this.files.prepareLastModifiedSetup(this.smilObject, smilFile);
@@ -2353,17 +2354,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	};
 
 	/**
-	 * call actual playing functions for given elements
-	 * @param value - json object or array of json objects of type SMILAudio | SMILImage | SMILWidget | SMILVideo | SMILTicker
-	 * @param version - smil internal version of current playlist
-	 * @param key - defines which media will be played ( video, audio, image or widget )
-	 * @param parent - superordinate element of value
-	 * @param currentIndex - current index in the currentlyPlayingPriority[priorityRegionName] array
-	 * @param previousPlayingIndex - index of previously playing content in currentlyPlayingPriority[priorityRegionName] array
-	 * @param endTime - when should playlist end, specified either in date in millis or how many times should playlist play
-	 * @param isLast - if this media is last element in current playlist
-	 */
-	/**
 	 * Fires non-blocking prePlayCheck for the next N media elements in the playlist.
 	 * Gives slow networks more time to download updated content before playback.
 	 */
@@ -2381,6 +2371,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (version < this.getPlaylistVersion()) return;
 
 		const allMedia = this.getAllMediaList();
+		debug('prefetchAheadElements: Looking ahead for %d elements from index %d (version %d)', count, currentIndex, version);
 
 		let found = 0;
 		for (let offset = 1; found < count && offset < entries.length; offset++) {
@@ -2388,7 +2379,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const [nextKey, nextValue] = entries[nextIndex];
 
 			if (!isObject(nextValue)) continue;
-			if (!XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(nextKey))) continue;
+			if (!XmlTags.extractedElements.includes(removeDigits(nextKey))) continue;
 
 			const media = nextValue as SMILMedia;
 			if (!('src' in media) || !('localFilePath' in media)) continue;
@@ -2405,6 +2396,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				});
 			found++;
 		}
+		debug('prefetchAheadElements: Queued %d/%d prefetch checks', found, count);
 	}
 
 	/**
@@ -2426,6 +2418,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.smilObject,
 				this.getAllMediaList(),
 			);
+			debug(`[${debugId}] Pre-play check complete for: %s, localFilePath: %s`, value.src, value.localFilePath);
 		}
 
 		// After prePlayCheck, if localFilePath is still empty the content is not available yet
@@ -2482,6 +2475,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
 				await sleep(100);
 				return;
+			} else {
+				debug(`[${debugId}] Empty localFilepath allowed through for pre-play check: %s`, (value as SMILMedia).src);
 			}
 		}
 
@@ -2493,6 +2488,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Pre-play content check: verify element freshness before playback
 		if (await this.runPrePlayCheck(value, key, debugId)) {
+			debug(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
 			return;
 		}
 
