@@ -1846,8 +1846,7 @@ export class FilesManager implements IFilesManager {
 		localFilePath: string,
 		smilObject: SMILFileObject,
 		allMediaList: MergedDownloadList[],
-	): Promise<{ updated: boolean; newLocalFilePath: string; newReportUrl?: string }> => {
-		const currentPath = media.localFilePath || '';
+	): Promise<void> => {
 		try {
 			const fetchStrategy = getStrategy(smilObject.updateMechanism);
 
@@ -1861,13 +1860,13 @@ export class FilesManager implements IFilesManager {
 			);
 
 			if (!detection) {
-				return { updated: false, newLocalFilePath: currentPath };
+				return;
 			}
 
 			// Check if a background download is already in progress for this file
 			const fileName = getFileName(media.src);
 			if (this.activePrePlayDownloads.has(fileName)) {
-				return { updated: false, newLocalFilePath: currentPath };
+				return;
 			}
 
 			// Fire-and-forget: download and commit in the background so playback is not blocked.
@@ -1931,10 +1930,8 @@ export class FilesManager implements IFilesManager {
 			})();
 
 			this.activePrePlayDownloads.set(fileName, backgroundDownload);
-			return { updated: false, newLocalFilePath: currentPath };
 		} catch (error) {
 			debug('Pre-play check failed for %s, using cached version: %O', media.src, error);
-			return { updated: false, newLocalFilePath: currentPath };
 		}
 	};
 

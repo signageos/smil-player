@@ -89,5 +89,5 @@ export interface IFilesManager {
 		localFilePath: string,
 		smilObject: SMILFileObject,
 		allMediaList: MergedDownloadList[],
-	) => Promise<{ updated: boolean; newLocalFilePath: string; newReportUrl?: string }>;
+	) => Promise<void>;
 }

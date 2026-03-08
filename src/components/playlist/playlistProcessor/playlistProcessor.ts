@@ -434,8 +434,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		conditionalExpr: string = '',
 	) => {
 		const allEntries = Object.entries(playlist);
-		let entryIdx = 0;
+		let entryIdx = -1;
 		for (let [key, loopValue] of allEntries) {
+			const currentEntryIdx = ++entryIdx;
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
 				debug('Skipping playlist element with key: %O is not object. value: %O', key, loopValue);
@@ -494,7 +495,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						previousPlayingIndex = indices.previousPlayingIndex;
 
 						// Fire lookahead prefetches — priority confirmed this element will play
-						this.prefetchAheadElements(allEntries, entryIdx, version);
+						this.prefetchAheadElements(allEntries, currentEntryIdx, version);
 
 						// Play element - can throw
 						const result = await this.playElement(
@@ -1010,7 +1011,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			await Promise.all(promises);
-			entryIdx++;
 		}
 	};
 
@@ -2367,6 +2367,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * Fires non-blocking prePlayCheck for the next N media elements in the playlist.
 	 * Gives slow networks more time to download updated content before playback.
 	 */
+	private getAllMediaList(): MergedDownloadList[] {
+		return [...this.smilObject.video, ...this.smilObject.img, ...this.smilObject.ref, ...this.smilObject.audio];
+	}
+
 	private prefetchAheadElements(
 		entries: [string, unknown][],
 		currentIndex: number,
@@ -2376,12 +2380,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (!this.smilObject.checkBeforePlay || count < 1) return;
 		if (version < this.getPlaylistVersion()) return;
 
-		const allMedia: MergedDownloadList[] = [
-			...this.smilObject.video,
-			...this.smilObject.img,
-			...this.smilObject.ref,
-			...this.smilObject.audio,
-		];
+		const allMedia = this.getAllMediaList();
 
 		let found = 0;
 		for (let offset = 1; found < count && offset < entries.length; offset++) {
@@ -2421,17 +2420,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const filePath = getFileStructureForMediaType(mediaType);
 		if (filePath) {
 			debug(`[${debugId}] Pre-play check for: %s`, value.src);
-			const allMedia: MergedDownloadList[] = [
-				...this.smilObject.video,
-				...this.smilObject.img,
-				...this.smilObject.ref,
-				...this.smilObject.audio,
-			];
 			await this.files.prePlayCheck(
 				value as SMILVideo | SMILImage | SMILWidget,
 				filePath,
 				this.smilObject,
-				allMedia,
+				this.getAllMediaList(),
 			);
 		}
 
@@ -2455,7 +2448,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		endTime: number,
 		isLast: boolean,
 		priorityCoord?: { version: number; priority: number },
-	) => {
+	): Promise<'RETRY' | undefined> => {
 		const debugId = `playElement_${version}_${key}_${Date.now()}`;
 		debug(`[${debugId}] Starting to play element: %O`, value);
 
