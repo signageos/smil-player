@@ -34,7 +34,8 @@
     "start-cypress": "webpack-dev-server --mode none --open-emulator",
     "escheck": "es-check --module es5 dist/index.js",
     "check": "npm run depcheck && npx --userconfig ./.npmrc @signageos/lib check-deps",
-    "depcheck": "depcheck --config .depcheckrc.json"
+    "depcheck": "depcheck --config .depcheckrc.json",
+    "review": "node tools/review-player.mjs"
   },
   "author": "signageOS <dev@signageos.io>",
   "repository": {
@@ -43,8 +44,10 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "7.9.0",
     "@babel/preset-env": "7.9.0",
     "@mdx-js/mdx": "3.0.0",
+    "@playwright/test": "^1.58.2",
     "@signageos/codestyle": "0.0.21",
     "@signageos/front-applet": "6.5.7",
     "@signageos/front-display": "12.1.1",
