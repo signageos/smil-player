@@ -15,6 +15,7 @@ import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/fi
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { FileStructure, smilLogging } from '../../../enums/fileEnums';
 import {
+	SMILAudio,
 	SMILIntro,
 	SMILMedia,
 	SMILVideo,
@@ -2390,7 +2391,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			debug('Prefetching ahead: %s (offset +%d from current)', media.src, offset);
 
-			this.files.prePlayCheck(media as SMILVideo | SMILImage | SMILWidget, filePath, this.smilObject, allMedia)
+			this.files.prePlayCheck(media as SMILVideo | SMILImage | SMILWidget | SMILAudio, filePath, this.smilObject, allMedia)
 				.catch((err: unknown) => {
 					debug('Prefetch ahead failed for %s: %O', media.src, err);
 				});
@@ -2413,7 +2414,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (filePath) {
 			debug(`[${debugId}] Pre-play check for: %s`, value.src);
 			await this.files.prePlayCheck(
-				value as SMILVideo | SMILImage | SMILWidget,
+				value as SMILVideo | SMILImage | SMILWidget | SMILAudio,
 				filePath,
 				this.smilObject,
 				this.getAllMediaList(),

@@ -399,11 +399,12 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.defaultTransition = metaRecord.defaultTransition;
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.checkBeforePlay)) {
-			regions.checkBeforePlay = metaRecord.checkBeforePlay === true
-				|| metaRecord.checkBeforePlay === 'true';
+			const cbpVal = metaRecord.checkBeforePlay;
+			regions.checkBeforePlay = cbpVal === true
+				|| (typeof cbpVal === 'string' && cbpVal.toLowerCase() === 'true');
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.checkAheadCount)) {
-			regions.checkAheadCount = parseInt(metaRecord.checkAheadCount!) || 0;
+			regions.checkAheadCount = Math.max(0, parseInt(metaRecord.checkAheadCount!) || 0);
 		}
 	}
 
