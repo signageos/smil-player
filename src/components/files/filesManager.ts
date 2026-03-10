@@ -90,6 +90,8 @@ export class FilesManager implements IFilesManager {
 	private prePlayLock: Promise<void> = Promise.resolve();
 	// Track in-progress background downloads to prevent duplicates
 	private activePrePlayDownloads: Map<string, Promise<void>> = new Map();
+	// Deferred wasUpdated flags: set during commitBatch after file migration, not during download
+	private pendingWasUpdated: Set<MergedDownloadList> = new Set();
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -1667,6 +1669,7 @@ export class FilesManager implements IFilesManager {
 	public startBatch = (): void => {
 		debug('Starting batch collection for mediaInfoObject updates');
 		this.batchUpdates.clear();
+		this.pendingWasUpdated.clear();
 	};
 
 	public collectUpdate = (fileName: string, value: string | number): void => {
@@ -1675,34 +1678,90 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public commitBatch = async (filesList: MergedDownloadList[]): Promise<void> => {
-		if (this.batchUpdates.size === 0 && this.tempDownloads.size === 0) {
-			debug('No batch updates or temp downloads to commit');
+		if (this.batchUpdates.size === 0 && this.tempDownloads.size === 0
+			&& this.pendingWasUpdated.size === 0) {
+			debug('No batch updates, temp downloads, or pending wasUpdated to commit');
 			return;
 		}
 
-		debug('Committing %d batch updates and %d temp downloads', this.batchUpdates.size, this.tempDownloads.size);
+		debug(
+			'Committing %d batch updates, %d temp downloads, %d pending wasUpdated',
+			this.batchUpdates.size, this.tempDownloads.size, this.pendingWasUpdated.size,
+		);
 
-		// Read current mediaInfoObject
+		// ── Phase A: Pre-resolve new localUri for temp files (async I/O) ──
+		const tempUriMap = new Map<string, string>(); // fileName → temp localUri
+		for (const [fileName, tempPath] of this.tempDownloads) {
+			try {
+				const fileDetails = await this.getFileByPath(tempPath);
+				if (fileDetails) {
+					tempUriMap.set(fileName, fileDetails.localUri);
+				}
+			} catch (err) {
+				debug('commitBatch: Failed to resolve temp URI for %s: %O', fileName, err);
+			}
+		}
+
+		// Read current mediaInfoObject from disk
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 
-		// Always run migration to ensure localFilePath is set for all files
-		// This covers: temp downloads, content movements, and storage restorations
-		debug('Triggering migration from temp to standard folders');
-		const failedFiles = await this.migrateFromTempToStandard(filesList, mediaInfoObject);
+		// Save pre-update state so migration can compare old vs new for movement detection
+		const preUpdateMediaInfo = { ...mediaInfoObject };
 
-		// Apply collected updates to mediaInfoObject, skipping files that failed to migrate
+		// ── Phase B: SYNCHRONOUS STATE SWAP (no await = no interleaving) ──
+
+		// Apply batchUpdates to mediaInfoObject (in-memory)
 		for (const [fileName, value] of this.batchUpdates) {
-			if (failedFiles.has(fileName)) {
-				debug('Skipping mediaInfoObject update for failed file: %s', fileName);
-				continue;
-			}
 			const oldValue = mediaInfoObject[fileName];
 			mediaInfoObject[fileName] = value;
 			debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
 		}
 
-		// Write mediaInfoObject once after all updates (as requested - last step)
+		// Swap localFilePath to temp URIs so playlist reads NEW content immediately
+		for (const file of filesList) {
+			if ('src' in file && 'localFilePath' in file) {
+				const fileName = getFileName(file.src);
+				const tempUri = tempUriMap.get(fileName);
+				if (tempUri) {
+					file.localFilePath = tempUri;
+					debug('commitBatch: Swapped localFilePath for %s to temp URI: %s', fileName, tempUri);
+				}
+			}
+		}
+
+		// Set wasUpdated for all pending files
+		for (const file of this.pendingWasUpdated) {
+			if ('localFilePath' in file) {
+				(file as any).wasUpdated = true;
+			}
+		}
+		this.pendingWasUpdated.clear();
+
+		// Set useInReportUrl from batchUpdates for consistency
+		for (const [fileName, value] of this.batchUpdates) {
+			for (const file of filesList) {
+				if ('src' in file && getFileName(file.src) === fileName && 'useInReportUrl' in file) {
+					file.useInReportUrl = String(value);
+					debug('commitBatch: Set useInReportUrl for %s to %s', fileName, value);
+				}
+			}
+		}
+
+		// ── End synchronous block ──
+
+		// ── Phase C: Persist and migrate (async, state already consistent) ──
 		await this.writeMediaInfoFile(mediaInfoObject);
+
+		// Migrate temp → standard (file copy + cleanup)
+		// State already points to temp/new content, so playlist is consistent
+		const failedFiles = await this.migrateFromTempToStandard(filesList, preUpdateMediaInfo);
+
+		// Log failed files (mediaInfoObject already written with new values;
+		// migration failure means file is still at temp path which localFilePath already points to)
+		for (const failedFile of failedFiles) {
+			debug('commitBatch: Migration failed for %s, temp URI still valid', failedFile);
+		}
+
 		debug('Batch updates committed and mediaInfoObject saved');
 
 		// Clear batch after successful commit
@@ -1802,10 +1861,20 @@ export class FilesManager implements IFilesManager {
 							value,
 						);
 						this.collectUpdate(fileName, String(value));
+					} else {
+						// MOVED_CONTENT: filesToUpdate is empty because parallelDownloadAllFiles
+						// filtered it out (shouldUpdate=false). Still need to register the update
+						// so commitBatch updates mediaInfoObject and migration can detect the movement.
+						debug(
+							'processNewContentUpdates: Collecting moved content update for %s with value: %s',
+							fileName,
+							detection.updateValue,
+						);
+						this.collectUpdate(fileName, String(detection.updateValue));
 					}
 
 					if ('localFilePath' in detection.file) {
-						detection.file.wasUpdated = true;
+						this.pendingWasUpdated.add(detection.file);
 					}
 				}
 
@@ -1882,8 +1951,10 @@ export class FilesManager implements IFilesManager {
 					// Phase 3: Capture our file's data from shared Maps and remove it.
 					const ourTempPath = this.tempDownloads.get(fileName);
 					const ourBatchValue = this.batchUpdates.get(fileName);
+					const hadPendingUpdate = this.pendingWasUpdated.has(media as MergedDownloadList);
 					this.tempDownloads.delete(fileName);
 					this.batchUpdates.delete(fileName);
+					this.pendingWasUpdated.delete(media as MergedDownloadList);
 
 					// Phase 4: Commit — serialized via prePlayLock (promise-chain mutex).
 					const commit = this.prePlayLock.then(async () => {
@@ -1925,6 +1996,18 @@ export class FilesManager implements IFilesManager {
 							mediaInfoObject[fileName] = ourBatchValue;
 						}
 						await this.writeMediaInfoFile(mediaInfoObject);
+
+						// Step 4d: Set wasUpdated and useInReportUrl AFTER migration is complete.
+						// This ensures the playlist only sees the update when the file content is ready.
+						if (hadPendingUpdate && 'localFilePath' in media) {
+							(media as any).wasUpdated = true;
+							debug('prePlayCheck: Set wasUpdated=true for %s after migration', fileName);
+						}
+						if (ourBatchValue !== undefined && 'useInReportUrl' in media) {
+							media.useInReportUrl = String(ourBatchValue);
+							debug('prePlayCheck: Set useInReportUrl for %s to %s', fileName, ourBatchValue);
+						}
+
 						debug('prePlayCheck: Commit complete for %s', fileName);
 					});
 					this.prePlayLock = commit.catch(() => {});
@@ -2766,7 +2849,8 @@ export class FilesManager implements IFilesManager {
 					});
 
 					if ('localFilePath' in file) {
-						file.wasUpdated = true;
+						// Defer wasUpdated to commitBatch for consistency with batch flow
+						this.pendingWasUpdated.add(file as MergedDownloadList);
 					}
 
 					return result.promises;
@@ -2803,7 +2887,8 @@ export class FilesManager implements IFilesManager {
 				);
 
 				if (updated) {
-					file.wasUpdated = true;
+					// Defer wasUpdated to commitBatch for consistency with batch flow
+					this.pendingWasUpdated.add(file as MergedDownloadList);
 					const fileName = getFileName(file.src);
 					const oldValue = mediaInfoObject[fileName];
 					debug(
