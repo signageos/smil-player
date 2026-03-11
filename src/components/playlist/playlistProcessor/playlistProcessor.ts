@@ -2446,9 +2446,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const debugId = `playElement_${version}_${key}_${Date.now()}`;
 		debug(`[${debugId}] Starting to play element: %O`, value);
 
-		// Initialize useInReportUrl from disk only on first play (before any commitBatch has run).
-		// After first play, useInReportUrl is maintained by commitBatch's synchronous state swap.
-		if ('src' in value && !value.useInReportUrl) {
+		// Initialize useInReportUrl from disk on first play, or refresh it after a playlist update
+		// (wasUpdated=true). This ensures the reported URL matches the content about to play,
+		// not stale in-flight values from before the update.
+		if ('src' in value && (!value.useInReportUrl || value.wasUpdated)) {
 			const fileName = getFileName(value.src);
 			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([value as MergedDownloadList]);
 			if (mediaInfoObject[fileName]) {
