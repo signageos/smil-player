@@ -1737,15 +1737,10 @@ export class FilesManager implements IFilesManager {
 		}
 		this.pendingWasUpdated.clear();
 
-		// Set useInReportUrl from batchUpdates for consistency
-		for (const [fileName, value] of this.batchUpdates) {
-			for (const file of filesList) {
-				if ('src' in file && getFileName(file.src) === fileName && 'useInReportUrl' in file) {
-					file.useInReportUrl = String(value);
-					debug('commitBatch: Set useInReportUrl for %s to %s', fileName, value);
-				}
-			}
-		}
+		// NOTE: useInReportUrl is NOT set here. In-flight elements (currently playing or
+		// already prepared) must keep their OLD useInReportUrl until they finish, so that
+		// sendMediaReport matches the content that actually played. useInReportUrl is
+		// refreshed in playElement when wasUpdated=true triggers a re-read from mediaInfoObject.
 
 		// ── End synchronous block ──
 
