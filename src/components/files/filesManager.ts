@@ -803,6 +803,14 @@ export class FilesManager implements IFilesManager {
 			// Phase 3c: Execute download tasks with optimization (download once per content group)
 			debug('Phase 3c: Executing downloads WITH OPTIMIZATION - download once per content group');
 
+			// Collect all storage paths needed by content groups to protect from eviction
+			const protectedStoragePaths = new Set<string>();
+			for (const [, tasks] of taskGroups) {
+				if (tasks[0].storageFilePath) {
+					protectedStoragePaths.add(tasks[0].storageFilePath);
+				}
+			}
+
 			let optimizedDownloads = 0;
 			let skippedDownloads = 0;
 
@@ -821,7 +829,7 @@ export class FilesManager implements IFilesManager {
 						// Handle storage preservation if needed (keep existing logic)
 						if (task.shouldPreserve && task.existingValue) {
 							debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
-							await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+							await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
 						} else if (task.existingValue && !task.shouldPreserve) {
 							debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 						}
@@ -890,6 +898,7 @@ export class FilesManager implements IFilesManager {
 							firstTask.fullLocalFilePath,
 							firstTask.existingValue,
 							fileType,
+							protectedStoragePaths,
 						);
 					}
 
@@ -922,6 +931,7 @@ export class FilesManager implements IFilesManager {
 										task.fullLocalFilePath,
 										task.existingValue,
 										fileType,
+										protectedStoragePaths,
 									);
 								}
 
@@ -986,7 +996,7 @@ export class FilesManager implements IFilesManager {
 					// Preserve existing file to storage if needed
 					if (task.shouldPreserve && task.existingValue) {
 						debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
-						await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType);
+						await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
 					} else if (task.existingValue && !task.shouldPreserve) {
 						debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 					}
@@ -1066,6 +1076,7 @@ export class FilesManager implements IFilesManager {
 							primaryTask.fullLocalFilePath,
 							primaryTask.existingValue,
 							fileType,
+							protectedStoragePaths,
 						);
 					} else if (primaryTask.existingValue && !primaryTask.shouldPreserve) {
 						debug('Content still needed by other URLs, not preserving: %s', primaryTask.existingValue);
@@ -1206,6 +1217,7 @@ export class FilesManager implements IFilesManager {
 								duplicateTask.fullLocalFilePath,
 								duplicateTask.existingValue,
 								fileType,
+								protectedStoragePaths,
 							);
 						}
 						// Files will be created by copy operation after primary download
@@ -3381,7 +3393,7 @@ export class FilesManager implements IFilesManager {
 	 * Ensure storage space by removing oldest file if we exceed the limit
 	 * Maintains maximum of STORAGE_MAX_FILES files per storage folder
 	 */
-	private ensureStorageSpace = async (storageFolder: string): Promise<void> => {
+	private ensureStorageSpace = async (storageFolder: string, protectedPaths?: Set<string>): Promise<void> => {
 		try {
 			const storageInfo = await this.getStorageInfo(storageFolder);
 			const entries = Object.entries(storageInfo);
@@ -3395,20 +3407,32 @@ export class FilesManager implements IFilesManager {
 					return timestampA - timestampB;
 				});
 
-				// Delete the oldest file
-				const [keyToDelete, entryToDelete] = entries[0];
+				// Find oldest non-protected file
+				const evictCandidate = entries.find(
+					([_key, entry]) => !protectedPaths || !protectedPaths.has(entry.storagePath),
+				);
 
-				try {
-					await this.deleteFile(entryToDelete.storagePath);
-					delete storageInfo[keyToDelete];
-					await this.saveStorageInfo(storageFolder, storageInfo);
+				if (evictCandidate) {
+					const [keyToDelete, entryToDelete] = evictCandidate;
+					try {
+						await this.deleteFile(entryToDelete.storagePath);
+						delete storageInfo[keyToDelete];
+						await this.saveStorageInfo(storageFolder, storageInfo);
+						debug(
+							'Deleted oldest storage file to make room (was at %d files): %s',
+							entries.length,
+							entryToDelete.storagePath,
+						);
+					} catch (err) {
+						debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
+					}
+				} else {
 					debug(
-						'Deleted oldest storage file to make room (was at %d files): %s',
+						'All storage files are protected, temporarily exceeding limit (%d/%d) in %s',
 						entries.length,
-						entryToDelete.storagePath,
+						STORAGE_MAX_FILES,
+						storageFolder,
 					);
-				} catch (err) {
-					debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
 				}
 			} else {
 				debug('Storage space OK: %d/%d files in %s', entries.length, STORAGE_MAX_FILES, storageFolder);
@@ -3430,6 +3454,7 @@ export class FilesManager implements IFilesManager {
 		filePath: string,
 		contentValue: string | number,
 		mediaType: string,
+		protectedPaths?: Set<string>,
 	): Promise<boolean> => {
 		try {
 			// SMIL files should never be preserved to storage
@@ -3465,7 +3490,7 @@ export class FilesManager implements IFilesManager {
 			const storageFolder = this.getStorageFolder(mediaType);
 
 			// Ensure we have space in storage (max 20 files)
-			await this.ensureStorageSpace(storageFolder);
+			await this.ensureStorageSpace(storageFolder, protectedPaths);
 
 			// Generate storage filename based on content value (without query params in hash)
 			// This ensures same content with different query params gets same filename
