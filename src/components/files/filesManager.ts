@@ -460,19 +460,6 @@ export class FilesManager implements IFilesManager {
 			getUrlWithoutQueryParams(currentValue) !== getUrlWithoutQueryParams(storedValue)
 			: moment(storedValue).valueOf() < moment(currentValue).valueOf();
 
-		// Check if we already have this content (for location strategy only)
-		if (isNewVersion && isLocationStrategy && this.isValueAlreadyStored(currentValue, mediaInfoObject)) {
-			debug(
-				`Content already exists locally with value: %s, skipping download but updating mapping`,
-				currentValue,
-			);
-			return {
-				shouldUpdate: false,
-				value: currentValue, // Still return the value to update mediaInfoObject
-				statusCode,
-			};
-		}
-
 		if (isNewVersion) {
 			debug(`New file version detected: %O `, media.src);
 			return {
