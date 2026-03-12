@@ -75,7 +75,7 @@ export interface IFilesManager {
 		externalPendingUpdates?: Map<string, string | number>,
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
-	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<Promise<void>[]>;
+	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<void>;
 	prepareLastModifiedSetup: (smilObject: SMILFileObject, smilFile: SMILFile) => Promise<Resource[]>;
 	// Batch update methods for atomic mediaInfoObject updates
 	startBatch: () => void;

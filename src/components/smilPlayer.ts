@@ -204,7 +204,6 @@ export class SmilPlayer implements ISmilPlayer {
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};
-		let downloadPromises: Promise<void>[] = [];
 
 		// set smilUrl in files instance ( links to files might me in media/file.mp4 format )
 		this.files.setSmilUrl(smilUrl);
@@ -259,7 +258,6 @@ export class SmilPlayer implements ISmilPlayer {
 				});
 
 				debug('SMIL file downloaded');
-				downloadPromises = [];
 
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
 				debug('SMIL file parsed: %O', smilObject);
@@ -304,16 +302,11 @@ export class SmilPlayer implements ISmilPlayer {
 
 					introPromises.concat(await this.processor.playIntro(introMedia));
 
-					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
-
 					introPromises.push(
 						(async () => {
-							await Promise.all(downloadPromises).then(async () => {
-								// prepares everything needed for processing playlist
-								await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
-								// all files are downloaded, stop intro
-								debug('SMIL media files download finished, stopping intro');
-							});
+							await this.files.prepareDownloadMediaSetup(smilObject);
+							await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+							debug('SMIL media files download finished, stopping intro');
 						})(),
 					);
 
@@ -321,8 +314,7 @@ export class SmilPlayer implements ISmilPlayer {
 				} else {
 					// no intro
 					debug('No intro element found');
-					downloadPromises = await this.files.prepareDownloadMediaSetup(smilObject);
-					await Promise.all(downloadPromises);
+					await this.files.prepareDownloadMediaSetup(smilObject);
 					debug('SMIL media files download finished');
 					await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
 				}

@@ -1414,77 +1414,60 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<Promise<void>[]> => {
-		let downloadPromises: Promise<void>[] = [];
-		debug(`Starting to download files %O:`, smilObject);
+	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<void> => {
+		debug('Starting to download files %O:', smilObject);
 
-		// Create a map to track all files that need to be updated in mediaInfoObject
-		const allFilesToUpdate: Map<string, number | string> = new Map();
-
-		// Get the mediaInfoObject once for all operations
-		const mediaInfoObject = await this.getOrCreateMediaInfoFile([
-			...smilObject.video,
-			...smilObject.audio,
-			...smilObject.img,
-			...smilObject.ref,
-		]);
-
-		// Get the appropriate fetch strategy based on update mechanism
 		const fetchStrategy = getStrategy(smilObject.updateMechanism);
+		const timeOut = smilObject.refresh.timeOut;
+		const skipCodes = smilObject.skipContentOnHttpStatus;
+		const updateCodes = smilObject.updateContentOnHttpStatus;
 
-		// Process each media type and collect promises and files to update
-		const videoResult = await this.parallelDownloadAllFiles(
-			smilObject.video,
-			FileStructure.videos,
-			smilObject.refresh.timeOut,
-			smilObject.skipContentOnHttpStatus,
-			smilObject.updateContentOnHttpStatus,
-			fetchStrategy,
+		// Step 1: Detect updates for all files (HEAD requests)
+		// Same as resource checker Phase 1 (detectFunction → detectUpdateOnly)
+		const fileEntries = [
+			...smilObject.video.map((f) => ({ file: f, localFilePath: FileStructure.videos })),
+			...smilObject.audio.map((f) => ({ file: f, localFilePath: FileStructure.audios })),
+			...smilObject.img.map((f) => ({ file: f, localFilePath: FileStructure.images })),
+			...smilObject.ref.map((f) => ({ file: f, localFilePath: FileStructure.widgets })),
+		];
+
+		const detections: UpdateDetection[] = [];
+		for (const entry of fileEntries) {
+			const detection = await this.detectUpdateOnly(
+				entry.file, entry.localFilePath, timeOut, skipCodes, updateCodes, fetchStrategy,
+			);
+			if (detection) {
+				detections.push(detection);
+			}
+		}
+
+		// Step 2: Classify (same as resource checker Phase 2)
+		const movedContent = detections.filter((d) => !d.needsDownload);
+		const newContent = detections.filter((d) => d.needsDownload);
+
+		debug(
+			'prepareDownloadMediaSetup: %d moved content, %d new content detections',
+			movedContent.length, newContent.length,
 		);
-		downloadPromises = downloadPromises.concat(videoResult.promises);
-		// Merge the filesToUpdate maps
-		videoResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
 
-		const audioResult = await this.parallelDownloadAllFiles(
-			smilObject.audio,
-			FileStructure.audios,
-			smilObject.refresh.timeOut,
-			smilObject.skipContentOnHttpStatus,
-			smilObject.updateContentOnHttpStatus,
-			fetchStrategy,
-		);
-		downloadPromises = downloadPromises.concat(audioResult.promises);
-		audioResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+		const allFilesList = [
+			...smilObject.video, ...smilObject.audio,
+			...smilObject.img, ...smilObject.ref,
+		];
 
-		const imgResult = await this.parallelDownloadAllFiles(
-			smilObject.img,
-			FileStructure.images,
-			smilObject.refresh.timeOut,
-			smilObject.skipContentOnHttpStatus,
-			smilObject.updateContentOnHttpStatus,
-			fetchStrategy,
-		);
-		downloadPromises = downloadPromises.concat(imgResult.promises);
-		imgResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+		// Step 3: Process using same mechanism as resource checker (Phases 3-4)
+		this.startBatch();
 
-		const refResult = await this.parallelDownloadAllFiles(
-			smilObject.ref,
-			FileStructure.widgets,
-			smilObject.refresh.timeOut,
-			smilObject.skipContentOnHttpStatus,
-			smilObject.updateContentOnHttpStatus,
-			fetchStrategy,
-		);
-		downloadPromises = downloadPromises.concat(refResult.promises);
-		refResult.filesToUpdate.forEach((value, key) => allFilesToUpdate.set(key, value));
+		if (movedContent.length > 0) {
+			await this.processNewContentUpdates(movedContent, allFilesList);
+		}
 
-		// Wait for all downloads to complete
-		await Promise.all(downloadPromises);
+		if (newContent.length > 0) {
+			await this.processNewContentUpdates(newContent, allFilesList);
+		}
 
-		// Update mediaInfoObject and save to storage after all downloads are complete
-		await this.updateMediaInfoAfterDownloads(mediaInfoObject, allFilesToUpdate);
-
-		return downloadPromises;
+		// Step 4: Commit atomically (same as resource checker Phase 6)
+		await this.commitBatch(allFilesList);
 	};
 
 	public prepareLastModifiedSetup = async (smilObject: SMILFileObject, smilFile: SMILFile): Promise<Resource[]> => {
