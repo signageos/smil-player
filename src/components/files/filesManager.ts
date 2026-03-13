@@ -1830,24 +1830,24 @@ export class FilesManager implements IFilesManager {
 				for (const detection of groupDetections) {
 					const fileName = getFileName(detection.file.src);
 
-					if (result.filesToUpdate.has(fileName)) {
-						const value = result.filesToUpdate.get(fileName)!;
+					// Always use detection's own updateValue — it has the correct per-file
+					// redirect URL with unique query params (e.g., ?id=...).
+					// result.filesToUpdate may have a shared latestRemoteValue from the
+					// skipUpdateCheck optimization, which is wrong for groups with
+					// multiple files pointing to the same content.
+					if (result.filesToUpdate.has(fileName) || !detection.needsDownload) {
 						debug(
 							'processNewContentUpdates: Collecting batch update for %s with value: %s',
-							fileName,
-							value,
-						);
-						this.collectUpdate(fileName, String(value));
-					} else {
-						// MOVED_CONTENT: filesToUpdate is empty because parallelDownloadAllFiles
-						// filtered it out (shouldUpdate=false). Still need to register the update
-						// so commitBatch updates mediaInfoObject and migration can detect the movement.
-						debug(
-							'processNewContentUpdates: Collecting moved content update for %s with value: %s',
 							fileName,
 							detection.updateValue,
 						);
 						this.collectUpdate(fileName, String(detection.updateValue));
+					} else {
+						// NEW_CONTENT but not in filesToUpdate — download/copy failed
+						debug(
+							'processNewContentUpdates: Skipping failed download for %s',
+							fileName,
+						);
 					}
 
 					if ('localFilePath' in detection.file) {
