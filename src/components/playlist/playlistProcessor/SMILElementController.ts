@@ -455,6 +455,31 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Check if a message's priority level indicates a priority transition
+	 * relative to stored and expected priority levels.
+	 * Returns false for undefined→undefined or same value.
+	 */
+	private hasPriorityChanged(
+		regionName: string,
+		messagePriority: number | undefined,
+		expectedPriority: number | undefined,
+	): boolean {
+		const storedPriority = this.syncState.priorityLevel.get(regionName);
+
+		// Message differs from stored priority (actual transition detected)
+		if (storedPriority !== undefined && messagePriority !== storedPriority) return true;
+		if (storedPriority === undefined && messagePriority !== undefined) return true;
+
+		// Expected differs from message priority (covers case where stored not yet updated)
+		if (expectedPriority !== undefined && messagePriority !== undefined
+			&& expectedPriority !== messagePriority) return true;
+		if (expectedPriority !== undefined && messagePriority === undefined) return true;
+		if (expectedPriority === undefined && messagePriority !== undefined) return true;
+
+		return false;
+	}
+
+	/**
 	 * Coordinate the start of element preparation
 	 * Master broadcasts cmd-prepare, slaves wait for it
 	 * @returns ProcessActionType indicating whether to continue or resync
@@ -874,6 +899,24 @@ export class SMILElementController {
 		}
 		// If no stored message (cleared due to priority mismatch or never existed), fall through to Promise listener
 
+		// Cross-command priority detection: check if master moved to a different priority context
+		// Only relevant when waiting for cmd-play or cmd-finish (not cmd-prepare itself)
+		if (commandType !== 'cmd-prepare') {
+			const crossCheckMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName);
+			if (crossCheckMsg && this.hasPriorityChanged(regionName, crossCheckMsg.priorityLevel, expectedPriorityLevel)) {
+				logDebug(timedDebug,
+					'Cross-check: master cmd-prepare has priority %s while waiting for %s with priority %s - exiting wait',
+					crossCheckMsg.priorityLevel, commandType, expectedPriorityLevel);
+				this.checkAndUpdatePriorityLevel(regionName, crossCheckMsg.priorityLevel);
+				// Intentionally redundant: checkAndUpdatePriorityLevel already calls clearResyncState on change,
+				// but we call again as safety net for edge cases where stored priority was already updated
+				this.clearResyncState();
+				// Always ACK as 'prepared' because the detected message is always cmd-prepare, regardless of what command type the slave was waiting for
+				await this.sendAckForPosition(regionName, crossCheckMsg.syncIndex, 'prepared', syncGroup);
+				return ProcessAction.RESYNC;
+			}
+		}
+
 		// Create promise with active listener
 		return new Promise<ProcessActionType>((resolve) => {
 			let resolved = false;
@@ -975,6 +1018,26 @@ export class SMILElementController {
 				// Handle sync-coordination messages (commands and ACKs)
 				if (key === 'sync-coordination' && value) {
 					const message = value as SyncMessage;
+
+					// Cross-command priority detection: master sent cmd-prepare with different priority
+					// while we're waiting for cmd-play or cmd-finish
+					if (commandType !== 'cmd-prepare'
+						&& message.type === 'cmd-prepare'
+						&& message.regionName === regionName
+						&& this.hasPriorityChanged(regionName, message.priorityLevel, expectedPriorityLevel)) {
+						logDebug(timedDebug,
+							'Live cross-check: cmd-prepare priority %s while waiting for %s priority %s - exiting wait',
+							message.priorityLevel, commandType, expectedPriorityLevel);
+						this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
+						// Intentionally redundant: checkAndUpdatePriorityLevel already calls clearResyncState on change,
+						// but we call again as safety net for edge cases where stored priority was already updated
+						this.clearResyncState();
+						// Always ACK as 'prepared' because the detected message is always cmd-prepare, regardless of what command type the slave was waiting for
+						await this.sendAckForPosition(regionName, message.syncIndex, 'prepared', syncGroup);
+						cleanup();
+						resolve(ProcessAction.RESYNC);
+						return;
+					}
 
 					// Check if this is a command message for our region
 					if (message.type === commandType && message.regionName === regionName) {
