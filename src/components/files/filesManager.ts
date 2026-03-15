@@ -3489,6 +3489,17 @@ export class FilesManager implements IFilesManager {
 
 			const storageFolder = this.getStorageFolder(mediaType);
 
+			// Key by base URL (without query params) so that same content with different
+			// query params (e.g., changing UUIDs) always maps to the same entry
+			const storageKey = getUrlWithoutQueryParams(String(contentValue));
+			const existingInfo = await this.getStorageInfo(storageFolder);
+
+			// Skip if already in storage — no need to re-copy
+			if (existingInfo[storageKey]) {
+				debug('Content already in storage, skipping preservation: %s', storageKey);
+				return true;
+			}
+
 			// Ensure we have space in storage (max 20 files)
 			await this.ensureStorageSpace(storageFolder, protectedPaths);
 
@@ -3514,11 +3525,9 @@ export class FilesManager implements IFilesManager {
 				},
 			);
 
-			// Update storage info
-			// Key is the Location header URL (may include query params like campaign IDs)
-			// When looking up, we compare without query params to find matching content
+			// Re-read storageInfo after ensureStorageSpace may have evicted entries
 			const storageInfo = await this.getStorageInfo(storageFolder);
-			storageInfo[String(contentValue)] = {
+			storageInfo[storageKey] = {
 				storagePath,
 				originalFileName: path.basename(filePath),
 				timestamp: Date.now(),
@@ -3559,23 +3568,46 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Check storage info as backup (in case file was named differently)
-			// Storage info keys are Location header URLs (may include query params)
-			// Compare without query params to find content regardless of campaign/query variations
+			// After the fix, keys should be base URLs without query params.
+			// Legacy entries may still have full URLs with query params — clean those up.
 			const storageInfo = await this.getStorageInfo(storageFolder);
 			const contentValueNoQuery = getUrlWithoutQueryParams(contentValue);
 
+			// Deduplicate: remove legacy full-URL keys that match the same base URL
+			const keysToClean: string[] = [];
+			let matchedEntry: { storagePath: string } | null = null;
+
 			for (const [storedKey, entry] of Object.entries(storageInfo)) {
-				if (getUrlWithoutQueryParams(storedKey) === contentValueNoQuery && entry.storagePath) {
-					// Verify the file actually exists
-					if (await this.fileExists(entry.storagePath)) {
-						debug('Found in storage via info lookup: %s', entry.storagePath);
-						return entry.storagePath;
-					} else {
-						// File in metadata but not on disk - clean up metadata
-						debug('Storage info references missing file, cleaning up: %s', entry.storagePath);
-						delete storageInfo[storedKey];
-						await this.saveStorageInfo(storageFolder, storageInfo);
+				if (getUrlWithoutQueryParams(storedKey) === contentValueNoQuery) {
+					if (storedKey !== contentValueNoQuery) {
+						// Legacy key with query params — schedule for cleanup
+						keysToClean.push(storedKey);
 					}
+					if (entry.storagePath && !matchedEntry) {
+						matchedEntry = entry;
+					}
+				}
+			}
+
+			// Clean up legacy keys
+			if (keysToClean.length > 0) {
+				for (const key of keysToClean) {
+					delete storageInfo[key];
+				}
+				await this.saveStorageInfo(storageFolder, storageInfo);
+				debug('Cleaned up %d legacy storage keys for: %s', keysToClean.length, contentValueNoQuery);
+			}
+
+			if (matchedEntry) {
+				// Verify the file actually exists
+				if (await this.fileExists(matchedEntry.storagePath)) {
+					debug('Found in storage via info lookup: %s', matchedEntry.storagePath);
+					return matchedEntry.storagePath;
+				} else {
+					// File in metadata but not on disk - clean up metadata
+					debug('Storage info references missing file, cleaning up: %s', matchedEntry.storagePath);
+					delete storageInfo[contentValueNoQuery];
+					await this.saveStorageInfo(storageFolder, storageInfo);
 				}
 			}
 
