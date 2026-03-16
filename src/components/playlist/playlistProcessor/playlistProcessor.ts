@@ -2384,8 +2384,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			mediaEntries.push({ index: i, key, media });
 		}
 
-		if (mediaEntries.length <= 1) return;
-
 		const currentMediaIdx = mediaEntries.findIndex((e) => e.index === currentIndex);
 		if (currentMediaIdx === -1) return;
 
@@ -2415,6 +2413,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					return;
 				}
 				debug('Prefetch ahead: %s is empty, checking next', target.media.src);
+			}
+
+			// All other elements are skipContent (or there are no other elements).
+			// Re-check the current element itself to detect content updates during playback.
+			if (version < this.getPlaylistVersion()) return;
+			const selfTarget = mediaEntries[currentMediaIdx];
+			const selfMediaType = removeDigits(selfTarget.key);
+			const selfFilePath = getFileStructureForMediaType(selfMediaType);
+			if (selfFilePath) {
+				debug('Prefetch ahead: re-checking current element %s for updates', selfTarget.media.src);
+				await this.files.prePlayCheck(
+					selfTarget.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+					selfFilePath, this.smilObject, allMedia,
+				);
 			}
 		})().catch((err) => {
 			debug('Prefetch ahead chain failed: %O', err);
