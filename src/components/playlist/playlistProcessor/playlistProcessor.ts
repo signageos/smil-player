@@ -41,7 +41,7 @@ import {
 import { SMILEnums } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import { ExprTag } from '../../../enums/conditionalEnums';
+import { ConditionalExprFormat, ExprTag } from '../../../enums/conditionalEnums';
 import { setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
@@ -2372,32 +2372,53 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (version < this.getPlaylistVersion()) return;
 
 		const allMedia = this.getAllMediaList();
-		debug('prefetchAheadElements: Looking ahead for %d elements from index %d (version %d)', count, currentIndex, version);
 
-		let found = 0;
-		for (let offset = 1; found < count && offset < entries.length; offset++) {
-			const nextIndex = (currentIndex + offset) % entries.length;
-			const [nextKey, nextValue] = entries[nextIndex];
-
-			if (!isObject(nextValue)) continue;
-			if (!XmlTags.extractedElements.includes(removeDigits(nextKey))) continue;
-
-			const media = nextValue as SMILMedia;
+		// Collect all media entries with their indices
+		const mediaEntries: { index: number; key: string; media: SMILMedia }[] = [];
+		for (let i = 0; i < entries.length; i++) {
+			const [key, value] = entries[i];
+			if (!isObject(value)) continue;
+			if (!XmlTags.extractedElements.includes(removeDigits(key))) continue;
+			const media = value as SMILMedia;
 			if (!('src' in media) || !('localFilePath' in media)) continue;
-
-			const mediaType = removeDigits(nextKey);
-			const filePath = getFileStructureForMediaType(mediaType);
-			if (!filePath) continue;
-
-			debug('Prefetching ahead: %s (offset +%d from current)', media.src, offset);
-
-			this.files.prePlayCheck(media as SMILVideo | SMILImage | SMILWidget | SMILAudio, filePath, this.smilObject, allMedia)
-				.catch((err: unknown) => {
-					debug('Prefetch ahead failed for %s: %O', media.src, err);
-				});
-			found++;
+			mediaEntries.push({ index: i, key, media });
 		}
-		debug('prefetchAheadElements: Queued %d/%d prefetch checks', found, count);
+
+		if (mediaEntries.length <= 1) return;
+
+		const currentMediaIdx = mediaEntries.findIndex((e) => e.index === currentIndex);
+		if (currentMediaIdx === -1) return;
+
+		// Fire-and-forget: sequentially check elements starting from `count`
+		// positions ahead. Stop at first element with valid content.
+		(async () => {
+			for (let step = 0; step < mediaEntries.length; step++) {
+				if (version < this.getPlaylistVersion()) return;
+
+				const targetIdx = (currentMediaIdx + count + step) % mediaEntries.length;
+				if (targetIdx === currentMediaIdx) continue;
+
+				const target = mediaEntries[targetIdx];
+				const mediaType = removeDigits(target.key);
+				const filePath = getFileStructureForMediaType(mediaType);
+				if (!filePath) continue;
+
+				debug('Prefetch ahead: checking %s (%d positions ahead)', target.media.src, count + step);
+
+				await this.files.prePlayCheck(
+					target.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+					filePath, this.smilObject, allMedia,
+				);
+
+				if (target.media.expr !== ConditionalExprFormat.skipContent) {
+					debug('Prefetch ahead: found valid content at %s', target.media.src);
+					return;
+				}
+				debug('Prefetch ahead: %s is empty, checking next', target.media.src);
+			}
+		})().catch((err) => {
+			debug('Prefetch ahead chain failed: %O', err);
+		});
 	}
 
 	/**

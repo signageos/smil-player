@@ -311,8 +311,8 @@ test('checkBeforePlay detects content changes across multiple elements with chec
 	const headLogData: { file: string; time: number }[] = await logResp.json();
 	console.log(`HEAD log entries: ${headLogData.length}`);
 
-	// With checkAheadCount=3, the player should HEAD-check multiple distinct images
-	// (not just the currently playing one). Verify we see more than 1 unique image.
+	// With checkAheadCount=3, the player checks the element 3 media-positions ahead,
+	// then continues forward until finding valid content. Verify we see more than 1 unique image.
 	const uniqueImages = new Set(headLogData.map((e) => e.file));
 	console.log(`Unique images in HEAD log: ${uniqueImages.size} (${[...uniqueImages].join(', ')})`);
 	expect(uniqueImages.size).toBeGreaterThan(1);
