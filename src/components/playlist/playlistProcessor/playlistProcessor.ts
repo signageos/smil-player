@@ -41,7 +41,7 @@ import {
 import { SMILEnums } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import { ConditionalExprFormat, ExprTag } from '../../../enums/conditionalEnums';
+import { ExprTag } from '../../../enums/conditionalEnums';
 import { setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
@@ -2368,73 +2368,61 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		version: number,
 	): void {
 		const count = this.smilObject.checkAheadCount || 0;
-		if (!this.smilObject.checkBeforePlay || count < 1) return;
-		if (version < this.getPlaylistVersion()) return;
-
-		const allMedia = this.getAllMediaList();
+		if (!this.smilObject.checkBeforePlay || count < 1) {
+			return;
+		}
+		if (version < this.getPlaylistVersion()) {
+			return;
+		}
 
 		// Collect all media entries with their indices
 		const mediaEntries: { index: number; key: string; media: SMILMedia }[] = [];
 		for (let i = 0; i < entries.length; i++) {
 			const [key, value] = entries[i];
-			if (!isObject(value)) continue;
-			if (!XmlTags.extractedElements.includes(removeDigits(key))) continue;
+			if (!isObject(value)) {
+				continue;
+			}
+			if (!XmlTags.extractedElements.includes(removeDigits(key))) {
+				continue;
+			}
 			const media = value as SMILMedia;
-			if (!('src' in media) || !('localFilePath' in media)) continue;
+			if (!('src' in media) || !('localFilePath' in media)) {
+				continue;
+			}
 			mediaEntries.push({ index: i, key, media });
 		}
 
 		const currentMediaIdx = mediaEntries.findIndex((e) => e.index === currentIndex);
-		if (currentMediaIdx === -1) return;
+		if (currentMediaIdx === -1) {
+			return;
+		}
 
-		// Fire-and-forget: sequentially check elements starting from `count`
-		// positions ahead. Stop at first element with valid content.
-		(async () => {
-			for (let step = 0; step < mediaEntries.length; step++) {
-				if (version < this.getPlaylistVersion()) return;
+		// Check exactly ONE element: the one `count` positions ahead (wrapping around).
+		// Each element in the playlist calls this once, so every element becomes
+		// the target of exactly one lookahead → N HEADs total per cycle.
+		// For single-element playlists, check the element itself for content updates.
+		const targetIdx = (currentMediaIdx + count) % mediaEntries.length;
+		const target = mediaEntries[targetIdx];
+		const mediaType = removeDigits(target.key);
+		const filePath = getFileStructureForMediaType(mediaType);
+		if (!filePath) {
+			return;
+		}
 
-				const targetIdx = (currentMediaIdx + count + step) % mediaEntries.length;
-				if (targetIdx === currentMediaIdx) continue;
+		const allMedia = this.getAllMediaList();
 
-				const target = mediaEntries[targetIdx];
-				const mediaType = removeDigits(target.key);
-				const filePath = getFileStructureForMediaType(mediaType);
-				if (!filePath) continue;
+		debug('Prefetch ahead: checking %s (%d positions ahead)', target.media.src, count);
 
-				debug('Prefetch ahead: checking %s (%d positions ahead)', target.media.src, count + step);
-
-				await this.files.prePlayCheck(
-					target.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-					filePath, this.smilObject, allMedia,
-				);
-
-				if (target.media.expr !== ConditionalExprFormat.skipContent) {
-					debug('Prefetch ahead: found valid content at %s', target.media.src);
-					return;
-				}
-				debug('Prefetch ahead: %s is empty, checking next', target.media.src);
-			}
-
-			// All other elements are skipContent (or there are no other elements).
-			// Re-check the current element itself to detect content updates during playback.
-			if (version < this.getPlaylistVersion()) return;
-			const selfTarget = mediaEntries[currentMediaIdx];
-			const selfMediaType = removeDigits(selfTarget.key);
-			const selfFilePath = getFileStructureForMediaType(selfMediaType);
-			if (selfFilePath) {
-				debug('Prefetch ahead: re-checking current element %s for updates', selfTarget.media.src);
-				await this.files.prePlayCheck(
-					selfTarget.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-					selfFilePath, this.smilObject, allMedia,
-				);
-			}
-		})().catch((err) => {
-			debug('Prefetch ahead chain failed: %O', err);
+		this.files.prePlayCheck(
+			target.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+			filePath, this.smilObject, allMedia,
+		).catch((err) => {
+			debug('Prefetch ahead check failed for %s: %O', target.media.src, err);
 		});
 	}
 
 	/**
-	 * Runs pre-play content check when checkBeforePlay is enabled.
+	 * Runs pre-play content check when checkBeforePlay is enabled but checkAheadCount is not set.
 	 * Downloads newly available content and returns true if the element should be skipped.
 	 */
 	private async runPrePlayCheck(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
@@ -2504,9 +2492,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			isNil((value as SMILVideo).isStream) &&
 			removeDigits(key) !== HtmlEnum.ticker
 		) {
-			// When checkBeforePlay is enabled, allow through to prePlayCheck
-			// so it can detect content that became available after initial 404
-			if (!(this.smilObject.checkBeforePlay && 'src' in value)) {
+			// When checkBeforePlay is enabled without checkAheadCount, allow through
+			// to runPrePlayCheck so it can detect content that became available after initial 404
+			if (!(this.smilObject.checkBeforePlay && !this.smilObject.checkAheadCount && 'src' in value)) {
 				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
 				await sleep(100);
 				return;
@@ -2521,8 +2509,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// Pre-play content check: verify element freshness before playback
-		if (await this.runPrePlayCheck(value, key, debugId)) {
+		// Pre-play content check when checkAheadCount is not set (no lookahead).
+		// When checkAheadCount is set, prefetchAheadElements already checked this element.
+		if (!this.smilObject.checkAheadCount && await this.runPrePlayCheck(value, key, debugId)) {
 			debug(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
 			return;
 		}
@@ -2530,7 +2519,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Re-check conditional expression after prePlayCheck.
 		// The fetch strategy inside detectUpdateOnly may have set media.expr = 'skipContent'
 		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
-		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+		if (!this.smilObject.checkAheadCount && isConditionalExpExpired(value, this.playerName, this.playerId)) {
 			debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return;
