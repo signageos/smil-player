@@ -2189,6 +2189,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		promiseRaceArray.push(
 			(async () => {
 				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+				debug(`[${debugId}] Finished## playing video onceEnded function - single video: %O`, video);
 			})(),
 		);
 
@@ -2527,6 +2528,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		let sosVideoObject: Video | Stream = this.sos.video;
 		let params: VideoParams = getDefaultVideoParams();
+		let needsRePrepare = false;
 		let element = document.getElementById(value.id ?? '') as HTMLElement;
 
 		const parentRegionInfo = value.regionInfo;
@@ -2554,6 +2556,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					return;
 				}
 				({ sosVideoObject, params } = result);
+				needsRePrepare = !!result.needsRePrepare;
 				break;
 			case 'img':
 				this.handleHtmlElementPrepare(value as SMILImage, element, version, debugId);
@@ -2588,6 +2591,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (waitStatus === WaitStatus.RETRY) {
 			debug(`[${debugId}] Element needs retry - returning RETRY status`);
 			return 'RETRY'; // Signal to processPlaylist that retry is needed
+		}
+
+		// Deferred re-prepare: file was updated at the same local path while video was playing.
+		// Now that shouldWaitAndContinue has returned (video ended), it's safe to prepare.
+		if (needsRePrepare) {
+			debug(`[${debugId}] Executing deferred re-prepare after video ended`);
+			await sosVideoObject.prepare(...params);
+			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
 		}
 
 		// should sync mechanism skip current element
@@ -2682,6 +2693,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		| {
 				sosVideoObject: Video | Stream;
 				params: VideoParams;
+				needsRePrepare?: boolean;
 		  }
 		| undefined
 	> => {
@@ -2720,20 +2732,29 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				value.protocol !== StreamEnums.internal &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src)
 		) {
-			// When file update triggers re-prepare of the SAME video that is currently playing,
-			// cancel old playback first. Otherwise, prepare() causes the display layer to call
-			// removeAllEventListeners() on the video element, orphaning the onceEnded() promise
-			// and causing shouldWaitAndContinue() to hang forever.
+			// When file update detected for the same video currently playing,
+			// compare local file paths to determine the right action:
 			if (
 				fileWasUpdated &&
 				this.currentlyPlaying[regionInfo.regionName]?.src === value.src &&
 				this.currentlyPlaying[regionInfo.regionName]?.playing
 			) {
-				debug(`[${debugId}] File updated: cancelling current playback before re-prepare`);
-				await this.cancelPreviousMedia(regionInfo);
-				if (this.promiseAwaiting[regionInfo.regionName]?.promiseFunction) {
-					this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
+				const currentLocalPath = (this.currentlyPlaying[regionInfo.regionName] as SMILVideo).localFilePath;
+
+				if (videoPath === currentLocalPath) {
+					// Same local path — content may have changed on disk (Last-Modified update)
+					// but prepare() with same URI would strip event listeners on the playing video.
+					// Defer prepare to after shouldWaitAndContinue() when the video has ended.
+					debug(`[${debugId}] File updated at same path, deferring re-prepare until after current playback`);
+					return { sosVideoObject, params, needsRePrepare: true };
 				}
+
+				// Different local path — real file update. prepare() with a new URI creates
+				// a new video element (display layer matches by all 5 params including URI),
+				// so the old video's onceEnded() listeners remain intact. No need to cancel;
+				// shouldWaitAndContinue() will wait for the old video to end naturally,
+				// then the new content plays.
+				debug(`[${debugId}] File updated with new path, preparing new video without cancelling current`);
 			}
 
 			if (
