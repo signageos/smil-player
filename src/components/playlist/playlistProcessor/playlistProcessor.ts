@@ -2699,6 +2699,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			options as keyof typeof StreamProtocol,
 		];
 
+		// Capture wasUpdated before any async work; reset immediately to prevent
+		// background processes (prePlayCheck, resource checker) from setting it
+		// during await points and causing spurious prepare() calls.
+		const fileWasUpdated = !!value.wasUpdated;
+		value.wasUpdated = false;
+
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
 			debug(`[${debugId}] Currently playing video exists, waiting 50ms`);
 			await sleep(50);
@@ -2706,7 +2712,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// prepare if video file was updated, is not same as previous one played, or should be played in background
 		if (
-			value.wasUpdated ||
+			fileWasUpdated ||
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== value.src &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src) ||
 			!this.currentlyPlaying[regionInfo.regionName]?.playing ||
@@ -2714,6 +2720,22 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				value.protocol !== StreamEnums.internal &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src)
 		) {
+			// When file update triggers re-prepare of the SAME video that is currently playing,
+			// cancel old playback first. Otherwise, prepare() causes the display layer to call
+			// removeAllEventListeners() on the video element, orphaning the onceEnded() promise
+			// and causing shouldWaitAndContinue() to hang forever.
+			if (
+				fileWasUpdated &&
+				this.currentlyPlaying[regionInfo.regionName]?.src === value.src &&
+				this.currentlyPlaying[regionInfo.regionName]?.playing
+			) {
+				debug(`[${debugId}] File updated: cancelling current playback before re-prepare`);
+				await this.cancelPreviousMedia(regionInfo);
+				if (this.promiseAwaiting[regionInfo.regionName]?.promiseFunction) {
+					this.promiseAwaiting[regionInfo.regionName].promiseFunction = [];
+				}
+			}
+
 			if (
 				!(await this.files.fileExists(createLocalFilePath(FileStructure.videos, value.src))) &&
 				!value.isStream
@@ -2727,9 +2749,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.videoPreparing[regionInfo.regionName] = cloneDeep(value);
 			debug(`[${debugId}] Video prepared successfully`);
 		}
-
-		// Reset wasUpdated after prepare block has consumed it, mirroring handleHtmlElementPrepare
-		value.wasUpdated = false;
 
 		return {
 			sosVideoObject,
