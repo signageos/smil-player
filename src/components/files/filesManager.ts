@@ -1850,7 +1850,7 @@ export class FilesManager implements IFilesManager {
 						);
 					}
 
-					if ('localFilePath' in detection.file) {
+					if (detection.needsDownload && result.filesToUpdate.has(fileName) && 'localFilePath' in detection.file) {
 						this.pendingWasUpdated.add(detection.file);
 					}
 				}
