@@ -2699,16 +2699,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			options as keyof typeof StreamProtocol,
 		];
 
-		// Reset wasUpdated after consuming localFilePath, mirroring handleHtmlElementPrepare
-		value.wasUpdated = false;
-
 		if (!isNil(this.currentlyPlaying[regionInfo.regionName])) {
 			debug(`[${debugId}] Currently playing video exists, waiting 50ms`);
 			await sleep(50);
 		}
 
-		// prepare if video is not same as previous one played or if video should be played in background
+		// prepare if video file was updated, is not same as previous one played, or should be played in background
 		if (
+			value.wasUpdated ||
 			(this.currentlyPlaying[regionInfo.regionName]?.src !== value.src &&
 				this.videoPreparing[regionInfo.regionName]?.src !== value.src) ||
 			!this.currentlyPlaying[regionInfo.regionName]?.playing ||
@@ -2729,6 +2727,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.videoPreparing[regionInfo.regionName] = cloneDeep(value);
 			debug(`[${debugId}] Video prepared successfully`);
 		}
+
+		// Reset wasUpdated after prepare block has consumed it, mirroring handleHtmlElementPrepare
+		value.wasUpdated = false;
+
 		return {
 			sosVideoObject,
 			params,
