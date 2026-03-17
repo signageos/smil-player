@@ -65,7 +65,7 @@ import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
-import { createLocalFilePath, createSourceReportObject, getFileName, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
+import { createLocalFilePath, createSourceReportObject, createVersionedUrl, getFileName, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
 import { isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -2596,7 +2596,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Deferred re-prepare: file was updated at the same local path while video was playing.
 		// Now that shouldWaitAndContinue has returned (video ended), it's safe to prepare.
 		if (needsRePrepare) {
-			debug(`[${debugId}] Executing deferred re-prepare after video ended`);
+			// Add __smil_version cache-busting so the display layer treats it as a new video
+			// source, even though the local file path hasn't changed.
+			params[0] = createVersionedUrl(params[0], version, null, false, true);
+			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, params[0]);
 			await sosVideoObject.prepare(...params);
 			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
 		}
