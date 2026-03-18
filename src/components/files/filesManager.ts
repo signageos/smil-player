@@ -1443,15 +1443,13 @@ export class FilesManager implements IFilesManager {
 			...smilObject.ref.map((f) => ({ file: f, localFilePath: FileStructure.widgets })),
 		];
 
-		const detections: UpdateDetection[] = [];
-		for (const entry of fileEntries) {
-			const detection = await this.detectUpdateOnly(
-				entry.file, entry.localFilePath, timeOut, skipCodes, updateCodes, fetchStrategy,
-			);
-			if (detection) {
-				detections.push(detection);
-			}
-		}
+		const detections = (await Promise.all(
+			fileEntries.map((entry) =>
+				this.detectUpdateOnly(
+					entry.file, entry.localFilePath, timeOut, skipCodes, updateCodes, fetchStrategy,
+				),
+			),
+		)).filter((d): d is UpdateDetection => d !== null);
 
 		// Step 2: Classify (same as resource checker Phase 2)
 		const movedContent = detections.filter((d) => !d.needsDownload);
