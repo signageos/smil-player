@@ -44,7 +44,7 @@ import {
 	SosHtmlElement,
 } from '../../models/mediaModels';
 import { CustomEndpointReport, ItemType, MediaItemType, Report } from '../../models/reportingModels';
-import { IFilesManager, UpdateCheckResult } from './IFilesManager';
+import { IFilesManager, ProcessedFileUpdate, UpdateCheckResult } from './IFilesManager';
 import { sleep } from '../playlist/tools/generalTools';
 import { SmilLogger } from '../../models/xmlJsonModels';
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
@@ -1754,10 +1754,12 @@ export class FilesManager implements IFilesManager {
 	public processNewContentUpdates = async (
 		detections: UpdateDetection[],
 		allFilesList?: MergedDownloadList[],
-	): Promise<void> => {
+	): Promise<ProcessedFileUpdate[]> => {
 		if (detections.length === 0) {
-			return;
+			return [];
 		}
+
+		const processedResults: ProcessedFileUpdate[] = [];
 
 		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
 
@@ -1827,13 +1829,14 @@ export class FilesManager implements IFilesManager {
 				// Post-process: collectUpdate and set wasUpdated for each file
 				for (const detection of groupDetections) {
 					const fileName = getFileName(detection.file.src);
+					const downloadSucceeded = result.filesToUpdate.has(fileName);
 
 					// Always use detection's own updateValue — it has the correct per-file
 					// redirect URL with unique query params (e.g., ?id=...).
 					// result.filesToUpdate may have a shared latestRemoteValue from the
 					// skipUpdateCheck optimization, which is wrong for groups with
 					// multiple files pointing to the same content.
-					if (result.filesToUpdate.has(fileName) || !detection.needsDownload) {
+					if (downloadSucceeded || !detection.needsDownload) {
 						debug(
 							'processNewContentUpdates: Collecting batch update for %s with value: %s',
 							fileName,
@@ -1848,9 +1851,21 @@ export class FilesManager implements IFilesManager {
 						);
 					}
 
-					if (detection.needsDownload && result.filesToUpdate.has(fileName) && 'localFilePath' in detection.file) {
+					const needsWasUpdated = detection.needsDownload && downloadSucceeded
+						&& 'localFilePath' in detection.file;
+					if (needsWasUpdated) {
 						this.pendingWasUpdated.add(detection.file);
 					}
+
+					// Collect per-file result so callers (e.g. prePlayCheck) can use returned
+					// data instead of reading from shared Maps.
+					processedResults.push({
+						fileName,
+						tempPath: this.tempDownloads.get(fileName),
+						updateValue: (downloadSucceeded || !detection.needsDownload)
+							? String(detection.updateValue) : undefined,
+						needsWasUpdated,
+					});
 				}
 
 				debug('processNewContentUpdates: Batch processing complete for group: %s', key);
@@ -1861,6 +1876,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		debug('processNewContentUpdates: All batches processed');
+		return processedResults;
 	};
 
 	/**
@@ -1923,16 +1939,21 @@ export class FilesManager implements IFilesManager {
 			debug('prePlayCheck: Starting background download for %s', fileName);
 			const backgroundDownload = (async () => {
 				try {
-					// Phase 2: Download (no longer blocks the caller)
-					await this.processNewContentUpdates([detection], allMediaList);
+					// Phase 2: Download — returns per-file results so we don't need to read
+					// from shared Maps (batchUpdates, tempDownloads, pendingWasUpdated).
+					const results = await this.processNewContentUpdates([detection], allMediaList);
+					const fileResult = results.find((r) => r.fileName === fileName);
 
-					// Phase 3: Capture our file's data from shared Maps and remove it.
-					const ourTempPath = this.tempDownloads.get(fileName);
-					const ourBatchValue = this.batchUpdates.get(fileName);
-					const hadPendingUpdate = this.pendingWasUpdated.has(media as MergedDownloadList);
+					// Phase 3: Clean up shared Maps to prevent stale data accumulation.
+					// processNewContentUpdates also writes to these Maps for commitBatch callers,
+					// but prePlayCheck handles its own commit below.
 					this.tempDownloads.delete(fileName);
 					this.batchUpdates.delete(fileName);
 					this.pendingWasUpdated.delete(media as MergedDownloadList);
+
+					const ourTempPath = fileResult?.tempPath;
+					const ourBatchValue = fileResult?.updateValue;
+					const hadPendingUpdate = fileResult?.needsWasUpdated ?? false;
 
 					// Phase 4: Commit — serialized via prePlayLock (promise-chain mutex).
 					const commit = this.prePlayLock.then(async () => {

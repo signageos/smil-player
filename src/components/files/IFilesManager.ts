@@ -21,6 +21,15 @@ export interface UpdateCheckResult {
 	statusCode?: number;
 }
 
+// Per-file result from processNewContentUpdates, used by prePlayCheck to avoid
+// reading from shared Maps (batchUpdates, tempDownloads, pendingWasUpdated).
+export interface ProcessedFileUpdate {
+	fileName: string;
+	tempPath?: string;
+	updateValue?: string;
+	needsWasUpdated: boolean;
+}
+
 export interface IFilesManager {
 	setSmilUrl: (url: string) => void;
 	setSmiLogging: (smilLogging: SmilLogger) => void;
@@ -82,7 +91,7 @@ export interface IFilesManager {
 	collectUpdate: (fileName: string, value: string) => void;
 	commitBatch: (filesList: MergedDownloadList[]) => Promise<void>;
 	// Batch download optimization methods
-	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<void>;
+	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<ProcessedFileUpdate[]>;
 	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
 	prePlayCheck: (
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
