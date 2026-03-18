@@ -1958,14 +1958,13 @@ export class FilesManager implements IFilesManager {
 						}
 
 						// Step 4b: Resolve the new localFilePath from the filesystem.
+						// Use the known mediaFolder directly instead of searching all 4 folders.
 						if ('localFilePath' in media) {
-							const actualPath = await this.determineFilePath(fileName);
-							if (actualPath) {
-								const fileDetails = await this.getFileByPath(actualPath);
-								if (fileDetails) {
-									media.localFilePath = fileDetails.localUri;
-									debug('prePlayCheck: Updated localFilePath for %s to %s', fileName, fileDetails.localUri);
-								}
+							const knownPath = `${mediaFolder}/${fileName}`;
+							const fileDetails = await this.getFileByPath(knownPath);
+							if (fileDetails) {
+								media.localFilePath = fileDetails.localUri;
+								debug('prePlayCheck: Updated localFilePath for %s to %s', fileName, fileDetails.localUri);
 							}
 						}
 
