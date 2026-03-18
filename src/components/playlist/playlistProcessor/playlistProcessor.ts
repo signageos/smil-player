@@ -2425,6 +2425,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	/**
 	 * Runs pre-play content check when checkBeforePlay is enabled but checkAheadCount is not set.
 	 * Downloads newly available content and returns true if the element should be skipped.
+	 *
+	 * Content delivery timing:
+	 *   - Phase 1 (HEAD request detection) completes before play — the await below only blocks on this.
+	 *   - Phases 2-4 (download + commit) run as fire-and-forget background work inside prePlayCheck,
+	 *     so the updated content becomes available on the **next** playlist cycle, not the current one.
+	 *   - This is by design: avoids blocking playback on potentially slow downloads while still
+	 *     ensuring that freshness detection happens before each element plays.
 	 */
 	private async runPrePlayCheck(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
 		if (!this.smilObject.checkBeforePlay || !('src' in value) || !('localFilePath' in value)) {

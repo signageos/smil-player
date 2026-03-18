@@ -1917,6 +1917,9 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Fire-and-forget: download and commit in the background so playback is not blocked.
+			// NOTE: Because this is not awaited by the caller (runPrePlayCheck), the updated content
+			// will not be available until the next playlist iteration. This is intentional — blocking
+			// playback on large downloads would cause visible stalls.
 			debug('prePlayCheck: Starting background download for %s', fileName);
 			const backgroundDownload = (async () => {
 				try {
