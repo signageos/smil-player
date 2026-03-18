@@ -20,7 +20,7 @@ export type Resource = {
 	interval: number;
 	checkFunction: () => Promise<Promise<void>[]>;
 	// Optional - for media files to support batch download optimization
-	detectFunction?: (detectedValues: Set<string>) => Promise<UpdateDetection | null>;
+	detectFunction?: () => Promise<UpdateDetection | null>;
 	actionOnSuccess: (data: Promise<void>[], stopChecker: () => Promise<void>) => Promise<void>;
 	mediaObject?: MergedDownloadList;  // Optional - only media resources will have this
 };
@@ -77,7 +77,7 @@ export class ResourceChecker implements IResourceChecker {
 							if (resource.detectFunction) {
 								try {
 									debug('Phase 1: Detecting updates for %s', resource.url);
-									const detection = await resource.detectFunction(detectedValues);
+									const detection = await resource.detectFunction();
 									if (detection) {
 										// Add to detected values to prevent duplicates
 										detectedValues.add(`${detection.updateValue}|${detection.localFilePath}`);

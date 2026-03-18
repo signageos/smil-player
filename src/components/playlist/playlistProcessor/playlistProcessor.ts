@@ -2185,11 +2185,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName);
 
-		debug(`[${debugId}] Starting## playing video onceEnded function - single video: %O`, video);
+		debug(`[${debugId}] Starting playing video onceEnded function - single video: %O`, video);
 		promiseRaceArray.push(
 			(async () => {
 				await this.sos.video.onceEnded(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
-				debug(`[${debugId}] Finished## playing video onceEnded function - single video: %O`, video);
+				debug(`[${debugId}] Finished playing video onceEnded function - single video: %O`, video);
 			})(),
 		);
 
@@ -2461,6 +2461,83 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return false;
 	}
 
+	/**
+	 * Checks whether an element is eligible to play right now.
+	 * @returns true if element should be skipped
+	 */
+	private async resolveContentAvailability(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
+		if (
+			'localFilePath' in value &&
+			value.localFilePath === '' &&
+			isNil((value as SMILVideo).isStream) &&
+			removeDigits(key) !== HtmlEnum.ticker
+		) {
+			// When checkBeforePlay is enabled without checkAheadCount, allow through
+			// to runPrePlayCheck so it can detect content that became available after initial 404
+			if (!(this.smilObject.checkBeforePlay && !this.smilObject.checkAheadCount && 'src' in value)) {
+				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
+				await sleep(100);
+				return true;
+			} else {
+				debug(`[${debugId}] Empty localFilepath allowed through for pre-play check: %s`, (value as SMILMedia).src);
+			}
+		}
+
+		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
+			await sleep(100);
+			return true;
+		}
+
+		// Pre-play content check when checkAheadCount is not set (no lookahead).
+		// When checkAheadCount is set, prefetchAheadElements already checked this element.
+		if (!this.smilObject.checkAheadCount && await this.runPrePlayCheck(value, key, debugId)) {
+			debug(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
+			return true;
+		}
+
+		// Re-check conditional expression after prePlayCheck.
+		// The fetch strategy inside detectUpdateOnly may have set media.expr = 'skipContent'
+		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
+		if (!this.smilObject.checkAheadCount && isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
+			await sleep(100);
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Stops the stale video player and re-prepares with a versioned URL so the
+	 * display layer picks up updated content.
+	 */
+	private async rePrepareUpdatedVideo(
+		sosVideoObject: Video | Stream,
+		params: VideoParams,
+		regionName: string,
+		value: SMILMedia,
+		version: number,
+		debugId: string,
+		reason: string,
+	): Promise<void> {
+		// Free pool slot by stopping the previous player.
+		// 1st update: lastPreparedVideoUrl is empty → stops un-versioned (initial) player.
+		// Subsequent updates: stops the previous versioned player.
+		const staleUrl = this.lastPreparedVideoUrl[regionName] || params[0];
+		try {
+			await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
+		} catch (err) {
+			debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
+		}
+
+		params[0] = createVersionedUrl(params[0], version, null, false, true);
+		debug(`[${debugId}] ${reason} with versioned path: %s`, params[0]);
+		await sosVideoObject.prepare(...params);
+		this.lastPreparedVideoUrl[regionName] = params[0];
+		this.videoPreparing[regionName] = cloneDeep(value);
+	}
+
 	private playElement = async (
 		value: SMILMedia,
 		version: number,
@@ -2493,43 +2570,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			debug(`[${debugId}] Updated localFilePath for ref element: %s`, value.localFilePath);
 		}
 
-		// TODO: implement check to sos library
-		if (
-			'localFilePath' in value &&
-			value.localFilePath === '' &&
-			isNil((value as SMILVideo).isStream) &&
-			removeDigits(key) !== HtmlEnum.ticker
-		) {
-			// When checkBeforePlay is enabled without checkAheadCount, allow through
-			// to runPrePlayCheck so it can detect content that became available after initial 404
-			if (!(this.smilObject.checkBeforePlay && !this.smilObject.checkAheadCount && 'src' in value)) {
-				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
-				await sleep(100);
-				return;
-			} else {
-				debug(`[${debugId}] Empty localFilepath allowed through for pre-play check: %s`, (value as SMILMedia).src);
-			}
-		}
-
-		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
-			await sleep(100);
-			return;
-		}
-
-		// Pre-play content check when checkAheadCount is not set (no lookahead).
-		// When checkAheadCount is set, prefetchAheadElements already checked this element.
-		if (!this.smilObject.checkAheadCount && await this.runPrePlayCheck(value, key, debugId)) {
-			debug(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
-			return;
-		}
-
-		// Re-check conditional expression after prePlayCheck.
-		// The fetch strategy inside detectUpdateOnly may have set media.expr = 'skipContent'
-		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
-		if (!this.smilObject.checkAheadCount && isConditionalExpExpired(value, this.playerName, this.playerId)) {
-			debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
-			await sleep(100);
+		if (await this.resolveContentAvailability(value, key, debugId)) {
 			return;
 		}
 
@@ -2601,43 +2642,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Deferred re-prepare: file was updated at the same local path while video was playing.
-		// Now that shouldWaitAndContinue has returned (video ended), it's safe to prepare.
 		if (needsRePrepare) {
-			// Free pool slot by stopping the previous player (video already ended, just frozen frame).
-			// 1st update: lastPreparedVideoUrl is empty → stops un-versioned (initial) player.
-			// Subsequent updates: stops the previous versioned player (the only one in pool, since
-			// handleVideoPrepare reuses lastPreparedVideoUrl for params[0] on regular loops).
-			const staleUrl = this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
-			try {
-				await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
-			} catch (err) {
-				debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
-			}
-
-			params[0] = createVersionedUrl(params[0], version, null, false, true);
-			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, params[0]);
-			await sosVideoObject.prepare(...params);
-			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = params[0];
-			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
+			await this.rePrepareUpdatedVideo(
+				sosVideoObject, params, currentRegionInfo.regionName, value, version, debugId,
+				'Executing deferred re-prepare after video ended',
+			);
 		}
 
 		// Queue-aware update: file was updated AFTER this element was prepared but WHILE
-		// it was waiting in shouldWaitAndContinue. Re-prepare with versioned URL so the
-		// display layer picks up the new content instead of playing stale prepared video.
+		// it was waiting in shouldWaitAndContinue.
 		if (!needsRePrepare && removeDigits(key) === 'video' && value.wasUpdated) {
 			value.wasUpdated = false;
-			const staleUrl = this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
-			try {
-				await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
-			} catch (err) {
-				debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
-			}
-
-			params[0] = createVersionedUrl(params[0], version, null, false, true);
-			debug(`[${debugId}] File updated while queued, re-preparing with versioned path: %s`, params[0]);
-			await sosVideoObject.prepare(...params);
-			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = params[0];
-			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
+			await this.rePrepareUpdatedVideo(
+				sosVideoObject, params, currentRegionInfo.regionName, value, version, debugId,
+				'File updated while queued, re-preparing',
+			);
 		}
 
 		// should sync mechanism skip current element
