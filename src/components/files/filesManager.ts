@@ -1429,6 +1429,9 @@ export class FilesManager implements IFilesManager {
 	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<void> => {
 		debug('Starting to download files %O:', smilObject);
 
+		// Clean up orphaned temp files from any prior crashed run so they don't accumulate on disk.
+		await this.clearTempFolders();
+
 		const fetchStrategy = getStrategy(smilObject.updateMechanism);
 		const timeOut = smilObject.refresh.timeOut;
 		const skipCodes = smilObject.skipContentOnHttpStatus;
@@ -1466,6 +1469,13 @@ export class FilesManager implements IFilesManager {
 		];
 
 		// Step 3: Process using same mechanism as resource checker (Phases 3-4)
+		// The batch flow is all-or-nothing by design: files download into temp folders, then
+		// commitBatch atomically migrates them and persists mediaInfoObject. This prevents the
+		// content swap bug where per-type commits could overwrite source files before they were
+		// copied. If the player crashes before commitBatch completes, downloads are repeated on
+		// restart — acceptable because initial download is a one-time operation, and
+		// clearTempFolders() at the top of this method prevents orphaned temp files from
+		// accumulating across crashes.
 		this.startBatch();
 
 		if (movedContent.length > 0) {
