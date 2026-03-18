@@ -2181,6 +2181,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 		}
 
+		// Clean up stale video player to prevent pool exhaustion from versioned re-prepares.
+		// The new video is already playing, so stopping the old one causes no visual gap.
+		const pendingStopUrl = this.pendingVideoStopUrl[currentRegionInfo.regionName];
+		if (pendingStopUrl) {
+			try {
+				debug(`[${debugId}] Stopping stale video player to free pool slot: %s`, pendingStopUrl);
+				await sosVideoObject.stop(pendingStopUrl, regionLeft, regionTop, regionWidth, regionHeight);
+				debug(`[${debugId}] Stale video player stopped successfully`);
+			} catch (err) {
+				debug(`[${debugId}] Stale video cleanup failed (non-fatal): %O`, err);
+			}
+			delete this.pendingVideoStopUrl[currentRegionInfo.regionName];
+		}
+
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName);
@@ -2596,11 +2610,34 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Deferred re-prepare: file was updated at the same local path while video was playing.
 		// Now that shouldWaitAndContinue has returned (video ended), it's safe to prepare.
 		if (needsRePrepare) {
-			// Add __smil_version cache-busting so the display layer treats it as a new video
-			// source, even though the local file path hasn't changed.
-			params[0] = createVersionedUrl(params[0], version, null, false, true);
-			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, params[0]);
-			await sosVideoObject.prepare(...params);
+			// Schedule stale player for cleanup AFTER the next play() — no visual gap.
+			// 1st re-prepare: stale = un-versioned original. Subsequent: stale = previous versioned.
+			this.pendingVideoStopUrl[currentRegionInfo.regionName] =
+				this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
+			// Prepare with versioned URL. Don't mutate params[0] — play()/onceEnded() use
+			// the un-versioned URL which the display layer matches by position.
+			const versionedPath = createVersionedUrl(params[0], version, null, false, true);
+			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, versionedPath);
+			await sosVideoObject.prepare(
+				versionedPath, params[1], params[2], params[3], params[4], params[5],
+			);
+			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = versionedPath;
+			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
+		}
+
+		// Queue-aware update: file was updated AFTER this element was prepared but WHILE
+		// it was waiting in shouldWaitAndContinue. Re-prepare with versioned URL so the
+		// display layer picks up the new content instead of playing stale prepared video.
+		if (!needsRePrepare && removeDigits(key) === 'video' && value.wasUpdated) {
+			value.wasUpdated = false;
+			this.pendingVideoStopUrl[currentRegionInfo.regionName] =
+				this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
+			const versionedPath = createVersionedUrl(params[0], version, null, false, true);
+			debug(`[${debugId}] File updated while queued, re-preparing with versioned path: %s`, versionedPath);
+			await sosVideoObject.prepare(
+				versionedPath, params[1], params[2], params[3], params[4], params[5],
+			);
+			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = versionedPath;
 			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
 		}
 

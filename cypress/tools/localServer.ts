@@ -305,6 +305,60 @@ app.get('/cbp-loc/content/:fileName', (req: Request, res: Response) => {
 	res.send(png);
 });
 
+// --- checkBeforePlay video test state ---
+// Serves a real video file with dynamic Last-Modified to test video re-prepare paths
+let cbpVideoLastModified = '2025-01-01T00:00:00.000Z';
+let cbpVideoVersion = 1;
+let cbpVideoBuffer: Buffer | null = null;
+
+// Lazy-load the video file from disk on first request
+async function getCbpVideoBuffer(): Promise<Buffer> {
+	if (!cbpVideoBuffer) {
+		cbpVideoBuffer = await fs.readFile('./cypress/testFiles/assets/loader.mp4');
+	}
+	return cbpVideoBuffer;
+}
+
+app.options('/cbp-video/*', (_req: Request, res: Response) => {
+	res.set(CBP_CORS_HEADERS);
+	res.sendStatus(204);
+});
+
+app.post('/cbp-video/reset', (_req: Request, res: Response) => {
+	cbpVideoLastModified = '2025-01-01T00:00:00.000Z';
+	cbpVideoVersion = 1;
+	res.set(CBP_CORS_HEADERS);
+	res.json({ version: cbpVideoVersion, lastModified: cbpVideoLastModified });
+});
+
+app.post('/cbp-video/switch', (_req: Request, res: Response) => {
+	cbpVideoVersion++;
+	cbpVideoLastModified = new Date().toISOString();
+	res.set(CBP_CORS_HEADERS);
+	res.json({ version: cbpVideoVersion, lastModified: cbpVideoLastModified });
+});
+
+app.head('/cbp-video/video.mp4', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_CORS_HEADERS,
+		'Content-Type': 'video/mp4',
+		'Content-Length': String(buf.length),
+		'Last-Modified': cbpVideoLastModified,
+	});
+	res.status(200).end();
+});
+
+app.get('/cbp-video/video.mp4', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_CORS_HEADERS,
+		'Content-Type': 'video/mp4',
+		'Last-Modified': cbpVideoLastModified,
+	});
+	res.send(buf);
+});
+
 // --- existing routes ---
 
 app.get('/assets/:fileName', (req: Request, res: Response) => {
