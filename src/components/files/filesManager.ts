@@ -1851,8 +1851,25 @@ export class FilesManager implements IFilesManager {
 						);
 					}
 
-					const needsWasUpdated = detection.needsDownload && downloadSucceeded
+					let needsWasUpdated = detection.needsDownload && downloadSucceeded
 						&& 'localFilePath' in detection.file;
+
+					// For MOVED_CONTENT (needsDownload=false), update localFilePath to point
+					// to the already-cached file and set wasUpdated if the path changed.
+					// Without this, a looping video whose content moved to an already-cached
+					// URL would never re-prepare because wasUpdated stays false.
+					if (!detection.needsDownload && 'localFilePath' in detection.file) {
+						const pathChanged = await this.updateLocalFilePathForMovedContent(
+							detection.file,
+							detection.updateValue,
+							detection.mediaInfoObject,
+							detection.localFilePath,
+						);
+						if (pathChanged) {
+							needsWasUpdated = true;
+						}
+					}
+
 					if (needsWasUpdated) {
 						this.pendingWasUpdated.add(detection.file);
 					}
