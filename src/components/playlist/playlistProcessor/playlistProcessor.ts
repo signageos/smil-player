@@ -2181,20 +2181,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 		}
 
-		// Clean up stale video player to prevent pool exhaustion from versioned re-prepares.
-		// The new video is already playing, so stopping the old one causes no visual gap.
-		const pendingStopUrl = this.pendingVideoStopUrl[currentRegionInfo.regionName];
-		if (pendingStopUrl) {
-			try {
-				debug(`[${debugId}] Stopping stale video player to free pool slot: %s`, pendingStopUrl);
-				await sosVideoObject.stop(pendingStopUrl, regionLeft, regionTop, regionWidth, regionHeight);
-				debug(`[${debugId}] Stale video player stopped successfully`);
-			} catch (err) {
-				debug(`[${debugId}] Stale video cleanup failed (non-fatal): %O`, err);
-			}
-			delete this.pendingVideoStopUrl[currentRegionInfo.regionName];
-		}
-
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName);
@@ -2610,18 +2596,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Deferred re-prepare: file was updated at the same local path while video was playing.
 		// Now that shouldWaitAndContinue has returned (video ended), it's safe to prepare.
 		if (needsRePrepare) {
-			// Schedule stale player for cleanup AFTER the next play() — no visual gap.
-			// 1st re-prepare: stale = un-versioned original. Subsequent: stale = previous versioned.
-			this.pendingVideoStopUrl[currentRegionInfo.regionName] =
-				this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
-			// Prepare with versioned URL. Don't mutate params[0] — play()/onceEnded() use
-			// the un-versioned URL which the display layer matches by position.
-			const versionedPath = createVersionedUrl(params[0], version, null, false, true);
-			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, versionedPath);
-			await sosVideoObject.prepare(
-				versionedPath, params[1], params[2], params[3], params[4], params[5],
-			);
-			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = versionedPath;
+			// Free pool slot by stopping the previous player (video already ended, just frozen frame).
+			// 1st update: lastPreparedVideoUrl is empty → stops un-versioned (initial) player.
+			// Subsequent updates: stops the previous versioned player (the only one in pool, since
+			// handleVideoPrepare reuses lastPreparedVideoUrl for params[0] on regular loops).
+			const staleUrl = this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
+			try {
+				await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
+			} catch (err) {
+				debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
+			}
+
+			params[0] = createVersionedUrl(params[0], version, null, false, true);
+			debug(`[${debugId}] Executing deferred re-prepare after video ended with versioned path: %s`, params[0]);
+			await sosVideoObject.prepare(...params);
+			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = params[0];
 			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
 		}
 
@@ -2630,14 +2619,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// display layer picks up the new content instead of playing stale prepared video.
 		if (!needsRePrepare && removeDigits(key) === 'video' && value.wasUpdated) {
 			value.wasUpdated = false;
-			this.pendingVideoStopUrl[currentRegionInfo.regionName] =
-				this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
-			const versionedPath = createVersionedUrl(params[0], version, null, false, true);
-			debug(`[${debugId}] File updated while queued, re-preparing with versioned path: %s`, versionedPath);
-			await sosVideoObject.prepare(
-				versionedPath, params[1], params[2], params[3], params[4], params[5],
-			);
-			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = versionedPath;
+			const staleUrl = this.lastPreparedVideoUrl[currentRegionInfo.regionName] || params[0];
+			try {
+				await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
+			} catch (err) {
+				debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
+			}
+
+			params[0] = createVersionedUrl(params[0], version, null, false, true);
+			debug(`[${debugId}] File updated while queued, re-preparing with versioned path: %s`, params[0]);
+			await sosVideoObject.prepare(...params);
+			this.lastPreparedVideoUrl[currentRegionInfo.regionName] = params[0];
 			this.videoPreparing[currentRegionInfo.regionName] = cloneDeep(value);
 		}
 
@@ -2741,7 +2733,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		const sosVideoObject: Video | Stream = isNil(value.isStream) ? this.sos.video : this.sos.stream;
 		const options = isNil(value.isStream) ? config.videoOptions : value.protocol;
-		const videoPath = isNil(value.isStream) ? value.localFilePath : value.src;
+		const rawVideoPath = isNil(value.isStream) ? value.localFilePath : value.src;
+		// After a versioned re-prepare, use the versioned URL so play()/onceEnded() match the prepared player.
+		// localFilePath gets reset to un-versioned by processNewContentUpdates Step 5, so we can't rely on it.
+		const lastVersioned = this.lastPreparedVideoUrl[regionInfo.regionName];
+		const videoPath =
+			lastVersioned && this.videoPreparing[regionInfo.regionName]?.src === value.src ? lastVersioned : rawVideoPath;
 		const params: VideoParams = [
 			videoPath,
 			regionInfo.left,
@@ -2781,7 +2778,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			) {
 				const currentLocalPath = (this.currentlyPlaying[regionInfo.regionName] as SMILVideo).localFilePath;
 
-				if (videoPath === currentLocalPath) {
+				// Compare using un-versioned path — videoPath may carry __smil_version from
+				// lastPreparedVideoUrl, while currentLocalPath is always reset to un-versioned
+				// by processNewContentUpdates.
+				if (rawVideoPath === currentLocalPath) {
 					// Same local path — content may have changed on disk (Last-Modified update)
 					// but prepare() with same URI would strip event listeners on the playing video.
 					// Defer prepare to after shouldWaitAndContinue() when the video has ended.

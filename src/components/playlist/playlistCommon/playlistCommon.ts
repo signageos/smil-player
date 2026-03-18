@@ -31,7 +31,6 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected currentlyPlayingPriority: CurrentlyPlayingPriority = {};
 	protected synchronization: Synchronization;
 	protected videoPreparing: VideoPreparing = {};
-	protected pendingVideoStopUrl: { [regionName: string]: string } = {};
 	protected lastPreparedVideoUrl: { [regionName: string]: string } = {};
 	protected randomPlaylist: RandomPlaylist = {};
 

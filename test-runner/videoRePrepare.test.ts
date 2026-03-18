@@ -13,8 +13,9 @@ const TEST_SERVER = 'http://localhost:3000';
  *   2nd update → prepare(versioned_v2) → pool=3 → "no more video players" → HANG
  *
  * The fix:
- *   - Don't mutate params[0] → play/onceEnded use un-versioned URL
- *   - Stop stale player after play() → frees pool slot → next prepare succeeds
+ *   - Stop stale player(s) BEFORE prepare() → frees pool slot → next prepare succeeds
+ *   - Mutate params[0] to versioned URL → play()/onceEnded() match the prepared player
+ *   - Persist versioned URL into value.localFilePath → subsequent loop iterations also use it
  *   - Track versioned URLs per region → enables correct cleanup chain
  *
  * Observable markers in the emulator (via @signageos/front-applet debug output):
@@ -78,12 +79,7 @@ test('video re-prepare: no hang after multiple file updates in single-video loop
 
 	console.log('1st re-prepare detected. Verifying video continues...');
 
-	// Verify play() uses un-versioned URL (params[0] not mutated)
-	const playMsgs = consoleMessages.filter((m) => m.includes('invoking e:play'));
-	const playWithVersion = playMsgs.filter((m) => m.includes('__smil_version'));
-	expect(playWithVersion.length).toBe(0); // play() should NEVER use versioned URL
-
-	// Verify stale player cleanup happened (stop after prepare+play)
+	// Verify stale player cleanup happened BEFORE prepare (stop to free pool slot)
 	const stopCount = consoleMessages.filter((m) => m.includes('invoking e:stop')).length;
 	expect(stopCount).toBeGreaterThanOrEqual(1);
 
@@ -141,11 +137,11 @@ test('video re-prepare: no hang after multiple file updates in single-video loop
 	expect(totalPrepares).toBeGreaterThanOrEqual(2);
 	expect(totalStops).toBeGreaterThanOrEqual(2);
 	expect(poolErrors).toBe(0);
-	// play() should never use a versioned URL (params[0] not mutated)
+	// play() SHOULD use versioned URL after re-prepare (params[0] mutated to match prepared player)
 	const allPlayWithVersion = consoleMessages.filter(
 		(m) => m.includes('invoking e:play') && m.includes('__smil_version'),
 	);
-	expect(allPlayWithVersion.length).toBe(0);
+	expect(allPlayWithVersion.length).toBeGreaterThanOrEqual(2);
 });
 
 test('video re-prepare: pool stays bounded after 3 consecutive updates', async ({ context, page }) => {
@@ -209,7 +205,8 @@ test('video re-prepare: pool stays bounded after 3 consecutive updates', async (
 
 	console.log(`Pool errors: ${poolErrors}, play() with version: ${allPlayWithVersion.length}`);
 	expect(poolErrors).toBe(0);
-	expect(allPlayWithVersion.length).toBe(0);
+	// play() SHOULD use versioned URLs after re-prepare (one per update)
+	expect(allPlayWithVersion.length).toBeGreaterThanOrEqual(3);
 
 	console.log('All 3 updates succeeded — pool stays bounded!');
 });
