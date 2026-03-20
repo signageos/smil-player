@@ -435,6 +435,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		conditionalExpr: string = '',
 	) => {
 		const allEntries = Object.entries(playlist);
+		const prefetchedUrls = new Set<string>();
 		let entryIdx = -1;
 		for (let [key, loopValue] of allEntries) {
 			const currentEntryIdx = ++entryIdx;
@@ -477,7 +478,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						: undefined;
 
 				// Fire lookahead prefetches before retry loop (dedup prevents re-downloads)
-				this.prefetchAheadElements(allEntries, currentEntryIdx, version);
+				this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
 
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Declare indices before try block so they're accessible in catch
@@ -2363,10 +2364,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return [...this.smilObject.video, ...this.smilObject.img, ...this.smilObject.ref, ...this.smilObject.audio];
 	}
 
+	private firePrePlayCheck(media: SMILMedia, key: string, allMedia: MergedDownloadList[], debugLabel: string): void {
+		const mediaType = removeDigits(key);
+		const filePath = getFileStructureForMediaType(mediaType);
+		if (!filePath) {
+			return;
+		}
+		debug('Prefetch ahead: checking %s (%s)', media.src, debugLabel);
+		this.files.prePlayCheck(
+			media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+			filePath, this.smilObject, allMedia,
+		).catch((err) => {
+			debug('Prefetch ahead check failed for %s: %O', media.src, err);
+		});
+	}
+
 	private prefetchAheadElements(
 		entries: [string, unknown][],
 		currentIndex: number,
 		version: number,
+		prefetchedUrls: Set<string>,
 	): void {
 		const count = this.smilObject.checkAheadCount || 0;
 		if (!this.smilObject.checkBeforePlay || count < 1) {
@@ -2398,28 +2415,37 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		// Check exactly ONE element: the one `count` positions ahead (wrapping around).
-		// Each element in the playlist calls this once, so every element becomes
-		// the target of exactly one lookahead → N HEADs total per cycle.
-		// For single-element playlists, check the element itself for content updates.
-		const targetIdx = (currentMediaIdx + count) % mediaEntries.length;
-		const target = mediaEntries[targetIdx];
-		const mediaType = removeDigits(target.key);
-		const filePath = getFileStructureForMediaType(mediaType);
-		if (!filePath) {
-			return;
-		}
-
 		const allMedia = this.getAllMediaList();
+		const startScanIdx = (currentMediaIdx + count) % mediaEntries.length;
+		const maxScan = mediaEntries.length;
 
-		debug('Prefetch ahead: checking %s (%d positions ahead)', target.media.src, count);
+		for (let offset = 0; offset < maxScan; offset++) {
+			const scanIdx = (startScanIdx + offset) % mediaEntries.length;
 
-		this.files.prePlayCheck(
-			target.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-			filePath, this.smilObject, allMedia,
-		).catch((err) => {
-			debug('Prefetch ahead check failed for %s: %O', target.media.src, err);
-		});
+			// After the initial target, stop if we've wrapped back to the current element
+			if (offset > 0 && scanIdx === currentMediaIdx) {
+				break;
+			}
+
+			const candidate = mediaEntries[scanIdx];
+
+			// Skip if already checked this cycle (prevents duplicate HEADs)
+			if (prefetchedUrls.has(candidate.media.src)) {
+				if (candidate.media.localFilePath !== '') {
+					break; // Content element already checked — stop cascade
+				}
+				continue; // Empty element already checked — skip but keep scanning
+			}
+
+			prefetchedUrls.add(candidate.media.src);
+			this.firePrePlayCheck(candidate.media, candidate.key, allMedia,
+				`${count + offset} positions ahead`);
+
+			// Stop cascade at first element with content
+			if (candidate.media.localFilePath !== '') {
+				break;
+			}
+		}
 	}
 
 	/**
