@@ -2429,12 +2429,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			const candidate = mediaEntries[scanIdx];
 
-			// Skip if already checked this cycle (prevents duplicate HEADs)
+			// Skip if already checked this cycle (prevents duplicate HEADs).
+			// Continue scanning past checked elements (both content and empty) so that
+			// later content elements (e.g. 9, 10) can pick up unchecked targets (2, 3)
+			// that sit beyond the cascade stop of an earlier element (8).
 			if (prefetchedUrls.has(candidate.media.src)) {
-				if (candidate.media.localFilePath !== '') {
-					break; // Content element already checked — stop cascade
-				}
-				continue; // Empty element already checked — skip but keep scanning
+				continue;
 			}
 
 			prefetchedUrls.add(candidate.media.src);
