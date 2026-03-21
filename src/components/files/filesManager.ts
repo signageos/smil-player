@@ -2944,8 +2944,21 @@ export class FilesManager implements IFilesManager {
 		);
 
 		if (!detection || !detection.updateCheck.value) {
+			// When content transitions to skipContent (e.g., 404) but has existing content,
+			// preserve the file to storage before it becomes orphaned.
+			if (detection && file.expr === ConditionalExprFormat.skipContent
+				&& 'localFilePath' in file && file.localFilePath !== '') {
+				const fileName = getFileName(file.src);
+				const contentValue = detection.mediaInfoObject[fileName];
+				if (contentValue) {
+					const fullPath = createLocalFilePath(localFilePath, file.src);
+					const mediaType = mapFileType(localFilePath);
+					debug('detectUpdateOnly: Preserving skipped content to storage: %s', file.src);
+					await this.preserveFileToStorage(fullPath, contentValue, mediaType);
+				}
+			}
 			debug('detectUpdateOnly: No update found for %s', file.src);
-			return null; // No update at all
+			return null;
 		}
 
 		// Check if this is MOVED_CONTENT scenario
