@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
+      "command": "bash",
+      "args": ["-c", "npm_config_registry=https://registry.npmjs.org/ npm_config_always_auth=false npx @playwright/mcp@latest"]
     }
   }
 }
