@@ -1989,8 +1989,9 @@ export class FilesManager implements IFilesManager {
 							debug('prePlayCheck: Migrated temp file to standard folder for %s', fileName);
 						}
 
-						// Step 4b: Resolve the new localFilePath from the filesystem.
-						// Use the known mediaFolder directly instead of searching all 4 folders.
+						// Step 4b: Resolve localFilePath from the slot's own file.
+						// For NEW_CONTENT, the file was just migrated by step 4a.
+						// For MOVED_CONTENT, the file was copied by updateLocalFilePathForMovedContent.
 						if ('localFilePath' in media) {
 							const knownPath = `${mediaFolder}/${fileName}`;
 							const fileDetails = await this.getFileByPath(knownPath);
@@ -2656,7 +2657,7 @@ export class FilesManager implements IFilesManager {
 		currentValue: string | null,
 		mediaInfoObject: MediaInfoObject,
 		localFilePath: string,
-	): Promise<string | null> => {
+	): Promise<{ localUri: string; filePath: string } | null> => {
 		if (!currentValue) {
 			debug('findActualFileForMovedContent: No value provided, returning null');
 			return null;
@@ -2680,7 +2681,7 @@ export class FilesManager implements IFilesManager {
 						filePath,
 						fileDetails.localUri,
 					);
-					return fileDetails.localUri;
+					return { localUri: fileDetails.localUri, filePath };
 				} else {
 					debug('findActualFileForMovedContent: File not found at expected path: %s', filePath);
 				}
@@ -2706,16 +2707,34 @@ export class FilesManager implements IFilesManager {
 			return false;
 		}
 
-		const actualLocalUri = await this.findActualFileForMovedContent(
+		const actualFile = await this.findActualFileForMovedContent(
 			String(updateValue),
 			mediaInfoObject,
 			localFilePath,
 		);
 
-		if (actualLocalUri) {
-			const oldPath = file.localFilePath;
-			file.localFilePath = actualLocalUri;
-			debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, actualLocalUri);
+		if (actualFile) {
+			// Copy the shared file to the slot's own path so it's self-contained
+			const slotFileName = getFileName(file.src);
+			const destPath = `${localFilePath}/${slotFileName}`;
+
+			if (actualFile.filePath !== destPath) {
+				await this.sos.fileSystem.copyFile(
+					{ storageUnit: this.internalStorageUnit, filePath: actualFile.filePath },
+					{ storageUnit: this.internalStorageUnit, filePath: destPath },
+					{ overwrite: true },
+				);
+				debug('Copied moved content from %s to %s for %s', actualFile.filePath, destPath, file.src);
+			}
+
+			// Resolve localFilePath from the slot's own file (now has correct content)
+			const slotFileDetails = await this.getFileByPath(destPath);
+			if (slotFileDetails) {
+				const oldPath = file.localFilePath;
+				file.localFilePath = slotFileDetails.localUri;
+				debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, slotFileDetails.localUri);
+			}
+
 			return true;
 		}
 
