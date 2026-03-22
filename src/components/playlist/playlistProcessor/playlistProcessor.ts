@@ -41,7 +41,7 @@ import {
 import { SMILEnums } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import { ExprTag } from '../../../enums/conditionalEnums';
+import { ConditionalExprFormat, ExprTag } from '../../../enums/conditionalEnums';
 import { setDefaultAwait, setElementDuration } from '../tools/scheduleTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
@@ -477,8 +477,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						  }
 						: undefined;
 
-				// Fire lookahead prefetches before retry loop (dedup prevents re-downloads)
-				this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
+				// Fire lookahead prefetches only for elements that will actually play.
+				// Skipped elements (empty localFilePath or expired conditional) process instantly,
+				// causing rapid-fire cascades that burst many concurrent HEAD requests.
+				const media = value as SMILMedia;
+				const willBeSkipped =
+					('localFilePath' in media && media.localFilePath === '') ||
+					isConditionalExpExpired(media, this.playerName, this.playerId);
+
+				if (!willBeSkipped) {
+					this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls)
+						.catch((err) => debug('Prefetch ahead cascade error: %O', err));
+				}
 
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Declare indices before try block so they're accessible in catch
@@ -2364,27 +2374,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return [...this.smilObject.video, ...this.smilObject.img, ...this.smilObject.ref, ...this.smilObject.audio];
 	}
 
-	private firePrePlayCheck(media: SMILMedia, key: string, allMedia: MergedDownloadList[], debugLabel: string): void {
-		const mediaType = removeDigits(key);
-		const filePath = getFileStructureForMediaType(mediaType);
-		if (!filePath) {
-			return;
-		}
-		debug('Prefetch ahead: checking %s (%s)', media.src, debugLabel);
-		this.files.prePlayCheck(
-			media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-			filePath, this.smilObject, allMedia,
-		).catch((err) => {
-			debug('Prefetch ahead check failed for %s: %O', media.src, err);
-		});
-	}
-
-	private prefetchAheadElements(
+	private async prefetchAheadElements(
 		entries: [string, unknown][],
 		currentIndex: number,
 		version: number,
 		prefetchedUrls: Set<string>,
-	): void {
+	): Promise<void> {
 		const count = this.smilObject.checkAheadCount || 0;
 		if (!this.smilObject.checkBeforePlay || count < 1) {
 			return;
@@ -2416,35 +2411,60 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		const allMedia = this.getAllMediaList();
-		const startScanIdx = (currentMediaIdx + count) % mediaEntries.length;
-		const maxScan = mediaEntries.length;
+		let foundCount = 0;
 
-		for (let offset = 0; offset < maxScan; offset++) {
-			const scanIdx = (startScanIdx + offset) % mediaEntries.length;
+		// Sequential cascade: start from next element, await each HEAD check.
+		// Continue through 404/skipContent elements until `count` playable elements found.
+		for (let offset = 1; offset <= mediaEntries.length; offset++) {
+			const scanIdx = (currentMediaIdx + offset) % mediaEntries.length;
 
-			// After the initial target, stop if we've wrapped back to the current element
-			if (offset > 0 && scanIdx === currentMediaIdx) {
+			// Wrapped back to current element — stop
+			if (scanIdx === currentMediaIdx) {
+				break;
+			}
+
+			// Playlist version changed — stop
+			if (version < this.getPlaylistVersion()) {
 				break;
 			}
 
 			const candidate = mediaEntries[scanIdx];
 
-			// Skip if already checked this cycle (prevents duplicate HEADs).
-			// Continue scanning past checked elements (both content and empty) so that
-			// later content elements (e.g. 9, 10) can pick up unchecked targets (2, 3)
-			// that sit beyond the cascade stop of an earlier element (8).
+			// Skip if already checked this cycle (dedup across cascades)
 			if (prefetchedUrls.has(candidate.media.src)) {
 				continue;
 			}
 
 			prefetchedUrls.add(candidate.media.src);
-			this.firePrePlayCheck(candidate.media, candidate.key, allMedia,
-				`${count + offset} positions ahead`);
 
-			// Stop cascade at first element with content
-			if (candidate.media.localFilePath !== '') {
-				break;
+			const mediaType = removeDigits(candidate.key);
+			const filePath = getFileStructureForMediaType(mediaType);
+			if (!filePath) {
+				continue;
 			}
+
+			// Await HEAD check sequentially — this is the key fix.
+			// Each check blocks only on Phase 1 (HEAD ~100-200ms), download runs in background.
+			debug('Prefetch ahead: checking %s (%d ahead)', candidate.media.src, offset);
+			try {
+				await this.files.prePlayCheck(
+					candidate.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+					filePath, this.smilObject, allMedia,
+				);
+			} catch (err) {
+				debug('Prefetch ahead check failed for %s: %O', candidate.media.src, err);
+			}
+
+			// Count elements that will actually be played (have content and not skipped)
+			const willPlay = candidate.media.localFilePath !== ''
+				&& candidate.media.expr !== ConditionalExprFormat.skipContent;
+			if (willPlay) {
+				foundCount++;
+				if (foundCount >= count) {
+					break;
+				}
+			}
+			// else: 404/skipContent — cascade continues to find more playable elements
 		}
 	}
 

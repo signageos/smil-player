@@ -303,16 +303,14 @@ test('checkBeforePlay detects content changes across multiple elements with chec
 	expect(visiblyVerified.size).toBeGreaterThanOrEqual(2);
 
 	// Phase 6: Verify checkAheadCount via HEAD log pattern
-	// Clear log and wait for a few image transitions
-	await page.request.post(`${TEST_SERVER}/cbp/clear-head-log`);
-	await new Promise((r) => setTimeout(r, 8000)); // ~2-3 image cycles at 3s each
-
+	// Use accumulated HEAD log from the entire test — the sequential cascade concentrates
+	// HEAD requests at the start of each cycle, so a short time window may miss them.
 	const logResp = await page.request.get(`${TEST_SERVER}/cbp/head-log`);
 	const headLogData: { file: string; time: number }[] = await logResp.json();
 	console.log(`HEAD log entries: ${headLogData.length}`);
 
-	// With checkAheadCount=3, the player checks the element 3 media-positions ahead,
-	// then continues forward until finding valid content. Verify we see more than 1 unique image.
+	// With checkAheadCount=3, the player checks multiple elements ahead via sequential cascade.
+	// Verify we see more than 1 unique image in the accumulated HEAD requests.
 	const uniqueImages = new Set(headLogData.map((e) => e.file));
 	console.log(`Unique images in HEAD log: ${uniqueImages.size} (${[...uniqueImages].join(', ')})`);
 	expect(uniqueImages.size).toBeGreaterThan(1);
@@ -540,9 +538,7 @@ test('checkBeforePlay (location strategy) detects changes across multiple elemen
 	expect(visiblyVerified.size).toBeGreaterThanOrEqual(2);
 
 	// Phase 6: Verify checkAheadCount via HEAD log pattern
-	await page.request.post(`${TEST_SERVER}/cbp-loc/clear-head-log`);
-	await new Promise((r) => setTimeout(r, 8000));
-
+	// Use accumulated HEAD log — sequential cascade concentrates requests at cycle start.
 	const logResp = await page.request.get(`${TEST_SERVER}/cbp-loc/head-log`);
 	const headLogData: { file: string; time: number }[] = await logResp.json();
 	console.log(`[location] HEAD log entries: ${headLogData.length}`);
