@@ -16,6 +16,24 @@ export const ProcessAction = {
 
 export type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
 
+/** Bundled context for slave command-wait operations (internal to controller) */
+interface SyncWaitContext {
+	commandType: SyncCommandType;
+	expectedState: 'prepared' | 'playing' | 'finished';
+	regionName: string;
+	syncIndex: number;
+	syncGroup: SyncGroup;
+	timedDebug?: TimedDebugger;
+	expectedPriorityLevel?: number;
+}
+
+/** Result from evaluating a live sync message (internal to controller) */
+interface SyncMessageAction {
+	action: ProcessActionType;
+	ackIndex?: number;
+	ackState?: 'prepared' | 'playing' | 'finished';
+}
+
 /**
  * Tracks acknowledgments from slave devices for synchronized operations
  */
@@ -276,6 +294,36 @@ export class SMILElementController {
 	};
 
 	constructor(private synchronization: Synchronization) {}
+
+	/**
+	 * Get the current resync target for a specific sync phase.
+	 * Replaces the repeated ternary pattern accessing resyncTargets by state name.
+	 */
+	private getResyncTargetForState(state: 'prepared' | 'playing' | 'finished'): number | undefined {
+		if (!this.synchronization.resyncTargets) return undefined;
+		return state === 'prepared'
+			? this.synchronization.resyncTargets.prepare
+			: state === 'playing'
+				? this.synchronization.resyncTargets.play
+				: this.synchronization.resyncTargets.finish;
+	}
+
+	/**
+	 * Set the resync target for a specific sync phase.
+	 * Replaces the repeated if/else chain setting resyncTargets by state name.
+	 */
+	private setResyncTargetForState(state: 'prepared' | 'playing' | 'finished', value: number): void {
+		if (!this.synchronization.resyncTargets) {
+			this.synchronization.resyncTargets = {};
+		}
+		if (state === 'prepared') {
+			this.synchronization.resyncTargets.prepare = value;
+		} else if (state === 'playing') {
+			this.synchronization.resyncTargets.play = value;
+		} else {
+			this.synchronization.resyncTargets.finish = value;
+		}
+	}
 
 	/**
 	 * Clear all resync state - used when priority context changes
@@ -799,25 +847,19 @@ export class SMILElementController {
 			type, regionName, syncIndex, bounds ? `[${bounds.min}-${bounds.max}]` : 'none');
 	}
 
-	/**
-	 * Unified method to wait for commands and check sync status
-	 * Handles cmd-prepare/cmd-play messages only (ACK protocol)
-	 * Returns action to take: CONTINUE, RESYNC, or keeps waiting if WAIT
-	 */
-	private async waitForCommandAndCheckSync(
-		commandType: SyncCommandType,
-		expectedState: 'prepared' | 'playing' | 'finished',
-		regionName: string,
-		syncIndex: number,
-		syncGroup: SyncGroup,
-		timedDebug?: TimedDebugger,
-		expectedPriorityLevel?: number,
-	): Promise<ProcessActionType> {
-		// Update slave position tracking
-		this.updateSlavePosition(regionName, syncIndex, expectedState);
+	// ==================== waitForCommandAndCheckSync helpers ====================
 
-		// FIRST: Check stored message for priority level changes BEFORE resync skip check
-		// This allows priority change to clear stale resync state before we check it
+	/**
+	 * Check stored message for priority level changes BEFORE resync skip check.
+	 * Allows priority change to clear stale resync state before we check it.
+	 */
+	private handleStoredMessagePriority(
+		syncGroup: SyncGroup,
+		commandType: SyncCommandType,
+		regionName: string,
+		expectedPriorityLevel: number | undefined,
+		timedDebug?: TimedDebugger,
+	): void {
 		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 		if (storedMsg) {
 			// Primary: Check if message priority differs from last received priority
@@ -839,15 +881,18 @@ export class SMILElementController {
 					commandType, storedMsg.priorityLevel);
 			}
 		}
+	}
 
-		// THEN: Check if actively resyncing and not at target yet - skip immediately
-		// This check now happens AFTER priority check may have cleared stale state
-		// Use state-specific resync target based on expected state
-		const resyncTarget = expectedState === 'prepared'
-			? this.synchronization.resyncTargets?.prepare
-			: expectedState === 'playing'
-				? this.synchronization.resyncTargets?.play
-				: this.synchronization.resyncTargets?.finish;
+	/**
+	 * Check if slave should skip waiting during active resync (not yet at target).
+	 * Returns true if syncIndex < resyncTarget, meaning we should return RESYNC immediately.
+	 */
+	private shouldSkipForResync(
+		syncIndex: number,
+		expectedState: 'prepared' | 'playing' | 'finished',
+		timedDebug?: TimedDebugger,
+	): boolean {
+		const resyncTarget = this.getResyncTargetForState(expectedState);
 
 		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
 			logDebug(
@@ -857,22 +902,24 @@ export class SMILElementController {
 				resyncTarget,
 				expectedState,
 			);
-			// Return RESYNC immediately - no timeout, no waiting
-			return ProcessAction.RESYNC;
+			return true;
 		}
+		return false;
+	}
 
-		// Log current positions for debugging
-		const positions = this.getPositions(regionName, expectedState, syncGroup);
-		logDebug(
-			timedDebug,
-			'Current sync positions for %s %s: slave=%d, master=%d',
-			regionName,
-			expectedState,
-			positions.slave,
-			positions.master,
-		);
-
-		// Re-fetch stored message (will be null if we cleared it above due to priority mismatch)
+	/**
+	 * Try processing a stored command message. Returns action if resolved,
+	 * null if no stored message or action is WAIT (should fall through to listener).
+	 */
+	private tryProcessStoredCommand(
+		syncGroup: SyncGroup,
+		commandType: SyncCommandType,
+		expectedState: 'prepared' | 'playing' | 'finished',
+		syncIndex: number,
+		regionName: string,
+		timedDebug?: TimedDebugger,
+	): ProcessActionType | null {
+		// Re-fetch stored message (will be null if cleared by handleStoredMessagePriority due to priority mismatch)
 		const currentStoredMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 		if (currentStoredMsg) {
 			const age = Date.now() - currentStoredMsg.timestamp;
@@ -897,10 +944,22 @@ export class SMILElementController {
 				return action;
 			}
 		}
-		// If no stored message (cleared due to priority mismatch or never existed), fall through to Promise listener
+		// If no stored message or WAIT, fall through to listener
+		return null;
+	}
 
-		// Cross-command priority detection: check if master moved to a different priority context
-		// Only relevant when waiting for cmd-play or cmd-finish (not cmd-prepare itself)
+	/**
+	 * Cross-command priority detection: check if master moved to a different priority context.
+	 * Only relevant when waiting for cmd-play or cmd-finish (not cmd-prepare itself).
+	 * Returns RESYNC if priority change detected, null otherwise.
+	 */
+	private async checkCrossCommandPriorityChange(
+		syncGroup: SyncGroup,
+		commandType: SyncCommandType,
+		regionName: string,
+		expectedPriorityLevel: number | undefined,
+		timedDebug?: TimedDebugger,
+	): Promise<ProcessActionType | null> {
 		if (commandType !== 'cmd-prepare') {
 			const crossCheckMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName);
 			if (crossCheckMsg && crossCheckMsg.priorityLevel !== undefined
@@ -917,8 +976,131 @@ export class SMILElementController {
 				return ProcessAction.RESYNC;
 			}
 		}
+		return null;
+	}
 
-		// Create promise with active listener
+	/**
+	 * Evaluate a live sync-coordination message and determine what action to take.
+	 * Returns SyncMessageAction if the message is relevant (action + optional ACK info),
+	 * or null if the message is not relevant (keep listening).
+	 *
+	 * This is a synchronous evaluation — the caller handles async ACK sending.
+	 */
+	private evaluateLiveCommandMessage(
+		message: SyncMessage,
+		ctx: SyncWaitContext,
+	): SyncMessageAction | null {
+		const { commandType, expectedState, regionName, syncIndex, expectedPriorityLevel, timedDebug } = ctx;
+
+		// Cross-command priority detection: master sent cmd-prepare with different priority
+		// while we're waiting for cmd-play or cmd-finish
+		if (commandType !== 'cmd-prepare'
+			&& message.type === 'cmd-prepare'
+			&& message.regionName === regionName
+			&& message.priorityLevel !== undefined
+			&& this.hasPriorityChanged(regionName, message.priorityLevel, expectedPriorityLevel)) {
+			logDebug(timedDebug,
+				'Live cross-check: cmd-prepare priority %s while waiting for %s priority %s - exiting wait',
+				message.priorityLevel, commandType, expectedPriorityLevel);
+			this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
+			// Intentionally redundant: checkAndUpdatePriorityLevel already calls clearResyncState on change,
+			// but we call again as safety net for edge cases where stored priority was already updated
+			this.clearResyncState();
+			// Always ACK as 'prepared' because the detected message is always cmd-prepare
+			return { action: ProcessAction.RESYNC, ackIndex: message.syncIndex, ackState: 'prepared' };
+		}
+
+		// Check if this is a command message for our region
+		if (message.type !== commandType || message.regionName !== regionName) {
+			return null; // Not relevant, keep listening
+		}
+
+		// Check for priority level changes and clear stale resync state if needed
+		this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
+
+		// Backup: If expected priority differs from message priority, clear resync state
+		// This handles case where checkAndUpdatePriorityLevel didn't detect change
+		// (e.g., stored priority matches message, but expected differs)
+		if (expectedPriorityLevel !== undefined &&
+			message.priorityLevel !== undefined &&
+			message.priorityLevel !== expectedPriorityLevel) {
+			logDebug(timedDebug, 'Expected priority %d differs from message priority %d - clearing resync state (listener backup)',
+				expectedPriorityLevel, message.priorityLevel);
+			this.clearResyncState();
+		}
+
+		// Recompute isAtResyncTarget after priority check may have cleared state
+		const currentResyncTarget = this.getResyncTargetForState(expectedState);
+		const currentIsAtResyncTarget =
+			this.synchronization.syncingInAction &&
+			currentResyncTarget !== undefined &&
+			syncIndex === currentResyncTarget;
+
+		// Special handling if we're at resync target and master has passed us
+		if (currentIsAtResyncTarget && message.syncIndex > syncIndex) {
+			// Master has moved past our resync target - use range-aware computation + priority bounds
+			const newTarget = this.getWrappedSyncIndex(
+				this.getNextEffectiveSyncIndex(message.syncIndex, regionName),
+				regionName,
+				message.priorityMaxSyncIndex,
+				message.priorityMinSyncIndex,
+			);
+
+			// Set state-specific resync target based on command type
+			if (commandType === 'cmd-prepare') {
+				this.synchronization.resyncTargets!.prepare = newTarget;
+			} else {
+				this.synchronization.resyncTargets!.play = newTarget;
+			}
+
+			logDebug(timedDebug, 'Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
+			return { action: ProcessAction.RESYNC, ackIndex: message.syncIndex, ackState: expectedState };
+		}
+
+		// Create virtual elementState from command, including priority bounds
+		const virtualElementState = {
+			state: expectedState,
+			regionName: message.regionName,
+			syncIndex: message.syncIndex,
+			timestamp: message.timestamp,
+			priorityMinSyncIndex: message.priorityMinSyncIndex,
+			priorityMaxSyncIndex: message.priorityMaxSyncIndex,
+		};
+
+		// Use processElementState to determine action
+		const action = this.processElementState(virtualElementState, expectedState, syncIndex, regionName);
+
+		switch (action) {
+			case ProcessAction.CONTINUE:
+				// Exact match - we got our command
+				logDebug(timedDebug, `Received ${commandType} for region=${regionName}, syncIndex=${syncIndex}`);
+				return { action: ProcessAction.CONTINUE };
+
+			case ProcessAction.RESYNC:
+				// We're behind - resync flags already set by processElementState
+				logDebug(timedDebug, 'Detected resync needed while waiting for %s', commandType);
+				return { action: ProcessAction.RESYNC, ackIndex: message.syncIndex, ackState: expectedState };
+
+			case ProcessAction.WAIT:
+				// We're ahead - need to send ACK for master's position but keep waiting
+				logDebug(timedDebug, 'Slave ahead at %d, master at %d - sending ACK and waiting',
+					syncIndex, message.syncIndex);
+				return { action: ProcessAction.WAIT, ackIndex: message.syncIndex, ackState: expectedState };
+
+			default:
+				logDebug(timedDebug, 'Unexpected action from processElementState: %s', action);
+				return null;
+		}
+	}
+
+	/**
+	 * Wait for live sync-coordination messages via active listener.
+	 * Sets up timeouts (10min at resync target, 60s otherwise), master-change monitoring,
+	 * and delegates message evaluation to evaluateLiveCommandMessage.
+	 */
+	private waitForLiveCommand(ctx: SyncWaitContext): Promise<ProcessActionType> {
+		const { commandType, expectedState, regionName, syncIndex, syncGroup, timedDebug } = ctx;
+
 		return new Promise<ProcessActionType>((resolve) => {
 			let resolved = false;
 			let unsubscribe: (() => void) | undefined;
@@ -939,11 +1121,7 @@ export class SMILElementController {
 			};
 
 			// Check if we're at resync target - use 10 minute timeout to prevent indefinite waiting
-			const resyncTargetCheck = expectedState === 'prepared'
-				? this.synchronization.resyncTargets?.prepare
-				: expectedState === 'playing'
-					? this.synchronization.resyncTargets?.play
-					: this.synchronization.resyncTargets?.finish;
+			const resyncTargetCheck = this.getResyncTargetForState(expectedState);
 			const isAtResyncTarget =
 				this.synchronization.syncingInAction && resyncTargetCheck !== undefined && syncIndex === resyncTargetCheck;
 
@@ -968,9 +1146,6 @@ export class SMILElementController {
 					}
 					logDebug(timedDebug, 'Timeout waiting for %s at syncIndex=%d - triggering resync', commandType, syncIndex);
 					this.synchronization.syncingInAction = true;
-					if (!this.synchronization.resyncTargets) {
-						this.synchronization.resyncTargets = {};
-					}
 
 					// Use range-aware computation + wraparound for timeout recovery
 					const nextIndex = this.getWrappedSyncIndex(
@@ -978,13 +1153,7 @@ export class SMILElementController {
 						regionName,
 					);
 
-					if (expectedState === 'prepared') {
-						this.synchronization.resyncTargets.prepare = nextIndex;
-					} else if (expectedState === 'playing') {
-						this.synchronization.resyncTargets.play = nextIndex;
-					} else {
-						this.synchronization.resyncTargets.finish = nextIndex;
-					}
+					this.setResyncTargetForState(expectedState, nextIndex);
 					cleanup();
 					resolve(ProcessAction.RESYNC);
 				}, SYNC_TIMEOUTS.networkFailureTimeout);
@@ -1010,151 +1179,83 @@ export class SMILElementController {
 				}
 			});
 
-			// Set up active listener for sync-coordination messages only
+			// Set up active listener for sync-coordination messages
 			unsubscribe = syncGroup.onValue(async ({ key, value }: { key: string; value?: any }) => {
 				if (resolved) {
 					return;
 				}
 
-				// Handle sync-coordination messages (commands and ACKs)
-				if (key === 'sync-coordination' && value) {
-					const message = value as SyncMessage;
-
-					// Cross-command priority detection: master sent cmd-prepare with different priority
-					// while we're waiting for cmd-play or cmd-finish
-					if (commandType !== 'cmd-prepare'
-						&& message.type === 'cmd-prepare'
-						&& message.regionName === regionName
-						&& message.priorityLevel !== undefined
-						&& this.hasPriorityChanged(regionName, message.priorityLevel, expectedPriorityLevel)) {
-						logDebug(timedDebug,
-							'Live cross-check: cmd-prepare priority %s while waiting for %s priority %s - exiting wait',
-							message.priorityLevel, commandType, expectedPriorityLevel);
-						this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
-						// Intentionally redundant: checkAndUpdatePriorityLevel already calls clearResyncState on change,
-						// but we call again as safety net for edge cases where stored priority was already updated
-						this.clearResyncState();
-						// Always ACK as 'prepared' because the detected message is always cmd-prepare, regardless of what command type the slave was waiting for
-						await this.sendAckForPosition(regionName, message.syncIndex, 'prepared', syncGroup);
-						cleanup();
-						resolve(ProcessAction.RESYNC);
-						return;
-					}
-
-					// Check if this is a command message for our region
-					if (message.type === commandType && message.regionName === regionName) {
-						// Check for priority level changes and clear stale resync state if needed
-						this.checkAndUpdatePriorityLevel(regionName, message.priorityLevel);
-
-						// Backup: If expected priority differs from message priority, clear resync state
-						// This handles case where checkAndUpdatePriorityLevel didn't detect change
-						// (e.g., stored priority matches message, but expected differs)
-						if (expectedPriorityLevel !== undefined &&
-							message.priorityLevel !== undefined &&
-							message.priorityLevel !== expectedPriorityLevel) {
-							logDebug(timedDebug, 'Expected priority %d differs from message priority %d - clearing resync state (listener backup)',
-								expectedPriorityLevel, message.priorityLevel);
-							this.clearResyncState();
-						}
-
-						// Recompute isAtResyncTarget after priority check may have cleared state
-						const currentResyncTarget = expectedState === 'prepared'
-							? this.synchronization.resyncTargets?.prepare
-							: expectedState === 'playing'
-								? this.synchronization.resyncTargets?.play
-								: this.synchronization.resyncTargets?.finish;
-						const currentIsAtResyncTarget =
-							this.synchronization.syncingInAction &&
-							currentResyncTarget !== undefined &&
-							syncIndex === currentResyncTarget;
-
-						// Create virtual elementState from command, including priority bounds
-						const virtualElementState = {
-							state: expectedState,
-							regionName: message.regionName,
-							syncIndex: message.syncIndex,
-							timestamp: message.timestamp,
-							priorityMinSyncIndex: message.priorityMinSyncIndex,
-							priorityMaxSyncIndex: message.priorityMaxSyncIndex,
-						};
-
-						// Special handling if we're at resync target and master has passed us
-						if (currentIsAtResyncTarget && message.syncIndex > syncIndex) {
-							// Master has moved past our resync target - use range-aware computation + priority bounds
-							const newTarget = this.getWrappedSyncIndex(
-								this.getNextEffectiveSyncIndex(message.syncIndex, regionName),
-								regionName,
-								message.priorityMaxSyncIndex,
-								message.priorityMinSyncIndex,
-							);
-
-							// Set state-specific resync target based on command type
-							if (commandType === 'cmd-prepare') {
-								this.synchronization.resyncTargets!.prepare = newTarget;
-							} else {
-								this.synchronization.resyncTargets!.play = newTarget;
-							}
-
-							logDebug(timedDebug, 'Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
-
-							// Send ACK for master's position to not block it
-							await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
-
-							cleanup();
-							resolve(ProcessAction.RESYNC);
-							return;
-						}
-
-						// Use processElementState to determine action
-						const action = this.processElementState(
-							virtualElementState,
-							expectedState,
-							syncIndex,
-							regionName,
-						);
-
-						switch (action) {
-							case ProcessAction.CONTINUE:
-								// Exact match - we got our command
-								logDebug(timedDebug, `Received ${commandType} for region=${regionName}, syncIndex=${syncIndex}`);
-								// Don't clear the message - we want to keep the latest for position tracking
-								cleanup();
-								resolve(ProcessAction.CONTINUE);
-								break;
-
-							case ProcessAction.RESYNC:
-								// We're behind - resync flags already set by processElementState
-								logDebug(timedDebug, 'Detected resync needed while waiting for %s', commandType);
-								// Send ACK for master's position to not block master during resync
-								await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
-								logDebug(
-									timedDebug,
-									'Sent ACK for master position %d before starting resync',
-									message.syncIndex,
-								);
-								cleanup();
-								resolve(ProcessAction.RESYNC);
-								break;
-
-							case ProcessAction.WAIT:
-								// We're ahead - send ACK for master's position but keep waiting
-								logDebug(
-									timedDebug,
-									'Slave ahead at %d, master at %d - sending ACK and waiting',
-									syncIndex,
-									message.syncIndex,
-								);
-								await this.sendAckForPosition(regionName, message.syncIndex, expectedState, syncGroup);
-								// Don't resolve - keep listening
-								break;
-							default:
-								// Should not happen
-								logDebug(timedDebug, 'Unexpected action from processElementState: %s', action);
-								break;
-						}
-					}
+				if (key !== 'sync-coordination' || !value) {
+					return;
 				}
+
+				const result = this.evaluateLiveCommandMessage(value as SyncMessage, ctx);
+				if (!result) {
+					return; // Not relevant, keep listening
+				}
+
+				if (result.action === ProcessAction.WAIT) {
+					// Send ACK for master's position but keep waiting
+					if (result.ackIndex !== undefined) {
+						await this.sendAckForPosition(regionName, result.ackIndex, result.ackState!, syncGroup);
+					}
+					return; // Don't resolve - keep listening
+				}
+
+				// CONTINUE or RESYNC — cancel timeout and unsubscribe BEFORE async work
+				// (Issue #2 fix: prevents timeout from firing during await and clobbering resync state)
+				cleanup();
+				if (result.ackIndex !== undefined) {
+					await this.sendAckForPosition(regionName, result.ackIndex, result.ackState!, syncGroup);
+				}
+				resolve(result.action);
 			});
+		});
+	}
+
+	/**
+	 * Unified method to wait for commands and check sync status (slave side).
+	 * Handles cmd-prepare/cmd-play/cmd-finish messages (ACK protocol).
+	 * Returns action to take: CONTINUE (proceed) or RESYNC (skip to resync target).
+	 */
+	private async waitForCommandAndCheckSync(
+		commandType: SyncCommandType,
+		expectedState: 'prepared' | 'playing' | 'finished',
+		regionName: string,
+		syncIndex: number,
+		syncGroup: SyncGroup,
+		timedDebug?: TimedDebugger,
+		expectedPriorityLevel?: number,
+	): Promise<ProcessActionType> {
+		// Update slave position tracking
+		this.updateSlavePosition(regionName, syncIndex, expectedState);
+
+		// Check stored message for priority changes (may clear stale resync state)
+		this.handleStoredMessagePriority(syncGroup, commandType, regionName, expectedPriorityLevel, timedDebug);
+
+		// If actively resyncing and not at target yet, skip immediately
+		if (this.shouldSkipForResync(syncIndex, expectedState, timedDebug)) {
+			return ProcessAction.RESYNC;
+		}
+
+		// Log current positions for debugging
+		const positions = this.getPositions(regionName, expectedState, syncGroup);
+		logDebug(timedDebug, 'Current sync positions for %s %s: slave=%d, master=%d',
+			regionName, expectedState, positions.slave, positions.master);
+
+		// Try processing stored command (returns null if no stored message or WAIT)
+		const storedAction = this.tryProcessStoredCommand(
+			syncGroup, commandType, expectedState, syncIndex, regionName, timedDebug);
+		if (storedAction) return storedAction;
+
+		// Check cross-command priority change (cmd-play/cmd-finish vs stored cmd-prepare)
+		const crossAction = await this.checkCrossCommandPriorityChange(
+			syncGroup, commandType, regionName, expectedPriorityLevel, timedDebug);
+		if (crossAction) return crossAction;
+
+		// Wait for live messages via active listener
+		return this.waitForLiveCommand({
+			commandType, expectedState, regionName, syncIndex, syncGroup, timedDebug, expectedPriorityLevel,
 		});
 	}
 
