@@ -903,7 +903,8 @@ export class SMILElementController {
 		// Only relevant when waiting for cmd-play or cmd-finish (not cmd-prepare itself)
 		if (commandType !== 'cmd-prepare') {
 			const crossCheckMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName);
-			if (crossCheckMsg && this.hasPriorityChanged(regionName, crossCheckMsg.priorityLevel, expectedPriorityLevel)) {
+			if (crossCheckMsg && crossCheckMsg.priorityLevel !== undefined
+				&& this.hasPriorityChanged(regionName, crossCheckMsg.priorityLevel, expectedPriorityLevel)) {
 				logDebug(timedDebug,
 					'Cross-check: master cmd-prepare has priority %s while waiting for %s with priority %s - exiting wait',
 					crossCheckMsg.priorityLevel, commandType, expectedPriorityLevel);
@@ -1024,6 +1025,7 @@ export class SMILElementController {
 					if (commandType !== 'cmd-prepare'
 						&& message.type === 'cmd-prepare'
 						&& message.regionName === regionName
+						&& message.priorityLevel !== undefined
 						&& this.hasPriorityChanged(regionName, message.priorityLevel, expectedPriorityLevel)) {
 						logDebug(timedDebug,
 							'Live cross-check: cmd-prepare priority %s while waiting for %s priority %s - exiting wait',
