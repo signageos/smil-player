@@ -1774,7 +1774,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
 		if (this.shouldCoordinateSync(value.syncIndex)) {
-			const priorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, index);
+			const priorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.log('Coordinating preparation start for sync');
 			try {
 				const action = await this.elementController.coordinatePrepareStart(
@@ -1846,7 +1846,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
 		if (this.shouldCoordinateSync(value.syncIndex)) {
-			const preparePriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, index);
+			const preparePriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.log('Coordinating preparation completion for sync');
 			try {
 				await this.elementController.coordinatePrepareComplete(
