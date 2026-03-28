@@ -34,7 +34,7 @@ export class SmilPlayer implements ISmilPlayer {
 	private dataPrepare: PlaylistDataPrepare;
 	private isPollingForPlaylist: boolean = false;
 
-	constructor(smilUrl?: string) {
+	constructor(smilUrl?: string, private configOverrides?: Record<string, string>) {
 		this.smilUrl = smilUrl;
 		this.files = new FilesManager(sos);
 		this.xmlParser = new XmlParser();
@@ -46,6 +46,15 @@ export class SmilPlayer implements ISmilPlayer {
 	public start = async () => {
 		await sos.onReady();
 		debug('sOS is ready');
+
+		// Apply test-time config overrides (e.g. syncGroupName, syncDeviceId, syncServerUrl)
+		if (this.configOverrides) {
+			for (const [key, value] of Object.entries(this.configOverrides)) {
+				(sos.config as any)[key] = value;
+			}
+			debug('Applied config overrides: %O', Object.keys(this.configOverrides));
+		}
+
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
 

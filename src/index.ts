@@ -17,5 +17,10 @@ function getSmilUrlFromParams(): string | undefined {
 	return urlParams.get('smilUrl') || undefined;
 }
 
+function getConfigOverrides(): Record<string, string> | undefined {
+	return (window as any).__SYNC_CONFIG__ || undefined;
+}
+
 const smilUrl = getSmilUrlFromParams();
-new SmilPlayer(smilUrl).start();
+const configOverrides = getConfigOverrides();
+new SmilPlayer(smilUrl, configOverrides).start();
