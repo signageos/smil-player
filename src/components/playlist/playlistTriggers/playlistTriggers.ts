@@ -18,7 +18,6 @@ import {
 } from '../../../models/triggerModels';
 import { getRandomInt } from '../../files/tools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
 import set = require('lodash/set');
@@ -181,7 +180,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		// cancel wait for dynamic playlist sync to avoid deadlocks
 		if (dynamicPlaylistConfig?.syncId) {
 			try {
-				await (this.sos as FrontApplet).sync.cancelWait(
+				await this.sos.sync.cancelWait(
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
 			} catch (err) {
@@ -226,12 +225,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchSyncServerError = async () => {
-		(this.sos as FrontApplet).sync.onClosed(async (error?: Error) => {
+		this.sos.sync.onClosed(async (error?: Error) => {
 			if (error) {
 				try {
 					await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
 					await sleep(5e3);
-					await (this.sos as FrontApplet).management.power.appRestart();
+					await this.sos.management.power.appRestart();
 				} catch (e) {
 					debug('error while restarting: %O', e);
 				}
@@ -240,7 +239,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
-		(this.sos as FrontApplet).sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
+		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
 			debug(
 				`received udp request ${JSON.stringify(
 					dynamicPlaylistConfig,
@@ -310,7 +309,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			if (dynamicPlaylistConfig.action === 'start' && dynamicPlaylistConfig.syncId) {
 				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
 				await joinSyncGroup(
-					this.sos as FrontApplet,
+					this.sos,
 					this.synchronization,
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
@@ -336,7 +335,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchSyncTriggers = async () => {
-		(this.sos as FrontApplet).sync.onStatus(async (onStatus) => {
+		this.sos.sync.onStatus(async (onStatus) => {
 			try {
 				debug('received onStatus: %O', onStatus);
 				if (!onStatus.connectedPeers) {
@@ -560,7 +559,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				);
 			}
 
-			serialPort = await (this.sos as FrontApplet).hardware.openSerialPort({
+			serialPort = await this.sos.hardware.openSerialPort({
 				device: getConfigString(this.sos.config, 'serialPortDevice') ?? SMILTriggersEnum.nexmoDevice,
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
 			});

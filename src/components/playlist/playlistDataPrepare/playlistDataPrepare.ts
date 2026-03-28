@@ -13,7 +13,7 @@ import { convertRelativePathToAbsolute, getFileName, getProtocol } from '../../f
 import { createTickerElement } from '../tools/tickerTools';
 import { createDomElement } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
@@ -23,12 +23,10 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
-	protected sos: FrontApplet;
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
-	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
-		this.sos = sos;
 	}
 
 	/**

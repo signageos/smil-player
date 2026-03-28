@@ -1,4 +1,4 @@
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
 import { debug, getConfigString, sleep } from './generalTools';
@@ -23,7 +23,7 @@ export function initSyncObject(): Synchronization {
 }
 
 export async function broadcastEndActionToAllDynamics(
-	sos: FrontApplet,
+	sos: ISos,
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ) {
@@ -46,7 +46,7 @@ export async function broadcastEndActionToAllDynamics(
 const syncGroups = new Map<string, SyncGroup>();
 
 export async function joinAllSyncGroupsOnSmilStart(
-	sos: FrontApplet,
+	sos: ISos,
 	synchronization: Synchronization,
 	smilObject: SMILFileObject,
 ): Promise<void> {
@@ -72,7 +72,7 @@ export function getSyncGroup(groupName: string): SyncGroup | undefined {
 	return syncGroups.get(groupName);
 }
 
-async function createSyncGroup(sos: FrontApplet, groupName: string): Promise<SyncGroup> {
+async function createSyncGroup(sos: ISos, groupName: string): Promise<SyncGroup> {
 	if (syncGroups.has(groupName)) {
 		return syncGroups.get(groupName)!;
 	}
@@ -85,7 +85,7 @@ async function createSyncGroup(sos: FrontApplet, groupName: string): Promise<Syn
 }
 
 async function createTriggerSyncGroups(
-	sos: FrontApplet,
+	sos: ISos,
 	synchronization: Synchronization,
 	triggerInfo: ParsedTriggerInfo,
 ): Promise<boolean> {
@@ -105,7 +105,7 @@ async function createTriggerSyncGroups(
 	return false;
 }
 
-async function createRegionSyncGroups(sos: FrontApplet, synchronization: Synchronization, smilObject: SMILFileObject) {
+async function createRegionSyncGroups(sos: ISos, synchronization: Synchronization, smilObject: SMILFileObject) {
 	let result = false;
 	for (let [key, value] of Object.entries(smilObject.region)) {
 		if (!isNil(value.region)) {
@@ -139,7 +139,7 @@ async function createRegionSyncGroups(sos: FrontApplet, synchronization: Synchro
 	return result;
 }
 
-export async function connectSyncSafe(sos: FrontApplet, retryCount: number = 3) {
+export async function connectSyncSafe(sos: ISos, retryCount: number = 3) {
 	try {
 		const options = sos.config.syncServerUrl
 			? {
@@ -175,7 +175,7 @@ export function hasDynamicContent(smilObject: SMILFileObject): boolean {
 	return Object.keys(smilObject.dynamic).length > 0;
 }
 
-async function limitedAppRestart(sos: FrontApplet) {
+async function limitedAppRestart(sos: ISos) {
 	const restartCounter = getAppRestartCount();
 	if (restartCounter <= 3) {
 		incrementAppRestartCount();

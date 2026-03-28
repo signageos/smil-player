@@ -1,19 +1,18 @@
 import { debug } from '../tools/generalTools';
-import sos from '@signageos/front-applet';
 import { EventEmitter } from 'events';
 import { SMILVideo } from '../../../models/mediaModels';
 import { StreamEnums } from '../../../enums/mediaEnums';
-import { IStreamErrorEvent } from '@signageos/front-applet/es6/FrontApplet/Stream/streamEvents';
+import { ISos } from '../../../models/sosModels';
 
-class SmilEventEmitter extends EventEmitter {
-	constructor() {
+export class SmilEventEmitter extends EventEmitter {
+	constructor(sos: ISos) {
 		super();
 		sos.stream.onDisconnected((event) => {
 			this.emit(StreamEnums.disconnectedEvent);
 			debug('Stream: %O emitted onDisconnected event: %O', event);
 		});
 
-		sos.stream.onError((event: IStreamErrorEvent) => {
+		sos.stream.onError((event) => {
 			this.emit(StreamEnums.errorEvent);
 			debug('Stream: %O emitted onError event: %O', event);
 		});
@@ -43,5 +42,3 @@ export async function waitForSuccessOrFailEvents(
 		eventEmitter.once(failEvent, failListener);
 	});
 }
-
-export const smilEventEmitter = new SmilEventEmitter();

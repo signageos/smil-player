@@ -1,6 +1,6 @@
 import { initSyncObject } from './tools/syncTools';
 import { PlaylistProcessor } from './playlistProcessor/playlistProcessor';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../models/sosModels';
 import { FilesManager } from '../files/filesManager';
 import { PlaylistDataPrepare } from './playlistDataPrepare/playlistDataPrepare';
 import { PlaylistOptions } from '../../models/playlistModels';
@@ -18,7 +18,7 @@ export class SmilPlayerPlaylist {
 		randomPlaylist: {},
 	};
 
-	constructor(sos: FrontApplet, files: FilesManager) {
+	constructor(sos: ISos, files: FilesManager) {
 		this.processor = new PlaylistProcessor(sos, files, this.options);
 		this.dataPrepare = new PlaylistDataPrepare(sos, files, this.options);
 	}

@@ -14,7 +14,7 @@ import { ISos } from '../../../src/models/sosModels';
 import { PlaylistOptions } from '../../../src/models/playlistModels';
 import { initSyncObject } from '../../../src/components/playlist/tools/syncTools';
 
-function stub() {
+export function stub() {
 	const calls: any[][] = [];
 	let resolveValue: any = undefined;
 	const fn: any = (...args: any[]) => {
@@ -33,7 +33,7 @@ function stub() {
 	return fn;
 }
 
-export function createMockSos(): ISos & { [key: string]: any } {
+export function createMockSos(): ISos {
 	return {
 		config: {
 			playerName: 'testPlayer',
@@ -49,7 +49,41 @@ export function createMockSos(): ISos & { [key: string]: any } {
 			play: stub().resolves(undefined),
 			prepare: stub().resolves(undefined),
 			stop: stub().resolves(undefined),
+			onDisconnected: stub(),
+			onError: stub(),
 		},
+		fileSystem: {
+			listStorageUnits: stub().resolves([]),
+			listFiles: stub().resolves([]),
+			readFile: stub().resolves(''),
+			writeFile: stub().resolves(undefined),
+			deleteFile: stub().resolves(undefined),
+			getFile: stub().resolves({}),
+			exists: stub().resolves(false),
+			downloadFile: stub().resolves(undefined),
+			createDirectory: stub().resolves(undefined),
+			appendFile: stub().resolves(undefined),
+			extractFile: stub().resolves(undefined),
+			isDirectory: stub().resolves(false),
+		},
+		sync: {
+			connect: stub().resolves(undefined),
+			joinGroup: stub().resolves(undefined),
+			isMaster: stub().resolves(false),
+			broadcastValue: stub().resolves(undefined),
+			onStatus: stub(),
+			onValue: stub(),
+			cancelWait: stub().resolves(undefined),
+			onClosed: stub(),
+		},
+		command: { dispatch: stub().resolves(undefined) },
+		proofOfPlay: { recordItemPlayed: stub().resolves(undefined) },
+		management: {
+			getBrand: stub().resolves('test'),
+			power: { appRestart: stub().resolves(undefined) },
+		},
+		hardware: { openSerialPort: stub().resolves({}) },
+		onReady: stub().resolves(undefined),
 	} as any;
 }
 

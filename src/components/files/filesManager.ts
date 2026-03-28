@@ -5,8 +5,8 @@ import get = require('lodash/get');
 const isUrl = require('is-url-superb');
 import moment from 'moment';
 import path from 'path';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { ISos } from '../../models/sosModels';
 import {
 	convertRelativePathToAbsolute,
 	createCustomEndpointMessagePayload,
@@ -58,7 +58,7 @@ declare global {
 }
 
 export class FilesManager implements IFilesManager {
-	private sos: FrontApplet;
+	private sos: ISos;
 	private smilFileUrl: string;
 	private internalStorageUnit: IStorageUnit;
 	private offlineReportsInfoObject: {
@@ -71,7 +71,7 @@ export class FilesManager implements IFilesManager {
 		reportFileLimit: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 	};
 
-	constructor(sos: FrontApplet) {
+	constructor(sos: ISos) {
 		this.sos = sos;
 	}
 
