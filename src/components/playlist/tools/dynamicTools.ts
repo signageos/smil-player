@@ -2,12 +2,12 @@ import { CurrentlyPlaying, CurrentlyPlayingPriority } from '../../../models/play
 import { debug } from './generalTools';
 import { resolvePlayingDeferred } from './deferredTools';
 import set = require('lodash/set');
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 
-export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchronization, groupName: string) {
+export async function joinSyncGroup(sos: ISos, synchronization: Synchronization, groupName: string) {
 	await sos.sync.joinGroup({
 		groupName,
 		...(synchronization.syncDeviceId ? { deviceIdentification: synchronization.syncDeviceId } : {}),
@@ -15,7 +15,7 @@ export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchroni
 }
 
 export async function broadcastSyncValue(
-	sos: FrontApplet,
+	sos: ISos,
 	dynamicPlaylistConfig: Partial<DynamicPlaylist>,
 	groupName: string,
 	action: string,
@@ -35,7 +35,7 @@ export async function broadcastSyncValue(
 
 export async function cancelDynamicPlaylistMaster(
 	triggers: PlaylistTriggers,
-	sos: FrontApplet,
+	sos: ISos,
 	currentlyPlaying: CurrentlyPlaying,
 	synchronization: Synchronization,
 	currentlyPlayingPriority: CurrentlyPlayingPriority,

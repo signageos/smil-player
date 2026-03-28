@@ -1,7 +1,6 @@
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { defaults as config } from '../../config/parameters';
-import sos from '@signageos/front-applet';
+import { ISos } from '../models/sosModels';
 import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
 import { FileStructure } from '../enums/fileEnums';
@@ -34,7 +33,7 @@ export class SmilPlayer implements ISmilPlayer {
 	private dataPrepare: PlaylistDataPrepare;
 	private isPollingForPlaylist: boolean = false;
 
-	constructor(smilUrl?: string, private configOverrides?: Record<string, string>) {
+	constructor(private sos: ISos, smilUrl?: string, private configOverrides?: Record<string, string>) {
 		this.smilUrl = smilUrl;
 		this.files = new FilesManager(sos);
 		this.xmlParser = new XmlParser();
@@ -44,13 +43,13 @@ export class SmilPlayer implements ISmilPlayer {
 	}
 
 	public start = async () => {
-		await sos.onReady();
+		await this.sos.onReady();
 		debug('sOS is ready');
 
 		// Apply test-time config overrides (e.g. syncGroupName, syncDeviceId, syncServerUrl)
 		if (this.configOverrides) {
 			for (const [key, value] of Object.entries(this.configOverrides)) {
-				(sos.config as any)[key] = value;
+				(this.sos.config as Record<string, unknown>)[key] = value;
 			}
 			debug('Applied config overrides: %O', Object.keys(this.configOverrides));
 		}
@@ -58,12 +57,12 @@ export class SmilPlayer implements ISmilPlayer {
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
 
-		if (sos.config.debugEnabled === true || sos.config.debugEnabled === 'true') {
+		if (this.sos.config.debugEnabled === true || this.sos.config.debugEnabled === 'true') {
 			debug('Debug enabled in config, enabling debug logs');
 			Debug.enable('@signageos/smil-player:*');
 		}
 
-		let smilUrl = this.smilUrl ? this.smilUrl : sos.config.smilUrl;
+		let smilUrl = this.smilUrl ? this.smilUrl : this.sos.config.smilUrl;
 
 		if (isNil(smilUrl)) {
 			throw new Error('No valid smil url provided');
@@ -76,7 +75,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 		debug('Smil file url is: %s', smilUrl);
 
-		const storageUnits = await sos.fileSystem.listStorageUnits();
+		const storageUnits = await this.sos.fileSystem.listStorageUnits();
 
 		// reference to persistent storage unit, where player stores all content
 		const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable)!;
@@ -94,7 +93,7 @@ export class SmilPlayer implements ISmilPlayer {
 			try {
 				const startVersion = this.processor.getPlaylistVersion();
 				debug('One smil iteration finished START' + startVersion);
-				await this.main(internalStorageUnit, smilUrl, sos);
+				await this.main(internalStorageUnit, smilUrl);
 				const finishVersion = this.processor.getPlaylistVersion();
 				if (startVersion < finishVersion) {
 					debug('Playlist ended and was replaced with new version of playlist');
@@ -146,12 +145,12 @@ export class SmilPlayer implements ISmilPlayer {
 	}
 
 	private async downloadBackupImage(): Promise<void> {
-		if (isNil(sos.config.backupImageUrl)) {
+		if (isNil(this.sos.config.backupImageUrl)) {
 			return;
 		}
 
 		const backupImageObject: SMILFile = {
-			src: getConfigString(sos.config, 'backupImageUrl')!,
+			src: getConfigString(this.sos.config, 'backupImageUrl')!,
 		};
 
 		try {
@@ -186,8 +185,8 @@ export class SmilPlayer implements ISmilPlayer {
 			document.documentElement.clientWidth >= document.documentElement.clientHeight
 				? backupImageLandscape
 				: backupImagePortrait;
-		const backupImageUrl = !isNil(sos.config.backupImageUrl)
-			? sos.config.backupImageUrl
+		const backupImageUrl = !isNil(this.sos.config.backupImageUrl)
+			? this.sos.config.backupImageUrl
 			: orientedBackupImage;
 
 		debug('Starting to play backup image');
@@ -195,7 +194,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const regionInfo = <SMILFileObject> getDefaultRegion();
 
 		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
-		if (isNil(sos.config.backupImageUrl)) {
+		if (isNil(this.sos.config.backupImageUrl)) {
 			backupPlaylist.seq.img.localFilePath = backupImageUrl;
 		}
 		await this.processor.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
@@ -204,7 +203,6 @@ export class SmilPlayer implements ISmilPlayer {
 	private main = async (
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
-		thisSos: FrontApplet,
 		playIntro: boolean = true,
 		firstIteration: boolean = true,
 		ignoreInvalidSmil: boolean = false,
@@ -212,7 +210,7 @@ export class SmilPlayer implements ISmilPlayer {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
-		config.videoOptions.background = getConfigBoolean(sos.config, 'videoBackground', false);
+		config.videoOptions.background = getConfigBoolean(this.sos.config, 'videoBackground', false);
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};
@@ -254,7 +252,7 @@ export class SmilPlayer implements ISmilPlayer {
 				}
 
 				// Always try to read from local storage (works with fresh download or cached file)
-				smilFileContent = await thisSos.fileSystem.readFile({
+				smilFileContent = await this.sos.fileSystem.readFile({
 					storageUnit: internalStorageUnit,
 					filePath: `${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
 				});
@@ -335,7 +333,6 @@ export class SmilPlayer implements ISmilPlayer {
 					this.main(
 						internalStorageUnit,
 						smilUrl,
-						thisSos,
 						false,
 						false,
 						smilObject.refresh.fallbackToPreviousPlaylist,
@@ -360,7 +357,6 @@ export class SmilPlayer implements ISmilPlayer {
 					await this.fallbackToPreviousPlaylist(
 						internalStorageUnit,
 						smilUrl,
-						thisSos,
 						SMILEnums.defaultRefresh * 1000,
 					);
 					return;
@@ -386,7 +382,6 @@ export class SmilPlayer implements ISmilPlayer {
 					return await this.fallbackToPreviousPlaylist(
 						internalStorageUnit,
 						smilUrl,
-						thisSos,
 						SMILEnums.defaultDownloadRetry * 1000,
 					);
 				}
@@ -400,7 +395,6 @@ export class SmilPlayer implements ISmilPlayer {
 	private fallbackToPreviousPlaylist = async (
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
-		thisSos: FrontApplet,
 		interval: number,
 	): Promise<void> => {
 		if (this.isPollingForPlaylist) {
@@ -413,7 +407,7 @@ export class SmilPlayer implements ISmilPlayer {
 		return new Promise<void>((resolve) => {
 			const intervalId = setInterval(
 				async () => {
-					const response = await this.main(internalStorageUnit, smilUrl, thisSos, false, false, true);
+					const response = await this.main(internalStorageUnit, smilUrl, false, false, true);
 					if (response !== smilUpdate.invalid) {
 						console.debug('Found valid smil file, exiting invalid smil loop');
 						this.isPollingForPlaylist = false;

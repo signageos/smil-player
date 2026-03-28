@@ -1,4 +1,5 @@
 import { SmilPlayer } from './components/smilPlayer';
+import sos from '@signageos/front-applet';
 
 function getSmilUrlFromParams(): string | undefined {
 	// Check for injected smilUrl (set by Playwright addInitScript)
@@ -23,4 +24,4 @@ function getConfigOverrides(): Record<string, string> | undefined {
 
 const smilUrl = getSmilUrlFromParams();
 const configOverrides = getConfigOverrides();
-new SmilPlayer(smilUrl, configOverrides).start();
+new SmilPlayer(sos, smilUrl, configOverrides).start();

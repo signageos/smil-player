@@ -9,7 +9,6 @@ import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
 import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
 import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/filesModels';
@@ -57,7 +56,7 @@ import Video from '@signageos/front-applet/es6/FrontApplet/Video/Video';
 import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
-import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
+import { SmilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
 import { createLocalFilePath, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -92,6 +91,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private smilObject: SMILFileObject;
 	private elementController: SMILElementController;
 	private traverser: PlaylistTraverser;
+	private readonly smilEventEmitter: SmilEventEmitter;
 
 	constructor(
 		sos: ISos,
@@ -109,6 +109,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.playerId = getConfigString(this.sos.config, 'playerId') ?? '';
 		this.elementController = new SMILElementController(this.synchronization);
 		this.traverser = new PlaylistTraverser(this.createEngine());
+		this.smilEventEmitter = new SmilEventEmitter(sos);
 	}
 
 	private createEngine(): IPlaylistEngine {
@@ -411,7 +412,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			if (dynamicPlaylistConfig.syncId) {
 				const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-				await joinSyncGroup(this.sos as FrontApplet, this.synchronization, syncGroupName);
+				await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
 				debug(
 					'Master dynamic playlist: %O is joining sync group: %s with timestamp: %s',
 					dynamicPlaylistConfig,
@@ -420,7 +421,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				);
 			}
 			await broadcastSyncValue(
-				this.sos as FrontApplet,
+				this.sos,
 				dynamicPlaylistConfig,
 				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 				'start',
@@ -429,7 +430,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
 					await broadcastSyncValue(
-						this.sos as FrontApplet,
+						this.sos,
 						dynamicPlaylistConfig,
 						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
 						'start',
@@ -1180,7 +1181,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			);
 			await cancelDynamicPlaylistMaster(
 				this.triggers,
-				this.sos as FrontApplet,
+				this.sos,
 				this.currentlyPlaying,
 				this.synchronization,
 				this.currentlyPlayingPriority,
@@ -1608,7 +1609,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		promiseRaceArray.push(
-			waitForSuccessOrFailEvents(smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent),
+			waitForSuccessOrFailEvents(this.smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent),
 		);
 
 		try {
@@ -1755,7 +1756,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return;
 		}
 
-		let sosVideoObject: Video | Stream = this.sos.video as Video;
+		let sosVideoObject: Video | Stream = this.sos.video;
 		let params: VideoParams = getDefaultVideoParams();
 		let element = document.getElementById(value.id ?? '') as HTMLElement;
 
@@ -1973,7 +1974,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	> => {
 		timedDebug.log('Starting video preparation for: %O', value);
 
-		const sosVideoObject: Video | Stream = isNil(value.isStream) ? (this.sos.video as Video) : (this.sos.stream as Stream);
+		const sosVideoObject = isNil(value.isStream) ? this.sos.video : this.sos.stream;
 		const options = isNil(value.isStream) ? config.videoOptions : value.protocol;
 		const videoPath = isNil(value.isStream) ? value.localFilePath : value.src;
 		const params: VideoParams = [
@@ -2209,13 +2210,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (this.sos.config.syncGroupName) {
 				debug('SyncGroupName is defined, starting sync setup');
 				if (firstIteration) {
-					await connectSyncSafe(this.sos as FrontApplet);
+					await connectSyncSafe(this.sos);
 				}
 
-				await joinAllSyncGroupsOnSmilStart(this.sos as FrontApplet, this.synchronization, this.smilObject);
+				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
 
 				if (firstIteration && hasDynamicContent(this.smilObject)) {
-					await broadcastEndActionToAllDynamics(this.sos as FrontApplet, this.synchronization, this.smilObject);
+					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
 				}
 				// give some time for master selection
 				await sleep(500);

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import Debug from 'debug';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { IMasterStatusProvider } from './IMasterStatusProvider';
 
 const debug = Debug('@signageos/smil-player:syncGroup');
@@ -23,7 +23,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	private connectedPeers: string[] = [];
 
 	constructor(
-		private sos: FrontApplet,
+		private sos: ISos,
 		public readonly groupName: string,
 		deviceId?: string,
 	) {

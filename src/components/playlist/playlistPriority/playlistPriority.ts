@@ -6,7 +6,6 @@ import { cloneDeep, isEqual, isNil } from 'lodash';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { ISos } from '../../../models/sosModels';
-import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
 import { PriorityRule } from '../../../enums/priorityEnums';
@@ -187,7 +186,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				debug('Dynamic playlist finished: %O for region: %s', currentIndexPriority.media, priorityRegionName);
 				await cancelDynamicPlaylistMaster(
 					triggers,
-					this.sos as FrontApplet,
+					this.sos,
 					this.currentlyPlaying,
 					this.synchronization,
 					this.currentlyPlayingPriority,
