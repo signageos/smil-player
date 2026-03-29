@@ -11,27 +11,27 @@ test.describe('videoStreams.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader video visible
-		await expect(page.locator('video[src*="videos/loader_fe864e57.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await testCoordinates(page.locator('video[src*="videos/loader_fe864e57.mp4"]'), 0, 0, 1920, 1080);
+		await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await testCoordinates(page.locator('video[src*="videos/loader_871e2ff0.mp4"]'), 0, 0, 1920, 1080);
 
 		// Loader hides, landscape image visible in top-right
-		await expect(page.locator('video[src*="videos/loader_fe864e57.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="landscape1_7a8cff48.jpg-top-right-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="landscape1_7a8cff48.jpg-top-right-img1"]'), 0, 960, 960, 540);
+		await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]'), 0, 960, 960, 540);
 
 		// Landscape image hides, local video visible in top-right
-		await expect(frame.locator('img[id*="landscape1_7a8cff48.jpg-top-right-img1"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_54188510.mp4"]'), 0, 960, 960, 540);
+		await expect(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]'), 0, 960, 960, 540);
 
 		// Local video hides, stream video visible in top-right
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video[src*="https://www.rmp-streaming.com/media/bbb-360p.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(page.locator('video[src*="https://www.rmp-streaming.com/media/bbb-360p.mp4"]'), 0, 960, 960, 540);
 
 		// Stream video hides, landscape image loops back
 		await expect(page.locator('video[src*="https://www.rmp-streaming.com/media/bbb-360p.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="landscape1_7a8cff48.jpg-top-right-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="landscape1_7a8cff48.jpg-top-right-img1"]'), 0, 960, 960, 540);
+		await expect(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]'), 0, 960, 960, 540);
 	});
 });

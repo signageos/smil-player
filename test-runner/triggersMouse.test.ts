@@ -11,26 +11,26 @@ test.describe('triggersMouse.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Initial video visible
-		await expect(page.locator('video[src*="videos/video-test_17354648.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await testCoordinates(page.locator('video[src*="videos/video-test_17354648.mp4"]'), 10, 10, 1280, 720);
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 10, 10, 1280, 720);
 
 		// First mouse click trigger
 		await page.waitForTimeout(Timeouts.transition);
 		await page.click('body');
 
 		// Triggered video visible
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_54188510.mp4"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]'), 10, 10, 640, 720);
 
 		// Triggered video hides, img3 visible
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]'), 10, 10, 640, 720);
 
 		// img3 hides, img1 visible (back to main playlist)
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img1"]'), 10, 10, 1280, 720);
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img1"]'), 10, 10, 1280, 720);
 
 		await page.waitForTimeout(Timeouts.transition);
 
@@ -38,41 +38,41 @@ test.describe('triggersMouse.smil test', () => {
 		await page.click('body');
 
 		// Triggered video visible again
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_54188510.mp4"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]'), 10, 10, 640, 720);
 
 		// Click during triggered content
 		await page.click('body');
 
 		// Triggered video hides, img3 visible
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]'), 10, 10, 640, 720);
 
 		// Click during img3
 		await page.click('body');
 
 		// Triggered video visible, img3 hides
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_54188510.mp4"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]'), 10, 10, 640, 720);
 
 		// Click again
 		await page.click('body');
 
 		// Triggered video hides, img3 visible
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]'), 10, 10, 640, 720);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]'), 10, 10, 640, 720);
 
 		// Main video loops back, img3 hides
-		await expect(page.locator('video[src*="videos/video-test_17354648.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_17354648.mp4"]'), 10, 10, 1280, 720);
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 10, 10, 1280, 720);
 
 		// Main video hides, img1 visible
-		await expect(page.locator('video[src*="videos/video-test_17354648.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_beb3_e6b35b8b.jpg-video-img1"]'), 10, 10, 1280, 720);
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img1"]'), 10, 10, 1280, 720);
 	});
 });

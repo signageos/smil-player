@@ -11,15 +11,15 @@ test.describe('widgetExtensions.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// All four widget iframes visible
-		await expect(frame.locator('iframe[id*="index_f86c9931.html-top-right-ref1"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await expect(frame.locator('iframe[id*="index_5922c6df.html-top-left-ref2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('iframe[id*="index_01d0e4ae.html-bottom-right-ref3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('iframe[id*="index_c60fe849.html-bottom-left-ref4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('iframe[id*="index"][id*=".html-top-right-ref1"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await expect(frame.locator('iframe[id*="index"][id*=".html-top-left-ref2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('iframe[id*="index"][id*=".html-bottom-right-ref3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('iframe[id*="index"][id*=".html-bottom-left-ref4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// Check coordinates for all four quadrants
-		await testCoordinates(frame.locator('iframe[id*="index_f86c9931.html-top-right-ref1"]'), 0, 960, 960, 540);
-		await testCoordinates(frame.locator('iframe[id*="index_5922c6df.html-top-left-ref2"]'), 0, 0, 960, 540);
-		await testCoordinates(frame.locator('iframe[id*="index_01d0e4ae.html-bottom-right-ref3"]'), 540, 960, 960, 540);
-		await testCoordinates(frame.locator('iframe[id*="index_c60fe849.html-bottom-left-ref4"]'), 540, 0, 960, 540);
+		await testCoordinates(frame.locator('iframe[id*="index"][id*=".html-top-right-ref1"]'), 0, 960, 960, 540);
+		await testCoordinates(frame.locator('iframe[id*="index"][id*=".html-top-left-ref2"]'), 0, 0, 960, 540);
+		await testCoordinates(frame.locator('iframe[id*="index"][id*=".html-bottom-right-ref3"]'), 540, 960, 960, 540);
+		await testCoordinates(frame.locator('iframe[id*="index"][id*=".html-bottom-left-ref4"]'), 540, 0, 960, 540);
 	});
 });
