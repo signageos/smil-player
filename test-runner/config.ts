@@ -4,6 +4,7 @@ export const Timeouts = {
 	firstElement: 90000, // webpack compile + asset download on first load
 	elementAwait: 13000, // standard element visibility wait
 	longerElementAwait: 15000,
+	priorityTransition: 30000, // wallclock-based priority window end + iteration-finish tail
 	transition: 1000,
 	videoTransition: 5300,
 };

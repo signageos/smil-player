@@ -9,7 +9,7 @@ test.describe('noAdditionalSeq.smil test', () => {
 
 		await page.goto(`/?duid=${DUID}`);
 
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await expect(page.locator('video[src*="videos/video-test_54188510.mp4"]')).toHaveCount(4);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toHaveCount(4);
 	});
 });
