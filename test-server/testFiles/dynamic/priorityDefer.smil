@@ -47,7 +47,7 @@
                             <seq repeatCount="indefinite">
                                 <excl begin="0" repeatCount="indefinite">
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
-                                        <par begin="PRIORITY_1_BEGIN" end="PRIORITY_1_END">
+                                        <par begin="DEFER_P1_BEGIN" end="DEFER_P1_END">
                                             <seq repeatCount="indefinite">
                                                 <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                                        id="annons0" fit="hidden" region="video">
@@ -61,7 +61,7 @@
                                         </par>
                                     </priorityClass>
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
-                                        <par begin="PRIORITY_2_BEGIN" end="PRIORITY_2_END">
+                                        <par begin="DEFER_P2_BEGIN" end="DEFER_P2_END">
                                             <seq repeatCount="indefinite">
                                                 <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg"
                                                      id="annons1" dur="3s" fit="hidden" region="video">
@@ -79,7 +79,7 @@
                                         </par>
                                     </priorityClass>
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
-                                        <par begin="PRIORITY_3_BEGIN" end="PRIORITY_3_END">
+                                        <par begin="DEFER_P3_BEGIN" end="DEFER_P3_END">
                                             <seq repeatCount="indefinite">
                                                 <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
                                                      id="annons1" dur="3s" fit="hidden" region="video">

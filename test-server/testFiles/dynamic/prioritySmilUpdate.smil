@@ -1,6 +1,7 @@
 <smil>
     <head>
-        <meta http-equiv="Refresh" content="444"/>
+        <!-- Short refresh interval (5s) so ResourceChecker detects update quickly -->
+        <meta http-equiv="Refresh" content="5"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
             <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF"
@@ -27,27 +28,22 @@
 
     <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
 
-        <!-- Paralel playback sequence, all below is happening at the same time -->
         <par>
-            <!-- Preloader to show something before the full content is loaded and ready -->
-            <!-- This <seq> will happend first followed by the next seq -->
             <seq end="__prefetchEnd.endEvent">
                 <seq repeatCount="indefinite">
-                    <!-- Play waiting prompt -->
                     <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
                 </seq>
             </seq>
 
-            <!-- Once all ready, the playback of the full content will start -->
             <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
                 <excl repeatCount="indefinite">
                     <priorityClass lower="never" peer="stop" higher="stop">
-                        <!-- Scheduled playback loop -->
                         <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
                             <seq repeatCount="indefinite">
                                 <excl begin="0" repeatCount="indefinite">
+                                    <!-- P_high (highest priority): active in Phase 1, expired in Phase 2 -->
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
-                                        <par begin="STOP_P1_BEGIN" end="STOP_P1_END">
+                                        <par begin="UPDATE_P_HIGH_BEGIN" end="UPDATE_P_HIGH_END">
                                             <seq repeatCount="indefinite">
                                                 <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                                        id="annons0" fit="hidden" region="video">
@@ -60,36 +56,15 @@
                                             </seq>
                                         </par>
                                     </priorityClass>
-                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
-                                        <par begin="STOP_P2_BEGIN" end="STOP_P2_END">
+                                    <!-- P_low (lower priority): always active, plays only when P_high is absent -->
+                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
+                                        <par begin="UPDATE_P_LOW_BEGIN" end="UPDATE_P_LOW_END">
                                             <seq repeatCount="indefinite">
-                                                <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg"
-                                                     id="annons1" dur="3s" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto"/>
-                                                </img>
-                                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
-                                                       id="annons0" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto"/>
-                                                </video>
-                                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
-                                                       id="annons0" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto"/>
-                                                </video>
-                                            </seq>
-                                        </par>
-                                    </priorityClass>
-                                    <priorityClass higher="stop" pauseDisplay="hide" lower="defer">
-                                        <par begin="STOP_P3_BEGIN" end="STOP_P3_END">
-                                            <seq repeatCount="indefinite">
-                                                <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
-                                                     id="annons1" dur="3s" fit="hidden" region="video">
-                                                    <param name="cacheControl" value="auto"/>
-                                                </img>
                                                 <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
                                                      id="annons1" dur="3s" fit="hidden" region="video">
                                                     <param name="cacheControl" value="auto"/>
                                                 </img>
-                                                <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                                <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                                                        id="annons0" fit="hidden" region="video">
                                                     <param name="cacheControl" value="auto"/>
                                                 </video>
@@ -100,8 +75,8 @@
                             </seq>
                         </par>
                     </priorityClass>
-                </excl> <!-- 1 -->
+                </excl>
             </par>
-        </par> <!-- /1 -->
+        </par>
     </body>
 </smil>
