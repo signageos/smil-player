@@ -7,7 +7,7 @@ const expect = chai.expect;
 
 describe('priorityTools', () => {
 	describe('createPriorityObject', () => {
-		it('Should use provided lower, peer, and pauseDisplay values', () => {
+		it('Should use provided lower, peer, higher, and pauseDisplay values', () => {
 			const input: PriorityObject = {
 				priorityLevel: 0,
 				maxPriorityLevel: 0,
@@ -19,6 +19,7 @@ describe('priorityTools', () => {
 			const result = createPriorityObject(input, 1, 3);
 			expect(result.lower).to.equal('never');
 			expect(result.peer).to.equal('stop');
+			expect(result.higher).to.equal('pause');
 			expect(result.pauseDisplay).to.equal('hide');
 		});
 
@@ -34,19 +35,8 @@ describe('priorityTools', () => {
 			const result = createPriorityObject(input, 1, 3);
 			expect(result.lower).to.equal(PriorityDefault.lower);
 			expect(result.peer).to.equal(PriorityDefault.peer);
+			expect(result.higher).to.equal(PriorityDefault.higher);
 			expect(result.pauseDisplay).to.equal(PriorityDefault.pauseDisplay);
-		});
-
-		it('Should always set higher to stop', () => {
-			const input: PriorityObject = {
-				priorityLevel: 0,
-				maxPriorityLevel: 0,
-				lower: 'never',
-				peer: 'stop',
-				higher: 'pause',
-			};
-			const result = createPriorityObject(input, 2, 5);
-			expect(result.higher).to.equal('stop');
 		});
 
 		it('Should pass through priorityLevel and maxPriorityLevel', () => {

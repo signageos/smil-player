@@ -351,6 +351,17 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				currentIndexPriority,
 			);
 
+			// handleStopBehaviour/handlePauseBehaviour act on previousPlayingIndex (the higher
+			// element). In this branch, stopping/pausing the higher element is incorrect —
+			// a lower-priority arrival should never interrupt higher-priority content.
+			// Remap: stop → never (skip the lower), pause → defer (lower waits).
+			let lowerRule = previousIndexPriority.priority.lower;
+			if (lowerRule === PriorityRule.stop) {
+				lowerRule = PriorityRule.never;
+			} else if (lowerRule === PriorityRule.pause) {
+				lowerRule = PriorityRule.defer;
+			}
+
 			await this.handlePriorityRules(
 				elementKey,
 				priorityObject,
@@ -359,7 +370,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				previousPlayingIndex,
 				parent,
 				endTime,
-				previousIndexPriority.priority.lower,
+				lowerRule,
 			);
 		}
 		debug('finished handling priority before play');
@@ -651,10 +662,9 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		}
 
 		// during playlist pause was exceeded its endTime, dont play it and return from function, if endtime is 0, play indefinitely
-		// TODO: previously currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime
 		if (
 			(currentIndexPriority.player.endTime <= Date.now() && currentIndexPriority.player.endTime > 1000) ||
-			(currentIndexPriority.player.timesPlayed > currentIndexPriority.player.endTime &&
+			(currentIndexPriority.player.timesPlayed >= currentIndexPriority.player.endTime &&
 				currentIndexPriority.player.endTime !== 0)
 		) {
 			// TODO: experimental, reset timesPlayed
