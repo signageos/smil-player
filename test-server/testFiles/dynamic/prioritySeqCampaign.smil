@@ -1,0 +1,91 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="444"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft"/>
+        </layout>
+
+        <metadata>
+            <x-server xmlns="http://schemas.adfotain.org/adapi-1.0">
+
+                <subscriptionList>
+
+                    <subscription>
+                        <type>SystemReport</type>
+                        <action>https://demo.signageos.io/smil/zones/play/report/?player=99</action>
+                        <method>put</method>
+                    </subscription>
+
+                </subscriptionList>
+
+            </x-server>
+        </metadata>
+
+    </head>
+
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Production-style campaign playlist (mirrors cypress/testFiles/playlist.smil structure) -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <!-- Higher priority (first priorityClass = highest priorityLevel) -->
+                            <!-- Defaults: lower="defer", peer="never", higher="stop" (hardcoded) -->
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <!-- Campaign A: video-test-1 + img_1, plays once per cycle -->
+                                    <seq repeatCount="1" begin="SEQ_CAMP_HIGH_BEGIN" end="SEQ_CAMP_HIGH_END">
+                                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                               id="annons0" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </video>
+                                        <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg"
+                                             id="annons1" dur="3s" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </img>
+                                    </seq>
+                                    <!-- Campaign B: img_3, plays once per cycle -->
+                                    <seq repeatCount="1" begin="SEQ_CAMP_HIGH_BEGIN" end="SEQ_CAMP_HIGH_END">
+                                        <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg"
+                                             id="annons1" dur="3s" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </img>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <!-- Lower priority (second priorityClass = lower priorityLevel) -->
+                            <!-- higher="pause" respected from SMIL but never triggered in this test
+                                 because lower-priority content never plays during the high-priority window -->
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+                                    <!-- Campaign C: img_2 + video-test-2, always active (no wallclock) -->
+                                    <seq repeatCount="1">
+                                        <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                                             id="annons1" dur="3s" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </img>
+                                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                                               id="annons0" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </video>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

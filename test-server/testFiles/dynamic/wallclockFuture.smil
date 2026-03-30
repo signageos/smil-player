@@ -47,7 +47,7 @@
                             <seq repeatCount="indefinite">
                                 <excl begin="0" repeatCount="indefinite">
                                     <priorityClass higher="stop" pauseDisplay="hide" lower="defer" peer="stop">
-                                        <par begin="PRIORITY_1_BEGIN" end="PRIORITY_1_END">
+                                        <par begin="FUTURE_P1_BEGIN" end="FUTURE_P1_END">
                                             <seq repeatCount="indefinite">
                                                 <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                                        id="annons0" fit="hidden" region="video">

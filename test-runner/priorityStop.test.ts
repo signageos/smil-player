@@ -96,10 +96,10 @@ test.describe('priorityStop.smil test', () => {
 		await expect(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]'), 0, 0, 1280, 720);
 
-		// await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		// await expect(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		// await testCoordinates(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]'), 0, 0, 1280, 720);
-
+		// P2 wallclock ends → P1 (highest priority) resumes.
+		// P1 continues from where it was stopped in its seq, NOT from the first element.
+		// This is because handlePrecedingContentStop defers remaining seq elements until the
+		// blocking higher-priority content finishes, then releases them in order.
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]'), 0, 0, 1280, 720);
