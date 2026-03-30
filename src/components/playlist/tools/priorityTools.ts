@@ -11,8 +11,7 @@ export function createPriorityObject(
 		maxPriorityLevel,
 		lower: priorityClass.lower ?? PriorityDefault.lower,
 		peer: priorityClass.peer ?? PriorityDefault.peer,
-		// TODO: default stop for higher priority for Dynamic Content
-		higher: 'stop',
+		higher: priorityClass.higher ?? PriorityDefault.higher,
 		pauseDisplay: priorityClass.pauseDisplay ?? PriorityDefault.pauseDisplay,
 	};
 }
