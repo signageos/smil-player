@@ -306,6 +306,10 @@ export class PlaylistTraverser {
 					if (parent.startsWith('seq') && !hasPriority) {
 						let anyActive = false;
 						for (const elem of value) {
+							if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+								continue;
+							}
+
 							let timeToStart = -1;
 							let timeToEnd = elem.repeatCount ? parseInt(elem.repeatCount as string) : 0;
 
@@ -339,6 +343,10 @@ export class PlaylistTraverser {
 
 					let anyActive = false;
 					for (const elem of value) {
+						if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+							continue;
+						}
+
 						if (elem.hasOwnProperty(ExprTag)) {
 							conditionalExpr = elem[ExprTag];
 						}
