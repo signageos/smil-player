@@ -2,7 +2,7 @@
 
 ## Summary
 
-- **11 passing**, **4 skipped** (code bugs), **0 failing**
+- **12 passing**, **3 skipped** (code bugs), **0 failing**
 - Run with: `npx playwright test test-runner/priority`
 
 ## Test Status
@@ -23,7 +23,7 @@
 | priorityPeerStop | **SKIP** | Code bug #2 |
 | priorityDeferInterrupt | PASS | Deferred element survives blocker replacement by higher priority |
 | priorityOscillation | PASS | Stop-resume-stop-resume oscillation across two wallclock windows |
-| prioritySeqCampaign | **SKIP** | Code bug #4 |
+| prioritySeqCampaign | PASS | Expired non-recurring wallclocks now release lower-priority content |
 
 ## Code Bugs Blocking Skipped Tests
 
@@ -69,14 +69,12 @@ The priority system's visibility restoration (`playHtmlContent` line 794: `eleme
 
 ---
 
-### Bug #4: Expired non-recurring wallclocks don't release lower-priority content
+### Bug #4: Expired non-recurring wallclocks don't release lower-priority content (FIXED)
 
 **File:** `src/components/playlist/playlistProcessor/playlistTraverser.ts`
 
-When all campaigns in a higher-priority `priorityClass` have expired wallclocks (absolute wallclock without `R/` recurrence), the outer `seq repeatCount="indefinite"` loops indefinitely skipping all expired campaigns. The priority system never signals that the higher priority is done, so lower-priority content remains deferred forever.
+**Root cause:** `allNeverPlay = false` was set before the `timeToEnd < Date.now()` expiry check in multiple branches (seq wallclock, par wallclock, par array). Expired content falsely cleared the flag, preventing `processPlaylist()` from returning `allExpired`, so `runEndlessLoop()` never broke.
 
-The production SMIL uses recurring wallclocks (`R/`) which re-activate daily, avoiding this issue.
+**Fix:** Moved `allNeverPlay = false` to after the expiry check in all affected branches, so it's only set when content will actually play.
 
-**Impact:** Non-recurring wallclock expiry with multi-level priority transitions is broken — lower-priority content never plays after higher-priority campaigns expire.
-
-**Tests affected:** prioritySeqCampaign
+**Tests fixed:** prioritySeqCampaign

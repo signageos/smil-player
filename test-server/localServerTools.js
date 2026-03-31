@@ -61,9 +61,9 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             break;
         case enums_1.SMILUrls.prioritySeqCampaign.split('/').pop():
             // Production-style: absolute wallclock (no R/ recurrence), seq-based campaign rotation.
-            // High priority campaigns active for 50s, then expire → low priority plays.
+            // High priority campaigns active for 30s, then expire → low priority plays.
             parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_BEGIN/g, `wallclock(${formatDate(moment())})`);
-            parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_END/g, `wallclock(${formatDate(moment().add(50, 'seconds'))})`);
+            parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_END/g, `wallclock(${formatDate(moment().add(30, 'seconds'))})`);
             break;
         case enums_1.SMILUrls.priorityPeerDefer.split('/').pop():
             // Peer A active for 30s, Peer B active for 60s. Both start at +0s.

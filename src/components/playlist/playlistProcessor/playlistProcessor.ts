@@ -138,6 +138,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				runEndlessLoop: self.runEndlessLoop,
 				getPlaylistVersion: self.getPlaylistVersion,
 				getCancelFunction: self.getCancelFunction,
+				cleanupExpiredPriority: self.cleanupExpiredPriority.bind(self),
 			},
 		};
 	}
