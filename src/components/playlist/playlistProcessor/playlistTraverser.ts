@@ -299,13 +299,28 @@ export class PlaylistTraverser {
 				if (Array.isArray(value)) {
 					if (parent.startsWith('seq')) {
 						for (const elem of value) {
+							let timeToStart = -1;
+							let timeToEnd = elem.repeatCount ? parseInt(elem.repeatCount as string) : 0;
+
+							if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
+								const schedule = parseSmilSchedule(elem.begin!, elem.end);
+								if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
+									continue;
+								}
+								if (schedule.timeToEnd < Date.now()) {
+									continue;
+								}
+								timeToStart = schedule.timeToStart;
+								timeToEnd = schedule.timeToEnd;
+							}
+
 							await this.createDefaultPromise(
 								elem,
 								version,
 								priorityObject,
 								newParent,
-								elem.repeatCount ? parseInt(elem.repeatCount as string) : 0,
-								-1,
+								timeToEnd,
+								timeToStart,
 								conditionalExpr,
 							);
 						}
@@ -318,14 +333,30 @@ export class PlaylistTraverser {
 						if (elem.hasOwnProperty(ExprTag)) {
 							conditionalExpr = elem[ExprTag];
 						}
+
+						let elemTimeToStart = -1;
+						let elemTimeToEnd = endTime;
+
+						if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
+							const schedule = parseSmilSchedule(elem.begin!, elem.end);
+							if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
+								continue;
+							}
+							if (schedule.timeToEnd < Date.now()) {
+								continue;
+							}
+							elemTimeToStart = schedule.timeToStart;
+							elemTimeToEnd = schedule.timeToEnd;
+						}
+
 						promises.push(
 							this.createDefaultPromise(
 								elem,
 								version,
 								priorityObject,
 								newParent,
-								endTime,
-								-1,
+								elemTimeToEnd,
+								elemTimeToStart,
 								conditionalExpr,
 							),
 						);
