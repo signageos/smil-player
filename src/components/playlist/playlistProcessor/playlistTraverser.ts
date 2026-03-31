@@ -99,6 +99,7 @@ export interface ITraverserControl {
 	): Promise<void>;
 	getPlaylistVersion(): number;
 	getCancelFunction(): boolean;
+	cleanupExpiredPriority(version: number, priorityLevel: number): void;
 }
 
 /**
@@ -298,6 +299,7 @@ export class PlaylistTraverser {
 				let newParent = generateParentId(key, value);
 				if (Array.isArray(value)) {
 					if (parent.startsWith('seq')) {
+						let anyActive = false;
 						for (const elem of value) {
 							let timeToStart = -1;
 							let timeToEnd = elem.repeatCount ? parseInt(elem.repeatCount as string) : 0;
@@ -314,6 +316,7 @@ export class PlaylistTraverser {
 								timeToEnd = schedule.timeToEnd;
 							}
 
+							anyActive = true;
 							await this.createDefaultPromise(
 								elem,
 								version,
@@ -325,10 +328,11 @@ export class PlaylistTraverser {
 							);
 						}
 						processedAnyContent = true;
-						allNeverPlay = false;
+						if (anyActive) allNeverPlay = false;
 						continue;
 					}
 
+					let anyActive = false;
 					for (const elem of value) {
 						if (elem.hasOwnProperty(ExprTag)) {
 							conditionalExpr = elem[ExprTag];
@@ -349,6 +353,7 @@ export class PlaylistTraverser {
 							elemTimeToEnd = schedule.timeToEnd;
 						}
 
+						anyActive = true;
 						promises.push(
 							this.createDefaultPromise(
 								elem,
@@ -363,7 +368,7 @@ export class PlaylistTraverser {
 					}
 					await Promise.all(promises);
 					processedAnyContent = true;
-					allNeverPlay = false;
+					if (anyActive) allNeverPlay = false;
 					continue;
 				}
 
@@ -374,9 +379,7 @@ export class PlaylistTraverser {
 						continue;
 					}
 
-					// All non-neverPlay wallclock par paths set these flags
 					processedAnyContent = true;
-					allNeverPlay = false;
 
 					if (timeToEnd < Date.now()) {
 						if (
@@ -391,6 +394,8 @@ export class PlaylistTraverser {
 						}
 						continue;
 					}
+
+					allNeverPlay = false;
 
 					// wallclock has higher priority than conditional expression
 					if (await this.checkConditionalDefaultAwait(value)) {
@@ -577,14 +582,14 @@ export class PlaylistTraverser {
 							continue;
 						}
 
-						// All non-neverPlay wallclock seq paths set these flags
 						processedAnyContent = true;
-						allNeverPlay = false;
 
 						if (timeToEnd < Date.now()) {
 							arrayIndex += 1;
 							continue;
 						}
+
+						allNeverPlay = false;
 
 						// wallclock has higher priority than conditional expression
 						if (await this.checkConditionalDefaultAwait(valueElement, arrayIndex, value?.length)) {
@@ -920,6 +925,11 @@ export class PlaylistTraverser {
 					this.control.dynamicPlaylist,
 					dynamicPlaylistId,
 				);
+				// Clean up priority tracking after loop ends (e.g., all wallclock content expired)
+				// Without this, deferred lower-priority content waits forever for a playing state change
+				if (priorityObject?.priorityLevel !== undefined) {
+					this.control.cleanupExpiredPriority(version, priorityObject.priorityLevel);
+				}
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000 && version >= this.control.getPlaylistVersion()) {
 				let newParent = generateParentId(key, value);

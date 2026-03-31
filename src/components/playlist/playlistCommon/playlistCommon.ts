@@ -22,6 +22,7 @@ import { SMILEnums } from '../../../enums/generalEnums';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { resolvePlayingDeferred } from '../tools/deferredTools';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: ISos;
@@ -171,6 +172,25 @@ export class PlaylistCommon implements IPlaylistCommon {
 		if (promiseObj.version && promiseObj.version < version) {
 			promiseObj.version = version;
 			debug(`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`);
+		}
+	}
+
+	/**
+	 * Cleans up priority tracking across all regions for a given priority level.
+	 * Called when an endless loop breaks due to allExpired — no media element was playing
+	 * to trigger handlePriorityWhenDone, so the deferred lower-priority content would wait forever.
+	 */
+	cleanupExpiredPriority(version: number, priorityLevel: number): void {
+		for (const [regionName, priorityRegion] of Object.entries(this.currentlyPlayingPriority)) {
+			if (Array.isArray(priorityRegion)) {
+				for (const entry of priorityRegion) {
+					if (entry.priority?.priorityLevel === priorityLevel && entry.player?.playing) {
+						entry.player.playing = false;
+						resolvePlayingDeferred(entry.player);
+					}
+				}
+			}
+			this.cleanupPriorityTracking(regionName, version, priorityLevel);
 		}
 	}
 

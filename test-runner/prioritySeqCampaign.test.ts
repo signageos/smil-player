@@ -1,16 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { DUID, Timeouts, SMILUrls } from './config';
 
-// CODE BUG: When all campaigns in the higher-priority priorityClass have expired
-// wallclocks (absolute wallclock, no R/ recurrence), the outer seq loops indefinitely
-// skipping expired campaigns. The priority system never signals that the higher
-// priority is done, so the lower-priority priorityClass remains deferred forever.
-// The production SMIL uses recurring wallclocks (R/) which re-activate daily,
-// avoiding this issue. Non-recurring wallclock expiry with priority transitions
-// is not supported.
-// SKIP until expired non-recurring wallclocks properly release lower-priority content.
 test.describe('prioritySeqCampaign.smil test', () => {
-	test.skip('production-style seq campaign rotation with priority', async ({ page, context }) => {
+	test('production-style seq campaign rotation with priority', async ({ page, context }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
 		}, SMILUrls.prioritySeqCampaign);
