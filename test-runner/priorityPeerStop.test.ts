@@ -1,13 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { DUID, Timeouts, SMILUrls } from './config';
 
-// CODE BUG: Same as priorityPeerDefer — the traverser does not parse wallclock
-// attributes on <par> elements when they are in an array (multiple <par> siblings
-// inside a single <priorityClass>). Both peers start immediately instead of
-// respecting their wallclock begin/end timing.
-// SKIP until the traverser is fixed to parse wallclock attributes on par array elements.
 test.describe('priorityPeerStop.smil test', () => {
-	test.skip('stopped peer recovers via handlePrecedingContentStop when stopper finishes', async ({ page, context }) => {
+	test('stopped peer recovers via handlePrecedingContentStop when stopper finishes', async ({ page, context }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
 		}, SMILUrls.priorityPeerStop);

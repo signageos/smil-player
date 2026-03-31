@@ -298,7 +298,12 @@ export class PlaylistTraverser {
 			if (removeDigits(key) === 'par') {
 				let newParent = generateParentId(key, value);
 				if (Array.isArray(value)) {
-					if (parent.startsWith('seq')) {
+					// In priority context, peer <par> siblings must run concurrently so the
+					// priority system can detect conflicts and apply peer rules (defer/pause/stop).
+					// Each element also needs its own parent ID for peer conflict detection.
+					const hasPriority = priorityObject?.priorityLevel !== undefined;
+
+					if (parent.startsWith('seq') && !hasPriority) {
 						let anyActive = false;
 						for (const elem of value) {
 							let timeToStart = -1;
@@ -338,6 +343,10 @@ export class PlaylistTraverser {
 							conditionalExpr = elem[ExprTag];
 						}
 
+						// Per-element parent ID so handlePriorityInfoObject creates separate
+						// tracking entries and handlePriorityBeforePlay detects peer conflicts
+						const elemParent = hasPriority ? generateParentId(key, elem) : newParent;
+
 						let elemTimeToStart = -1;
 						let elemTimeToEnd = endTime;
 
@@ -359,7 +368,7 @@ export class PlaylistTraverser {
 								elem,
 								version,
 								priorityObject,
-								newParent,
+								elemParent,
 								elemTimeToEnd,
 								elemTimeToStart,
 								conditionalExpr,

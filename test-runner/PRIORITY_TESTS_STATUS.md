@@ -2,7 +2,7 @@
 
 ## Summary
 
-- **12 passing**, **3 skipped** (code bugs), **0 failing**
+- **15 passing**, **0 skipped**, **0 failing**
 - Run with: `npx playwright test test-runner/priority`
 
 ## Test Status
@@ -18,9 +18,9 @@
 | priorityStop | PASS | 3-level stop cascade with restart |
 | priorityThreeLevelDeferExpiry | PASS | Expired middle priority skipped, lowest plays after highest ends |
 | prioritySmilUpdate | PASS | SMIL update during priority cancels and reloads (fixed server endpoint) |
-| priorityPeerDefer | **SKIP** | Code bug #2 |
-| priorityPeerPause | **SKIP** | Code bug #2 |
-| priorityPeerStop | **SKIP** | Code bug #2 |
+| priorityPeerDefer | PASS | Peer A plays first, Peer B defers until A's wallclock ends |
+| priorityPeerPause | PASS | Peer B pauses Peer A, A resumes after B ends |
+| priorityPeerStop | PASS | Peer B stops Peer A, A recovers via handlePrecedingContentStop |
 | priorityDeferInterrupt | PASS | Deferred element survives blocker replacement by higher priority |
 | priorityOscillation | PASS | Stop-resume-stop-resume oscillation across two wallclock windows |
 | prioritySeqCampaign | PASS | Expired non-recurring wallclocks now release lower-priority content |
@@ -41,17 +41,17 @@
 
 ---
 
-### Bug #2: Traverser does not parse wallclock on `par` array elements (FIXED for oscillation)
+### Bug #2: Traverser does not parse wallclock on `par` array elements (FIXED)
 
 **File:** `src/components/playlist/playlistProcessor/playlistTraverser.ts` — `processPlaylist`, par array branch (~line 300)
 
-When multiple `<par>` elements are siblings inside a single `<priorityClass>`, the traverser processes them as an array. The array branch did NOT check for `begin`/`end` wallclock attributes — it called `createDefaultPromise` with `timeToStart=-1` (no delay) and the parent's `endTime`.
+When multiple `<par>` elements are siblings inside a single `<priorityClass>`, the traverser processes them as an array. Two issues:
 
-**Fix applied:** Both par array branches (seq parent and non-seq parent) now check each element for wallclock attributes and parse `timeToStart`/`timeToEnd` via `parseSmilSchedule`. This fixed `priorityOscillation`.
+1. **Wallclock parsing (fixed earlier):** The array branch did not parse `begin`/`end` wallclock attributes. Fixed by adding `parseSmilSchedule` calls in both seq and non-seq par array branches.
 
-**Remaining impact:** Peer tests (priorityPeerDefer, priorityPeerPause, priorityPeerStop) may have additional issues beyond wallclock parsing — they remain skipped pending separate verification.
+2. **Shared parent ID + sequential processing (fixed now):** `generateParentId(key, value)` hashed the entire array, giving all elements the same parent. This prevented `handlePriorityBeforePlay` from detecting peer conflicts (`parent !== parent` always false). Additionally, the `parent.startsWith('seq')` condition routed priority-context par arrays to the sequential branch, preventing peer interruption (pause/stop). Fixed by: (a) generating per-element parent IDs via `generateParentId(key, elem)` in priority context, and (b) routing priority-context par arrays to the parallel branch so peers run concurrently.
 
-**Tests affected:** priorityPeerDefer, priorityPeerPause, priorityPeerStop
+**Tests fixed:** priorityPeerDefer, priorityPeerPause, priorityPeerStop, priorityOscillation
 
 ---
 
