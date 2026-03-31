@@ -226,7 +226,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 	): Promise<void> => {
 		switch (priorityRule) {
 			case PriorityRule.never:
-				await this.handleNeverBehaviour(priorityRegionName, currentIndex);
+				await this.handleNeverBehaviour(priorityRegionName, currentIndex, previousPlayingIndex, priorityObject);
 				break;
 			case PriorityRule.stop:
 				this.handleStopBehaviour(priorityRegionName, previousPlayingIndex);
@@ -491,13 +491,47 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		previousIndexPriority.behaviour = 'stop';
 	};
 
-	private handleNeverBehaviour = async (priorityRegionName: string, currentIndex: number) => {
-		debug(
-			'Found never behaviour for playlist: %O skipping',
-			this.currentlyPlayingPriority[priorityRegionName][currentIndex],
-		);
-		// avoid infinite loop
-		await sleep(100);
+	private handleNeverBehaviour = async (
+		priorityRegionName: string,
+		currentIndex: number,
+		previousPlayingIndex: number,
+		priorityObject: PriorityObject,
+	) => {
+		const currentIndexPriority = this.currentlyPlayingPriority[priorityRegionName][currentIndex];
+		debug('Found never behaviour for playlist: %O, waiting for blocker to finish', currentIndexPriority);
+
+		// SMIL spec (lower="never" / peers="never"): the new element is prevented from
+		// beginning — its begin is ignored and it is not added to the queue.
+		// We block here until no higher-priority element is active.
+		currentIndexPriority.player.playing = false;
+		resolvePlayingDeferred(currentIndexPriority.player);
+
+		while (true) {
+			if (
+				!(await this.handlePriorityDeferStopWait(
+					this.currentlyPlayingPriority[priorityRegionName],
+					currentIndexPriority,
+					previousPlayingIndex,
+					priorityRegionName,
+					priorityObject,
+				))
+			) {
+				return;
+			}
+
+			const newPreviousIndex = getIndexOfPlayingMedia(this.currentlyPlayingPriority[priorityRegionName]);
+			if (newPreviousIndex === -1) {
+				break;
+			}
+			if (
+				this.currentlyPlayingPriority[priorityRegionName][newPreviousIndex].priority.priorityLevel >
+				priorityObject.priorityLevel
+			) {
+				previousPlayingIndex = newPreviousIndex;
+			} else {
+				break;
+			}
+		}
 	};
 
 	/**
