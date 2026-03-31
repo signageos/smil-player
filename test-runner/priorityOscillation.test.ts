@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { DUID, Timeouts, SMILUrls } from './config';
 
-// CODE BUG: When a high-priority wallclock window ends and lower-priority content
-// should resume, the priority system does not properly release the deferred content.
-// The deferred/stopped lower-priority content remains blocked even after the
-// higher-priority wallclock expires. This prevents the stop→resume→stop→resume
-// oscillation pattern from working.
-// SKIP until the priority system correctly releases content after wallclock expiry.
+// P_high has two wallclock windows (0-15s and 25-40s) with a gap between them.
+// P_low (always active) defers behind P_high. When window 1 ends, P_low plays
+// in the gap. When window 2 starts, P_high stops P_low and takes over again.
+// When window 2 ends, P_low resumes. Tests the full stop-resume-stop-resume cycle.
 test.describe('priorityOscillation.smil test', () => {
-	test.skip('low-priority content recovers correctly through multiple high-priority windows', async ({ page, context }) => {
+	test('low-priority content recovers correctly through multiple high-priority windows', async ({ page, context }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
 		}, SMILUrls.priorityOscillation);

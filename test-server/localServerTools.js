@@ -131,12 +131,13 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('LOWER_PAUSE_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
         case enums_1.SMILUrls.priorityDeferInterrupt.split('/').pop():
-            // P1 arrives at +15s, plays until +45s. P2 starts at +0s. P3 always active.
-            // P3 defers behind P2, then P1 replaces P2, P3 continues deferring until P1 ends.
+            // P1 arrives at +15s, plays until +40s. P2 starts at +0s, wallclock expires at +25s.
+            // P3 always active, defers behind P2, then P1 stops P2, P3 re-defers behind P1.
+            // When P1 ends at +40s, P2's wallclock has expired → P3 plays immediately.
             parsedFileString = parsedFileString.replace('DEFER_INT_P1_BEGIN', `wallclock(R/${formatDate(moment().add(15, 'seconds'))}/P1D)`);
-            parsedFileString = parsedFileString.replace('DEFER_INT_P1_END', `wallclock(R/${formatDate(moment().add(45, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('DEFER_INT_P1_END', `wallclock(R/${formatDate(moment().add(40, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('DEFER_INT_P2_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
-            parsedFileString = parsedFileString.replace('DEFER_INT_P2_END', `wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('DEFER_INT_P2_END', `wallclock(R/${formatDate(moment().add(25, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('DEFER_INT_P3_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('DEFER_INT_P3_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
