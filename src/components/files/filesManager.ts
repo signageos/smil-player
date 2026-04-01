@@ -1004,6 +1004,13 @@ export class FilesManager implements IFilesManager {
 					// Download as normal for single file
 					promises.push(
 						(async () => {
+							// Check storage before downloading to prevent wasted bandwidth
+							if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+								debug('Skipping download for %s - insufficient storage space', task.file.src);
+								filesToUpdate.delete(task.fileName);
+								return;
+							}
+
 							try {
 								debug(`Downloading file: %O`, task.updateValue ?? task.file.src);
 								debug(`Using downloadUrl: %s for file: %s`, task.downloadUrl, task.file.src);
@@ -1085,6 +1092,16 @@ export class FilesManager implements IFilesManager {
 					// Download only the primary file
 					promises.push(
 						(async () => {
+							// Check storage before downloading to prevent wasted bandwidth
+							if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+								debug('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
+								filesToUpdate.delete(primaryTask.fileName);
+								for (let i = 1; i < tasks.length; i++) {
+									filesToUpdate.delete(tasks[i].fileName);
+								}
+								return;
+							}
+
 							try {
 								debug(
 									`DEDUP: Downloading primary file: %O`,
@@ -1328,6 +1345,13 @@ export class FilesManager implements IFilesManager {
 
 						promises.push(
 							(async () => {
+								// Check storage before downloading to prevent wasted bandwidth
+								if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+									debug('Skipping download for %s - insufficient storage space', file.src);
+									filesToUpdate.delete(getFileName(file.src));
+									return;
+								}
+
 								try {
 									debug(`Downloading file: %O`, updateValue ?? file.src);
 									// Location strategy uses strings as values, while lastModified uses timestamps
@@ -1750,6 +1774,11 @@ export class FilesManager implements IFilesManager {
 		allFilesList?: MergedDownloadList[],
 	): Promise<ProcessedFileUpdate[]> => {
 		if (detections.length === 0) {
+			return [];
+		}
+
+		if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+			debug('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
 			return [];
 		}
 
@@ -2595,8 +2624,8 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 
-			// Clear temp folders after migration
-			await this.clearTempFolders();
+			// Don't clear temp folders here — failed migrations leave temp files that
+			// localFilePath still points to. Startup clearTempFolders() handles cleanup.
 		}
 
 		// Step 5: Update localFilePath for all media items
