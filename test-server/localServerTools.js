@@ -106,7 +106,8 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             if (requestCount <= 1) {
                 parsedFileString = parsedFileString.replace('UPDATE_P_HIGH_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
                 parsedFileString = parsedFileString.replace('UPDATE_P_HIGH_END', `wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`);
-            } else {
+            }
+            else {
                 // P_high wallclock in the past → permanently expired after reload
                 parsedFileString = parsedFileString.replace('UPDATE_P_HIGH_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
                 parsedFileString = parsedFileString.replace('UPDATE_P_HIGH_END', `wallclock(R/${formatDate(moment().subtract(9, 'minute'))}/P1D)`);
