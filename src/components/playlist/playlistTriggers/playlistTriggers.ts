@@ -27,6 +27,7 @@ import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels
 import { BinaryOperatorChar } from '../../../enums/conditionalEnums';
 import { IPlaylistTriggers } from './IPlaylistTriggers';
 import { PriorityObject } from '../../../models/priorityModels';
+import { PriorityRule } from '../../../enums/priorityEnums';
 import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { resolvePlayingDeferred } from '../tools/deferredTools';
@@ -289,9 +290,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			const priorityObject: PriorityObject = {
 				priorityLevel: 1000,
 				maxPriorityLevel: 1000,
-				higher: 'stop',
-				lower: 'defer',
-				peer: 'defer',
+				higher: PriorityRule.stop,
+				lower: PriorityRule.defer,
+				peer: PriorityRule.defer,
 			};
 
 			// if another dynamic playlist is playing, wait for timeout to avoid race condition with default content

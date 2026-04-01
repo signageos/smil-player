@@ -30,8 +30,18 @@ app.get('/dynamic/:fileName', async (req, res) => {
 	res.send(fileString);
 });
 
-// Stateful endpoint: tracks request count per file, returns incrementing Last-Modified
+// Stateful endpoint: tracks GET request count per file, returns incrementing Last-Modified
 // header to trigger the player's SMIL update detection via ResourceChecker.
+// Only GET requests increment the counter — HEAD requests (used by ResourceChecker to
+// check for updates) return a stable Last-Modified based on the current count.
+app.head('/dynamic-update/:fileName', (req, res) => {
+	const fileName = req.params.fileName;
+	const count = requestCounts[fileName] || 1;
+	const lastModified = new Date(Date.now() + count * 1000).toUTCString();
+	res.set({ 'Content-type': 'text/xml', 'Last-Modified': lastModified });
+	res.end();
+});
+
 app.get('/dynamic-update/:fileName', async (req, res) => {
 	const fileName = req.params.fileName;
 	const count = (requestCounts[fileName] = (requestCounts[fileName] || 0) + 1);

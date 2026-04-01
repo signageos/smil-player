@@ -1,9 +1,11 @@
+import { PriorityRule } from '../enums/priorityEnums';
+
 export type PriorityObject = {
 	priorityLevel: number;
 	maxPriorityLevel: number;
-	lower: string;
-	peer: string;
-	higher: string;
+	lower: PriorityRule;
+	peer: PriorityRule;
+	higher: PriorityRule;
 	pauseDisplay?: string;
 };
 
