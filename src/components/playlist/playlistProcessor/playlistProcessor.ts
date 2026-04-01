@@ -39,7 +39,7 @@ import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { setElementDuration } from '../tools/scheduleTools';
 import { PriorityObject } from '../../../models/priorityModels';
-import { WaitStatus } from '../../../enums/priorityEnums';
+import { ENDTIME_REPEAT_THRESHOLD, PriorityBehaviour, WaitStatus } from '../../../enums/priorityEnums';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { findTriggerToCancel } from '../tools/triggerTools';
@@ -1047,7 +1047,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Wait for previous promise to finish BEFORE claiming priority tracking
 		// This prevents race condition where new priority claims tracking while stuck waiting
 		if (
-			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
+			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== PriorityBehaviour.pause &&
 			this.promiseAwaiting[regionInfo.regionName]?.promiseFunction!?.length > 0 &&
 			(!media.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
 				media.triggerValue === this.promiseAwaiting[regionInfo.regionName].triggerValue)
@@ -1154,7 +1154,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// wait for all
 		if (
 			this.triggers.dynamicPlaylist[media.dynamicValue!]?.isMaster &&
-			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== 'pause' &&
+			this.currentlyPlayingPriority[parentRegionName][previousPlayingIndex].behaviour !== PriorityBehaviour.pause &&
 			version >= this.getPlaylistVersion()
 		) {
 			timedDebug.log(
@@ -1238,7 +1238,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (
 			currentIndexPriority?.player.stop ||
 			currentIndexPriority?.player.contentPause !== 0 ||
-			currentIndexPriority?.behaviour === 'pause'
+			currentIndexPriority?.behaviour === PriorityBehaviour.pause
 		) {
 			timedDebug.log(
 				'Playlist was stopped/paused by higher priority during await: %O, media: %O',
@@ -1252,7 +1252,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return WaitStatus.SKIP;
 		}
 
-		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > 1000) {
+		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > ENDTIME_REPEAT_THRESHOLD) {
 			timedDebug.log(
 				'Playtime for playlist: %O with media: %O was exceeded wait, exiting',
 				currentIndexPriority,

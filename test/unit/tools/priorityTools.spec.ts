@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import { createPriorityObject } from '../../../src/components/playlist/tools/priorityTools';
-import { PriorityDefault } from '../../../src/enums/priorityEnums';
+import { PriorityDefault, PriorityRule } from '../../../src/enums/priorityEnums';
 import { PriorityObject } from '../../../src/models/priorityModels';
 
 const expect = chai.expect;
@@ -11,15 +11,15 @@ describe('priorityTools', () => {
 			const input: PriorityObject = {
 				priorityLevel: 0,
 				maxPriorityLevel: 0,
-				lower: 'never',
-				peer: 'stop',
-				higher: 'pause',
+				lower: PriorityRule.never,
+				peer: PriorityRule.stop,
+				higher: PriorityRule.pause,
 				pauseDisplay: 'hide',
 			};
 			const result = createPriorityObject(input, 1, 3);
-			expect(result.lower).to.equal('never');
-			expect(result.peer).to.equal('stop');
-			expect(result.higher).to.equal('pause');
+			expect(result.lower).to.equal(PriorityRule.never);
+			expect(result.peer).to.equal(PriorityRule.stop);
+			expect(result.higher).to.equal(PriorityRule.pause);
 			expect(result.pauseDisplay).to.equal('hide');
 		});
 
@@ -43,9 +43,9 @@ describe('priorityTools', () => {
 			const input: PriorityObject = {
 				priorityLevel: 0,
 				maxPriorityLevel: 0,
-				lower: 'defer',
-				peer: 'never',
-				higher: 'stop',
+				lower: PriorityRule.defer,
+				peer: PriorityRule.never,
+				higher: PriorityRule.stop,
 			};
 			const result = createPriorityObject(input, 7, 10);
 			expect(result.priorityLevel).to.equal(7);
