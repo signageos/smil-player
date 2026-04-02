@@ -3564,19 +3564,12 @@ export class FilesManager implements IFilesManager {
 				return false;
 			}
 
-			const fileSize = fileStats.sizeBytes || 0;
+			const fileSize = fileStats.sizeBytes || MINIMAL_STORAGE_FREE_SPACE;
 
-			// If we don't know the file size, we still try to preserve it
-			// but log a warning
-			if (!fileStats.sizeBytes) {
-				debug('Warning: File size unknown for %s, proceeding with preservation anyway', filePath);
-			} else {
-				// Only check space if we know the file size
-				const hasSpace = await this.checkAvailableSpace(fileSize);
-				if (!hasSpace) {
-					debug('Not enough space to preserve file to storage: %s (size: %d bytes)', filePath, fileSize);
-					return false;
-				}
+			const hasSpace = await this.checkAvailableSpace(fileSize);
+			if (!hasSpace) {
+				debug('Not enough space to preserve file to storage: %s (size: %d bytes)', filePath, fileSize);
+				return false;
 			}
 
 			const storageFolder = this.getStorageFolder(mediaType);
