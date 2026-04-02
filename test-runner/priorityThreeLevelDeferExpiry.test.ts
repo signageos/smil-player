@@ -23,7 +23,7 @@ test.describe('priorityThreeLevelDeferExpiry.smil test', () => {
 		}
 
 		// P1 (highest priority) plays immediately: video-test-1 + img_1 loop
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// P2 (middle, img_3) and P3 (lowest, img_2) should NOT be visible — both deferred
@@ -31,7 +31,7 @@ test.describe('priorityThreeLevelDeferExpiry.smil test', () => {
 		await expect(frame.locator('img[src*="images/img_2_18b5d21f.jpg"]')).not.toBeVisible({ timeout: 3000 });
 
 		// P1 continues looping while P2's wallclock expires at +15s
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// P1 wallclock ends at +30s → P2 abandoned (expired at +15s), P3 finally plays
@@ -42,7 +42,7 @@ test.describe('priorityThreeLevelDeferExpiry.smil test', () => {
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).not.toBeVisible({ timeout: 3000 });
 
 		// P3 continues: video-test-2 plays
-		await expect(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// P3 loops: img_2 again
 		await expect(frame.locator('img[src*="images/img_2_18b5d21f.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });

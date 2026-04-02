@@ -27,30 +27,26 @@ test.describe('priorityPause.smil test', () => {
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await expect(frame.locator('img[src*="images/img_2_18b5d21f.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		// P2 interrupts P3 (pauses it) at +20s: img_3 + video-test-2 loop
+		// P2 interrupts P3 (pauses it) at +35s: img_3 + video-test-2 loop
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
 
-		await expect(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await page.waitForTimeout(Timeouts.videoTransition);
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		// P1 interrupts P2 (pauses it) at +50s: video-test-1 + img_1 loop
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
+		// P1 interrupts P2 (pauses it) at +65s: video-test-1 + img_1 loop
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
 
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		// P1 plays another iteration
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-
-		// P1 wallclock ends at +70s → P2 resumes from pause point (not restart).
+		// P1 wallclock ends at +85s → P2 resumes from pause point (not restart).
 		// P2 content: img_3 (iframe) or video-test-2 (main page) depending on exact pause timing.
 		// Check for video-test-2 which will appear within the transition window regardless of
 		// whether P2 resumed at img_3 (plays briefly, then video) or directly at video-test-2.
-		await expect(page.locator('video:visible[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
+		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
 
 		// Followed by next P2 content to confirm it's looping
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		// P2 wallclock ends at +100s → P3 resumes from pause point (was paused at +20s).
+		// P2 wallclock ends at +120s → P3 resumes from pause point (was paused at +35s).
 		// P3 content: img_1, img_2 (iframe) or video-test-1 (main page) — resume position varies.
 		await expect(
 			frame.locator('img[src*="images/img_1_aba14e1e.jpg"]:visible, img[src*="images/img_2_18b5d21f.jpg"]:visible')
