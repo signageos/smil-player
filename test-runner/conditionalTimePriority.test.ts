@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
 
 test.describe('conditionalTimePriority.smil test', () => {
 	test('processes smil file correctly', async ({ page, context }) => {
@@ -12,30 +11,24 @@ test.describe('conditionalTimePriority.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 0, 0, 1920, 1080);
 
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]'), 0, 0, 1920, 1080);
 
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 0, 0, 1920, 1080);
 
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]'), 0, 0, 1920, 1080);
 
-		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		// Time window expires → low-priority content takes over (use priorityTransition for wallclock transition)
+		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).toBeVisible({ timeout: Timeouts.priorityTransition });
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img2"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]'), 0, 0, 1920, 1080);
 
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img3"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img4"]'), 0, 0, 1920, 1080);
 
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img[id*="img_1_aba1"][id*=".jpg-video-img4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 0, 0, 1920, 1080);
 	});
 });

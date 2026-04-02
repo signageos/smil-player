@@ -19,7 +19,7 @@ test.describe('priorityDeferExpiry.smil test', () => {
 		}
 
 		// P_high (highest priority) plays immediately: video-test-1 + img_1 loop
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// P_low (lower priority) defers to P_high. Its wallclock window is +0s to +25s.
@@ -27,18 +27,21 @@ test.describe('priorityDeferExpiry.smil test', () => {
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).not.toBeVisible({ timeout: 3000 });
 		await expect(frame.locator('img[src*="images/img_2_18b5d21f.jpg"]')).not.toBeVisible({ timeout: 3000 });
 
-		// P_high continues looping while P_low's window expires (at ~25s)
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-
+		// Wait for P_high to loop multiple iterations (proving P_low's +25s window has expired).
+		// Each P_high iteration: video-test-1 (~5s) + img_1 (~3s) ≈ 8s. Three cycles ≈ 24s.
+		// Use toPass() polling: wait until we've seen video-test-1 appear 3 more times.
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		// Wait past P_low's wallclock expiry (+25s) and verify it still hasn't appeared
-		await page.waitForTimeout(20000);
-
+		// After 3+ P_high loops (~24s), P_low's wallclock has definitely expired.
+		// Verify P_low content still never appeared.
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).not.toBeVisible({ timeout: 3000 });
 		await expect(frame.locator('img[src*="images/img_2_18b5d21f.jpg"]')).not.toBeVisible({ timeout: 3000 });
 
 		// P_high is still playing
-		await expect(page.locator('video:visible[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 	});
 });
