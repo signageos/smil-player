@@ -7,6 +7,7 @@ import set = require('lodash/set');
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
+import { IPlaylistPriority } from '../playlistPriority/IPlaylistPriority';
 import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { ISos } from '../../../models/sosModels';
@@ -64,7 +65,6 @@ import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamic
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { broadcastSyncValue, cancelDynamicPlaylistMaster, joinSyncGroup } from '../tools/dynamicTools';
-import { resolvePlayingDeferred } from '../tools/deferredTools';
 import {
 	broadcastEndActionToAllDynamics,
 	connectSyncSafe,
@@ -84,7 +84,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private readonly playerName: string;
 	private readonly playerId: string;
 	private triggers: PlaylistTriggers;
-	private priority: PlaylistPriority;
+	private priority: IPlaylistPriority;
 	private foundNewPlaylist: boolean = false;
 	private playlistVersion: number = 0;
 	private internalStorageUnit: IStorageUnit;
@@ -99,12 +99,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		options: PlaylistOptions,
 		overrides?: {
 			triggers?: PlaylistTriggers;
-			priority?: PlaylistPriority;
+			priority?: IPlaylistPriority;
 		},
 	) {
 		super(sos, files, options);
 		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, this.processPlaylist);
-		this.priority = overrides?.priority ?? new PlaylistPriority(sos, files, options);
+		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos);
 		this.playerName = getConfigString(this.sos.config, 'playerName') ?? '';
 		this.playerId = getConfigString(this.sos.config, 'playerId') ?? '';
 		this.elementController = new SMILElementController(this.synchronization);
@@ -526,11 +526,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				}
 			}
 
-			// Resolve all playing deferreds to unblock any waiters
+			// Cancel all playing entries to unblock any waiters (triggers notifyWaiters)
 			for (const region in this.currentlyPlayingPriority) {
-				for (const entry of this.currentlyPlayingPriority[region]) {
-					resolvePlayingDeferred(entry.player);
-				}
+				this.priority.cancelAllInRegion(region);
 			}
 
 			return true;
