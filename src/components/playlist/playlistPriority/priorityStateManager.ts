@@ -1,5 +1,5 @@
 import { isNil, cloneDeep } from 'lodash';
-import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting } from '../../../models/playlistModels';
+import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting, PromiseAwaitingEntry } from '../../../models/playlistModels';
 import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { SMILMedia } from '../../../models/mediaModels';
@@ -72,7 +72,8 @@ export class PriorityStateManager {
 			try {
 				satisfied = !!entries && waiter.predicate(entries);
 			} catch (err) {
-				debug('Waiter predicate threw for region %s, removing waiter: %O', regionName, err);
+				debug('Waiter predicate threw for region %s, resolving and removing waiter: %O', regionName, err);
+				waiter.deferred.resolve();
 				waiters.delete(waiter);
 				continue;
 			}
@@ -129,6 +130,27 @@ export class PriorityStateManager {
 			currentIndex !== previousIndex &&
 			this.state[regionName][currentIndex].version === this.state[regionName][previousIndex].version
 		);
+	}
+
+	// --- PromiseAwaiting accessors ---
+
+	getPromiseAwaiting(regionName: string): PromiseAwaitingEntry | undefined {
+		return this.promiseAwaiting[regionName];
+	}
+
+	ensurePromiseAwaiting(regionName: string, version: number, triggerValue?: string): PromiseAwaitingEntry {
+		if (isNil(this.promiseAwaiting[regionName])) {
+			this.promiseAwaiting[regionName] = {
+				promiseFunction: [],
+				version,
+				highestProcessingPriority: -1,
+				triggerValue,
+			};
+		}
+		if (isNil(this.promiseAwaiting[regionName].promiseFunction)) {
+			this.promiseAwaiting[regionName].promiseFunction = [];
+		}
+		return this.promiseAwaiting[regionName];
 	}
 
 	// --- Registration ---
@@ -313,6 +335,44 @@ export class PriorityStateManager {
 		this.state[toRegion] = cloneDeep(this.state[fromRegion]);
 	}
 
+	// --- PromiseAwaiting mutations ---
+
+	resetAllPromiseAwaiting(): void {
+		for (const region in this.promiseAwaiting) {
+			if (this.promiseAwaiting[region]?.promiseFunction) {
+				this.promiseAwaiting[region].promiseFunction = [];
+				if (this.promiseAwaiting[region].highestProcessingPriority !== undefined) {
+					this.promiseAwaiting[region].highestProcessingPriority = -1;
+				}
+			}
+		}
+	}
+
+	setPromiseFunction(regionName: string, promises: Promise<void>[]): void {
+		this.promiseAwaiting[regionName].promiseFunction = promises;
+	}
+
+	/**
+	 * Updates priority version/level tracking for a region.
+	 * Returns the current highest priority level being processed.
+	 */
+	updatePriorityTracking(regionName: string, version: number, priority: number): { currentHighest: number } {
+		const promiseObj = this.promiseAwaiting[regionName];
+		if (!promiseObj.version || promiseObj.version < version) {
+			promiseObj.version = version;
+			promiseObj.highestProcessingPriority = priority;
+		} else if (promiseObj.version === version) {
+			const currentTracked = promiseObj.highestProcessingPriority ?? priority;
+			promiseObj.highestProcessingPriority = Math.max(currentTracked, priority);
+		}
+		this.notifyWaiters(regionName);
+		return { currentHighest: promiseObj.highestProcessingPriority ?? -1 };
+	}
+
+	setTriggerValue(regionName: string, triggerValue: string): void {
+		this.promiseAwaiting[regionName].triggerValue = triggerValue;
+	}
+
 	// --- Priority tracking cleanup ---
 
 	/**
@@ -324,13 +384,19 @@ export class PriorityStateManager {
 		}
 
 		const promiseObj = this.promiseAwaiting[regionName];
+		let changed = false;
 
 		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
 			promiseObj.highestProcessingPriority = -1;
+			changed = true;
 		}
 
 		if (promiseObj.version && promiseObj.version < version) {
 			promiseObj.version = version;
+		}
+
+		if (changed) {
+			this.notifyWaiters(regionName);
 		}
 	}
 

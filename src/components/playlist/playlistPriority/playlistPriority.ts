@@ -3,7 +3,7 @@ import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
 import Debug from 'debug';
-import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
+import { PlaylistOptions } from '../../../models/playlistModels';
 import { ISos } from '../../../models/sosModels';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
@@ -19,7 +19,7 @@ import { PriorityConflictResolver } from './priorityConflictResolver';
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
 export class PlaylistPriority implements IPlaylistPriority {
-	private stateManager: PriorityStateManager;
+	public readonly stateManager: PriorityStateManager;
 	private _sideEffects: IPrioritySideEffects;
 	private conflictResolver: PriorityConflictResolver;
 	private cancelFunction: boolean[];
@@ -185,35 +185,4 @@ export class PlaylistPriority implements IPlaylistPriority {
 		}
 	};
 
-	public cleanupPriorityTracking = (regionName: string, version: number, priorityLevel?: number): void => {
-		this.stateManager.cleanupPriorityTracking(regionName, version, priorityLevel);
-	};
-
-	public cleanupExpiredPriority = (version: number, priorityLevel: number): void => {
-		this.stateManager.cleanupExpiredPriority(version, priorityLevel);
-	};
-
-	public cancelAllInRegion = (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean): void => {
-		this.stateManager.cancelAllInRegion(regionName, filter);
-	};
-
-	public setPlaying = (regionName: string, index: number): void => {
-		this.stateManager.setPlaying(regionName, index);
-	};
-
-	public aliasRegion = (fromRegion: string, toRegion: string): void => {
-		this.stateManager.aliasRegion(fromRegion, toRegion);
-	};
-
-	public cloneRegion = (fromRegion: string, toRegion: string): void => {
-		this.stateManager.cloneRegion(fromRegion, toRegion);
-	};
-
-	public waitUntil = (regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean): Promise<void> => {
-		return this.stateManager.waitUntil(regionName, predicate);
-	};
-
-	public waitForTurn = (regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean, priorityLevel: number): Promise<void> => {
-		return this.stateManager.waitForTurn(regionName, predicate, priorityLevel);
-	};
 }

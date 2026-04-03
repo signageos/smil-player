@@ -245,6 +245,103 @@ describe('PriorityStateManager', () => {
 		});
 	});
 
+	describe('ensurePromiseAwaiting', () => {
+		it('should create promiseAwaiting entry with correct fields', () => {
+			const entry = mgr.ensurePromiseAwaiting('main', 1, 'trigger1');
+			expect(entry.promiseFunction).to.be.an('array').with.length(0);
+			expect(entry.version).to.equal(1);
+			expect(entry.highestProcessingPriority).to.equal(-1);
+			expect(entry.triggerValue).to.equal('trigger1');
+		});
+
+		it('should return existing entry without overwriting', () => {
+			const entry1 = mgr.ensurePromiseAwaiting('main', 1, 'trigger1');
+			entry1.highestProcessingPriority = 5;
+			const entry2 = mgr.ensurePromiseAwaiting('main', 2, 'trigger2');
+			expect(entry2).to.equal(entry1);
+			expect(entry2.highestProcessingPriority).to.equal(5);
+		});
+
+		it('should fix missing promiseFunction on existing entry', () => {
+			promiseAwaiting['main'] = { version: 1 } as any;
+			const entry = mgr.ensurePromiseAwaiting('main', 1);
+			expect(entry.promiseFunction).to.be.an('array').with.length(0);
+		});
+	});
+
+	describe('getPromiseAwaiting', () => {
+		it('should return undefined for non-existent region', () => {
+			expect(mgr.getPromiseAwaiting('main')).to.be.undefined;
+		});
+
+		it('should return existing entry', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			expect(mgr.getPromiseAwaiting('main')).to.not.be.undefined;
+		});
+	});
+
+	describe('resetAllPromiseAwaiting', () => {
+		it('should clear promiseFunction and reset highestProcessingPriority for all regions', () => {
+			promiseAwaiting['main'] = { promiseFunction: [Promise.resolve()], highestProcessingPriority: 5, version: 1 } as any;
+			promiseAwaiting['side'] = { promiseFunction: [Promise.resolve()], highestProcessingPriority: 3, version: 1 } as any;
+			mgr.resetAllPromiseAwaiting();
+			expect(promiseAwaiting['main'].promiseFunction).to.have.length(0);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(-1);
+			expect(promiseAwaiting['side'].promiseFunction).to.have.length(0);
+			expect(promiseAwaiting['side'].highestProcessingPriority).to.equal(-1);
+		});
+
+		it('should skip regions without promiseFunction', () => {
+			promiseAwaiting['empty'] = { version: 1 } as any;
+			mgr.resetAllPromiseAwaiting();
+			// should not throw
+			expect(promiseAwaiting['empty'].version).to.equal(1);
+		});
+	});
+
+	describe('setPromiseFunction', () => {
+		it('should set promiseFunction for a region', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			const p = Promise.resolve();
+			mgr.setPromiseFunction('main', [p]);
+			expect(promiseAwaiting['main'].promiseFunction).to.deep.equal([p]);
+		});
+	});
+
+	describe('updatePriorityTracking', () => {
+		it('should initialize tracking for new version', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			const result = mgr.updatePriorityTracking('main', 2, 5);
+			expect(promiseAwaiting['main'].version).to.equal(2);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(5);
+			expect(result.currentHighest).to.equal(5);
+		});
+
+		it('should track highest priority for same version', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.updatePriorityTracking('main', 1, 3);
+			const result = mgr.updatePriorityTracking('main', 1, 7);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(7);
+			expect(result.currentHighest).to.equal(7);
+		});
+
+		it('should not downgrade highest priority', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.updatePriorityTracking('main', 1, 7);
+			const result = mgr.updatePriorityTracking('main', 1, 3);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(7);
+			expect(result.currentHighest).to.equal(7);
+		});
+	});
+
+	describe('setTriggerValue', () => {
+		it('should set triggerValue for a region', () => {
+			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.setTriggerValue('main', 'myTrigger');
+			expect(promiseAwaiting['main'].triggerValue).to.equal('myTrigger');
+		});
+	});
+
 	describe('cleanupPriorityTracking', () => {
 		it('should reset highestProcessingPriority when it matches the given level', () => {
 			promiseAwaiting['main'] = { highestProcessingPriority: 2, version: 1 } as any;
@@ -381,6 +478,25 @@ describe('PriorityStateManager', () => {
 			mgr.setPlaying('main', 1);
 			await new Promise((r) => setTimeout(r, 10));
 			expect(resolvedP1).to.be.true;
+		});
+
+		it('should resolve (not hang) a waiter whose predicate throws', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let throwCount = 0;
+			let badWaiterResolved = false;
+			// Predicate returns false on registration, throws on notification
+			mgr.waitUntil('main', () => {
+				throwCount++;
+				if (throwCount > 1) throw new Error('predicate error');
+				return false;
+			}).then(() => { badWaiterResolved = true; });
+
+			// Trigger notification — the bad predicate should be caught and waiter resolved
+			mgr.markFinished('main', 0);
+			await new Promise((r) => setTimeout(r, 10));
+			expect(badWaiterResolved).to.be.true;
 		});
 
 		it('should not crash other waiters when a predicate throws during notification', async () => {

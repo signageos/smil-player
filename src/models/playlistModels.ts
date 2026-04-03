@@ -93,7 +93,7 @@ export type PromiseAwaitingEntry = {
 	version?: number;
 	highestProcessingPriority?: number;
 	triggerValue?: string;
-} & Partial<SMILMedia> & Partial<SosHtmlElement>;
+};
 
 export type PromiseAwaiting = {
 	[regionName: string]: PromiseAwaitingEntry;
