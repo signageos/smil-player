@@ -88,12 +88,15 @@ export type CurrentlyPlayingRegion = {
 	isFirstInPlaylist: SMILMedia;
 };
 
+export type PromiseAwaitingEntry = {
+	promiseFunction?: Promise<void>[];
+	version?: number;
+	highestProcessingPriority?: number;
+	triggerValue?: string;
+} & Partial<SMILMedia> & Partial<SosHtmlElement>;
+
 export type PromiseAwaiting = {
-	[regionName: string]: (SMILMedia | SosHtmlElement) & {
-		promiseFunction?: Promise<void>[];
-		version?: number;                    // Track playlist version
-		highestProcessingPriority?: number;  // Track highest priority currently processing
-	};
+	[regionName: string]: PromiseAwaitingEntry;
 };
 
 export type VideoPreparing = {

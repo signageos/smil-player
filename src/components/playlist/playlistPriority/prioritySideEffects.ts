@@ -1,7 +1,7 @@
 import { cloneDeep } from 'lodash';
 import Debug from 'debug';
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
-import { CurrentlyPlaying, CurrentlyPlayingPriority, VideoPreparing } from '../../../models/playlistModels';
+import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion, VideoPreparing } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { ISos } from '../../../models/sosModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
@@ -34,6 +34,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		private currentlyPlayingPriority: CurrentlyPlayingPriority,
 		private synchronization: Synchronization,
 		private videoPreparing: VideoPreparing,
+		private cancelAllInRegionFn?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 	) {}
 
 	hideTransitionElement(regionName: string): void {
@@ -65,6 +66,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 			this.synchronization,
 			this.currentlyPlayingPriority,
 			dynamicValue,
+			this.cancelAllInRegionFn,
 		);
 	}
 }

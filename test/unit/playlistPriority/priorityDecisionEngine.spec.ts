@@ -8,6 +8,7 @@ import {
 	isPlaylistFinished,
 	shouldContinueWaiting,
 	findMatchingEntryIndex,
+	isMediaMatch,
 } from '../../../src/components/playlist/playlistPriority/priorityDecisionEngine';
 import { PriorityBehaviour, PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
 import { PriorityObject } from '../../../src/models/priorityModels';
@@ -331,6 +332,44 @@ describe('PriorityDecisionEngine', () => {
 				timesPlayed: 100,
 				isCancelled: false,
 			})).to.be.true;
+		});
+	});
+
+	describe('isMediaMatch', () => {
+		it('should return true for same src, region, dynamicValue, and triggerValue', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
+			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.true;
+		});
+
+		it('should return false when src differs', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
+			const b = { src: 'video2.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.false;
+		});
+
+		it('should return false when regionName differs', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
+			const b = { src: 'video1.mp4', regionInfo: { regionName: 'sidebar' } } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.false;
+		});
+
+		it('should return false when dynamicValue differs', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dynamicValue: 'dyn1' } as SMILMedia;
+			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dynamicValue: 'dyn2' } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.false;
+		});
+
+		it('should return false when triggerValue differs', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, triggerValue: 'trig1' } as SMILMedia;
+			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, triggerValue: 'trig2' } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.false;
+		});
+
+		it('should match when non-identity fields differ (dur, localFilePath)', () => {
+			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dur: '5s' } as SMILMedia;
+			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dur: '10s' } as SMILMedia;
+			expect(isMediaMatch(a, b)).to.be.true;
 		});
 	});
 

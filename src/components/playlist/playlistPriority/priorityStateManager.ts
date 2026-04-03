@@ -1,11 +1,18 @@
-import { isNil } from 'lodash';
+import { isNil, cloneDeep } from 'lodash';
 import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting } from '../../../models/playlistModels';
 import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { SMILMedia } from '../../../models/mediaModels';
 import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete } from '../tools/deferredTools';
+import { Deferred } from '../tools/Deferred';
 import { getIndexOfPlayingMedia } from '../tools/generalTools';
 import { findMatchingEntryIndex } from './priorityDecisionEngine';
+
+interface RegionWaiter {
+	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
+	deferred: Deferred<void>;
+	priorityLevel?: number;
+}
 
 /**
  * Manages the mutable priority state (currentlyPlayingPriority and promiseAwaiting).
@@ -13,10 +20,72 @@ import { findMatchingEntryIndex } from './priorityDecisionEngine';
  * Takes the same object references as PlaylistCommon, so all consumers see changes immediately.
  */
 export class PriorityStateManager {
+	private regionWaiters = new Map<string, Set<RegionWaiter>>();
+
 	constructor(
 		private state: CurrentlyPlayingPriority,
 		private promiseAwaiting: PromiseAwaiting,
 	) {}
+
+	// --- Reactive waiting ---
+
+	/** Unordered wait — resolves ALL matching waiters when predicate is satisfied. */
+	waitUntil(regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean): Promise<void> {
+		return this._registerWaiter(regionName, predicate, undefined);
+	}
+
+	/** Priority-ordered wait — only the highest-priority satisfied waiter wakes. */
+	waitForTurn(regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean, priorityLevel: number): Promise<void> {
+		return this._registerWaiter(regionName, predicate, priorityLevel);
+	}
+
+	private _registerWaiter(
+		regionName: string,
+		predicate: (entries: CurrentlyPlayingRegion[]) => boolean,
+		priorityLevel?: number,
+	): Promise<void> {
+		const entries = this.state[regionName];
+		if (entries && predicate(entries)) {
+			return Promise.resolve();
+		}
+		const deferred = new Deferred<void>();
+		if (!this.regionWaiters.has(regionName)) {
+			this.regionWaiters.set(regionName, new Set());
+		}
+		this.regionWaiters.get(regionName)!.add({ predicate, deferred, priorityLevel });
+		return deferred.promise;
+	}
+
+	private notifyWaiters(regionName: string): void {
+		const waiters = this.regionWaiters.get(regionName);
+		if (!waiters || waiters.size === 0) return;
+		const entries = this.state[regionName];
+
+		let bestOrdered: RegionWaiter | null = null;
+		const unorderedToResolve: RegionWaiter[] = [];
+
+		for (const waiter of waiters) {
+			if (!entries || !waiter.predicate(entries)) continue;
+
+			if (waiter.priorityLevel !== undefined) {
+				if (!bestOrdered || waiter.priorityLevel > bestOrdered.priorityLevel!) {
+					bestOrdered = waiter;
+				}
+			} else {
+				unorderedToResolve.push(waiter);
+			}
+		}
+
+		for (const w of unorderedToResolve) {
+			w.deferred.resolve();
+			waiters.delete(w);
+		}
+
+		if (bestOrdered) {
+			bestOrdered.deferred.resolve();
+			waiters.delete(bestOrdered);
+		}
+	}
 
 	// --- Accessors ---
 
@@ -127,6 +196,7 @@ export class PriorityStateManager {
 		const entry = this.state[regionName][index];
 		entry.player.playing = true;
 		ensurePlayingDeferred(entry.player);
+		this.notifyWaiters(regionName);
 	}
 
 	setStopped(regionName: string, index: number): void {
@@ -135,6 +205,7 @@ export class PriorityStateManager {
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
 		entry.behaviour = PriorityBehaviour.stop;
+		this.notifyWaiters(regionName);
 	}
 
 	setPaused(regionName: string, index: number, controllerIndex: number): void {
@@ -144,12 +215,14 @@ export class PriorityStateManager {
 		resolvePlayingDeferred(entry.player);
 		entry.behaviour = PriorityBehaviour.pause;
 		this.state[regionName][controllerIndex].controlledPlaylist = index;
+		this.notifyWaiters(regionName);
 	}
 
 	setDeferred(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
+		this.notifyWaiters(regionName);
 	}
 
 	setDeferBehaviour(regionName: string, index: number): void {
@@ -160,6 +233,7 @@ export class PriorityStateManager {
 		const entry = this.state[regionName][index];
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
+		this.notifyWaiters(regionName);
 	}
 
 	resetBehaviour(regionName: string, index: number): void {
@@ -177,6 +251,7 @@ export class PriorityStateManager {
 		const entry = this.state[regionName][index];
 		entry.player.contentPause = 0;
 		entry.behaviour = PriorityBehaviour.none;
+		this.notifyWaiters(regionName);
 	}
 
 	/**
@@ -189,11 +264,79 @@ export class PriorityStateManager {
 		entry.player.timesPlayed = 0;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
+		this.notifyWaiters(regionName);
 		return { pausedIndex };
 	}
 
 	incrementTimesPlayed(regionName: string, index: number): void {
 		this.state[regionName][index].player.timesPlayed++;
+	}
+
+	resetTimesPlayed(regionName: string, index: number): void {
+		this.state[regionName][index].player.timesPlayed = 0;
+	}
+
+	// --- Bulk operations ---
+
+	cancelAllInRegion(regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean): void {
+		const entries = this.state[regionName];
+		if (!entries) return;
+		for (const entry of entries) {
+			if (!filter || filter(entry)) {
+				entry.player.playing = false;
+				resolvePlayingDeferred(entry.player);
+			}
+		}
+		this.notifyWaiters(regionName);
+	}
+
+	aliasRegion(fromRegion: string, toRegion: string): void {
+		this.state[toRegion] = this.state[fromRegion];
+	}
+
+	cloneRegion(fromRegion: string, toRegion: string): void {
+		this.state[toRegion] = cloneDeep(this.state[fromRegion]);
+	}
+
+	// --- Priority tracking cleanup ---
+
+	/**
+	 * Cleans up priority tracking after an element finishes waiting or gets skipped.
+	 */
+	cleanupPriorityTracking(regionName: string, version: number, priorityLevel?: number): void {
+		if (!this.promiseAwaiting[regionName]) {
+			return;
+		}
+
+		const promiseObj = this.promiseAwaiting[regionName];
+
+		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
+			promiseObj.highestProcessingPriority = -1;
+		}
+
+		if (promiseObj.version && promiseObj.version < version) {
+			promiseObj.version = version;
+		}
+	}
+
+	/**
+	 * Cleans up priority tracking across all regions for a given priority level.
+	 * Called when an endless loop breaks due to allExpired — no media element was playing
+	 * to trigger handlePriorityWhenDone, so the deferred lower-priority content would wait forever.
+	 */
+	cleanupExpiredPriority(version: number, priorityLevel: number): void {
+		for (const [regionName, priorityRegion] of Object.entries(this.state)) {
+			if (Array.isArray(priorityRegion)) {
+				for (const entry of priorityRegion) {
+					if (entry.priority?.priorityLevel === priorityLevel && entry.player?.playing) {
+						entry.player.playing = false;
+						resolvePlayingDeferred(entry.player);
+					}
+				}
+			}
+			this.cleanupPriorityTracking(regionName, version, priorityLevel);
+			this.notifyWaiters(regionName);
+		}
 	}
 
 	// --- Async waiting ---

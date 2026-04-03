@@ -1,4 +1,3 @@
-import { isEqual } from 'lodash';
 import { ENDTIME_REPEAT_THRESHOLD, PriorityRule } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
@@ -133,6 +132,18 @@ export function shouldContinueWaiting(params: {
  * - matchIndex: the index of the matching entry (-1 if not found)
  * - matchType: 'exact' if media+parent+version match, 'parent' if parent+version match, 'none' if new entry
  */
+/**
+ * Checks if two SMILMedia objects represent the same playlist entry.
+ * Uses targeted field comparison instead of deep equality — the match is for
+ * identity (is this the same element?), not change detection.
+ */
+export function isMediaMatch(a: SMILMedia, b: SMILMedia): boolean {
+	return a.src === b.src
+		&& a.regionInfo?.regionName === b.regionInfo?.regionName
+		&& a.dynamicValue === b.dynamicValue
+		&& a.triggerValue === b.triggerValue;
+}
+
 export function findMatchingEntryIndex(
 	entries: CurrentlyPlayingRegion[],
 	media: SMILMedia,
@@ -143,7 +154,7 @@ export function findMatchingEntryIndex(
 	for (let i = 0; i < entries.length; i++) {
 		const elem = entries[i];
 		if (elem.parent === parent && elem.version === version) {
-			if (isEqual(elem.media, media)) {
+			if (isMediaMatch(elem.media, media)) {
 				return { matchIndex: i, matchType: 'exact' };
 			}
 			if (parentMatchIndex === -1) {

@@ -1,8 +1,8 @@
 import Debug from 'debug';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { PriorityObject } from '../../../models/priorityModels';
+import { ENDTIME_REPEAT_THRESHOLD } from '../../../enums/priorityEnums';
 import { sleep } from '../tools/generalTools';
-import { waitForPlayingToComplete } from '../tools/deferredTools';
 import { shouldContinueWaiting } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
 
@@ -22,13 +22,15 @@ export interface WaitCondition {
 }
 
 /**
- * Structured wait loop replacing three separate while(true) loops.
- * Waits for a blocking playlist to finish, then checks conditions.
+ * Structured wait loop for priority ordering.
+ * Uses waitForTurn for priority-ordered waking (only highest-priority waiter wakes first).
+ * Uses waiter's endTime for precise expiry-based wakeup (no fixed timeout).
  */
 export async function waitForPriorityRelease(
 	stateManager: PriorityStateManager,
 	currentPriorityRegion: CurrentlyPlayingRegion[],
 	currentIndexPriority: CurrentlyPlayingRegion,
+	waiterIndex: number,
 	blockerIndex: number,
 	priorityRegionName: string,
 	priorityObject: PriorityObject,
@@ -38,15 +40,30 @@ export async function waitForPriorityRelease(
 	while (true) {
 		const previousPlayer = currentPriorityRegion[blockerIndex].player;
 
-		// Wait for blocking playlist to finish using promise instead of polling
+		// Wait for blocking playlist to finish using priority-ordered reactive wait
 		if (previousPlayer.playing) {
 			debug(
-				'waiting for playlist to complete via deferred %s, %O, currentlyPlaying: %O',
+				'waiting for playlist to complete via waitForTurn %s, %O, currentlyPlaying: %O',
 				priorityRegionName,
 				currentIndexPriority,
 				currentPriorityRegion[blockerIndex],
 			);
-			await waitForPlayingToComplete(previousPlayer);
+
+			const racers: Promise<any>[] = [
+				stateManager.waitForTurn(
+					priorityRegionName,
+					(entries) => !entries[blockerIndex]?.player.playing,
+					priorityObject.priorityLevel,
+				),
+			];
+
+			// Precise wakeup at waiter's endTime (wallclock mode only)
+			const waiterEndTime = currentIndexPriority.player.endTime;
+			if (waiterEndTime > ENDTIME_REPEAT_THRESHOLD && waiterEndTime > Date.now()) {
+				racers.push(sleep(waiterEndTime - Date.now() + 100));
+			}
+
+			await Promise.race(racers);
 			await stateManager.waitForRegionPromises(priorityRegionName);
 		}
 
@@ -55,21 +72,13 @@ export async function waitForPriorityRelease(
 			return 'cancelled';
 		}
 
-		// Sleep proportional to priority gap
-		if (!currentIndexPriority.media.dynamicValue) {
-			const sleepMs = (priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100;
-			debug('sleeping defer/stop priority interval: %s', sleepMs);
-			await sleep(sleepMs);
-			debug('finished sleeping defer/stop priority interval: %s', sleepMs);
-		}
-
 		// Check if endTime/repeatCount expired while waiting
 		if (!shouldContinueWaiting({
 			endTime: currentIndexPriority.player.endTime,
 			timesPlayed: currentIndexPriority.player.timesPlayed,
 			isCancelled: false,
 		})) {
-			currentIndexPriority.player.timesPlayed = 0;
+			stateManager.resetTimesPlayed(priorityRegionName, waiterIndex);
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return 'expired';
 		}
