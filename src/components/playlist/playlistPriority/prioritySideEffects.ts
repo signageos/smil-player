@@ -34,7 +34,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		private currentlyPlayingPriority: CurrentlyPlayingPriority,
 		private synchronization: Synchronization,
 		private videoPreparing: VideoPreparing,
-		private cancelAllInRegionFn?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
+		private cancelAllInRegionFn: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 	) {}
 
 	hideTransitionElement(regionName: string): void {

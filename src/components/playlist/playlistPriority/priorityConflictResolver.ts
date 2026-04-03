@@ -24,6 +24,8 @@ export class PriorityConflictResolver {
 		private getCurrentlyPlayingSrc: (regionName: string) => string | undefined,
 	) {}
 
+	private static readonly MAX_PRIORITY_RECURSION_DEPTH = 3;
+
 	public handlePriorityBeforePlay = async (
 		elementKey: string,
 		priorityObject: PriorityObject,
@@ -32,6 +34,7 @@ export class PriorityConflictResolver {
 		previousPlayingIndex: number,
 		parent: string,
 		endTime: number,
+		depth: number = 0,
 	): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		const previousIndexPriority = this.stateManager.getEntry(priorityRegionName, previousPlayingIndex);
@@ -64,19 +67,15 @@ export class PriorityConflictResolver {
 		if (relation === 'higher' && previousIndexPriority.player.playing) {
 			debug('Found conflict with higher priority playlist, lower: %O, higher: %O', previousIndexPriority, currentIndexPriority);
 			const rule = selectApplicableRule('higher', previousIndexPriority.priority);
-			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule);
-		}
-
-		if (peerConflict) {
+			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule, depth);
+		} else if (peerConflict) {
 			debug('Found conflict with same priority playlists, old: %O, new: %O', previousIndexPriority, currentIndexPriority);
 			const rule = selectApplicableRule('peer', previousIndexPriority.priority);
-			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule);
-		}
-
-		if (relation === 'lower' && previousIndexPriority.player.playing) {
+			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule, depth);
+		} else if (relation === 'lower' && previousIndexPriority.player.playing) {
 			debug('Found conflict with lower priority playlist, higher: %O, lower: %O', previousIndexPriority, currentIndexPriority);
 			const rule = selectApplicableRule('lower', previousIndexPriority.priority);
-			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule);
+			await this.handlePriorityRules(elementKey, priorityObject, priorityRegionName, currentIndex, previousPlayingIndex, parent, endTime, rule, depth);
 		}
 
 		debug('finished handling priority before play');
@@ -91,6 +90,7 @@ export class PriorityConflictResolver {
 		parent: string,
 		endTime: number,
 		priorityRule: PriorityRule,
+		depth: number,
 	): Promise<void> => {
 		switch (priorityRule) {
 			case PriorityRule.never:
@@ -111,6 +111,7 @@ export class PriorityConflictResolver {
 					previousPlayingIndex,
 					parent,
 					endTime,
+					depth,
 				);
 				break;
 			default:
@@ -237,6 +238,7 @@ export class PriorityConflictResolver {
 		previousPlayingIndex: number,
 		parent: string,
 		endTime: number,
+		depth: number = 0,
 	): Promise<void> => {
 		const currentPriorityRegion = this.stateManager.getRegion(priorityRegionName)!;
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
@@ -295,6 +297,10 @@ export class PriorityConflictResolver {
 		if (result === 'released') {
 			const newPlayingIndex = this.stateManager.getPlayingIndex(priorityRegionName);
 			if (newPlayingIndex !== -1 && currentPriorityRegion[newPlayingIndex].priority.priorityLevel <= priorityObject.priorityLevel) {
+				if (depth >= PriorityConflictResolver.MAX_PRIORITY_RECURSION_DEPTH) {
+					debug('Max priority recursion depth reached (%d), stopping recursion for region: %s', depth, priorityRegionName);
+					return;
+				}
 				await this.handlePriorityBeforePlay(
 					elementKey,
 					priorityObject,
@@ -303,6 +309,7 @@ export class PriorityConflictResolver {
 					newPlayingIndex,
 					parent,
 					endTime,
+					depth + 1,
 				);
 			}
 		}

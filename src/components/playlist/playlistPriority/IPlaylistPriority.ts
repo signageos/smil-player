@@ -24,7 +24,7 @@ export interface IPlaylistPriority {
 		version: number,
 		currentVersion: number,
 		triggers: PlaylistTriggers,
-	) => void;
+	) => Promise<void>;
 	cleanupPriorityTracking: (regionName: string, version: number, priorityLevel?: number) => void;
 	cleanupExpiredPriority: (version: number, priorityLevel: number) => void;
 	cancelAllInRegion: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;

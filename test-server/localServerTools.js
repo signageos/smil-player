@@ -77,9 +77,10 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
         case enums_1.SMILUrls.priorityThreeLevelDeferExpiry.split('/').pop():
             // Three-level defer: P1 active 30s, P2 expires at 15s while deferred, P3 always active.
             // After P1 ends, P2 is abandoned (expired), P3 plays.
-            parsedFileString = parsedFileString.replace('THREE_LVL_P1_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
+            // BEGIN offset accounts for asset download latency (~15s).
+            parsedFileString = parsedFileString.replace('THREE_LVL_P1_BEGIN', `wallclock(R/${formatDate(moment().subtract(15, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('THREE_LVL_P1_END', `wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`);
-            parsedFileString = parsedFileString.replace('THREE_LVL_P2_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('THREE_LVL_P2_BEGIN', `wallclock(R/${formatDate(moment().subtract(15, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('THREE_LVL_P2_END', `wallclock(R/${formatDate(moment().add(15, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('THREE_LVL_P3_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('THREE_LVL_P3_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
@@ -152,10 +153,10 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('DEFER_INT_P3_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
         case enums_1.SMILUrls.priorityOscillation.split('/').pop():
-            // Two high-priority windows with a gap: +0-20s and +35-50s. P_low always active.
+            // Two high-priority windows with a gap: -15s to +20s and +35-50s. P_low always active.
             // Tests full stop→resume→stop→resume cycle.
-            // Wide enough to survive 15s asset download: window 1 still has 5s+ after download
-            parsedFileString = parsedFileString.replace('OSC_HIGH_A_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
+            // BEGIN offset accounts for asset download latency (~15s).
+            parsedFileString = parsedFileString.replace('OSC_HIGH_A_BEGIN', `wallclock(R/${formatDate(moment().subtract(15, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('OSC_HIGH_A_END', `wallclock(R/${formatDate(moment().add(20, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('OSC_HIGH_B_BEGIN', `wallclock(R/${formatDate(moment().add(35, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('OSC_HIGH_B_END', `wallclock(R/${formatDate(moment().add(50, 'seconds'))}/P1D)`);

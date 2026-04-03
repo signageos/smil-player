@@ -7,6 +7,9 @@ import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete
 import { Deferred } from '../tools/Deferred';
 import { getIndexOfPlayingMedia } from '../tools/generalTools';
 import { findMatchingEntryIndex } from './priorityDecisionEngine';
+import Debug from 'debug';
+
+const debug = Debug('@signageos/smil-player:priorityStateManager');
 
 interface RegionWaiter {
 	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
@@ -65,7 +68,15 @@ export class PriorityStateManager {
 		const unorderedToResolve: RegionWaiter[] = [];
 
 		for (const waiter of waiters) {
-			if (!entries || !waiter.predicate(entries)) continue;
+			let satisfied = false;
+			try {
+				satisfied = !!entries && waiter.predicate(entries);
+			} catch (err) {
+				debug('Waiter predicate threw for region %s, removing waiter: %O', regionName, err);
+				waiters.delete(waiter);
+				continue;
+			}
+			if (!satisfied) continue;
 
 			if (waiter.priorityLevel !== undefined) {
 				if (!bestOrdered || waiter.priorityLevel > bestOrdered.priorityLevel!) {

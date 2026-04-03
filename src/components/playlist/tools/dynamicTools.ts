@@ -37,9 +37,9 @@ export async function cancelDynamicPlaylistMaster(
 	sos: ISos,
 	currentlyPlaying: CurrentlyPlaying,
 	synchronization: Synchronization,
-	currentlyPlayingPriority: CurrentlyPlayingPriority,
+	_currentlyPlayingPriority: CurrentlyPlayingPriority,
 	dynamicValue: string,
-	cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
+	cancelAllInRegion: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 ) {
 	const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue];
 	if (!currentDynamicPlaylist) {
@@ -59,23 +59,8 @@ export async function cancelDynamicPlaylistMaster(
 		);
 	}
 
-	if (cancelAllInRegion) {
-		cancelAllInRegion(regionName);
-		cancelAllInRegion(currentDynamicPlaylist.parentRegion, (e) => !!e.media.dynamicValue);
-	} else {
-		// Legacy path — kept for backward compatibility during migration
-		const { resolvePlayingDeferred } = require('./deferredTools');
-		for (const elem of currentlyPlayingPriority[regionName] ?? []) {
-			elem.player.playing = false;
-			resolvePlayingDeferred(elem.player);
-		}
-		for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.parentRegion] ?? []) {
-			if (elem.media.dynamicValue) {
-				elem.player.playing = false;
-				resolvePlayingDeferred(elem.player);
-			}
-		}
-	}
+	cancelAllInRegion(regionName);
+	cancelAllInRegion(currentDynamicPlaylist.parentRegion, (e) => !!e.media.dynamicValue);
 
 	currentDynamicPlaylist.play = false;
 }
