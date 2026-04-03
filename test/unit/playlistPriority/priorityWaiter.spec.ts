@@ -4,44 +4,10 @@ import {
 	WaitCondition,
 } from '../../../src/components/playlist/playlistPriority/priorityWaiter';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
-import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting } from '../../../src/models/playlistModels';
-import { PriorityBehaviour, PriorityRule } from '../../../src/enums/priorityEnums';
-import { PriorityObject } from '../../../src/models/priorityModels';
-import { SMILMedia } from '../../../src/models/mediaModels';
+import { CurrentlyPlayingPriority, PromiseAwaiting } from '../../../src/models/playlistModels';
+import { makePriorityObject, makeRegion } from './testHelpers';
 
 const expect = chai.expect;
-
-function makePriorityObject(overrides: Partial<PriorityObject> = {}): PriorityObject {
-	return {
-		priorityLevel: 0,
-		maxPriorityLevel: 1,
-		lower: PriorityRule.defer,
-		peer: PriorityRule.never,
-		higher: PriorityRule.stop,
-		...overrides,
-	};
-}
-
-function makeRegion(overrides: Partial<CurrentlyPlayingRegion> = {}): CurrentlyPlayingRegion {
-	return {
-		media: { src: 'test.mp4', regionInfo: { regionName: 'main' } } as SMILMedia,
-		priority: makePriorityObject(),
-		player: {
-			contentPause: 0,
-			stop: false,
-			endTime: 0,
-			playing: false,
-			timesPlayed: 0,
-			playingCompletionDeferred: undefined,
-		},
-		parent: 'par-abc',
-		behaviour: PriorityBehaviour.none,
-		version: 1,
-		controlledPlaylist: null,
-		isFirstInPlaylist: {} as SMILMedia,
-		...overrides,
-	};
-}
 
 describe('priorityWaiter', () => {
 	describe('waitForPriorityRelease', () => {

@@ -1,47 +1,10 @@
 import * as chai from 'chai';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
-import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting } from '../../../src/models/playlistModels';
-import { PAUSE_CONTENT_VALUE, PriorityBehaviour, PriorityRule } from '../../../src/enums/priorityEnums';
-import { PriorityObject } from '../../../src/models/priorityModels';
-import { SMILMedia } from '../../../src/models/mediaModels';
+import { CurrentlyPlayingPriority, PromiseAwaiting } from '../../../src/models/playlistModels';
+import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../src/enums/priorityEnums';
+import { makePriorityObject, makeMedia, makeRegion } from './testHelpers';
 
 const expect = chai.expect;
-
-function makePriorityObject(overrides: Partial<PriorityObject> = {}): PriorityObject {
-	return {
-		priorityLevel: 0,
-		maxPriorityLevel: 2,
-		lower: PriorityRule.defer,
-		peer: PriorityRule.never,
-		higher: PriorityRule.stop,
-		...overrides,
-	};
-}
-
-function makeMedia(src: string = 'test.mp4'): SMILMedia {
-	return { src, regionInfo: { regionName: 'main' } } as SMILMedia;
-}
-
-function makeRegion(overrides: Partial<CurrentlyPlayingRegion> = {}): CurrentlyPlayingRegion {
-	return {
-		media: makeMedia(),
-		priority: makePriorityObject(),
-		player: {
-			contentPause: 0,
-			stop: false,
-			endTime: 0,
-			playing: false,
-			timesPlayed: 0,
-			playingCompletionDeferred: undefined,
-		},
-		parent: 'par-abc',
-		behaviour: PriorityBehaviour.none,
-		version: 1,
-		controlledPlaylist: null,
-		isFirstInPlaylist: {} as SMILMedia,
-		...overrides,
-	};
-}
 
 describe('PriorityStateManager', () => {
 	let state: CurrentlyPlayingPriority;
@@ -418,6 +381,39 @@ describe('PriorityStateManager', () => {
 			mgr.setPlaying('main', 1);
 			await new Promise((r) => setTimeout(r, 10));
 			expect(resolvedP1).to.be.true;
+		});
+
+		it('should not crash other waiters when a predicate throws during notification', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let goodWaiterResolved = false;
+			let throwCount = 0;
+			// Register a waiter that succeeds on registration (returns false) but throws on notification
+			mgr.waitUntil('main', () => { throwCount++; if (throwCount > 1) throw new Error('bad predicate'); return false; });
+			// Register a valid waiter
+			mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { goodWaiterResolved = true; });
+
+			// Trigger notification — the bad predicate should be caught, good waiter should resolve
+			mgr.markFinished('main', 0);
+			await new Promise((r) => setTimeout(r, 10));
+			expect(goodWaiterResolved).to.be.true;
+		});
+
+		it('should not crash ordered waiters when an unordered predicate throws during notification', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let orderedResolved = false;
+			let throwCount = 0;
+			// Bad unordered waiter — returns false on registration, throws on notification
+			mgr.waitUntil('main', () => { throwCount++; if (throwCount > 1) throw new Error('boom'); return false; });
+			// Good ordered waiter
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { orderedResolved = true; });
+
+			mgr.markFinished('main', 0);
+			await new Promise((r) => setTimeout(r, 10));
+			expect(orderedResolved).to.be.true;
 		});
 
 		it('should handle mixed ordered and unordered waiters', async () => {

@@ -30,7 +30,7 @@ import { PriorityObject } from '../../../models/priorityModels';
 import { PriorityRule } from '../../../enums/priorityEnums';
 import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-import { resolvePlayingDeferred } from '../tools/deferredTools';
+import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { joinSyncGroup } from '../tools/dynamicTools';
@@ -43,9 +43,18 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	public smilObject: SMILFileObject;
 	private readonly processPlaylist: Function;
 
-	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, processPlaylist: Function) {
+	private cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;
+
+	constructor(
+		sos: ISos,
+		files: FilesManager,
+		options: PlaylistOptions,
+		processPlaylist: Function,
+		cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
+	) {
 		super(sos, files, options);
 		this.processPlaylist = processPlaylist;
+		this.cancelAllInRegion = cancelAllInRegion;
 	}
 
 	public watchTriggers = async (
@@ -189,23 +198,15 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 		}
 
-		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig?.data) {
-					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig?.data);
-					elem.player.playing = false;
-					resolvePlayingDeferred(elem.player);
-				}
-			}
-		}
+		const dynamicData = dynamicPlaylistConfig?.data;
+		const dynamicFilter = (e: CurrentlyPlayingRegion) => !!e.media.dynamicValue && e.media.dynamicValue === dynamicData;
 
-		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig?.data) {
-					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig?.data);
-					elem.player.playing = false;
-					resolvePlayingDeferred(elem.player);
-				}
+		if (this.cancelAllInRegion) {
+			if (currentDynamicPlaylist?.regionInfo?.regionName) {
+				this.cancelAllInRegion(currentDynamicPlaylist.regionInfo.regionName, dynamicFilter);
+			}
+			if (currentDynamicPlaylist?.parentRegion) {
+				this.cancelAllInRegion(currentDynamicPlaylist.parentRegion, dynamicFilter);
 			}
 		}
 		set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
@@ -404,29 +405,15 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				}
 				currentDynamicPlaylist.play = false;
 
-				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig?.data) {
-							debug(
-								'Cancelling dynamic playlist with dynamic value %s',
-								currentDynamicPlaylist.dynamicConfig?.data,
-							);
-							elem.player.playing = false;
-							resolvePlayingDeferred(elem.player);
-						}
-					}
-				}
+				const dynamicData = currentDynamicPlaylist.dynamicConfig?.data;
+				const dynamicFilter = (e: CurrentlyPlayingRegion) => !!e.media.dynamicValue && e.media.dynamicValue === dynamicData;
 
-				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig?.data) {
-							debug(
-								'Cancelling dynamic playlist with dynamic value %s',
-								currentDynamicPlaylist.dynamicConfig?.data,
-							);
-							elem.player.playing = false;
-							resolvePlayingDeferred(elem.player);
-						}
+				if (this.cancelAllInRegion) {
+					if (currentDynamicPlaylist?.regionInfo?.regionName) {
+						this.cancelAllInRegion(currentDynamicPlaylist.regionInfo.regionName, dynamicFilter);
+					}
+					if (currentDynamicPlaylist?.parentRegion) {
+						this.cancelAllInRegion(currentDynamicPlaylist.parentRegion, dynamicFilter);
 					}
 				}
 				set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);

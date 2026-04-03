@@ -10,44 +10,11 @@ import {
 	findMatchingEntryIndex,
 	isMediaMatch,
 } from '../../../src/components/playlist/playlistPriority/priorityDecisionEngine';
-import { PriorityBehaviour, PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
-import { PriorityObject } from '../../../src/models/priorityModels';
-import { CurrentlyPlayingRegion } from '../../../src/models/playlistModels';
+import { PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
 import { SMILMedia } from '../../../src/models/mediaModels';
+import { makePriorityObject, makeRegion } from './testHelpers';
 
 const expect = chai.expect;
-
-function makePriorityObject(overrides: Partial<PriorityObject> = {}): PriorityObject {
-	return {
-		priorityLevel: 0,
-		maxPriorityLevel: 2,
-		lower: PriorityRule.defer,
-		peer: PriorityRule.never,
-		higher: PriorityRule.stop,
-		...overrides,
-	};
-}
-
-function makeRegion(overrides: Partial<CurrentlyPlayingRegion> = {}): CurrentlyPlayingRegion {
-	return {
-		media: { src: 'test.mp4', regionInfo: { regionName: 'main' } } as SMILMedia,
-		priority: makePriorityObject(),
-		player: {
-			contentPause: 0,
-			stop: false,
-			endTime: 0,
-			playing: false,
-			timesPlayed: 0,
-			playingCompletionDeferred: undefined,
-		},
-		parent: 'par-abc123',
-		behaviour: PriorityBehaviour.none,
-		version: 1,
-		controlledPlaylist: null,
-		isFirstInPlaylist: {} as SMILMedia,
-		...overrides,
-	};
-}
 
 describe('PriorityDecisionEngine', () => {
 	describe('determinePriorityRelation', () => {

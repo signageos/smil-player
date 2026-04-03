@@ -103,8 +103,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		},
 	) {
 		super(sos, files, options);
-		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, this.processPlaylist);
 		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos);
+		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, this.processPlaylist,
+			(regionName, filter) => this.priority.cancelAllInRegion(regionName, filter));
 		this.playerName = getConfigString(this.sos.config, 'playerName') ?? '';
 		this.playerId = getConfigString(this.sos.config, 'playerId') ?? '';
 		this.elementController = new SMILElementController(this.synchronization);
