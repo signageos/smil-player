@@ -3,10 +3,8 @@ import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
 import Debug from 'debug';
-import { PlaylistCommon } from '../playlistCommon/playlistCommon';
+import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
 import { ISos } from '../../../models/sosModels';
-import { FilesManager } from '../../files/filesManager';
-import { PlaylistOptions } from '../../../models/playlistModels';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { IPrioritySideEffects, PrioritySideEffects } from './prioritySideEffects';
@@ -20,42 +18,46 @@ import { PriorityConflictResolver } from './priorityConflictResolver';
 
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
-export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriority {
+export class PlaylistPriority implements IPlaylistPriority {
 	private stateManager: PriorityStateManager;
 	private _sideEffects: IPrioritySideEffects;
 	private conflictResolver: PriorityConflictResolver;
+	private cancelFunction: boolean[];
 
 	constructor(
-		sos: ISos,
-		files: FilesManager,
 		options: PlaylistOptions,
+		sos?: ISos,
 		deps?: {
 			stateManager?: PriorityStateManager;
 			sideEffects?: IPrioritySideEffects;
 			conflictResolver?: PriorityConflictResolver;
 		},
 	) {
-		super(sos, files, options);
+		this.cancelFunction = options.cancelFunction;
 		this.stateManager = deps?.stateManager ?? new PriorityStateManager(
-			this.currentlyPlayingPriority,
-			this.promiseAwaiting,
+			options.currentlyPlayingPriority,
+			options.promiseAwaiting,
 		);
 		this._sideEffects = deps?.sideEffects ?? new PrioritySideEffects(
-			sos,
-			this.currentlyPlaying,
-			this.currentlyPlayingPriority,
-			this.synchronization,
-			this.videoPreparing,
+			sos!,
+			options.currentlyPlaying,
+			options.currentlyPlayingPriority,
+			options.synchronization,
+			options.videoPreparing,
 			(regionName, filter) => this.stateManager.cancelAllInRegion(regionName, filter),
 		);
 		this.conflictResolver = deps?.conflictResolver ?? new PriorityConflictResolver(
 			this.stateManager,
 			this._sideEffects,
-			this.synchronization,
+			options.synchronization,
 			() => this.getCancelFunction(),
-			(regionName) => this.currentlyPlaying[regionName]?.src,
+			(regionName) => options.currentlyPlaying[regionName]?.src,
 		);
 	}
+
+	private getCancelFunction = (): boolean => {
+		return this.cancelFunction[this.cancelFunction?.length - 1];
+	};
 
 	public priorityBehaviour = async (
 		value: SMILMedia,
@@ -191,7 +193,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		this.stateManager.cleanupExpiredPriority(version, priorityLevel);
 	};
 
-	public cancelAllInRegion = (regionName: string, filter?: (entry: any) => boolean): void => {
+	public cancelAllInRegion = (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean): void => {
 		this.stateManager.cancelAllInRegion(regionName, filter);
 	};
 
@@ -207,11 +209,11 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		this.stateManager.cloneRegion(fromRegion, toRegion);
 	};
 
-	public waitUntil = (regionName: string, predicate: (entries: any[]) => boolean): Promise<void> => {
+	public waitUntil = (regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean): Promise<void> => {
 		return this.stateManager.waitUntil(regionName, predicate);
 	};
 
-	public waitForTurn = (regionName: string, predicate: (entries: any[]) => boolean, priorityLevel: number): Promise<void> => {
+	public waitForTurn = (regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean, priorityLevel: number): Promise<void> => {
 		return this.stateManager.waitForTurn(regionName, predicate, priorityLevel);
 	};
 }
