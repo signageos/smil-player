@@ -227,6 +227,7 @@ export class PriorityStateManager {
 
 	setDeferBehaviour(regionName: string, index: number): void {
 		this.state[regionName][index].behaviour = PriorityBehaviour.defer;
+		this.notifyWaiters(regionName);
 	}
 
 	setNeverBlocked(regionName: string, index: number): void {
@@ -242,6 +243,7 @@ export class PriorityStateManager {
 
 	resetStop(regionName: string, index: number): void {
 		this.state[regionName][index].player.stop = false;
+		this.notifyWaiters(regionName);
 	}
 
 	/**
@@ -270,10 +272,12 @@ export class PriorityStateManager {
 
 	incrementTimesPlayed(regionName: string, index: number): void {
 		this.state[regionName][index].player.timesPlayed++;
+		this.notifyWaiters(regionName);
 	}
 
 	resetTimesPlayed(regionName: string, index: number): void {
 		this.state[regionName][index].player.timesPlayed = 0;
+		this.notifyWaiters(regionName);
 	}
 
 	// --- Bulk operations ---
