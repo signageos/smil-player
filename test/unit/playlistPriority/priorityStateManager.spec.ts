@@ -245,6 +245,17 @@ describe('PriorityStateManager', () => {
 		});
 	});
 
+	describe('resetTimesPlayed', () => {
+		it('should reset timesPlayed counter to zero', () => {
+			state['main'] = [makeRegion()];
+			mgr.incrementTimesPlayed('main', 0);
+			mgr.incrementTimesPlayed('main', 0);
+			expect(state['main'][0].player.timesPlayed).to.equal(2);
+			mgr.resetTimesPlayed('main', 0);
+			expect(state['main'][0].player.timesPlayed).to.equal(0);
+		});
+	});
+
 	describe('waitForCompletion', () => {
 		it('should resolve immediately when not playing', async () => {
 			state['main'] = [makeRegion()];
@@ -268,6 +279,162 @@ describe('PriorityStateManager', () => {
 
 			await waitPromise;
 			expect(resolved).to.be.true;
+		});
+	});
+
+	describe('cleanupPriorityTracking', () => {
+		it('should reset highestProcessingPriority when it matches the given level', () => {
+			promiseAwaiting['main'] = { highestProcessingPriority: 2, version: 1 } as any;
+			mgr.cleanupPriorityTracking('main', 1, 2);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(-1);
+		});
+
+		it('should not reset highestProcessingPriority when it does not match', () => {
+			promiseAwaiting['main'] = { highestProcessingPriority: 2, version: 1 } as any;
+			mgr.cleanupPriorityTracking('main', 1, 1);
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(2);
+		});
+
+		it('should update version if outdated', () => {
+			promiseAwaiting['main'] = { version: 1 } as any;
+			mgr.cleanupPriorityTracking('main', 3);
+			expect(promiseAwaiting['main'].version).to.equal(3);
+		});
+
+		it('should not fail when region does not exist in promiseAwaiting', () => {
+			mgr.cleanupPriorityTracking('nonexistent', 1, 0);
+			// should not throw
+		});
+	});
+
+	describe('cleanupExpiredPriority', () => {
+		it('should set playing=false and resolve deferred for matching priority entries', () => {
+			state['main'] = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 2 }),
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1 }),
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+			];
+			mgr.setPlaying('main', 0);
+			mgr.setPlaying('main', 1);
+			promiseAwaiting['main'] = { highestProcessingPriority: 2, version: 1 } as any;
+
+			mgr.cleanupExpiredPriority(1, 2);
+
+			// Only priority level 2 should be stopped
+			expect(state['main'][0].player.playing).to.be.false;
+			expect(state['main'][1].player.playing).to.be.true;
+			// Priority tracking should be cleaned up
+			expect(promiseAwaiting['main'].highestProcessingPriority).to.equal(-1);
+		});
+	});
+
+	describe('waitUntil', () => {
+		it('should resolve immediately when predicate is already true', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: false, timesPlayed: 0 } })];
+			await mgr.waitUntil('main', (entries) => !entries[0].player.playing);
+			// Should not hang
+		});
+
+		it('should block until mutation satisfies predicate', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let resolved = false;
+			const waitPromise = mgr.waitUntil('main', (entries) => !entries[0].player.playing).then(() => { resolved = true; });
+
+			await new Promise((r) => setTimeout(r, 10));
+			expect(resolved).to.be.false;
+
+			mgr.markFinished('main', 0);
+
+			await waitPromise;
+			expect(resolved).to.be.true;
+		});
+
+		it('should resolve ALL matching unordered waiters simultaneously', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let resolved1 = false;
+			let resolved2 = false;
+			const p1 = mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolved1 = true; });
+			const p2 = mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolved2 = true; });
+
+			mgr.markFinished('main', 0);
+
+			await Promise.all([p1, p2]);
+			expect(resolved1).to.be.true;
+			expect(resolved2).to.be.true;
+		});
+	});
+
+	describe('waitForTurn', () => {
+		it('should resolve ONLY highest priority among multiple satisfied waiters', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let resolvedHigh = false;
+			let resolvedLow = false;
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { resolvedHigh = true; });
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedLow = true; });
+
+			mgr.markFinished('main', 0);
+
+			// Allow microtasks to process
+			await new Promise((r) => setTimeout(r, 10));
+
+			expect(resolvedHigh).to.be.true;
+			expect(resolvedLow).to.be.false; // Lower priority stays registered
+		});
+
+		it('should resolve lower priority on subsequent mutation after winner acts', async () => {
+			state['main'] = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 2 }),
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({ priority: makePriorityObject({ priorityLevel: 1 }) }),
+				makeRegion({ priority: makePriorityObject({ priorityLevel: 0 }) }),
+			];
+			mgr.setPlaying('main', 0);
+
+			let resolvedP2 = false;
+			let resolvedP1 = false;
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { resolvedP2 = true; });
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedP1 = true; });
+
+			// P3 finishes → only P2 wakes
+			mgr.markFinished('main', 0);
+			await new Promise((r) => setTimeout(r, 10));
+			expect(resolvedP2).to.be.true;
+			expect(resolvedP1).to.be.false;
+
+			// P2 starts playing → triggers notifyWaiters → P1 wakes
+			mgr.setPlaying('main', 1);
+			await new Promise((r) => setTimeout(r, 10));
+			expect(resolvedP1).to.be.true;
+		});
+
+		it('should handle mixed ordered and unordered waiters', async () => {
+			state['main'] = [makeRegion({ player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 } })];
+			mgr.setPlaying('main', 0);
+
+			let resolvedOrdered = false;
+			let resolvedUnordered = false;
+			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedOrdered = true; });
+			mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolvedUnordered = true; });
+
+			mgr.markFinished('main', 0);
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Both should resolve — unordered always resolves, ordered resolves as only one
+			expect(resolvedOrdered).to.be.true;
+			expect(resolvedUnordered).to.be.true;
 		});
 	});
 

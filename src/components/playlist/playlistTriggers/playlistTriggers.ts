@@ -189,7 +189,6 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 		}
 
-		// TODO: unify region cancellation with master
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig?.data) {

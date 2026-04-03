@@ -22,7 +22,6 @@ import { SMILEnums } from '../../../enums/generalEnums';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
-import { resolvePlayingDeferred } from '../tools/deferredTools';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: ISos;
@@ -145,54 +144,6 @@ export class PlaylistCommon implements IPlaylistCommon {
 				break;
 		}
 	};
-
-	/**
-	 * Cleans up priority tracking after an element finishes waiting or gets skipped
-	 * @param regionName - The region where priority tracking should be cleaned
-	 * @param version - Current playlist version
-	 * @param priorityLevel - The priority level to clean up
-	 */
-	protected cleanupPriorityTracking(regionName: string, version: number, priorityLevel?: number): void {
-		if (!this.promiseAwaiting[regionName]) {
-			return;
-		}
-
-		const promiseObj = this.promiseAwaiting[regionName] as any;
-
-		// Reset highest processing priority if it matches the one being cleaned up
-		if (priorityLevel !== undefined && promiseObj.highestProcessingPriority === priorityLevel) {
-			// Reset to -1 (no priority) so lower priorities can proceed
-			promiseObj.highestProcessingPriority = -1;
-			debug(
-				`Cleaned up priority tracking for region ${regionName}, priority ${priorityLevel}, version ${version} - resetting to allow lower priorities to proceed`,
-			);
-		}
-
-		// Clean up version if it's outdated
-		if (promiseObj.version && promiseObj.version < version) {
-			promiseObj.version = version;
-			debug(`Updated version tracking for region ${regionName} from ${promiseObj.version} to ${version}`);
-		}
-	}
-
-	/**
-	 * Cleans up priority tracking across all regions for a given priority level.
-	 * Called when an endless loop breaks due to allExpired — no media element was playing
-	 * to trigger handlePriorityWhenDone, so the deferred lower-priority content would wait forever.
-	 */
-	cleanupExpiredPriority(version: number, priorityLevel: number): void {
-		for (const [regionName, priorityRegion] of Object.entries(this.currentlyPlayingPriority)) {
-			if (Array.isArray(priorityRegion)) {
-				for (const entry of priorityRegion) {
-					if (entry.priority?.priorityLevel === priorityLevel && entry.player?.playing) {
-						entry.player.playing = false;
-						resolvePlayingDeferred(entry.player);
-					}
-				}
-			}
-			this.cleanupPriorityTracking(regionName, version, priorityLevel);
-		}
-	}
 
 	/**
 	 * sets element which played in current region before currently playing element invisible ( image, widget, video )
