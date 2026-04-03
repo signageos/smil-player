@@ -215,7 +215,7 @@ export class PlaylistTraverser {
 					if (result === 'RETRY') {
 						retryCount++;
 						debug(`processPlaylist: Retrying element (attempt ${retryCount}/${MAX_RETRIES}): %O`, value);
-						// Small delay before retry
+						// Small delay before retry to allow higher-priority element to proceed
 						await this.control.sleep(100);
 					} else {
 						shouldRetry = false;
