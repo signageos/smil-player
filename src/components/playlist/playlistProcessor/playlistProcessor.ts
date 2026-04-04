@@ -5,6 +5,8 @@ import cloneDeep = require('lodash/cloneDeep');
 import get = require('lodash/get');
 import set = require('lodash/set');
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
+import { Deferred } from '../tools/Deferred';
+import { ensurePlayingDeferred } from '../tools/deferredTools';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
 import { IPlaylistPriority } from '../playlistPriority/IPlaylistPriority';
@@ -80,7 +82,7 @@ import { PlaylistTraverser, IPlaylistEngine } from './playlistTraverser';
 
 export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProcessor {
 	private checkFilesLoop: boolean = true;
-	private playingIntro: boolean = false;
+	private introFinished: Deferred<void> = new Deferred<void>();
 	private readonly playerName: string;
 	private readonly playerId: string;
 	private triggers: PlaylistTriggers;
@@ -170,6 +172,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	public setCancelFunction = (value: boolean, index: number) => {
 		this.cancelFunction[index] = value;
+		if (value) {
+			this.cancelDeferred.resolve();
+			this.cancelDeferred = new Deferred<void>();
+		}
 	};
 
 	/**
@@ -590,7 +596,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlaying[SMILEnums.defaultRegion].src,
 				element.src,
 			);
-			this.playingIntro = false;
+			this.introFinished.resolve();
 			await this.cancelPreviousMedia(this.currentlyPlaying[SMILEnums.defaultRegion].regionInfo);
 			return;
 		}
@@ -896,8 +902,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timedDebug: TimedDebugger,
 	): Promise<void> => {
 		timedDebug.log('Starting to play element wait media function: %O', element);
-		let duration = setElementDuration(element.dur);
-		let transitionSet = false;
+		const duration = setElementDuration(element.dur);
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version, timedDebug);
 
@@ -912,48 +917,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		timedDebug.log('waiting image duration: %s from element: %s', duration, element.id);
 
-		while (
-			duration > 0 &&
-			!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop &&
-			this.currentlyPlaying[currentRegionInfo.regionName]?.player !== 'stop'
-		) {
-			if (
-				this.currentlyPlayingPriority[currentRegionInfo.regionName][arrayIndex] &&
-				get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player
-					.contentPause !== 0
-			) {
-				await Promise.race([
-					this.priority.stateManager.waitUntil(currentRegionInfo.regionName, (e) =>
-						!e[arrayIndex] || e[arrayIndex]?.player.contentPause === 0 || e[arrayIndex]?.player.stop === true),
-					(async () => {
-						while (!this.getCancelFunction()) { await sleep(1000); }
-						await this.cancelPreviousMedia(currentRegionInfo);
-					})(),
-				]);
-			}
-			if (
-				transitionDuration !== 0 &&
-				duration < transitionDuration &&
-				this.currentlyPlaying[currentRegionInfo.regionName].nextElement?.type === 'html' &&
-				!transitionSet
-			) {
-				transitionSet = true;
-				timedDebug.log(
-					'setting transition css for element: %O, duration: %s, transitionDuration: %s',
-					element,
-					duration,
-					transitionDuration,
-				);
-				setTransitionCss(
-					element,
-					elementHtml,
-					this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
-					transitionDuration,
-				);
-			}
-			duration -= 100;
-			await sleep(100);
-		}
+		await this.waitElementDuration(
+			duration, currentRegionInfo, arrayIndex, element, elementHtml, transitionDuration, timedDebug,
+		);
 
 		timedDebug.log('element playing finished: %O', element);
 
@@ -971,20 +937,126 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @param timeout - how long should function wait
 	 */
 	protected waitTimeoutOrFileUpdate = async (timeout: number): Promise<boolean> => {
-		const promises = [];
 		let fileUpdated = false;
-		promises.push(sleep(timeout));
-		promises.push(
-			new Promise<void>(async (resolve) => {
-				while (!this.getCancelFunction()) {
-					await sleep(1000);
-				}
-				fileUpdated = true;
-				resolve();
-			}),
-		);
-		await Promise.race(promises);
+		await Promise.race([
+			sleep(timeout),
+			this.waitForCancelFunction().then(() => { fileUpdated = true; }),
+		]);
 		return fileUpdated;
+	};
+
+	/**
+	 * Waits for the given duration, interruptible by priority stop/pause or SMIL file update.
+	 * Handles transition CSS timing and priority pause/unpause cycles.
+	 */
+	private waitElementDuration = async (
+		duration: number,
+		currentRegionInfo: RegionAttributes,
+		arrayIndex: number,
+		element: SosHtmlElement,
+		elementHtml: HTMLElement,
+		transitionDuration: number,
+		timedDebug: TimedDebugger,
+	): Promise<void> => {
+		let transitionSet = false;
+
+		while (
+			duration > 0 &&
+			!get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player.stop
+		) {
+			// Check if paused — wait reactively for unpause, stop, or cancel
+			if (
+				this.currentlyPlayingPriority[currentRegionInfo.regionName][arrayIndex] &&
+				get(this.currentlyPlayingPriority, `${currentRegionInfo.regionName}`)[arrayIndex]?.player
+					.contentPause !== 0
+			) {
+				await Promise.race([
+					this.priority.stateManager.waitUntil(currentRegionInfo.regionName, (e) =>
+						!e[arrayIndex] || e[arrayIndex]?.player.contentPause === 0 || e[arrayIndex]?.player.stop === true),
+					this.waitForCancelFunction(),
+				]);
+				if (this.getCancelFunction()) {
+					await this.cancelPreviousMedia(currentRegionInfo);
+					break;
+				}
+				continue;
+			}
+
+			// Guard: entry must exist
+			const player = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[arrayIndex]?.player;
+			if (!player) break;
+
+			// Ensure a fresh interrupt deferred for this play cycle.
+			// At most 1 unsettled Deferred exists per player at any time (no accumulation).
+			ensurePlayingDeferred(player);
+
+			// Set up transition timer if needed
+			let transitionTimer: ReturnType<typeof setTimeout> | undefined;
+			if (transitionDuration !== 0 && duration > transitionDuration && !transitionSet) {
+				transitionTimer = setTimeout(() => {
+					if (
+						this.currentlyPlaying[currentRegionInfo.regionName]?.nextElement?.type === 'html' &&
+						!transitionSet
+					) {
+						transitionSet = true;
+						timedDebug.log(
+							'setting transition css for element: %O, duration: %s, transitionDuration: %s',
+							element,
+							duration,
+							transitionDuration,
+						);
+						setTransitionCss(
+							element,
+							elementHtml,
+							this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
+							transitionDuration,
+						);
+					}
+				}, duration - transitionDuration);
+			}
+
+			// Cancellable sleep — clearTimeout prevents orphaned timers on early race exit
+			let sleepTimer: ReturnType<typeof setTimeout>;
+			const sleepPromise = new Promise<void>((resolve) => {
+				sleepTimer = setTimeout(resolve, duration);
+			});
+
+			// Wait for: duration expires, stop/pause signal (via deferred), or cancel
+			const startTime = Date.now();
+			await Promise.race([
+				sleepPromise,
+				player.playingCompletionDeferred!.promise,
+				this.waitForCancelFunction(),
+			]);
+			clearTimeout(sleepTimer!);
+			if (transitionTimer) clearTimeout(transitionTimer);
+
+			// Deduct elapsed time so remaining duration is correct after priority pause/unpause
+			const elapsed = Date.now() - startTime;
+			duration -= elapsed;
+
+			// Handle cancel — exit immediately
+			if (this.getCancelFunction()) {
+				await this.cancelPreviousMedia(currentRegionInfo);
+				break;
+			}
+
+			// Apply transition if we passed the threshold but timer didn't fire
+			if (
+				transitionDuration !== 0 &&
+				duration <= transitionDuration &&
+				!transitionSet &&
+				this.currentlyPlaying[currentRegionInfo.regionName]?.nextElement?.type === 'html'
+			) {
+				transitionSet = true;
+				setTransitionCss(
+					element,
+					elementHtml,
+					this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
+					transitionDuration,
+				);
+			}
+		}
 	};
 
 	// audio currently not supported
@@ -1355,7 +1427,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								this.priority.stateManager.waitUntil(currentRegionInfo.regionName, (e) =>
 									!e[arrayIndex] || e[arrayIndex]?.player.contentPause === 0 || e[arrayIndex]?.player.stop === true),
 								(async () => {
-									while (!this.getCancelFunction()) { await sleep(1000); }
+									await this.waitForCancelFunction();
 									await this.cancelPreviousMedia(currentRegionInfo);
 									timedDebug.log(
 										'Finished iteration of playlist: %O',
@@ -1628,16 +1700,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private playIntroLoop = async (media: string, intro: SMILIntro): Promise<Promise<void>[]> => {
 		const promises = [];
-		this.playingIntro = true;
+		this.introFinished = new Deferred<void>();
 		promises.push(
 			(async () => {
-				while (this.playingIntro) {
+				while (!this.introFinished.isSettled) {
 					switch (removeDigits(media)) {
 						case SMILEnums.img:
-							await sleep(1000);
+							await this.introFinished.promise;
 							break;
 						default:
-							await this.playIntroVideo(intro[media] as SMILVideo);
+							await Promise.race([
+								this.playIntroVideo(intro[media] as SMILVideo),
+								this.introFinished.promise,
+							]);
 					}
 				}
 			})(),
