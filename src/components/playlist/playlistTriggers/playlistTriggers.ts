@@ -1,5 +1,6 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
 import { SMILMedia } from '../../../models/mediaModels';
+import { Deferred } from '../tools/Deferred';
 import { getConfigString, sleep } from '../tools/generalTools';
 import { FunctionKeys, SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { isNil, isObject } from 'lodash';
@@ -92,12 +93,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			) &&
 			this.isRegionOrNestedActive(regionInfo)
 		) {
-			// debug(
-			// 	'Cant play media because its region is occupied by trigger. video: %O, region: %O',
-			// 	media,
-			// 	regionInfo,
-			// );
-			await sleep(25);
+			await this.waitForRegionChange();
 		}
 
 		if (
@@ -210,6 +206,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			}
 		}
 		set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
+		this.notifyRegionChange();
 		return;
 	};
 
@@ -417,6 +414,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					}
 				}
 				set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
+				this.notifyRegionChange();
 				if (!currentDynamicPlaylist.isMaster) {
 					debug('Cancelling dynamic playlist on slave device: %O', currentDynamicPlaylist);
 					await this.cancelPreviousMedia({
@@ -432,10 +430,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		if (onStatus.connectedPeers.length === this.synchronization.syncGroupIds.length) {
 			for (const trigger in this.triggersEndless) {
 				this.triggersEndless[trigger].play = false;
+				this.triggersEndless[trigger].cancelDeferred?.resolve();
 				this.triggersEndless[trigger].syncCanceled = true;
 				// stop fullscreen trigger
 				set(this.currentlyPlaying, `fullScreenTrigger.player`, 'stop');
 			}
+			this.notifyRegionChange();
 			this.synchronization.shouldSync = true;
 			this.synchronization.shouldCancelAll = true;
 			return;
@@ -478,6 +478,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					this.triggersEndless[trigger].syncCanceled = true;
 					set(this.currentlyPlaying, `fullScreenTrigger.player`, 'stop');
 				}
+				this.notifyRegionChange();
 			}
 		}
 	};
@@ -629,6 +630,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			if (triggerMedia.seq?.end === triggerInfo.trigger) {
 				const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 				currentTrigger.play = false;
+				currentTrigger.cancelDeferred?.resolve();
 				await this.cancelPreviousMedia(currentTrigger.regionInfo);
 			}
 			return;
@@ -716,6 +718,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		if (this.triggersEndless[triggerInfo.trigger]?.play && triggerMedia.seq?.end === triggerInfo.trigger) {
 			const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 			currentTrigger.play = false;
+			currentTrigger.cancelDeferred?.resolve();
 			await this.cancelPreviousMedia(currentTrigger.regionInfo);
 		}
 
@@ -738,6 +741,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentTrigger.play = true;
 		currentTrigger.syncCanceled = false;
 		currentTrigger.triggerRandom = triggerRandom;
+		currentTrigger.cancelDeferred = new Deferred<void>();
 
 		let play = true;
 		const promises = [];
@@ -758,8 +762,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		promises.push(
 			(async () => {
-				while (currentTrigger?.latestEventFired + durationMillis > Date.now() && currentTrigger.play) {
-					await sleep(100);
+				// Re-check deadline after each sleep — latestEventFired is updated on re-trigger,
+				// extending the deadline (e.g., 5s trigger re-fired at 3s plays until 8s total)
+				while (currentTrigger.latestEventFired + durationMillis > Date.now() && currentTrigger.play) {
+					const remaining = currentTrigger.latestEventFired + durationMillis - Date.now();
+					await Promise.race([
+						sleep(Math.max(0, remaining)),
+						currentTrigger.cancelDeferred!.promise,
+					]);
 				}
 				play = false;
 			})(),
@@ -772,6 +782,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		const regionInfo = currentTrigger.regionInfo;
 		if (currentTrigger.triggerRandom === triggerRandom && (currentTrigger.play || currentTrigger.syncCanceled)) {
 			currentTrigger.play = false;
+			currentTrigger.cancelDeferred?.resolve();
 			await this.cancelPreviousMedia(regionInfo);
 		}
 	};
@@ -797,6 +808,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		const regionInfo = currentTrigger.regionInfo;
 		if (currentTrigger.triggerRandom === triggerRandom && (currentTrigger.play || currentTrigger.syncCanceled)) {
 			currentTrigger.play = false;
+			currentTrigger.cancelDeferred?.resolve();
 			await this.cancelPreviousMedia(regionInfo);
 		}
 	};

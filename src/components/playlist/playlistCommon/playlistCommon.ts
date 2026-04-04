@@ -22,6 +22,7 @@ import { SMILEnums } from '../../../enums/generalEnums';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { Deferred } from '../tools/Deferred';
 
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: ISos;
@@ -33,6 +34,8 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected synchronization: Synchronization;
 	protected videoPreparing: VideoPreparing = {};
 	protected randomPlaylist: RandomPlaylist = {};
+	protected cancelDeferred: Deferred<void> = new Deferred<void>();
+	protected regionChangeDeferred: Deferred<void> = new Deferred<void>();
 
 	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
 		this.sos = sos;
@@ -54,6 +57,20 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected getCancelFunction = (): boolean => {
 		return this.cancelFunction[this.cancelFunction?.length - 1];
 	};
+
+	protected waitForCancelFunction(): Promise<void> {
+		if (this.getCancelFunction()) return Promise.resolve();
+		return this.cancelDeferred.promise;
+	}
+
+	protected notifyRegionChange(): void {
+		this.regionChangeDeferred.resolve();
+		this.regionChangeDeferred = new Deferred<void>();
+	}
+
+	protected waitForRegionChange(): Promise<void> {
+		return this.regionChangeDeferred.promise;
+	}
 
 	/**
 	 * runs function given as parameter in endless loop
@@ -168,6 +185,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 
 			this.currentlyPlaying[regionInfo.regionName].player = 'stop';
 			this.currentlyPlaying[regionInfo.regionName].playing = false;
+			this.notifyRegionChange();
 		} catch (err) {
 			await this.cancelPreviousVideo(regionInfo);
 		}
@@ -178,6 +196,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			stopTickerAnimation(this.currentlyPlaying[regionInfo.regionName] as SMILTicker);
 			this.currentlyPlaying[regionInfo.regionName].player = 'stop';
 			this.currentlyPlaying[regionInfo.regionName].playing = false;
+			this.notifyRegionChange();
 		} catch (err) {
 			debug('error during ticker cancellation: %O', err);
 		}
@@ -220,6 +239,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 				localRegionInfo.height,
 			);
 			video.playing = false;
+			this.notifyRegionChange();
 			debug(`previous ${videoElement} stopped: %O`, video);
 		} catch (err) {
 			debug('error during video cancellation: %O', err);
