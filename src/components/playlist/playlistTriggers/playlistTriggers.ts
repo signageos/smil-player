@@ -108,9 +108,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			// if this trigger has already assigned region take it,
 			// else find first free region in nested regions, if none is free, take first one
 			if (media.hasOwnProperty(SMILTriggersEnum.triggerValue)) {
-				regionInfo = !isNil(this.triggersEndless[media.triggerValue as string]?.regionInfo)
-					? this.triggersEndless[media.triggerValue as string].regionInfo
-					: regionInfo.region[this.findFirstFreeRegion(regionInfo.region)];
+				const cachedRegion = this.triggersEndless[media.triggerValue as string]?.regionInfo;
+				regionInfo = cachedRegion ?? regionInfo.region[this.findFirstFreeRegion(regionInfo.region)];
 
 				set(this.triggersEndless, `${media.triggerValue}.regionInfo`, regionInfo);
 			}
@@ -631,7 +630,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 				currentTrigger.play = false;
 				currentTrigger.cancelDeferred?.resolve();
-				await this.cancelPreviousMedia(currentTrigger.regionInfo);
+				if (currentTrigger.regionInfo) {
+					await this.cancelPreviousMedia(currentTrigger.regionInfo);
+				}
 			}
 			return;
 		}
@@ -719,7 +720,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 			currentTrigger.play = false;
 			currentTrigger.cancelDeferred?.resolve();
-			await this.cancelPreviousMedia(currentTrigger.regionInfo);
+			if (currentTrigger.regionInfo) {
+				await this.cancelPreviousMedia(currentTrigger.regionInfo);
+			}
 		}
 
 		if (!FunctionKeys[key]) {
@@ -742,6 +745,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentTrigger.syncCanceled = false;
 		currentTrigger.triggerRandom = triggerRandom;
 		currentTrigger.cancelDeferred = new Deferred<void>();
+		delete currentTrigger.regionInfo;
 
 		let play = true;
 		const promises = [];
@@ -780,7 +784,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		// trigger finished playing by itself, cancel it
 		debug('Cancelling trigger: %O', triggerInfo.trigger);
 		const regionInfo = currentTrigger.regionInfo;
-		if (currentTrigger.triggerRandom === triggerRandom && (currentTrigger.play || currentTrigger.syncCanceled)) {
+		if (regionInfo && currentTrigger.triggerRandom === triggerRandom && (currentTrigger.play || currentTrigger.syncCanceled)) {
 			currentTrigger.play = false;
 			currentTrigger.cancelDeferred?.resolve();
 			await this.cancelPreviousMedia(regionInfo);
@@ -798,14 +802,19 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentTrigger.play = true;
 		currentTrigger.syncCanceled = false;
 		currentTrigger.triggerRandom = triggerRandom;
+		delete currentTrigger.regionInfo;
 
 		await this.processPlaylist(triggerMedia, SMILScheduleEnum.triggerPlaylistVersion, '', 0, priorityObject);
-		await Promise.all(this.promiseAwaiting[currentTrigger.regionInfo.regionName].promiseFunction!);
+
+		// Re-read from object — regionInfo was repopulated by handleTriggers() during processPlaylist
+		const regionInfo = this.triggersEndless[triggerInfo.trigger]?.regionInfo;
+		if (!regionInfo) return;
+
+		await Promise.all(this.promiseAwaiting[regionInfo.regionName].promiseFunction!);
 
 		// trigger finished playing by itself, cancel it
 		debug('Cancelling trigger: %O', triggerInfo.trigger);
 
-		const regionInfo = currentTrigger.regionInfo;
 		if (currentTrigger.triggerRandom === triggerRandom && (currentTrigger.play || currentTrigger.syncCanceled)) {
 			currentTrigger.play = false;
 			currentTrigger.cancelDeferred?.resolve();
@@ -833,7 +842,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			debug('Cancelling trigger: %O', triggerInfo.trigger);
 			const regionInfo = this.triggersEndless[triggerInfo.trigger].regionInfo;
 			set(this.triggersEndless, `${triggerInfo.trigger}.play`, false);
-			await this.cancelPreviousMedia(regionInfo);
+			if (regionInfo) {
+				await this.cancelPreviousMedia(regionInfo);
+			}
 			return;
 		}
 
