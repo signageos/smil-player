@@ -894,8 +894,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			// region is empty or media playing in it are not defined as trigger media or dynamic playlist
 			if (
 				!currentRegion?.playing ||
-				!currentRegion[SMILTriggersEnum.triggerValue] ||
-				!currentRegion[SMILDynamicEnum.dynamicValue]
+				(!currentRegion[SMILTriggersEnum.triggerValue] &&
+				!currentRegion[SMILDynamicEnum.dynamicValue])
 			) {
 				set(this.currentlyPlaying, `${region.regionName}.playing`, true);
 				return index;
