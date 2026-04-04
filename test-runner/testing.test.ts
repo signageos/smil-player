@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from './fixtures';
 import { DUID, SMILUrls } from './config';
 
 test('manual debug: testing.smil', async ({ page, context }) => {

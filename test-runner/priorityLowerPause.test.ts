@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 
 // Tests that lower="pause" does NOT pause the higher-priority element when a lower

@@ -142,14 +142,15 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 			break;
 		case SMILUrls.prioritySeqCampaign.split('/').pop():
 			// Production-style: absolute wallclock (no R/ recurrence), seq-based campaign rotation.
-			// High priority campaigns active for 30s, then expire → low priority plays.
+			// High priority campaigns active for 60s, then expire → low priority plays.
+			// 60s allows enough margin for prefetch + loader even on slow machines.
 			parsedFileString = parsedFileString.replace(
 				/SEQ_CAMP_HIGH_BEGIN/g,
 				`wallclock(${formatDate(moment())})`,
 			);
 			parsedFileString = parsedFileString.replace(
 				/SEQ_CAMP_HIGH_END/g,
-				`wallclock(${formatDate(moment().add(30, 'seconds'))})`,
+				`wallclock(${formatDate(moment().add(60, 'seconds'))})`,
 			);
 			break;
 		case SMILUrls.priorityPeerDefer.split('/').pop():
@@ -280,15 +281,15 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 			);
 			break;
 		case SMILUrls.priorityLowerStop.split('/').pop():
-			// P_high has lower="stop" (remapped to never by fix). P_high active 30s, P_low always active.
-			// Without fix: P_high gets stopped by P_low arrival. With fix: P_high plays, P_low blocked.
+			// P_high has lower="stop" (remapped to never by fix). P_high active 60s, P_low always active.
+			// 60s allows enough margin for prefetch + loader even on slow machines.
 			parsedFileString = parsedFileString.replace(
 				'LOWER_STOP_HIGH_BEGIN',
 				`wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`,
 			);
 			parsedFileString = parsedFileString.replace(
 				'LOWER_STOP_HIGH_END',
-				`wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`,
+				`wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`,
 			);
 			parsedFileString = parsedFileString.replace(
 				'LOWER_STOP_LOW_BEGIN',
@@ -300,15 +301,15 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 			);
 			break;
 		case SMILUrls.priorityLowerPause.split('/').pop():
-			// P_high has lower="pause" (remapped to defer by fix). P_high active 30s, P_low always active.
-			// Without fix: P_high gets paused by P_low arrival. With fix: P_high plays, P_low defers.
+			// P_high has lower="pause" (remapped to defer by fix). P_high active 60s, P_low always active.
+			// 60s allows enough margin for prefetch + loader even on slow machines.
 			parsedFileString = parsedFileString.replace(
 				'LOWER_PAUSE_HIGH_BEGIN',
 				`wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`,
 			);
 			parsedFileString = parsedFileString.replace(
 				'LOWER_PAUSE_HIGH_END',
-				`wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`,
+				`wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`,
 			);
 			parsedFileString = parsedFileString.replace(
 				'LOWER_PAUSE_LOW_BEGIN',

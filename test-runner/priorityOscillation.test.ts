@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 
 // P_high has two wallclock windows (0-20s and 35-50s) with a gap between them.
