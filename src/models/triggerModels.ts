@@ -19,7 +19,7 @@ export type TriggerEndless = {
 		play: boolean;
 		syncCanceled: boolean;
 		latestEventFired: number;
-		regionInfo: RegionAttributes;
+		regionInfo?: RegionAttributes;
 		triggerRandom: number;
 		cancelDeferred?: Deferred<void>;
 	};
