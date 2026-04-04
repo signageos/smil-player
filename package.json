@@ -34,6 +34,7 @@
     "build": "npm run clean && webpack --display-modules",
     "build-prod": "npm run clean && cross-env NODE_OPTIONS='--openssl-legacy-provider' NODE_ENV=production webpack --display-modules",
     "start": "webpack-dev-server --mode development --open-emulator",
+    "dev": "npm run e2e:servers:stop 2>/dev/null; node test-server/localServer.js & npm run start-emulator",
     "start-emulator": "cross-env NODE_OPTIONS='--openssl-legacy-provider' webpack-dev-server --mode none --open-emulator --no-hot --no-liveReload --no-watch-content-base",
     "check": "npm run depcheck && npx --userconfig ./.npmrc @signageos/lib-ci check-deps",
     "depcheck": "depcheck --config .depcheckrc.json"
