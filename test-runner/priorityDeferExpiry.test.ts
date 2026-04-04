@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 // Tests that a deferred element whose wallclock window expires while waiting is abandoned
 // and never plays. Exercises playlistPriority.ts handlePriorityDeferStopWait endTime check.

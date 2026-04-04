@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 // Tests the lower="never" priority behavior: lower-priority content is
 // prevented from beginning while the higher-priority element is active

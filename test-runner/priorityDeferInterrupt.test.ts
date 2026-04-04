@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 
 // P2 (middle priority, already active) plays first. P1 (highest) arrives at +30s and stops P2.

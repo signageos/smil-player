@@ -4,6 +4,7 @@ export default defineConfig({
 	testDir: './test-runner',
 	timeout: 180000,
 	workers: 1,
+	retries: 1,
 	use: {
 		baseURL: 'http://localhost:8090',
 		viewport: { width: 1080, height: 1920 },

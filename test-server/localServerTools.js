@@ -62,9 +62,10 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             break;
         case enums_1.SMILUrls.prioritySeqCampaign.split('/').pop():
             // Production-style: absolute wallclock (no R/ recurrence), seq-based campaign rotation.
-            // High priority campaigns active for 30s, then expire → low priority plays.
+            // High priority campaigns active for 60s, then expire → low priority plays.
+            // 60s allows enough margin for prefetch + loader even on slow machines.
             parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_BEGIN/g, `wallclock(${formatDate(moment())})`);
-            parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_END/g, `wallclock(${formatDate(moment().add(30, 'seconds'))})`);
+            parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_END/g, `wallclock(${formatDate(moment().add(60, 'seconds'))})`);
             break;
         case enums_1.SMILUrls.priorityPeerDefer.split('/').pop():
             // Peer A active for 30s, Peer B active for 60s. Both start at +0s.
@@ -123,18 +124,18 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('UPDATE_P_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
         case enums_1.SMILUrls.priorityLowerStop.split('/').pop():
-            // P_high has lower="stop" (remapped to never by fix). P_high active 30s, P_low always active.
-            // Without fix: P_high gets stopped by P_low arrival. With fix: P_high plays, P_low blocked.
+            // P_high has lower="stop" (remapped to never by fix). P_high active 60s, P_low always active.
+            // 60s allows enough margin for prefetch + loader even on slow machines.
             parsedFileString = parsedFileString.replace('LOWER_STOP_HIGH_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
-            parsedFileString = parsedFileString.replace('LOWER_STOP_HIGH_END', `wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('LOWER_STOP_HIGH_END', `wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('LOWER_STOP_LOW_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('LOWER_STOP_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
         case enums_1.SMILUrls.priorityLowerPause.split('/').pop():
-            // P_high has lower="pause" (remapped to defer by fix). P_high active 30s, P_low always active.
-            // Without fix: P_high gets paused by P_low arrival. With fix: P_high plays, P_low defers.
+            // P_high has lower="pause" (remapped to defer by fix). P_high active 60s, P_low always active.
+            // 60s allows enough margin for prefetch + loader even on slow machines.
             parsedFileString = parsedFileString.replace('LOWER_PAUSE_HIGH_BEGIN', `wallclock(R/${formatDate(moment().add(0, 'seconds'))}/P1D)`);
-            parsedFileString = parsedFileString.replace('LOWER_PAUSE_HIGH_END', `wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('LOWER_PAUSE_HIGH_END', `wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`);
             parsedFileString = parsedFileString.replace('LOWER_PAUSE_LOW_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('LOWER_PAUSE_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;

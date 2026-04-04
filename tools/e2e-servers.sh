@@ -134,10 +134,43 @@ start_servers() {
     echo "Both servers ready. You can now run e2e tests."
 }
 
+stop_emulator() {
+    if [[ -f "$EMULATOR_PID_FILE" ]]; then
+        local pid
+        pid=$(cat "$EMULATOR_PID_FILE")
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+        fi
+        rm -f "$EMULATOR_PID_FILE"
+    fi
+    # Kill only the LISTENING process on port 8090 (not browser clients)
+    local listen_pid
+    listen_pid=$(lsof -ti :8090 -sTCP:LISTEN 2>/dev/null || true)
+    if [[ -n "$listen_pid" ]]; then
+        kill $listen_pid 2>/dev/null || true
+    fi
+}
+
+start_emulator() {
+    cd "$PROJECT_DIR"
+    if is_running "$EMULATOR_URL"; then
+        return 0
+    fi
+    nohup npm run start-emulator > "$EMULATOR_LOG" 2>&1 &
+    echo $! > "$EMULATOR_PID_FILE"
+    wait_for_server "$EMULATOR_URL" "$EMULATOR_TIMEOUT" "Emulator (:8090)" || exit 1
+}
+
 # --- Main ---
 case "${1:-}" in
     --stop)
         stop_servers
+        ;;
+    --stop-emulator)
+        stop_emulator
+        ;;
+    --start-emulator)
+        start_emulator
         ;;
     --status)
         check_status

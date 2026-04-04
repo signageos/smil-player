@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
 
 // Tests three-level defer with middle priority expiry: P1 (highest) plays, P2 (middle)
