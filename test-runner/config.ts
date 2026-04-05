@@ -60,6 +60,7 @@ export const SMILUrls = {
 	playModeOne: 'http://localhost:3000/playback/playModeOne.smil',
 	queryStringMedia: 'http://localhost:3000/playback/queryStringMedia.smil',
 	triggersMouseDuration: 'http://localhost:3000/triggers/triggersMouseDuration.smil',
+	triggersCrossCancel: 'http://localhost:3000/triggers/triggersCrossCancel.smil',
 };
 
 export const TestServer = {

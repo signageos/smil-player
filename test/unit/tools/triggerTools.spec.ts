@@ -1,6 +1,6 @@
 import * as chai from 'chai';
-import { findTriggerToCancel } from '../../../src/components/playlist/tools/triggerTools';
-import { TriggerEndless } from '../../../src/models/triggerModels';
+import { findTriggerToCancel, findTriggerToCancelByEndId } from '../../../src/components/playlist/tools/triggerTools';
+import { TriggerEndless, TriggerObject } from '../../../src/models/triggerModels';
 import { RegionAttributes } from '../../../src/models/xmlJsonModels';
 
 const expect = chai.expect;
@@ -53,6 +53,48 @@ describe('triggerTools', () => {
 				'trigger-A': { regionName: 'zone1', play: false },
 			});
 			const result = findTriggerToCancel(triggers, 'zone1', 'trigger-B');
+			expect(result).to.equal('');
+		});
+	});
+
+	describe('findTriggerToCancelByEndId', () => {
+		it('Should return key when another trigger has end matching the firing ID and is playing', () => {
+			const triggers = {
+				'trigger1': { seq: { begin: 'trigger1', end: 'trigger2', repeatCount: 'indefinite', dur: '' } },
+			} as unknown as { [key: string]: TriggerObject };
+			const endless = makeTriggerEndless({
+				'trigger1': { regionName: 'zone1', play: true },
+			});
+			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			expect(result).to.equal('trigger1');
+		});
+
+		it('Should return empty string when no trigger has matching end', () => {
+			const triggers = {
+				'trigger1': { seq: { begin: 'trigger1', end: 'trigger1', repeatCount: 'indefinite', dur: '' } },
+			} as unknown as { [key: string]: TriggerObject };
+			const endless = makeTriggerEndless({
+				'trigger1': { regionName: 'zone1', play: true },
+			});
+			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			expect(result).to.equal('');
+		});
+
+		it('Should return empty string when matching trigger is not playing', () => {
+			const triggers = {
+				'trigger1': { seq: { begin: 'trigger1', end: 'trigger2', repeatCount: 'indefinite', dur: '' } },
+			} as unknown as { [key: string]: TriggerObject };
+			const endless = makeTriggerEndless({
+				'trigger1': { regionName: 'zone1', play: false },
+			});
+			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			expect(result).to.equal('');
+		});
+
+		it('Should return empty string when triggers object is empty', () => {
+			const triggers = {} as { [key: string]: TriggerObject };
+			const endless = makeTriggerEndless({});
+			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
 			expect(result).to.equal('');
 		});
 	});
