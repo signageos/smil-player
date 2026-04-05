@@ -138,10 +138,6 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		debug('[syncGroup] cleared sync-coordination: group=%s, key=%s', this.groupName, key);
 	}
 
-	private getTimestamp(): string {
-		return new Date().toISOString();
-	}
-
 	private monitorStatus() {
 		this.sos.sync.onStatus(({ isMaster, groupName, connectedPeers }) => {
 			if (groupName === this.groupName) {
