@@ -14,7 +14,7 @@ export function parseSmilSchedule(
 	startTime: string,
 	endTime: string = SMILScheduleEnum.endDateAndTimeFuture,
 ): SmilScheduleObject {
-	debug('Received startTime: %s and endTime: %s strings', startTime, endTime);
+	debug('[wallclock] parsing schedule: start=%s, end=%s', startTime, endTime);
 
 	// remove extra characters, wallclock, ( and )
 	let dateStringStart = startTime.replace(/wallclock|\(|\)/g, '');
@@ -87,7 +87,7 @@ export function parseSmilSchedule(
 				datePart = computeScheduledDate(moment(nowDay), nowTime, timeEnd, dateStart, dayInfoStart);
 				timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 
-				debug('Schedule for tomorrow - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+				debug('[wallclock] P1D repeat, start ahead: waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
 				return {
 					timeToStart,
 					timeToEnd,
@@ -102,14 +102,14 @@ export function parseSmilSchedule(
 			) {
 				timeToStart = 0;
 				timeToEnd = SMILScheduleEnum.neverPlay;
-				debug('Wallclock completely in the past, will not be played - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+				debug('[wallclock] schedule expired (non-repeating): waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
 				return {
 					timeToStart,
 					timeToEnd,
 				};
 			}
 
-			debug('Play immediately - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+			debug('[wallclock] playing immediately: waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
 			return {
 				timeToStart,
 				timeToEnd,
@@ -131,14 +131,14 @@ export function parseSmilSchedule(
 		if ((dateEnd < nowDay || timeEnd < nowTime) && splitStringEnd[2] !== 'P1D') {
 			timeToStart = 0;
 			timeToEnd = SMILScheduleEnum.neverPlay;
-			debug('Wallclock completely in the past, will not be played - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+			debug('[wallclock] non-P1D schedule fully past: waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
 			return {
 				timeToStart,
 				timeToEnd,
 			};
 		}
 
-		debug('Schedule for tomorrow - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+		debug('[wallclock] scheduling tomorrow: both times past today, waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
 		return {
 			timeToStart,
 			timeToEnd,
@@ -157,7 +157,7 @@ export function parseSmilSchedule(
 		timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 	}
 
-	debug('All in future - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
+	debug('[wallclock] Both times in future: waitBeforeStart=%s, playUntil=%s', timeToStart, timeToEnd);
 	return {
 		timeToStart,
 		timeToEnd,
