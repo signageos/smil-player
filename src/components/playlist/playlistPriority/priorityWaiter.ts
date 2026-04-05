@@ -42,12 +42,7 @@ export async function waitForPriorityRelease(
 
 		// Wait for blocking playlist to finish using priority-ordered reactive wait
 		if (previousPlayer.playing) {
-			debug(
-				'waiting for playlist to complete via waitForTurn %s, %O, currentlyPlaying: %O',
-				priorityRegionName,
-				currentIndexPriority,
-				currentPriorityRegion[blockerIndex],
-			);
+			debug('[priority-wait] waiting for blocker to complete: region=%s, waiter=%s, blocker=%s', priorityRegionName, currentIndexPriority.media.src, currentPriorityRegion[blockerIndex].media.src);
 
 			const racers: Promise<any>[] = [
 				stateManager.waitForTurn(
@@ -79,7 +74,7 @@ export async function waitForPriorityRelease(
 			isCancelled: false,
 		})) {
 			stateManager.resetTimesPlayed(priorityRegionName, waiterIndex);
-			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
+			debug('[priority-wait] exiting wait: playtime expired for src=%s', currentIndexPriority.media.src);
 			return 'expired';
 		}
 

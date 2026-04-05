@@ -1,7 +1,10 @@
+import Debug from 'debug';
 import { ENDTIME_REPEAT_THRESHOLD, PriorityRule } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { SMILMedia } from '../../../models/mediaModels';
+
+const debug = Debug('@signageos/smil-player:priorityDecisionEngine');
 
 export type PriorityRelation = 'higher' | 'peer' | 'lower';
 
@@ -15,13 +18,16 @@ export function determinePriorityRelation(
 	incomingLevel: number,
 	existingLevel: number,
 ): PriorityRelation {
+	let relation: PriorityRelation;
 	if (existingLevel < incomingLevel) {
-		return 'higher';
+		relation = 'higher';
+	} else if (existingLevel > incomingLevel) {
+		relation = 'lower';
+	} else {
+		relation = 'peer';
 	}
-	if (existingLevel > incomingLevel) {
-		return 'lower';
-	}
-	return 'peer';
+	debug('[priority-engine] priority relation: incoming=%d vs existing=%d -> %s', incomingLevel, existingLevel, relation);
+	return relation;
 }
 
 /**
@@ -32,22 +38,28 @@ export function selectApplicableRule(
 	relation: PriorityRelation,
 	existingPriority: PriorityObject,
 ): PriorityRule {
+	let rule: PriorityRule;
 	switch (relation) {
 		case 'higher':
-			return existingPriority.higher;
+			rule = existingPriority.higher;
+			break;
 		case 'peer':
-			return existingPriority.peer;
+			rule = existingPriority.peer;
+			break;
 		case 'lower': {
 			const lowerRule = existingPriority.lower;
 			if (lowerRule === PriorityRule.stop) {
-				return PriorityRule.never;
+				rule = PriorityRule.never;
+			} else if (lowerRule === PriorityRule.pause) {
+				rule = PriorityRule.defer;
+			} else {
+				rule = lowerRule;
 			}
-			if (lowerRule === PriorityRule.pause) {
-				return PriorityRule.defer;
-			}
-			return lowerRule;
+			break;
 		}
 	}
+	debug('[priority-engine] selected rule: relation=%s, rule=%s', relation, rule!);
+	return rule!;
 }
 
 /**
@@ -59,12 +71,16 @@ export function isPeerConflict(
 	existing: CurrentlyPlayingRegion,
 	incoming: { priorityLevel: number; parent: string; endTime: number },
 ): boolean {
-	return (
+	const result = (
 		existing.priority.priorityLevel === incoming.priorityLevel &&
 		existing.parent !== incoming.parent &&
 		existing.player.playing &&
 		(Date.now() <= incoming.endTime || incoming.endTime <= ENDTIME_REPEAT_THRESHOLD)
 	);
+	if (result) {
+		debug('[priority-engine] detected peer conflict: pri=%d, existingParent=%s, incomingParent=%s', incoming.priorityLevel, existing.parent, incoming.parent);
+	}
+	return result;
 }
 
 /**
@@ -97,11 +113,20 @@ export function isPlaylistFinished(params: {
 	smilFileUpdated: boolean;
 	expiredVersion: boolean;
 }): boolean {
-	return (
+	const result = (
 		((params.endTimeExpired || params.repeatCountExpired) && params.isLast) ||
 		params.smilFileUpdated ||
 		params.expiredVersion
 	);
+	if (result) {
+		const reasons = [];
+		if (params.endTimeExpired && params.isLast) reasons.push('endTimeExpired+isLast');
+		if (params.repeatCountExpired && params.isLast) reasons.push('repeatCountExpired+isLast');
+		if (params.smilFileUpdated) reasons.push('smilFileUpdated');
+		if (params.expiredVersion) reasons.push('expiredVersion');
+		debug('[priority-engine] playlist finished: reasons=[%s]', reasons.join(', '));
+	}
+	return result;
 }
 
 /**
@@ -114,12 +139,15 @@ export function shouldContinueWaiting(params: {
 	isCancelled: boolean;
 }): boolean {
 	if (params.isCancelled) {
+		debug('[priority-engine] stop waiting: cancelled');
 		return false;
 	}
 	if (isEndTimeExpired(params.endTime)) {
+		debug('[priority-engine] stop waiting: endTime expired (endTime=%d)', params.endTime);
 		return false;
 	}
 	if (isRepeatCountExpired(params.timesPlayed, params.endTime)) {
+		debug('[priority-engine] stop waiting: repeat count expired (played=%d, endTime=%d)', params.timesPlayed, params.endTime);
 		return false;
 	}
 	return true;
@@ -163,7 +191,9 @@ export function findMatchingEntryIndex(
 		}
 	}
 	if (parentMatchIndex !== -1) {
+		debug('[priority-engine] entry match: type=parent, index=%d, parent=%s', parentMatchIndex, parent);
 		return { matchIndex: parentMatchIndex, matchType: 'parent' };
 	}
+	debug('[priority-engine] entry match: type=none, creating new entry for parent=%s', parent);
 	return { matchIndex: -1, matchType: 'none' };
 }

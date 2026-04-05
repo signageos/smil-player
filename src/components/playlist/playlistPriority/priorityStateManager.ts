@@ -72,7 +72,7 @@ export class PriorityStateManager {
 			try {
 				satisfied = !!entries && waiter.predicate(entries);
 			} catch (err) {
-				debug('Waiter predicate threw for region %s, resolving and removing waiter: %O', regionName, err);
+				debug('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
 				waiter.deferred.resolve();
 				waiters.delete(waiter);
 				continue;
@@ -227,6 +227,7 @@ export class PriorityStateManager {
 
 	setPlaying(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
+		debug('[priority-state] setPlaying: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = true;
 		ensurePlayingDeferred(entry.player);
 		this.notifyWaiters(regionName);
@@ -234,6 +235,7 @@ export class PriorityStateManager {
 
 	setStopped(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
+		debug('[priority-state] setStopped: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.stop = true;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -243,6 +245,7 @@ export class PriorityStateManager {
 
 	setPaused(regionName: string, index: number, controllerIndex: number): void {
 		const entry = this.state[regionName][index];
+		debug('[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d', regionName, index, entry.media.src, controllerIndex);
 		entry.player.contentPause = PAUSE_CONTENT_VALUE;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -296,6 +299,7 @@ export class PriorityStateManager {
 	markFinished(regionName: string, index: number): { pausedIndex: number | null } {
 		const entry = this.state[regionName][index];
 		const pausedIndex = entry.controlledPlaylist;
+		debug('[priority-state] markFinished: region=%s, index=%d, src=%s, hadPaused=%s', regionName, index, entry.media.src, pausedIndex !== null);
 		entry.player.timesPlayed = 0;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
