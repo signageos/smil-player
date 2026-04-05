@@ -20,7 +20,7 @@ export default defineConfig({
 		},
 		{
 			command: 'node test-server/localServer.js',
-			url: 'http://localhost:3000/zonesCypress.smil',
+			url: 'http://localhost:3000/layout/zonesCypress.smil',
 			reuseExistingServer: true,
 			timeout: 10000,
 		},

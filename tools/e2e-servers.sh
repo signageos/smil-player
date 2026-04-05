@@ -9,7 +9,7 @@
 set -euo pipefail
 
 EMULATOR_URL="http://localhost:8090"
-TEST_SERVER_URL="http://localhost:3000/zonesCypress.smil"
+TEST_SERVER_URL="http://localhost:3000/layout/zonesCypress.smil"
 EMULATOR_LOG="/tmp/smil-emulator.log"
 TEST_SERVER_LOG="/tmp/smil-test-server.log"
 EMULATOR_PID_FILE="/tmp/smil-emulator.pid"

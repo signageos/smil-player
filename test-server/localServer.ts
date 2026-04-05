@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const fs = require('fs').promises;
 
 import { TestServer } from './enums';
@@ -22,10 +23,6 @@ app.use((_req, res, next) => {
 app.post('/reset', (_req, res) => {
 	Object.keys(requestCounts).forEach(key => delete requestCounts[key]);
 	res.json({ ok: true });
-});
-
-app.get('/assets/:fileName', (req, res) => {
-	res.sendFile(`./${TestServer.assetsPath}/${req.params.fileName}`, { root: process.env.PWD });
 });
 
 app.get('/dynamic/:fileName', async (req, res) => {
@@ -67,8 +64,6 @@ app.get('/dynamic-update/:fileName', async (req, res) => {
 	res.send(fileString);
 });
 
-app.get('/:fileName', (req, res) => {
-	res.sendFile(`./${TestServer.testFilesPath}/${req.params.fileName}`, { root: process.env.PWD });
-});
+app.use(express.static(path.join(process.env.PWD!, TestServer.testFilesPath)));
 
 app.listen(port, () => console.log(`Test server started on port ${port}!`));
