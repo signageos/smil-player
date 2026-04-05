@@ -87,8 +87,7 @@ export function parseSmilSchedule(
 				datePart = computeScheduledDate(moment(nowDay), nowTime, timeEnd, dateStart, dayInfoStart);
 				timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 
-				debug('schedule for tomorrow');
-				debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+				debug('Schedule for tomorrow - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 				return {
 					timeToStart,
 					timeToEnd,
@@ -103,16 +102,14 @@ export function parseSmilSchedule(
 			) {
 				timeToStart = 0;
 				timeToEnd = SMILScheduleEnum.neverPlay;
-				debug('wallclock completely in the past, will not be played');
-				debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+				debug('Wallclock completely in the past, will not be played - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 				return {
 					timeToStart,
 					timeToEnd,
 				};
 			}
 
-			debug('play immediately');
-			debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+			debug('Play immediately - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 			return {
 				timeToStart,
 				timeToEnd,
@@ -134,16 +131,14 @@ export function parseSmilSchedule(
 		if ((dateEnd < nowDay || timeEnd < nowTime) && splitStringEnd[2] !== 'P1D') {
 			timeToStart = 0;
 			timeToEnd = SMILScheduleEnum.neverPlay;
-			debug('wallclock completely in the past, will not be played');
-			debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+			debug('Wallclock completely in the past, will not be played - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 			return {
 				timeToStart,
 				timeToEnd,
 			};
 		}
 
-		debug('schedule for tomorrow');
-		debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+		debug('Schedule for tomorrow - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 		return {
 			timeToStart,
 			timeToEnd,
@@ -162,8 +157,7 @@ export function parseSmilSchedule(
 		timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 	}
 
-	debug('all in future');
-	debug('Wait before start: %s and play until: %s', timeToStart, timeToEnd);
+	debug('All in future - waitBeforeStart: %s, playUntil: %s', timeToStart, timeToEnd);
 	return {
 		timeToStart,
 		timeToEnd,

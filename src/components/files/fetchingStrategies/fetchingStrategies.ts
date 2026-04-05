@@ -42,45 +42,45 @@ const locationHeaderStrategy: FetchStrategy = async (
 	} catch (err) {
 		// Handle timeout specifically
 		if (err.message === 'Request timeout') {
-			debug('Request to %s was aborted due to timeout.', media.src, timeOut);
+			debug('[location] Request to %s was aborted due to timeout: %d', media.src, timeOut);
 			return media.src; // Return original URL on timeout
 		}
 
 		// Log other errors with more detail
-		debug('HEAD request to %s failed with error: %O', media.src, err);
+		debug('[location] HEAD request to %s failed with error: %O', media.src, err);
 
 		// Handle local fallback based on configuration
 		if (media.allowLocalFallback === false) {
-			debug('allowLocalFallback is false. Skipping content.', media.src);
+			debug('[location] allowLocalFallback is false, skipping content for: %s', media.src);
 			media.expr = ConditionalExprFormat.skipContent;
 		} else {
-			debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
+			debug('[location] allowLocalFallback is true, proceeding with local fallback for: %s', media.src);
 		}
 		return null;
 	}
 
 	const resourceLocation = response?.headers?.get('location') ?? response.url;
 
-	debug('Received response when calling HEAD request for url: %s: %O, %d', downloadUrl, response, timeOut);
+	debug('[location] Received HEAD response for url: %s: %O, timeout: %d', downloadUrl, response, timeOut);
 
 	// Use Location header if it exists, otherwise use media.src
 	if (response && resourceLocation) {
 		media.useInReportUrl = resourceLocation;
-		debug('Using Location header for reporting: %s', resourceLocation);
+		debug('[location] Using Location header for reporting: %s', resourceLocation);
 	} else {
 		media.useInReportUrl = media.src;
-		debug('Using original source URL for reporting: %s', media.src);
+		debug('[location] Using original source URL for reporting: %s', media.src);
 	}
 
 	// Handle server errors (5xx)
 	if (response.status >= 500 && response.status < 600) {
-		debug('Server returned error code: %s for media: %s', response.status, media.src);
+		debug('[location] Server returned error code: %s for media: %s', response.status, media.src);
 
 		if (media.allowLocalFallback === false) {
-			debug('allowLocalFallback is false. Skipping content.');
+			debug('[location] allowLocalFallback is false, skipping content for: %s', media.src);
 			media.expr = ConditionalExprFormat.skipContent;
 		} else {
-			debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
+			debug('[location] allowLocalFallback is true or undefined (legacy), proceeding with local fallback for: %s', media.src);
 		}
 
 		return media.src; // Return original URL on server error
@@ -89,7 +89,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 	// Handle skip content status codes
 	if (response && skipContentHttpStatusCodes.includes(response.status)) {
 		debug(
-			'Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
+			'[location] Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
 			response.status,
 			media.src,
 			skipContentHttpStatusCodes,
@@ -100,7 +100,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 	// Handle update content status codes
 	if (response && updateContentHttpStatusCodes.includes(response.status)) {
 		debug(
-			'Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
+			'[location] Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
 			response.status,
 			media.src,
 			updateContentHttpStatusCodes,
@@ -110,7 +110,7 @@ const locationHeaderStrategy: FetchStrategy = async (
 	}
 
 	// Return the Location header after redirects or original URL if not available
-	debug('Final Location header for media: %s, location: %s', media.src, resourceLocation);
+	debug('[location] Final Location header for media: %s, location: %s', media.src, resourceLocation);
 	return resourceLocation || media.src;
 };
 
@@ -135,43 +135,43 @@ const lastModifiedStrategy: FetchStrategy = async (
 	} catch (err) {
 		// Handle timeout specifically
 		if (err.message === 'Request timeout') {
-			debug('Request to %s was aborted due to timeout.', media.src);
+			debug('[lastModified] Request to %s was aborted due to timeout', media.src);
 			return null;
 		}
 
 		// Log other errors
-		debug('HEAD request to %s failed with error: %O', media.src, err);
+		debug('[lastModified] HEAD request to %s failed with error: %O', media.src, err);
 
 		// Handle local fallback based on configuration
 		if (media.allowLocalFallback === false) {
-			debug('allowLocalFallback is false. Skipping content.', media.src);
+			debug('[lastModified] allowLocalFallback is false, skipping content for: %s', media.src);
 			media.expr = ConditionalExprFormat.skipContent;
 		} else {
-			debug('allowLocalFallback is true. Proceeding with local fallback.', media.src);
+			debug('[lastModified] allowLocalFallback is true, proceeding with local fallback for: %s', media.src);
 		}
 		return null;
 	}
 
-	debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
+	debug('[lastModified] Received HEAD response for url: %s: %O, timeout: %d', media.src, response, timeOut);
 
 	// Extract URL from response if it exists, otherwise use media.src
 	if (response && response.url) {
 		media.useInReportUrl = response.url || media.src;
-		debug('Using response URL for reporting: %s', response.url);
+		debug('[lastModified] Using response URL for reporting: %s', response.url);
 	} else {
 		media.useInReportUrl = media.src;
-		debug('Using original source URL for reporting: %s', media.src);
+		debug('[lastModified] Using original source URL for reporting: %s', media.src);
 	}
 
 	// Handle server errors (5xx)
 	if (response.status >= 500 && response.status < 600) {
-		debug('Server returned error code: %s for media: %s', response.status, media.src);
+		debug('[lastModified] Server returned error code: %s for media: %s', response.status, media.src);
 
 		if (media.allowLocalFallback === false) {
-			debug('allowLocalFallback is false. Skipping content.');
+			debug('[lastModified] allowLocalFallback is false, skipping content for: %s', media.src);
 			media.expr = ConditionalExprFormat.skipContent;
 		} else {
-			debug('allowLocalFallback is true or undefined (legacy). Proceeding with local fallback.');
+			debug('[lastModified] allowLocalFallback is true or undefined (legacy), proceeding with local fallback for: %s', media.src);
 		}
 
 		return null;
@@ -180,7 +180,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 	// Handle skip content status codes
 	if (response && skipContentHttpStatusCodes.includes(response.status)) {
 		debug(
-			'Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
+			'[lastModified] Response code: %s for media: %s is included in skipContentHttpStatusCodes: %s, skipping content',
 			response.status,
 			media.src,
 			skipContentHttpStatusCodes,
@@ -191,7 +191,7 @@ const lastModifiedStrategy: FetchStrategy = async (
 	// Handle update content status codes
 	if (response && updateContentHttpStatusCodes.includes(response.status)) {
 		debug(
-			'Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
+			'[lastModified] Response code: %s for media: %s is included in updateContentHttpStatusCodes: %s, forcing update',
 			response.status,
 			media.src,
 			updateContentHttpStatusCodes,
@@ -202,13 +202,13 @@ const lastModifiedStrategy: FetchStrategy = async (
 		futureDate.setFullYear(futureDate.getFullYear() + 1);
 		const futureDateString = futureDate.toUTCString();
 
-		debug('Forcing update by returning future date: %s', futureDateString);
+		debug('[lastModified] Forcing update by returning future date: %s', futureDateString);
 		return futureDateString;
 	}
 
 	// Get last-modified header or use default
 	const newLastModified = response?.headers?.get('last-modified');
-	debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
+	debug('[lastModified] New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
 	return newLastModified || DEFAULT_LAST_MODIFIED;
 };
 
