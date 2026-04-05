@@ -12,6 +12,18 @@ export async function testCoordinates(
 }
 
 /**
+ * Dispatch a widget trigger sosEvent inside the applet iframe.
+ * The SMIL player listens for 'sosEvent' CustomEvents on the applet window.
+ */
+export async function dispatchWidgetTrigger(page: Page, triggerData: string) {
+	const appletFrame = page.frames().find((f) => f.url().includes('/applet'));
+	if (!appletFrame) throw new Error('Applet frame not found');
+	await appletFrame.evaluate((data: string) => {
+		window.dispatchEvent(new CustomEvent('sosEvent', { detail: data }));
+	}, triggerData);
+}
+
+/**
  * Creates a console log collector. Attach to a page BEFORE navigation.
  * Returns live arrays and helper methods for querying collected messages.
  */

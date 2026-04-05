@@ -52,6 +52,8 @@ export const SMILUrls = {
 	widgetExtensions: 'http://localhost:3000/widgetExtensions.smil',
 	cssBottom: 'http://localhost:3000/cssBottomAndRight.smil',
 	conditionalTimePriority: 'http://localhost:3000/dynamic/conditionalTimePriority.smil',
+	triggersWidget: 'http://localhost:3000/triggersWidget.smil',
+	triggersStop: 'http://localhost:3000/triggersStop.smil',
 	testing: 'http://localhost:3000/testing.smil',
 };
 
