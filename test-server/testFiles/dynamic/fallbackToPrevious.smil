@@ -1,0 +1,21 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="5" fallbackToPreviousPlaylist="true"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape1.jpg"
+                     region="main" fit="fill"/>
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape2.jpg"
+                     region="main" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

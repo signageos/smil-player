@@ -8,20 +8,34 @@ import { fillWallclock } from './localServerTools';
 const app = express();
 const port = TestServer.port;
 
+app.use(express.json());
+
 // In-memory request count per file for the /dynamic-update/ endpoint
 const requestCounts: Record<string, number> = {};
+
+// In-memory report capture for custom endpoint reporting tests
+const reportHistory: Array<{ receivedAt: string; body: any }> = [];
+
+// Configurable HTTP status codes for /status-check/ endpoint
+const statusConfig: Record<string, number> = {};
+
+// Fallback SMIL config: returns valid SMIL for first N requests, then broken XML
+const fallbackConfig: Record<string, { invalidAfterCount: number; count: number }> = {};
 
 // Allow cross-origin requests from the emulator (localhost:8090)
 app.use((_req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*');
-	res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+	res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, POST');
 	res.header('Access-Control-Allow-Headers', '*');
 	next();
 });
 
-// Reset server state between tests (clears request counters for /dynamic-update/ endpoint)
+// Reset server state between tests
 app.post('/reset', (_req, res) => {
 	Object.keys(requestCounts).forEach(key => delete requestCounts[key]);
+	reportHistory.length = 0;
+	Object.keys(statusConfig).forEach(key => delete statusConfig[key]);
+	Object.keys(fallbackConfig).forEach(key => delete fallbackConfig[key]);
 	res.json({ ok: true });
 });
 
@@ -71,6 +85,68 @@ app.get('/redirect/:fileName', (req, res) => {
 	const fileName = req.params.fileName;
 	const actualUrl = `http://localhost:${port}/assets/${fileName}`;
 	res.redirect(302, actualUrl);
+});
+
+// --- Custom endpoint reporting: capture POST payloads, expose via GET ---
+app.post('/report', (req, res) => {
+	reportHistory.push({ receivedAt: new Date().toISOString(), body: req.body });
+	res.json({ ok: true });
+});
+
+app.get('/report/history', (_req, res) => {
+	res.json(reportHistory);
+});
+
+// --- Configurable HTTP status for HEAD requests (skipContentOnHttpStatus tests) ---
+app.post('/status-config', (req, res) => {
+	const { fileName, statusCode } = req.body;
+	statusConfig[fileName] = statusCode;
+	res.json({ ok: true });
+});
+
+app.head('/status-check/:fileName', (req, res) => {
+	const fileName = req.params.fileName;
+	const statusCode = statusConfig[fileName] || 200;
+	res.status(statusCode).set({
+		'Content-type': 'application/octet-stream',
+		'Last-Modified': new Date(2000000000000).toUTCString(),
+		'Cache-Control': 'no-cache, no-store',
+	}).end();
+});
+
+// --- Fallback SMIL: valid for first N requests, then broken XML ---
+app.post('/fallback-config', (req, res) => {
+	const { fileName, invalidAfterCount } = req.body;
+	fallbackConfig[fileName] = { invalidAfterCount, count: 0 };
+	res.json({ ok: true });
+});
+
+app.head('/fallback-smil/:fileName', (_req, res) => {
+	res.set({
+		'Content-type': 'text/xml',
+		'Last-Modified': new Date(Date.now()).toUTCString(),
+		'Cache-Control': 'no-cache, no-store',
+	}).end();
+});
+
+app.get('/fallback-smil/:fileName', async (req, res) => {
+	const fileName = req.params.fileName;
+	const config = fallbackConfig[fileName] || { invalidAfterCount: 999, count: 0 };
+	config.count += 1;
+	fallbackConfig[fileName] = config;
+
+	if (config.count > config.invalidAfterCount) {
+		res.set({ 'Content-type': 'text/xml', 'Cache-Control': 'no-cache, no-store' });
+		res.send('THIS IS NOT VALID XML <broken>');
+	} else {
+		let fileString = await fs.readFile(`./${TestServer.testFilesPath}/dynamic/${fileName}`, 'utf8');
+		res.set({
+			'Content-Disposition': `attachment; filename=\"${fileName}\"`,
+			'Content-type': 'text/xml',
+			'Cache-Control': 'no-cache, no-store',
+		});
+		res.send(fileString);
+	}
 });
 
 app.use(express.static(path.join(process.env.PWD!, TestServer.testFilesPath)));

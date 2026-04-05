@@ -61,6 +61,9 @@ export const SMILUrls = {
 	queryStringMedia: 'http://localhost:3000/playback/queryStringMedia.smil',
 	triggersMouseDuration: 'http://localhost:3000/triggers/triggersMouseDuration.smil',
 	triggersCrossCancel: 'http://localhost:3000/triggers/triggersCrossCancel.smil',
+	customEndpointReporting: 'http://localhost:3000/reporting/customEndpointReporting.smil',
+	skipContentOnHttpStatus: 'http://localhost:3000/reporting/skipOnHttpStatus.smil',
+	fallbackToPreviousPlaylist: 'http://localhost:3000/fallback-smil/fallbackToPrevious.smil',
 };
 
 export const TestServer = {
