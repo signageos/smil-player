@@ -523,6 +523,23 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
+				// Already playing — handle end-condition toggle or skip
+				if (this.triggersEndless[triggerId]?.play) {
+					if (triggerMedia.seq?.end === triggerId) {
+						debug('Cancelling widget trigger via end-condition toggle: %s, region: %s', triggerId, this.triggersEndless[triggerId]?.regionInfo?.regionName);
+						const currentTrigger = this.triggersEndless[triggerId];
+						currentTrigger.play = false;
+						currentTrigger.cancelDeferred?.resolve();
+						if (currentTrigger.regionInfo) {
+							debug('Stopping media in region: %s for widget trigger: %s', currentTrigger.regionInfo.regionName, triggerId);
+							await this.cancelPreviousMedia(currentTrigger.regionInfo);
+						}
+					} else {
+						debug('Widget trigger already playing, skipping: %s', triggerId);
+					}
+					return;
+				}
+
 				const stringDuration = findDuration(triggerMedia);
 				debug('Duration: %s for trigger Id: %s', stringDuration, triggerId);
 				if (!isNil(stringDuration)) {
