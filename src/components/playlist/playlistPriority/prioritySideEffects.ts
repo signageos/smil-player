@@ -51,7 +51,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 			regionInfo.height,
 		);
 		this.videoPreparing.fullScreenTrigger = cloneDeep(video);
-		debug('Prepared dynamic content video during peer priority defer stage: %O', video);
+		debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
 	}
 
 	async cancelDynamicPlaylist(

@@ -80,18 +80,10 @@ export class PlaylistPriority implements IPlaylistPriority {
 			priorityObject,
 			version,
 		);
-		debug(
-			'Got currentIndex and previousPlayingIndex: %s, %s for priorityRegionName: %s',
-			currentIndex,
-			previousPlayingIndex,
-			priorityRegionName,
-		);
+		debug('[priority] registered element: region=%s, currentIndex=%d, previousIndex=%d', priorityRegionName, currentIndex, previousPlayingIndex);
 
 		if (this.stateManager.hasConflict(priorityRegionName, currentIndex, previousPlayingIndex)) {
-			debug(
-				'Detected priority conflict for playlist: %O',
-				this.stateManager.getEntry(priorityRegionName, currentIndex),
-			);
+			debug('[priority] detected conflict: region=%s, src=%s', priorityRegionName, this.stateManager.getEntry(priorityRegionName, currentIndex).media.src);
 			await this.conflictResolver.handlePriorityBeforePlay(
 				elementKey,
 				priorityObject,
@@ -119,7 +111,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		triggers: PlaylistTriggers,
 	): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
-		debug('Checking if playlist is finished: %O for region: %s', currentIndexPriority, priorityRegionName);
+		debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 		if (isNil(value.triggerValue) && endTime !== 0 && value.src === currentIndexPriority.isFirstInPlaylist.src) {
 			this.stateManager.incrementTimesPlayed(priorityRegionName, currentIndex);
@@ -131,7 +123,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		const expiredVersion = version < currentVersion;
 
 		debug(
-			'[PRIORITY-DONE] Checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
+			'[priority-done] checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
 			priorityRegionName,
 			endTimeExpired,
 			repeatCountExpired,
@@ -141,47 +133,27 @@ export class PlaylistPriority implements IPlaylistPriority {
 		);
 
 		if (isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
-			debug(
-				'[PRIORITY-DONE] Unlocking playlist for region: %s, setting playing=false for src: %s',
-				priorityRegionName,
-				currentIndexPriority.media.src,
-			);
-			debug(
-				'Finished playing playlist: %O for region: %s and element: %s',
-				currentIndexPriority,
-				priorityRegionName,
-				currentIndexPriority.media.src,
-			);
+			debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 			const { pausedIndex } = this.stateManager.markFinished(priorityRegionName, currentIndex);
 
 			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
 			if (priorityLevel !== undefined) {
 				this.stateManager.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
-				debug('Cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
+				debug('[priority-done] cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
 			}
 
 			if (!isNil(pausedIndex)) {
-				debug(
-					'Un paused priority dependant playlist: %O for region: %s',
-					this.stateManager.getEntry(priorityRegionName, pausedIndex),
-					priorityRegionName,
-				);
+				debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);
 				this.stateManager.unpauseControlled(priorityRegionName, pausedIndex);
 			}
 
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
-				debug('Dynamic playlist finished: %O for region: %s', currentIndexPriority.media, priorityRegionName);
+				debug('[priority-done] dynamic playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 				await this._sideEffects.cancelDynamicPlaylist(triggers, value, value.dynamicValue!);
 			}
 		} else {
-			debug(
-				'[PRIORITY-DONE] NOT unlocking playlist for region: %s - conditions not met (isLast=%s, endTimeExpired=%s, repeatCountExpired=%s)',
-				priorityRegionName,
-				isLast,
-				endTimeExpired,
-				repeatCountExpired,
-			);
+			debug('[priority-done] not finished: region=%s, isLast=%s, endTimeExpired=%s, repeatCountExpired=%s', priorityRegionName, isLast, endTimeExpired, repeatCountExpired);
 		}
 	};
 
