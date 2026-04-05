@@ -1,0 +1,34 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <layout>
+            <transition xml:id="crossfade1" type="fade" subtype="crossfade" dur="1s"/>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill" transIn="crossfade1"/>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         region="main" fit="fill" transIn="crossfade1"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>
