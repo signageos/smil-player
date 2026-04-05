@@ -142,7 +142,7 @@ export function parseNestedRegions(paramValue: RegionAttributes): RegionAttribut
 						delete innerValue.right;
 						break;
 					default:
-						debug('Unhandled attribute found during nestedRegion parsing: %s', innerRegionKey);
+						debug('[xml] skipping unhandled nested region attribute: %s', innerRegionKey);
 				}
 			}
 		}
@@ -218,7 +218,7 @@ export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
 	new JefNode(playableMedia.playlist).remove((node: { key: string; value: any }) => {
 		if (node.key === 'ticker') {
 			if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
-				console.warn('Ticker component must have "text" array with one string at least');
+				debug('[xml] invalid ticker: must have "text" array with at least one string');
 				return node;
 			}
 		}
@@ -263,7 +263,7 @@ export function extractDataFromPlaylist(
 				new JefNode(node.parent.value).filter(
 					(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
 						if (!isNil(introNode.key) && XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-							debug('Intro element found: %O', introNode.parent.value);
+							debug('[xml] Intro element found: %O', introNode.parent.value);
 							downloads.intro.push(introNode.parent.value);
 						}
 					},
