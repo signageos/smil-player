@@ -28,10 +28,10 @@ export async function broadcastEndActionToAllDynamics(
 	smilObject: SMILFileObject,
 ) {
 	const dynamicInPlaylist = getDynamicTagsFromPlaylist(smilObject.playlist);
-	debug('Dynamic tags in playlist: %O', dynamicInPlaylist);
+	debug('[sync] dynamic tags in playlist: count=%d', dynamicInPlaylist.length);
 	for (let dynamicId in smilObject.dynamic) {
 		if (dynamicInPlaylist.includes(dynamicId)) {
-			debug('Dynamic tag %s is in playlist, sending end event', dynamicId);
+			debug('[sync] sending end event for dynamic tag: id=%s', dynamicId);
 			await broadcastSyncValue(
 				sos,
 				{ data: dynamicId },
@@ -60,11 +60,11 @@ export async function joinAllSyncGroupsOnSmilStart(
 
 	if (triggerSync || regionSync) {
 		// smil has some sync region, turn on sync
-		debug('Event-based sync groups created, turning sync on');
+		debug('[sync] sync enabled: event-based groups created');
 		synchronization.shouldSync = true;
-		debug('sync object: %O', synchronization);
+		debug('[sync] sync config: group=%s, deviceId=%s', synchronization.syncGroupName, synchronization.syncDeviceId);
 	} else {
-		debug('No sync groups found, turning sync off');
+		debug('[sync] sync disabled: no groups found');
 	}
 }
 
@@ -77,7 +77,7 @@ async function createSyncGroup(sos: ISos, groupName: string): Promise<SyncGroup>
 		return syncGroups.get(groupName)!;
 	}
 
-	debug('Creating and joining event-based sync group: %s', groupName);
+	debug('[sync] creating sync group: name=%s', groupName);
 	const syncGroup = new SyncGroup(sos, groupName);
 	await syncGroup.join();
 	syncGroups.set(groupName, syncGroup);
@@ -92,7 +92,7 @@ async function createTriggerSyncGroups(
 	for (let [key] of Object.entries(triggerInfo)) {
 		if (key.startsWith('sync-')) {
 			debug(
-				'Creating event-based sync group for sync triggers: %s with deviceSyncId: %s',
+				'[sync] creating trigger sync group: name=%s, deviceId=%s',
 				`${synchronization.syncGroupName}`,
 				synchronization.syncDeviceId,
 			);
@@ -115,7 +115,7 @@ async function createRegionSyncGroups(sos: ISos, synchronization: Synchronizatio
 			for (let [, nestedValue] of Object.entries(value.region)) {
 				if (nestedValue.sync) {
 					debug(
-						'Creating event-based sync group for nested region: %s with deviceSyncId: %s',
+						'[sync] creating nested region sync group: name=%s, deviceId=%s',
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 						synchronization.syncDeviceId,
 					);
@@ -126,14 +126,14 @@ async function createRegionSyncGroups(sos: ISos, synchronization: Synchronizatio
 		}
 		if (value.sync) {
 			debug(
-				'Creating event-based sync groups for region: %s with deviceSyncId: %s',
+				'[sync] creating region sync group: name=%s, deviceId=%s',
 				`${synchronization.syncGroupName}-${key}`,
 				synchronization.syncDeviceId,
 			);
 			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-before`);
 			result = true;
 
-			debug('Event-based sync groups created for region: %s', `${synchronization.syncGroupName}-${key}`);
+			debug('[sync] sync groups created for region: %s', `${synchronization.syncGroupName}-${key}`);
 		}
 	}
 	return result;
@@ -152,11 +152,11 @@ export async function connectSyncSafe(sos: ISos, retryCount: number = 3) {
 			: {
 					engine: SyncEngine.P2PLocal,
 			  };
-		debug('Connecting to sync server with engine: %O', options);
+		debug('[sync] connecting to sync server');
 		await sos.sync.connect(options);
 		resetAppRestartCount();
 	} catch (error) {
-		debug('Error occurred during sync connection: %O', error);
+		debug('[sync] connection error: %O', error);
 		const nextTryMultiplier = 1 / (Math.log(retryCount) + 1);
 		await sleep(nextTryMultiplier * 2000);
 		if (retryCount > 0) {

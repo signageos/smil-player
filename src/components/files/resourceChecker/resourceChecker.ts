@@ -27,14 +27,14 @@ export class ResourceChecker implements IResourceChecker {
 
 	public start() {
 		if (this.isRunning) {
-			debug('ResourceChecker is already running');
+			debug('[files] resource checker already running, skipping start');
 			return;
 		}
 
 		this.isRunning = true;
 		this.clearAllTimers();
 
-		debug('ResourceChecker grouped resources: %O', this.groupedResources);
+		debug('[files] resource checker grouped resources: groups=%d', this.groupedResources.size);
 
 		for (const [interval, resourceGroup] of this.groupedResources.entries()) {
 			const scheduleNext = (): NodeJS.Timeout => {
@@ -48,13 +48,13 @@ export class ResourceChecker implements IResourceChecker {
 							if (!this.isRunning) {
 								break;
 							}
-							debug('Checking resource: %O at interval: %d', resource, interval);
+							debug('[files] checking resource: url=%s, interval=%d', resource.url, interval);
 
 							try {
 								const response = await resource.checkFunction();
 								await resource.actionOnSuccess(response, async () => this.stop());
 							} catch (error) {
-								debug('Error checking %s: %O', resource.url, error);
+								debug('[files] resource check error: url=%s, error=%O', resource.url, error);
 							}
 						}
 					} finally {
@@ -76,12 +76,12 @@ export class ResourceChecker implements IResourceChecker {
 			scheduleNext();
 		}
 
-		debug('Grouped resource checks started.');
+		debug('[files] resource checker started');
 	}
 
 	public async stop() {
 		if (!this.isRunning) {
-			debug('ResourceChecker is not running');
+			debug('[files] resource checker not running, skipping stop');
 			return;
 		}
 
@@ -94,15 +94,15 @@ export class ResourceChecker implements IResourceChecker {
 			try {
 				this.isRunning = false;
 
-				debug('All grouped resource checks stopped.');
+				debug('[files] resource checker stopped');
 
 				if (this.shouldSync) {
-					debug('Updating content with sync on');
+					debug('[files] updating content: sync=on');
 					// await this.playlistSyncStopFunction();
 					this.playlistNonSyncStopFunction();
 					this.restartPlaylist();
 				} else {
-					debug('Updating content with sync off');
+					debug('[files] updating content: sync=off');
 					this.playlistNonSyncStopFunction();
 					this.restartPlaylist();
 				}
@@ -110,9 +110,9 @@ export class ResourceChecker implements IResourceChecker {
 				// Cleanup all resources
 				this.groupedResources.clear();
 				this.clearAllTimers();
-				debug('ResourceChecker resources cleaned up.');
+				debug('[files] resource checker cleaned up');
 			} catch (error) {
-				debug('Error during ResourceChecker stop: %O', error);
+				debug('[files] resource checker stop error: %O', error);
 				throw error;
 			} finally {
 				this.stopPromise = null;

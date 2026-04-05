@@ -73,7 +73,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
-				debug('found %s element, getting all info', key);
+				debug('[prepare] processing %s element', key);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
@@ -98,7 +98,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						htmlElement = HtmlEnum.ticker;
 						break;
 					default:
-						debug(`Sorry, we are out of ${key}.`);
+						debug('[prepare] unsupported element type: %s', key);
 				}
 
 				for (const elem of value) {
@@ -167,8 +167,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 							elem.transitionInfo = smilObject.transition[transitionId];
 						} else {
 							debug(
-								`No corresponding transition found for element: %O, with transitionType: %s`,
-								elem,
+								'[prepare] no matching transition: type=%s',
 								transitionId,
 							);
 						}
@@ -182,7 +181,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					if (key.startsWith(HtmlEnum.ticker)) {
 						elem.id = createTickerElement(elem, elem.regionInfo, key);
 					}
-					debug('all info extracted for element: %O', elem);
+					debug('[prepare] element info extracted: src=%s', elem.src);
 				}
 				// reset widget expression for next elements
 				widgetRootFile = '';
@@ -205,7 +204,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				start: playModeRangeStart,
 				end: playModeRangeEnd,
 			});
-			debug('Stored playMode range for region=%s: [%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
+			debug('[prepare] Stored playMode range for region=%s: [%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
 		}
 	};
 
@@ -230,19 +229,19 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, internalStorageUnit, smilUrl, true);
-		debug('All triggers info extracted');
+		debug('[prepare] All triggers info extracted');
 
 		await this.getAllInfo(smilObject.dynamic, smilObject, internalStorageUnit, smilUrl, true);
-		debug('All dynamic playlist info extracted');
+		debug('[prepare] All dynamic playlist info extracted');
 
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
-		debug('All elements info extracted');
+		debug('[prepare] All elements info extracted');
 
 		// Set max sync indices for each region in synchronization object
 		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
 			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
-			debug('Set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+			debug('[prepare] Set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
 		}
 	};
 }

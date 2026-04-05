@@ -97,11 +97,11 @@ export class PlaylistCommon implements IPlaylistCommon {
 			try {
 				const result = await fn();
 				if (result === SMILScheduleEnum.allExpired) {
-					debug('Breaking endless loop - all wallclock content permanently expired');
+					debug('[playback] breaking endless loop: all wallclock content expired');
 					break;
 				}
 			} catch (err) {
-				debug('Error: %O occurred during processing function %s', err, fn.name);
+				debug('[playback] error in %s: %O', fn.name, err);
 				throw err;
 			}
 		}
@@ -143,7 +143,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 */
 	protected cancelPreviousMedia = async (regionInfo: RegionAttributes, isPlaylistUpdate: boolean = false) => {
 		debug(
-			'Cancelling media in region: %s with tag: %s',
+			'[playback] cancelling media: region=%s, tag=%s',
 			regionInfo.regionName,
 			this.currentlyPlaying[regionInfo.regionName]?.media,
 		);
@@ -157,7 +157,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			case 'ticker':
 				await this.cancelPreviousTicker(regionInfo);
 			default:
-				debug('Element not supported for cancellation');
+				debug('[playback] unsupported element for cancellation');
 				break;
 		}
 	};
@@ -169,9 +169,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 */
 	private cancelPreviousHtmlElement = async (regionInfo: RegionAttributes, isPlaylistUpdate?: boolean) => {
 		try {
-			debug('previous html element playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+			debug('[playback] previous html element playing: region=%s', regionInfo.regionName);
 			if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
-				debug('html element was already cancelled');
+				debug('[playback] html element already cancelled');
 				return;
 			}
 			const element = <HTMLImageElement>document.getElementById(this.currentlyPlaying[regionInfo.regionName].id);
@@ -198,7 +198,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			this.currentlyPlaying[regionInfo.regionName].playing = false;
 			this.notifyRegionChange();
 		} catch (err) {
-			debug('error during ticker cancellation: %O', err);
+			debug('[playback] Error during ticker cancellation: %O', err);
 		}
 	};
 
@@ -208,9 +208,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 */
 	private cancelPreviousVideo = async (regionInfo: RegionAttributes) => {
 		try {
-			debug('previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
+			debug('[playback] Previous video playing: %O', this.currentlyPlaying[regionInfo.regionName]);
 			if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
-				debug('video was already cancelled');
+				debug('[playback] Video was already cancelled');
 				return;
 			}
 
@@ -230,7 +230,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 					}
 				});
 			}
-			debug('Calling## video stop function - single video: %O', video);
+			debug('[playback] Calling video stop: %O', video);
 			await sosVideoObject.stop(
 				elementUrl,
 				localRegionInfo.left,
@@ -240,9 +240,9 @@ export class PlaylistCommon implements IPlaylistCommon {
 			);
 			video.playing = false;
 			this.notifyRegionChange();
-			debug(`previous ${videoElement} stopped: %O`, video);
+			debug('[playback] Previous %s stopped: %O', videoElement, video);
 		} catch (err) {
-			debug('error during video cancellation: %O', err);
+			debug('[playback] Error during video cancellation: %O', err);
 		}
 	};
 }
