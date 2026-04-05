@@ -92,7 +92,7 @@ export class SmilPlayer implements ISmilPlayer {
 		while (true) {
 			try {
 				const startVersion = this.processor.getPlaylistVersion();
-				debug('One smil iteration finished START' + startVersion);
+				debug('Starting SMIL iteration, current playlist version: %s', startVersion);
 				await this.main(internalStorageUnit, smilUrl);
 				const finishVersion = this.processor.getPlaylistVersion();
 				if (startVersion < finishVersion) {
@@ -138,9 +138,6 @@ export class SmilPlayer implements ISmilPlayer {
 		} catch (err) {
 			// Handle any errors that might occur during file operations
 			debug('Error during SMIL media info file management: %O', err);
-			if (err instanceof Error) {
-				debug('Error details: %s', err.message);
-			}
 		}
 	}
 
@@ -173,10 +170,6 @@ export class SmilPlayer implements ISmilPlayer {
 			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 		} catch (err) {
 			debug('Failed to download backup image: %O', err);
-			// Log additional error details if available
-			if (err instanceof Error) {
-				debug('Error details: %s', err.message);
-			}
 		}
 	}
 
@@ -257,7 +250,7 @@ export class SmilPlayer implements ISmilPlayer {
 					filePath: `${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
 				});
 
-				debug('SMIL file downloaded');
+				debug('SMIL file content loaded from storage');
 				downloadPromises = [];
 
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);

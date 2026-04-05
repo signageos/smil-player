@@ -466,7 +466,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					conditionalExpr,
 				);
 			} catch (err) {
-				debug('Unexpected error during dynamic playlist playback: %O', err);
+				debug('Unexpected error during dynamic playlist trigger handling: %O', err);
 				clearInterval(intervalId);
 			}
 		} catch (err) {
@@ -549,6 +549,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			(this.synchronization.shouldCancelAll ||
 				(element.hasOwnProperty(SMILDynamicEnum.dynamicValue) && !this.currentlyPlaying.fullScreenTrigger))
 		) {
+			timedDebug.log('Cancelling all content due to fullScreenTrigger: shouldCancelAll=%s, hasDynamic=%s, currentlyPlayingFullScreen=%s',
+				this.synchronization.shouldCancelAll, element.hasOwnProperty(SMILDynamicEnum.dynamicValue), !!this.currentlyPlaying.fullScreenTrigger);
 			this.synchronization.shouldCancelAll = false;
 			await this.stopAllContent(false);
 		}

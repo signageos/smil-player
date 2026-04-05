@@ -392,6 +392,7 @@ export class PlaylistTraverser {
 				if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
 					const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
 					if (timeToEnd === SMILScheduleEnum.neverPlay) {
+						debug('Wallclock permanently expired for par element, skipping: begin=%s, end=%s', value.begin, value.end);
 						processedAnyContent = true;
 						continue;
 					}
@@ -594,6 +595,7 @@ export class PlaylistTraverser {
 						}
 
 						if (timeToEnd === SMILScheduleEnum.neverPlay) {
+							debug('Wallclock permanently expired for seq element, skipping: begin=%s, end=%s', valueElement.begin, valueElement.end);
 							processedAnyContent = true;
 							arrayIndex += 1;
 							continue;
