@@ -1,0 +1,33 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="http://localhost:3000/redirect/landscape1.jpg?v=1&amp;campaign=testA"/>
+                <prefetch src="http://localhost:3000/redirect/landscape2.jpg?v=2&amp;campaign=testB"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <img dur="3s"
+                         src="http://localhost:3000/redirect/landscape1.jpg?v=1&amp;campaign=testA"
+                         region="main" fit="fill"/>
+                    <img dur="3s"
+                         src="http://localhost:3000/redirect/landscape2.jpg?v=2&amp;campaign=testB"
+                         region="main" fit="fill"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>

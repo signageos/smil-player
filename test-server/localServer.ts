@@ -64,6 +64,15 @@ app.get('/dynamic-update/:fileName', async (req, res) => {
 	res.send(fileString);
 });
 
+// Redirect endpoint: returns 302 with Location header to the actual static asset.
+// Used for testing that the SMIL player correctly handles media URLs with query params
+// that redirect to the real file location.
+app.get('/redirect/:fileName', (req, res) => {
+	const fileName = req.params.fileName;
+	const actualUrl = `http://localhost:${port}/assets/${fileName}`;
+	res.redirect(302, actualUrl);
+});
+
 app.use(express.static(path.join(process.env.PWD!, TestServer.testFilesPath)));
 
 app.listen(port, () => console.log(`Test server started on port ${port}!`));
