@@ -35,6 +35,7 @@ import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { joinSyncGroup } from '../tools/dynamicTools';
+import { findTriggerToCancelByEndId } from '../tools/triggerTools';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
 
@@ -519,6 +520,25 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
+				// Cross-trigger cancellation: check if another trigger's end matches this triggerId
+				const crossCancelKey = findTriggerToCancelByEndId(
+					this.smilObject.triggers, this.triggersEndless, triggerId,
+				);
+				if (crossCancelKey) {
+					debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
+					const target = this.triggersEndless[crossCancelKey];
+					target.play = false;
+					target.cancelDeferred?.resolve();
+					if (target.regionInfo) {
+						await this.cancelPreviousMedia(target.regionInfo);
+					}
+				}
+
+				// Cancel-only trigger with no content — nothing more to do
+				if (isNil(triggerMedia)) {
+					return;
+				}
+
 				// Already playing — handle end-condition toggle or skip
 				if (this.triggersEndless[triggerId]?.play) {
 					if (triggerMedia.seq?.end === triggerId) {
@@ -635,7 +655,26 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
+		// Cross-trigger cancellation: check if another trigger's end matches this trigger
+		const crossCancelKey = findTriggerToCancelByEndId(
+			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
+		);
+		if (crossCancelKey) {
+			debug('[trigger-mouse] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
+			const target = this.triggersEndless[crossCancelKey];
+			target.play = false;
+			target.cancelDeferred?.resolve();
+			if (target.regionInfo) {
+				await this.cancelPreviousMedia(target.regionInfo);
+			}
+		}
+
 		const triggerMedia = this.smilObject.triggers[triggerInfo.trigger];
+
+		// Cancel-only trigger with no content — nothing more to do
+		if (isNil(triggerMedia)) {
+			return;
+		}
 
 		if (this.triggersEndless[triggerInfo.trigger]?.play) {
 			if (triggerMedia.seq?.end === triggerInfo.trigger) {
@@ -717,7 +756,30 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 		// regenerate time when was trigger last called
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+
+		// Cross-trigger cancellation: check if another trigger's end matches this trigger
+		const crossCancelKey = findTriggerToCancelByEndId(
+			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
+		);
+		if (crossCancelKey) {
+			debug('[trigger-keyboard] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
+			const target = this.triggersEndless[crossCancelKey];
+			target.play = false;
+			target.cancelDeferred?.resolve();
+			if (target.regionInfo) {
+				await this.cancelPreviousMedia(target.regionInfo);
+			}
+		}
+
 		const triggerMedia = this.smilObject.triggers[triggerInfo.trigger];
+
+		// Cancel-only trigger with no content — return early
+		if (isNil(triggerMedia)) {
+			if (!FunctionKeys[key]) {
+				state = { buffer: buffer, lastKeyTime: currentTime };
+			}
+			return state;
+		}
 
 		if (!this.triggersEndless[triggerInfo.trigger]?.play) {
 			buffer = [];
