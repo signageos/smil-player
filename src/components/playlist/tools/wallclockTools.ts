@@ -157,7 +157,7 @@ export function parseSmilSchedule(
 		timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 	}
 
-	debug('[wallclock] Both times in future: waitBeforeStart=%s, playUntil=%s', timeToStart, timeToEnd);
+	debug('[wallclock] both times in future: waitBeforeStart=%s, playUntil=%s', timeToStart, timeToEnd);
 	return {
 		timeToStart,
 		timeToEnd,

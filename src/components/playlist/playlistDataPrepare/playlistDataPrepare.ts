@@ -204,7 +204,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				start: playModeRangeStart,
 				end: playModeRangeEnd,
 			});
-			debug('[prepare] Stored playMode range for region=%s: [%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
+			debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
 		}
 	};
 
@@ -229,19 +229,19 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, internalStorageUnit, smilUrl, true);
-		debug('[prepare] All triggers info extracted');
+		debug('[prepare] all triggers extracted');
 
 		await this.getAllInfo(smilObject.dynamic, smilObject, internalStorageUnit, smilUrl, true);
-		debug('[prepare] All dynamic playlist info extracted');
+		debug('[prepare] all dynamic playlists extracted');
 
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
-		debug('[prepare] All elements info extracted');
+		debug('[prepare] all elements extracted');
 
 		// Set max sync indices for each region in synchronization object
 		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
 			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
-			debug('[prepare] Set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+			debug('[prepare] set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
 		}
 	};
 }

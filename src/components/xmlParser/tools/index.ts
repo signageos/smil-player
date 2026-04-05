@@ -263,7 +263,7 @@ export function extractDataFromPlaylist(
 				new JefNode(node.parent.value).filter(
 					(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
 						if (!isNil(introNode.key) && XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-							debug('[xml] Intro element found: %O', introNode.parent.value);
+							debug('[xml] intro element found: %O', introNode.parent.value);
 							downloads.intro.push(introNode.parent.value);
 						}
 					},
