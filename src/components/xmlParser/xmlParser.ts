@@ -42,7 +42,7 @@ export class XmlParser implements IXmlParser {
 			dynamic: {},
 		};
 
-		debug('Parsing xml string to json : %O', xmlFile);
+		debug('[xml] parsing SMIL XML to JSON');
 		const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 			mergeAttrs: true,
 			explicitArray: false,
@@ -50,7 +50,7 @@ export class XmlParser implements IXmlParser {
 			attrValueProcessors: [parseBooleans],
 		});
 
-		debug('Xml file parsed to json object: %O', xmlObject);
+		debug('[xml] parsed XML to JSON: %O', xmlObject);
 
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
@@ -63,9 +63,10 @@ export class XmlParser implements IXmlParser {
 
 		removeDataFromPlaylist(playableMedia);
 
-		debug('Extracted transitions object: %O', transitions);
-		debug('Extracted playableMedia object: %O', playableMedia);
-		debug('Extracted downloads object: %O', downloads);
+		debug('[xml] extracted regions: count=%d', Object.keys(regions.region || {}).length);
+		debug('[xml] extracted transitions: count=%d', Object.keys(transitions.transition || {}).length);
+		debug('[xml] extracted playable media');
+		debug('[xml] extracted downloads: video=%d, img=%d, ref=%d, audio=%d', downloads.video.length, downloads.img.length, downloads.ref.length, downloads.audio.length);
 
 		return Object.assign({}, regions, playableMedia, downloads, triggerList, transitions, dynamicList);
 	};
