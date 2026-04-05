@@ -26,9 +26,9 @@ function linkFontFamily(fontFamily: string) {
 
 export function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttributes, key: string): string {
 	const elementId = `ticker-${ticker.regionInfo.regionName}-${key}`;
-	debug('creating element: %s' + elementId);
+	debug('[ticker] creating element: id=%s', elementId);
 	if (document.getElementById(elementId)) {
-		debug('element already exists: %s' + elementId);
+		debug('[ticker] reusing existing element: id=%s', elementId);
 		return elementId;
 	}
 

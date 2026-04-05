@@ -131,7 +131,7 @@ export function changeZIndex(
 	if (resultZIndex < currentElementZIndex && !('transitionInfo' in value)) {
 		resultZIndex = 0;
 	}
-	debug('changing zIndex for element: %O : %s', element, resultZIndex);
+	debug('[html] changing zIndex: zIndex=%s', resultZIndex);
 	element?.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 }
 
@@ -150,9 +150,9 @@ export function createDomElement(
 	isSpecial: boolean = false,
 ): string {
 	const elementId = generateElementId(value.localFilePath, value.regionInfo.regionName, key);
-	debug('creating element: %s' + elementId);
+	debug('[html] creating element: id=%s', elementId);
 	if (document.getElementById(elementId)) {
-		debug('element already exists: %s' + elementId);
+		debug('[html] reusing existing element: id=%s', elementId);
 		return elementId;
 	}
 	const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
@@ -175,14 +175,14 @@ export function extractAttributesByPrefix<T extends ObjectWithStringKeys>(obj: T
 
 export function resetBodyContent() {
 	try {
+		debug('[html] removing stale images');
 		for (let i = document.images.length; i-- > 0; ) {
-			debug('Removing images');
 			if (!isNil(document.images[i])) {
 				document.images[i].parentNode!.removeChild(document.images[i]);
 			}
 		}
 	} catch (err) {
-		debug('Error: %O during removing image: %O', err, document.images[document.images?.length]);
+		debug('[html] error removing image: %O', err);
 	}
 
 	// reset body content

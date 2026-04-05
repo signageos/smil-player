@@ -7,7 +7,7 @@ import { PlaylistElement } from '../../../models/playlistModels';
 import { isConditionalExpExpired } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { parseSmilSchedule } from './wallclockTools';
-import { removeDigits } from './generalTools';
+import { debug, removeDigits } from './generalTools';
 
 /**
  * function to set defaultAwait in case of no active element in wallclock schedule to avoid infinite loop
@@ -80,6 +80,7 @@ export function setDefaultAwait(
 		}
 	}
 
+	debug('[schedule] no playable item in %d elements, setting default await', elementsArray.length);
 	return SMILScheduleEnum.defaultAwait;
 }
 
@@ -89,11 +90,13 @@ export function setDefaultAwait(
  */
 export function setElementDuration(dur: string | undefined): number {
 	if (dur === 'indefinite') {
+		debug('[schedule] parsed duration: indefinite');
 		return SMILScheduleEnum.infiniteDuration;
 	}
 
 	// if duration is undefined
 	if (isNil(dur)) {
+		debug('[schedule] parsed duration: default (dur undefined)');
 		return SMILScheduleEnum.defaultDuration;
 	}
 
@@ -103,6 +106,7 @@ export function setElementDuration(dur: string | undefined): number {
 	dur = dur.replace(/[^0-9.]/g, '');
 	// empty string or NaN
 	if (isNaN(Number(dur)) || dur.length === 0) {
+		debug('[schedule] parsed duration: default (invalid format: %s)', dur);
 		return SMILScheduleEnum.defaultDuration;
 	}
 
@@ -128,6 +132,7 @@ export function areAllWallclocksPermanentlyExpired(elements: PlaylistElement[]):
 		}
 	}
 
+	debug('[schedule] all wallclock elements permanently expired: count=%d', elements.length);
 	return true;
 }
 

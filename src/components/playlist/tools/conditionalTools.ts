@@ -26,12 +26,12 @@ export function isConditionalExpExpired(
 	if (Array.isArray(element)) {
 		const result = setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
 		if (result) {
-			debug('Conditional expression expired for array element (no playable item found)');
+			debug('[conditional] array conditional expired: no playable item found');
 		}
 		return result;
 	}
 	if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId)) {
-		debug('Conditional expression evaluated to false, skipping element: expr=%s', element.expr);
+		debug('[conditional] expression false, skipping: expr=%s', element.expr);
 		return true;
 	}
 	return false;
@@ -69,7 +69,7 @@ export function checkConditionalExprSafe(expression: string, playerName: string 
 		expression = sanitizeConditionalExpr(expression);
 		return checkConditionalExpr(expression, playerName, playerId);
 	} catch (error) {
-		debug('Error happened during parsing expr attribute: %o', error);
+		debug('[conditional] parse error in expr: %O', error);
 		return false;
 	}
 }
