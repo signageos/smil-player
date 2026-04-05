@@ -55,6 +55,12 @@ export const SMILUrls = {
 	triggersWidget: 'http://localhost:3000/triggers/triggersWidget.smil',
 	triggersStop: 'http://localhost:3000/triggers/triggersStop.smil',
 	testing: 'http://localhost:3000/playback/testing.smil',
+	crossfadeTransition: 'http://localhost:3000/transitions/simpleCrossfade.smil',
+	billboardTransition: 'http://localhost:3000/transitions/simpleBillboard.smil',
+	playModeOne: 'http://localhost:3000/playback/playModeOne.smil',
+	queryStringMedia: 'http://localhost:3000/playback/queryStringMedia.smil',
+	triggersMouseDuration: 'http://localhost:3000/triggers/triggersMouseDuration.smil',
+	triggersCrossCancel: 'http://localhost:3000/triggers/triggersCrossCancel.smil',
 };
 
 export const TestServer = {
