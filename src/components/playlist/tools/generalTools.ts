@@ -203,7 +203,7 @@ export function generateParentId(tagName: string, value: PlaylistElement): strin
 		const parent = `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
 		return parent;
 	} catch (err) {
-		debug('[general] Error during parent generation: %O', err);
+		debug('[general] error during parent generation: %O', err);
 		return `${tagName}-undefined`;
 	}
 }
@@ -249,7 +249,7 @@ export function getDefaultVideoParams(): VideoParams {
 }
 
 export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
-	debug('[general] Getting index of currently playing priority: %O', currentlyPlaying);
+	debug('[general] getting index of playing priority: %O', currentlyPlaying);
 	// no element was played before ( trigger/dynamic playlist case )
 	if (isNil(currentlyPlaying)) {
 		return 0;
@@ -347,7 +347,7 @@ export function processRandomPlayMode(
 		case 'one':
 			return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
 		default:
-			debug('[general] No valid playMode specified, returning original object, playMode: %s', playlist.playmode);
+			debug('[general] no valid playMode, returning original: playMode=%s', playlist.playmode);
 			return playlist;
 	}
 }

@@ -51,14 +51,14 @@ export class SmilPlayer implements ISmilPlayer {
 			for (const [key, value] of Object.entries(this.configOverrides)) {
 				(this.sos.config as Record<string, unknown>)[key] = value;
 			}
-			debug('[smil] Applied config overrides: %O', Object.keys(this.configOverrides));
+			debug('[smil] applied config overrides: %O', Object.keys(this.configOverrides));
 		}
 
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
 
 		if (this.sos.config.debugEnabled === true || this.sos.config.debugEnabled === 'true') {
-			debug('[smil] Debug enabled in config, enabling debug logs');
+			debug('[smil] debug enabled in config');
 			Debug.enable('@signageos/smil-player:*');
 		}
 
@@ -73,7 +73,7 @@ export class SmilPlayer implements ISmilPlayer {
 		}
 		smilUrl = removeWhitespace(smilUrl);
 
-		debug('[smil] SMIL file url: %s', smilUrl);
+		debug('[smil] SMIL url: %s', smilUrl);
 
 		const storageUnits = await this.sos.fileSystem.listStorageUnits();
 
@@ -92,15 +92,15 @@ export class SmilPlayer implements ISmilPlayer {
 		while (true) {
 			try {
 				const startVersion = this.processor.getPlaylistVersion();
-				debug('[smil] Starting SMIL iteration, current playlist version: %s', startVersion);
+				debug('[smil] starting SMIL iteration: version=%s', startVersion);
 				await this.main(internalStorageUnit, smilUrl);
 				const finishVersion = this.processor.getPlaylistVersion();
 				if (startVersion < finishVersion) {
-					debug('[smil] Playlist replaced with new version: v%d -> v%d, restarting', startVersion, finishVersion);
+					debug('[smil] playlist version updated: v%d -> v%d, restarting', startVersion, finishVersion);
 					break;
 				}
 			} catch (err) {
-				debug('[smil] Unexpected error during SMIL iteration, retrying after delay: %O', err);
+				debug('[smil] iteration error, retrying: %O', err);
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
@@ -254,7 +254,7 @@ export class SmilPlayer implements ISmilPlayer {
 				downloadPromises = [];
 
 				const smilObject: SMILFileObject = await this.xmlParser.processSmilXml(smilFileContent);
-				debug('[smil] SMIL file parsed: %O', smilObject);
+				debug('[smil] parsed SMIL: %O', smilObject);
 
 				if (isEmpty(smilObject.playlist)) {
 					debug('[smil] detected empty SMIL playlist, will not process');
