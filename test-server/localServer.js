@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require('express');
+const path = require('path');
 const fs = require('fs').promises;
 const enums_1 = require("./enums");
 const localServerTools_1 = require("./localServerTools");
@@ -20,9 +21,6 @@ app.post('/reset', (_req, res) => {
     Object.keys(requestCounts).forEach(key => delete requestCounts[key]);
     res.json({ ok: true });
 });
-app.get('/assets/:fileName', (req, res) => {
-    res.sendFile(`./${enums_1.TestServer.assetsPath}/${req.params.fileName}`, { root: process.env.PWD });
-});
 app.get('/dynamic/:fileName', async (req, res) => {
     const fileName = req.params.fileName;
     let fileString = await fs.readFile(`./${enums_1.TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
@@ -38,6 +36,7 @@ app.head('/dynamic-update/:fileName', (req, res) => {
     const fileName = req.params.fileName;
     const count = requestCounts[fileName] || 1;
     // After Phase 2 (count >= 2), return stable Last-Modified to prevent infinite reload cycle.
+    // Phase 1: varying Last-Modified triggers the first update detection.
     const lastModified = count >= 2
         ? new Date(2000000000000).toUTCString()
         : new Date(Date.now() + count * 1000).toUTCString();
@@ -56,7 +55,5 @@ app.get('/dynamic-update/:fileName', async (req, res) => {
     res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml', 'Last-Modified': lastModified, 'Cache-Control': 'no-cache, no-store' });
     res.send(fileString);
 });
-app.get('/:fileName', (req, res) => {
-    res.sendFile(`./${enums_1.TestServer.testFilesPath}/${req.params.fileName}`, { root: process.env.PWD });
-});
+app.use(express.static(path.join(process.env.PWD, enums_1.TestServer.testFilesPath)));
 app.listen(port, () => console.log(`Test server started on port ${port}!`));
