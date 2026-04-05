@@ -9,12 +9,12 @@ export class SmilEventEmitter extends EventEmitter {
 		super();
 		sos.stream.onDisconnected((event) => {
 			this.emit(StreamEnums.disconnectedEvent);
-			debug('Stream: %O emitted onDisconnected event: %O', event);
+			debug('[events] stream disconnected: %O', event);
 		});
 
 		sos.stream.onError((event) => {
 			this.emit(StreamEnums.errorEvent);
-			debug('Stream: %O emitted onError event: %O', event);
+			debug('[events] stream error: %O', event);
 		});
 	}
 }
@@ -30,12 +30,12 @@ export async function waitForSuccessOrFailEvents(
 		let failListener: () => void;
 		successListener = () => {
 			eventEmitter.removeListener(failEvent, failListener);
-			debug('Stream: %O emitted %s event', stream, successEvent);
+			debug('[events] stream success: event=%s, src=%s', successEvent, stream.src);
 			resolve();
 		};
 		failListener = () => {
 			eventEmitter.removeListener(successEvent, successListener);
-			debug('Stream: %O emitted %s event', stream, failEvent);
+			debug('[events] stream fail: event=%s, src=%s', failEvent, stream.src);
 			reject(new Error('error: ' + failEvent));
 		};
 		eventEmitter.once(successEvent, successListener);

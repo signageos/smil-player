@@ -89,14 +89,14 @@ export class FilesManager implements IFilesManager {
 
 	public sendReport = async (message: Report) => {
 		if (this.smilLogging.enabled) {
-			debug('Sending report: %O', message);
+			debug('[files] sending report: endpoint=%s', this.smilLogging?.endpoint);
 			await this.sos.command.dispatch(message);
 		}
 	};
 
 	public sendPoPReport = async (message: IRecordItemOptions) => {
 		if (this.smilLogging.enabled) {
-			debug('Sending PoP report: %O', message);
+			debug('[files] sending PoP report');
 			await this.sos.proofOfPlay.recordItemPlayed(message);
 		}
 	};
@@ -107,7 +107,7 @@ export class FilesManager implements IFilesManager {
 			filePath: FileStructure.offlineReports,
 		});
 
-		debug('Number of custom endpoint report files', arrayOfReportFiles.length);
+		debug('[files] found offline report files: count=%d', arrayOfReportFiles.length);
 
 		if (arrayOfReportFiles.length > 0) {
 			for (const file of arrayOfReportFiles) {
@@ -115,7 +115,7 @@ export class FilesManager implements IFilesManager {
 					// get fileIndex of the current file
 					const fileIndex = parseInt(file.filePath.split('.csv')[0].replace(/\D/g, ''), 10);
 
-					debug('getting file index for offline reports', fileIndex);
+					debug('[files] got offline report file index: %d', fileIndex);
 					const fileContent = await this.sos.fileSystem.readFile({
 						storageUnit: this.internalStorageUnit,
 						filePath: file.filePath,
@@ -137,7 +137,7 @@ export class FilesManager implements IFilesManager {
 						arrayOfReports.length < this.smilLogging.reportFileLimit
 					) {
 						debug(
-							'Skipping active batch file %d (%d/%d reports)',
+							'[files] skipping active batch: fileIndex=%d, reports=%d/%d',
 							fileIndex,
 							arrayOfReports.length,
 							this.smilLogging.reportFileLimit,
@@ -145,22 +145,22 @@ export class FilesManager implements IFilesManager {
 						continue;
 					}
 
-					debug('Sending custom endpoint report file: %s', file.filePath);
+					debug('[files] sending offline report: file=%s', file.filePath);
 					const start = Date.now();
 
 					await this.sendCustomEndpointReport(arrayOfReports, true);
 
-					debug('Custom endpoint report file: %s, request took: %s ms', file.filePath, Date.now() - start);
+					debug('[files] sent offline report: file=%s, took=%d ms', file.filePath, Date.now() - start);
 
 					await this.deleteFile(file.filePath);
 
 					// reset number of reports in file due to the bug with repeated connection issues
 					delete this.offlineReportsInfoObject[fileIndex];
 
-					debug('Custom endpoint report file deleted: %s', file.filePath);
+					debug('[files] deleted offline report: file=%s', file.filePath);
 				} catch (err) {
 					debug(
-						'Unexpected error occurred during sending custom endpoint report file: %s, error: %O',
+						'[files] error sending offline report: file=%s, error=%O',
 						file.filePath,
 						err,
 					);
@@ -178,10 +178,8 @@ export class FilesManager implements IFilesManager {
 			const payload = Array.isArray(message) ? message : [message];
 
 			debug(
-				'Sending custom endpoint report: %s. %O',
-				new Date().toISOString(),
+				'[files] sending custom report: endpoint=%s',
 				this.smilLogging.endpoint!,
-				payload,
 			);
 			const response = await fetch(this.smilLogging.endpoint!, {
 				method: 'POST',
@@ -191,13 +189,13 @@ export class FilesManager implements IFilesManager {
 				body: JSON.stringify(payload),
 			});
 
-			debug('Custom endpoint report send: %O', payload);
+			debug('[files] custom report sent');
 
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 		} catch (error) {
-			debug('Unexpected error occurred during custom endpoint report:', error);
+			debug('[files] custom report error: %O', error);
 			if (offlineUpload) {
 				throw new Error('Error during offline custom endpoint report upload');
 			}
@@ -253,10 +251,10 @@ export class FilesManager implements IFilesManager {
 			// to create difference between download and media played
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
-				debug('Custom endpoint report enabled: %s', this.smilLogging.enabled);
+				debug('[files] Custom endpoint report enabled: %s', this.smilLogging.enabled);
 				const payload = createCustomEndpointMessagePayload(createPoPMessagePayload(value, errMessage));
 				if (value.reportMode === 'batch') {
-					debug('Report mode is batch, saving to offline storage');
+					debug('[files] Report mode is batch, saving to offline storage');
 					await this.saveCustomEndpointInfo(payload);
 				} else {
 					await this.sendCustomEndpointReport(payload);
@@ -290,10 +288,10 @@ export class FilesManager implements IFilesManager {
 
 	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
 		await this.deleteUnusedFiles(smilObject, smilUrl);
-		debug('Unused files deleted');
+		debug('[files] Unused files deleted');
 
 		await this.extractWidgets(widgets);
-		debug('Widgets extracted');
+		debug('[files] Widgets extracted');
 	};
 
 	public getFileDetails = async (
@@ -301,7 +299,7 @@ export class FilesManager implements IFilesManager {
 		internalStorageUnit: IStorageUnit,
 		fileStructure: string,
 	) => {
-		debug(`Getting file details for file: %O`, media);
+		debug('[files] Getting file details for file: %O', media);
 		return this.sos.fileSystem.getFile({
 			storageUnit: internalStorageUnit,
 			filePath: `${fileStructure}/${getFileName(media.src)}`,
@@ -326,12 +324,12 @@ export class FilesManager implements IFilesManager {
 		);
 		// file was not found
 		if (isNil(currentValue)) {
-			debug(`File was not found on remote server: %O `, media.src);
+			debug('[files] File was not found on remote server: %s', media.src);
 			return { shouldUpdate: false };
 		}
 
 		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
-			debug(`File does not exist in local storage: %s  downloading`, media.src);
+			debug('[files] File does not exist in local storage, downloading: %s', media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
@@ -339,7 +337,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		const storedValue = mediaInfoObject[getFileName(media.src)];
-		debug(`Stored value for file %s: %O`, media.src, storedValue);
+		debug('[files] Stored value for file: %s, value: %O', media.src, storedValue);
 
 		if (isNil(storedValue)) {
 			return {
@@ -350,7 +348,7 @@ export class FilesManager implements IFilesManager {
 
 		// Location strategy uses strings as values, while lastModified uses timestamps
 		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
-		debug('isLocationStrategy', isLocationStrategy);
+		debug('[files] Using location strategy: %s', isLocationStrategy);
 
 		// Helper function to strip __smil_version query parameter from URL
 		const stripSmilVersion = (url: string | null): string | null => {
@@ -370,14 +368,14 @@ export class FilesManager implements IFilesManager {
 		// Debug logging for location strategy edge cases
 		if (isLocationStrategy) {
 			if (currentValue === null) {
-				debug('Location strategy: currentValue is null (request failed or no Location header)');
+				debug('[files] Location strategy: currentValue is null (request failed or no Location header)');
 			}
 			if (stripSmilVersion(currentValue) === stripSmilVersion(media.src)) {
-				debug('Location strategy: currentValue equals media.src (no redirect, same URL returned)');
+				debug('[files] Location strategy: currentValue equals media.src (no redirect, same URL returned)');
 			}
 			// Log the comparison values for debugging
 			debug(
-				'Location strategy comparison - currentValue: %s, media.src: %s, storedValue: %s',
+				'[files] Location strategy comparison - currentValue: %s, media.src: %s, storedValue: %s',
 				stripSmilVersion(currentValue),
 				stripSmilVersion(media.src),
 				stripSmilVersion(storedValue as string),
@@ -394,19 +392,18 @@ export class FilesManager implements IFilesManager {
 			&& moment(storedValue).valueOf() !== moment(currentValue).valueOf();
 
 		if (isNewVersion) {
-			debug(`New file version detected: %O `, media.src);
+			debug('[files] New file version detected: %s', media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
 			};
 		}
 
-		debug(`File is already downloaded in internal storage: %O `, media.src);
+		debug('[files] File is already downloaded in internal storage: %s', media.src);
 		return { shouldUpdate: false };
 	};
 
 	public writeMediaInfoFile = async (mediaInfoObject: object) => {
-		debug('Writing to mediaInfo file in persistent storage: %O', mediaInfoObject);
 		await this.sos.fileSystem.writeFile(
 			{
 				storageUnit: this.internalStorageUnit,
@@ -414,12 +411,12 @@ export class FilesManager implements IFilesManager {
 			},
 			JSON.stringify(mediaInfoObject),
 		);
-		debug('Writing to mediaInfo file in persistent storage done: %O', mediaInfoObject);
+		debug('[files] Wrote mediaInfo to persistent storage: %O', mediaInfoObject);
 	};
 
 	public deleteFile = async (filePath: string) => {
 		try {
-			debug('Deleting file from persistent storage: %s', filePath);
+			debug('[files] Deleting file from persistent storage: %s', filePath);
 			await this.sos.fileSystem.deleteFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -428,7 +425,7 @@ export class FilesManager implements IFilesManager {
 				true,
 			);
 		} catch (err) {
-			debug('Unexpected error occurred during deleting file from persistent storage: %s', filePath);
+			debug('[files] Unexpected error occurred during deleting file from persistent storage: %s', filePath);
 			await this.sendGeneralErrorReport(err.message);
 		}
 	};
@@ -461,7 +458,7 @@ export class FilesManager implements IFilesManager {
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
-		debug('Received media info object: %s', JSON.stringify(mediaInfoObject));
+		debug('[files] Received media info object: %s', JSON.stringify(mediaInfoObject));
 
 		// Create a map to track which files need to be updated in mediaInfoObject
 		const filesToUpdate: Map<string, number | string> = new Map();
@@ -470,7 +467,7 @@ export class FilesManager implements IFilesManager {
 			filesList.map(async (file) => {
 				// do not download website widgets or video streams
 				if (shouldNotDownload(localFilePath, file)) {
-					debug('Will not download file: %O', file);
+					debug('[files] Will not download file: %O', file);
 					return;
 				}
 
@@ -504,7 +501,7 @@ export class FilesManager implements IFilesManager {
 					promises.push(
 						(async () => {
 							try {
-								debug(`Downloading file: %O`, updateValue ?? file.src);
+								debug('[files] Downloading file: %s', updateValue ?? file.src);
 								// Location strategy uses strings as values, while lastModified uses timestamps
 								const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 								let downloadUrl: string;
@@ -514,7 +511,7 @@ export class FilesManager implements IFilesManager {
 								} else {
 									downloadUrl = createDownloadPath(file.src);
 								}
-								debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
+								debug('[files] Using downloadUrl: %s for file: %s', downloadUrl, file.src);
 								const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
 								await this.sos.fileSystem.downloadFile(
@@ -526,11 +523,11 @@ export class FilesManager implements IFilesManager {
 									authHeaders,
 								);
 
-								debug(`File downloaded: %s`, updateValue ?? file.src);
+								debug('[files] File downloaded: %s', updateValue ?? file.src);
 
 								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate);
 							} catch (err) {
-								debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+								debug('[files] Unexpected error: %O during downloading file: %s', err, file.src);
 								this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, err.message);
 								// Remove from filesToUpdate if download failed
 								filesToUpdate.delete(getFileName(file.src));
@@ -552,7 +549,7 @@ export class FilesManager implements IFilesManager {
 	): Promise<void> => {
 		// Update mediaInfoObject with successful downloads
 		filesToUpdate.forEach((value, fileName) => {
-			debug(`Updating mediaInfoObject for file: %s with value: %O`, fileName, value);
+			debug('[files] Updating mediaInfoObject for file: %s with value: %O', fileName, value);
 			updateJsonObject(mediaInfoObject, fileName, value);
 		});
 
@@ -566,10 +563,10 @@ export class FilesManager implements IFilesManager {
 	public createFileStructure = async () => {
 		for (const structPath of Object.values(FileStructure)) {
 			if (await this.fileExists(structPath)) {
-				debug(`Filepath already exists: %O`, structPath);
+				debug('[files] Filepath already exists: %s', structPath);
 				continue;
 			}
-			debug(`Create directory structure: %O`, structPath);
+			debug('[files] Create directory structure: %s', structPath);
 			await this.sos.fileSystem.createDirectory({
 				storageUnit: this.internalStorageUnit,
 				filePath: structPath,
@@ -579,7 +576,7 @@ export class FilesManager implements IFilesManager {
 
 	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<Promise<void>[]> => {
 		let downloadPromises: Promise<void>[] = [];
-		debug(`Starting to download files %O:`, smilObject);
+		debug('[files] Starting to download files: %O', smilObject);
 
 		// Create a map to track all files that need to be updated in mediaInfoObject
 		const allFilesToUpdate: Map<string, number | string> = new Map();
@@ -652,7 +649,7 @@ export class FilesManager implements IFilesManager {
 
 	public prepareLastModifiedSetup = async (smilObject: SMILFileObject, smilFile: SMILFile): Promise<Resource[]> => {
 		let resourceCheckers: Resource[] = [];
-		debug(`Starting to check files for updates %O:`, smilObject);
+		debug('[files] Starting to check files for updates: %O', smilObject);
 		try {
 			// For SMIL file, always use lastModified strategy
 			const smilFetchStrategy = getStrategy(SMILEnums.lastModified);
@@ -726,7 +723,7 @@ export class FilesManager implements IFilesManager {
 
 			return resourceCheckers;
 		} catch (err) {
-			debug('Unexpected error occurred during lastModified check setup: %O', err);
+			debug('[files] Unexpected error occurred during lastModified check setup: %O', err);
 			// return empty arrays as if no new versions of files were found
 		}
 		return [];
@@ -743,7 +740,7 @@ export class FilesManager implements IFilesManager {
 				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 			))
 		) {
-			debug('MediaInfo file not found, creating json object');
+			debug('[files] MediaInfo file not found, creating json object');
 			return createJsonStructureMediaInfo(filesList);
 		}
 
@@ -754,7 +751,7 @@ export class FilesManager implements IFilesManager {
 		try {
 			return JSON.parse(response);
 		} catch (error) {
-			debug('Cannot parse smil meta media info', error);
+			debug('[files] Cannot parse smil meta media info: %O', error);
 			return createJsonStructureMediaInfo(filesList);
 		}
 	};
@@ -821,7 +818,7 @@ export class FilesManager implements IFilesManager {
 				return result.promises;
 			}
 		} catch (err) {
-			debug('Error occurred: %O during checking file version: %O', err, file);
+			debug('[files] Error occurred: %O during checking file version: %O', err, file);
 		}
 
 		return [];
@@ -924,7 +921,7 @@ export class FilesManager implements IFilesManager {
 	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
 		if (this.internalStorageUnit.freeSpace <= MINIMAL_STORAGE_FREE_SPACE) {
 			debug(
-				'Not enough space on device to save custom endpoint report, free space: %s',
+				'[files] Not enough space on device to save custom endpoint report, free space: %s',
 				this.internalStorageUnit.freeSpace,
 			);
 			return;
@@ -937,12 +934,12 @@ export class FilesManager implements IFilesManager {
 			// First save after restart - find highest existing index and start fresh
 			const highestExistingIndex = await this.initializeOfflineReportsIndex();
 			currentFileIndex = highestExistingIndex + 1; // Start with new file to avoid appending
-			debug('First save after restart, starting with new file index: %d', currentFileIndex);
+			debug('[files] First save after restart, starting with new file index: %d', currentFileIndex);
 		} else {
 			// Use the highest tracked index from current session
 			const trackedIndexes = Object.keys(this.offlineReportsInfoObject).map(k => parseInt(k, 10));
 			currentFileIndex = Math.max(...trackedIndexes);
-			debug('Using highest tracked index from current session: %d', currentFileIndex);
+			debug('[files] Using highest tracked index from current session: %d', currentFileIndex);
 		}
 
 		if (!this.offlineReportsInfoObject[currentFileIndex]) {
@@ -952,7 +949,7 @@ export class FilesManager implements IFilesManager {
 		}
 		// -1 because its indexed from 0
 		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > this.smilLogging.reportFileLimit - 1) {
-			debug('File number of records exceeded ', currentFileIndex);
+			debug('[files] File number of records exceeded: %d', currentFileIndex);
 			currentFileIndex += 1;
 			this.offlineReportsInfoObject[currentFileIndex] = {
 				numberOfReports: 0,
@@ -960,7 +957,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (await this.fileExists(`${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`)) {
-			debug('appending to a file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			debug('[files] Appending to a file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.appendFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -970,7 +967,7 @@ export class FilesManager implements IFilesManager {
 			);
 			this.offlineReportsInfoObject[currentFileIndex].numberOfReports += 1;
 		} else {
-			debug('creating new file ', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			debug('[files] Creating new file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.writeFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -995,7 +992,7 @@ export class FilesManager implements IFilesManager {
 			});
 
 			if (reportFiles.length === 0) {
-				debug('No existing offline report files found');
+				debug('[files] No existing offline report files found');
 				return -1; // Will start from index 0
 			}
 
@@ -1006,16 +1003,16 @@ export class FilesManager implements IFilesManager {
 			}).filter(index => index >= 0);
 
 			if (indexes.length === 0) {
-				debug('No valid offline report indexes found');
+				debug('[files] No valid offline report indexes found');
 				return -1;
 			}
 
 			const highestIndex = Math.max(...indexes);
-			debug('Found highest offline report index: %d from %d files', highestIndex, reportFiles.length);
+			debug('[files] Found highest offline report index: %d from %d files', highestIndex, reportFiles.length);
 
 			return highestIndex;
 		} catch (error) {
-			debug('Error finding offline report index: %O', error);
+			debug('[files] Error finding offline report index: %O', error);
 			return -1; // Safe fallback to start from 0
 		}
 	};
@@ -1025,9 +1022,9 @@ export class FilesManager implements IFilesManager {
 			try {
 				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
 					debug(
-						`Extracting widget: %O to destination path: %O`,
+						'[files] Extracting widget: %O to destination path: %s',
 						widgets[i],
-						`${FileStructure.extracted}	${getFileName(widgets[i].src)}`,
+						`${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
 					);
 					await this.sos.fileSystem.extractFile(
 						{
@@ -1042,7 +1039,7 @@ export class FilesManager implements IFilesManager {
 					);
 				}
 			} catch (err) {
-				debug(`Unexpected error: %O occurred during widget extract: %O`, err, widgets[i]);
+				debug('[files] Unexpected error: %O occurred during widget extract: %O', err, widgets[i]);
 			}
 		}
 	};
@@ -1066,7 +1063,7 @@ export class FilesManager implements IFilesManager {
 				let found = false;
 				for (let smilFile of smilMediaArray) {
 					if (storedFileName === getFileName(smilFile.src)) {
-						debug(`File found in new SMIL file: %s`, storedFile.filePath);
+						debug('[files] File found in new SMIL file: %s', storedFile.filePath);
 						found = true;
 						break;
 					}
@@ -1085,7 +1082,7 @@ export class FilesManager implements IFilesManager {
 							filePath: storedFile.filePath,
 						}))
 					) {
-						debug(`File was not found in new SMIL file, deleting: %O`, storedFile);
+						debug('[files] File was not found in new SMIL file, deleting: %O', storedFile);
 						await this.deleteFile(storedFile.filePath);
 					}
 				}
