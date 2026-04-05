@@ -13,18 +13,18 @@ test.describe('simpleBillboard.smil test', () => {
 		// Loader visible during prefetch
 		await expect(page.locator('video[src*="loader_871e2ff0"]')).toBeVisible({ timeout: Timeouts.firstElement });
 
-		// First image appears with billboard transition
-		await expect(frame.locator('img[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="landscape1"]'), 0, 0, 1920, 1080);
+		// First image appears with billboard transition (rendered as <ol> with <li> columns)
+		await expect(frame.locator('ol[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('ol[id*="landscape1"]'), 0, 0, 1920, 1080);
 
 		// First image disappears, second image appears with billboard
-		await expect(frame.locator('img[id*="landscape1"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="landscape2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="landscape2"]'), 0, 0, 1920, 1080);
+		await expect(frame.locator('ol[id*="landscape1"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('ol[id*="landscape2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('ol[id*="landscape2"]'), 0, 0, 1920, 1080);
 
 		// Second image disappears, first image reappears (loop)
-		await expect(frame.locator('img[id*="landscape2"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
-		await expect(frame.locator('img[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="landscape1"]'), 0, 0, 1920, 1080);
+		await expect(frame.locator('ol[id*="landscape2"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
+		await expect(frame.locator('ol[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('ol[id*="landscape1"]'), 0, 0, 1920, 1080);
 	});
 });
