@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that lower="pause" does NOT pause the higher-priority element when a lower
@@ -10,10 +10,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // With the remap, P_high plays throughout its window. P_low defers (waits in
 // handleDeferBehaviour) and plays cleanly after P_high's wallclock ends.
 test.describe('priorityLowerPause.smil test', () => {
-	test('lower="pause" does not pause higher-priority content', async ({ page, context }) => {
+	test('lower="pause" does not pause higher-priority content', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityLowerPause);
+		}, smilUrls.priorityLowerPause);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

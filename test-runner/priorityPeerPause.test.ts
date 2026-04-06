@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 test.describe('priorityPeerPause.smil test', () => {
-	test('second peer pauses first peer, first resumes after second ends', async ({ page, context }) => {
+	test('second peer pauses first peer, first resumes after second ends', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityPeerPause);
+		}, smilUrls.priorityPeerPause);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

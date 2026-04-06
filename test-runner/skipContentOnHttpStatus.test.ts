@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 
 // Tests that media is skipped when its updateCheckUrl HEAD response returns a
 // status code matching skipContentOnHttpStatus in the SMIL meta.
@@ -10,14 +10,10 @@ import { DUID, Timeouts, SMILUrls } from './config';
 // 3. ResourceChecker fires (contentRefresh=5s), sets media.expr='skipContent'
 // 4. Playlist skips landscape1 — only landscape2 plays
 test.describe('skipContentOnHttpStatus.smil test', () => {
-	test.beforeEach(async ({ request }) => {
-		await request.post('http://localhost:3000/reset');
-	});
-
-	test('skips media when HEAD returns status matching skipContentOnHttpStatus', async ({ page, context, request }) => {
+	test('skips media when HEAD returns status matching skipContentOnHttpStatus', async ({ page, context, request, smilUrls, testServerBaseUrl }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.skipContentOnHttpStatus);
+		}, smilUrls.skipContentOnHttpStatus);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
@@ -29,7 +25,7 @@ test.describe('skipContentOnHttpStatus.smil test', () => {
 		await expect(frame.locator('img[src*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// Phase 2: Configure 404 for landscape1's updateCheckUrl
-		await request.post('http://localhost:3000/status-config', {
+		await request.post(`${testServerBaseUrl}/status-config`, {
 			data: { fileName: 'landscape1.jpg', statusCode: 404 },
 		});
 

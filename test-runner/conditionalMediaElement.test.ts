@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('conditionalMediaElement.smil test', () => {
@@ -12,10 +12,22 @@ test.describe('conditionalMediaElement.smil test', () => {
 		[540, 960, 960, 540],
 	];
 
-	test('processes smil file correctly', async ({ page, context }) => {
+	/** Find the video-test-1 element positioned at top-left (x≈0, y≈0) */
+	async function findVideo1AtTopLeft(page: any) {
+		const locator = page.locator('video[src*="videos/video-test_465b7757.mp4"]');
+		const count = await locator.count();
+		for (let i = 0; i < count; i++) {
+			const box = await locator.nth(i).boundingBox();
+			if (box && box.x < 10) return locator.nth(i);
+		}
+		// Fallback to first if only one element
+		return locator.first();
+	}
+
+	test('processes smil file correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.conditionalMediaElement);
+		}, smilUrls.conditionalMediaElement);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
@@ -34,20 +46,9 @@ test.describe('conditionalMediaElement.smil test', () => {
 		for (let i = 0; i < video2Count; i++) {
 			await testCoordinates(video2Elements.nth(i), ...video2Coords[i]);
 		}
-		// video1 may appear in multiple regions at certain timing, check the one in top-left
-		const video1First = page.locator('video[src*="videos/video-test_465b7757.mp4"]');
-		const video1FirstCount = await video1First.count();
-		if (video1FirstCount === 1) {
-			await testCoordinates(video1First, 0, 0, 960, 540);
-		} else {
-			// Multiple video-test-1 elements — find the one at top-left (x=0)
-			let found = false;
-			for (let i = 0; i < video1FirstCount; i++) {
-				const box = await video1First.nth(i).boundingBox();
-				if (box && box.x === 0) { await testCoordinates(video1First.nth(i), 0, 0, 960, 540); found = true; break; }
-			}
-			expect(found).toBe(true);
-		}
+		// video1 may appear in multiple regions — find the one at top-left (x=0)
+		const video1AtTL = await findVideo1AtTopLeft(page);
+		await testCoordinates(video1AtTL, 0, 0, 960, 540);
 		await testCoordinates(frame.locator('img[src*="images/landscape1_fe944bd5.jpg"]').first(), 0, 960, 960, 540);
 
 		// Second state: landscape2 appears, video2 hides
@@ -70,7 +71,8 @@ test.describe('conditionalMediaElement.smil test', () => {
 		await expect(frame.locator('img[src*="images/landscape2_2d654451.jpg"]').first()).not.toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]').first()).toBeVisible({ timeout: Timeouts.elementAwait });
 
-		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]').last(), 0, 0, 960, 540);
+		const video1AtTL3 = await findVideo1AtTopLeft(page);
+		await testCoordinates(video1AtTL3, 0, 0, 960, 540);
 		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img4"]'), 0, 960, 960, 540);
 		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-bottom-left-img8"]'), 540, 0, 960, 540);
 		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-bottom-right-img12"]'), 540, 960, 960, 540);
@@ -89,7 +91,8 @@ test.describe('conditionalMediaElement.smil test', () => {
 			const correctIndex = video2Coords.length - 1 - i;
 			await testCoordinates(video2ElementsAgain.nth(i), ...video2Coords[correctIndex]);
 		}
-		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]').last(), 0, 0, 960, 540);
+		const video1AtTL4 = await findVideo1AtTopLeft(page);
+		await testCoordinates(video1AtTL4, 0, 0, 960, 540);
 		await testCoordinates(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img4"]'), 0, 960, 960, 540);
 	});
 });

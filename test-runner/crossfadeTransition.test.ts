@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('simpleCrossfade.smil test', () => {
-	test('crossfade transition displays images in sequence', async ({ page, context }) => {
+	test('crossfade transition displays images in sequence', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.crossfadeTransition);
+		}, smilUrls.crossfadeTransition);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 

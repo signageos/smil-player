@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 test.describe('priorityPeerDefer.smil test', () => {
-	test('second peer defers until first peer wallclock ends', async ({ page, context }) => {
+	test('second peer defers until first peer wallclock ends', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityPeerDefer);
+		}, smilUrls.priorityPeerDefer);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

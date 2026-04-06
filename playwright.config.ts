@@ -3,7 +3,6 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
 	testDir: './test-runner',
 	timeout: 180000,
-	workers: 1,
 	retries: 1,
 	use: {
 		baseURL: 'http://localhost:8090',
@@ -18,11 +17,6 @@ export default defineConfig({
 			reuseExistingServer: true,
 			timeout: 30000,
 		},
-		{
-			command: 'node test-server/localServer.js',
-			url: 'http://localhost:3000/layout/zonesCypress.smil',
-			reuseExistingServer: true,
-			timeout: 10000,
-		},
+		// Test server removed — each worker starts its own via worker-scoped fixture
 	],
 });

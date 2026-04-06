@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('triggersCrossCancel.smil test', () => {
-	test('trigger1 starts content, trigger2 cancels it', async ({ page, context }) => {
+	test('trigger1 starts content, trigger2 cancels it', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersCrossCancel);
+		}, smilUrls.triggersCrossCancel);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
@@ -38,10 +38,10 @@ test.describe('triggersCrossCancel.smil test', () => {
 		await testCoordinates(page.locator('video[src*="video-test_465b7757"]'), 10, 10, 1280, 720);
 	});
 
-	test('trigger2 has no effect without prior trigger1 activation', async ({ page, context }) => {
+	test('trigger2 has no effect without prior trigger1 activation', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersCrossCancel);
+		}, smilUrls.triggersCrossCancel);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 

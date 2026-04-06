@@ -1,13 +1,13 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 // Tests that a deferred element whose wallclock window expires while waiting is abandoned
 // and never plays. Exercises playlistPriority.ts handlePriorityDeferStopWait endTime check.
 test.describe('priorityDeferExpiry.smil test', () => {
-	test('deferred element never plays when its wallclock window expires', async ({ page, context }) => {
+	test('deferred element never plays when its wallclock window expires', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityDeferExpiry);
+		}, smilUrls.priorityDeferExpiry);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

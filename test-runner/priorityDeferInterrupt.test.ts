@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // P2 (middle priority, already active) plays first. P1 (highest) arrives at +30s and stops P2.
@@ -7,10 +7,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // P2's wallclock expires at +40s (during P1's window). When P1 ends at +60s,
 // P2's endTime has passed so it doesn't resume, and P3 plays immediately.
 test.describe('priorityDeferInterrupt.smil test', () => {
-	test('deferred element survives blocker replacement by higher priority', async ({ page, context }) => {
+	test('deferred element survives blocker replacement by higher priority', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityDeferInterrupt);
+		}, smilUrls.priorityDeferInterrupt);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests higher="pause" priority behavior: when a higher-priority element activates,
@@ -9,10 +9,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // finishes its current media, then waits. On resume, it continues with the next element.
 // Resume position depends on exact pause timing, so assertions use flexible selectors.
 test.describe('priorityPause.smil test', () => {
-	test('lower-priority content pauses and resumes when higher-priority ends', async ({ page, context }) => {
+	test('lower-priority content pauses and resumes when higher-priority ends', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityPause);
+		}, smilUrls.priorityPause);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

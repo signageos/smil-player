@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('triggersStop.smil test', () => {
-	test('duration trigger expires and returns to default content', async ({ page, context }) => {
+	test('duration trigger expires and returns to default content', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersStop);
+		}, smilUrls.triggersStop);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
@@ -27,10 +27,10 @@ test.describe('triggersStop.smil test', () => {
 		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 10, 10, 1280, 720);
 	});
 
-	test('self-cancel toggle stops trigger early on re-click', async ({ page, context }) => {
+	test('self-cancel toggle stops trigger early on re-click', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersStop);
+		}, smilUrls.triggersStop);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
@@ -53,10 +53,10 @@ test.describe('triggersStop.smil test', () => {
 		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 10, 10, 1280, 720);
 	});
 
-	test('keyboard trigger with repeatCount=1 plays once and returns', async ({ page, context }) => {
+	test('keyboard trigger with repeatCount=1 plays once and returns', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersStop);
+		}, smilUrls.triggersStop);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
