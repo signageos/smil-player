@@ -43,16 +43,14 @@ test.describe('triggersKeyboard.smil test', () => {
 		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img2"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(frame.locator('img[id*="img_2_18b5"][id*=".jpg-video-img2"]'), 10, 10, 1280, 720);
-		await page.waitForTimeout(Timeouts.transition);
 
-		// Trigger keyboard sequence 4-5-6 again
+		// Trigger keyboard sequence 4-5-6 again (player is in stable state after assertion above)
+		await page.waitForTimeout(Timeouts.transition);
 		await page.keyboard.press('4');
 		await page.keyboard.press('5');
 		await page.keyboard.press('6');
 
-		await page.waitForTimeout(Timeouts.transition);
-
-		// Trigger keyboard sequence 7-8-9
+		// Trigger keyboard sequence 7-8-9 (send immediately after first sequence)
 		await page.keyboard.press('7');
 		await page.keyboard.press('8');
 		await page.keyboard.press('9');

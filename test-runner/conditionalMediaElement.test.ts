@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('conditionalMediaElement.smil test', () => {
 	const video1Coords = [
@@ -21,11 +21,7 @@ test.describe('conditionalMediaElement.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader video (may be skipped if assets are cached from a previous test)
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// First set of elements visible
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]').first()).toBeVisible({ timeout: Timeouts.firstElement });

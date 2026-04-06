@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // Tests three-level defer with middle priority expiry: P1 (highest) plays, P2 (middle)
 // and P3 (lowest) both defer. P2's wallclock expires at +15s while deferred behind P1.
@@ -16,11 +17,7 @@ test.describe('priorityThreeLevelDeferExpiry.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader may be skipped if files are cached from a previous run
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// P1 (highest priority) plays immediately: video-test-1 + img_1 loop
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });

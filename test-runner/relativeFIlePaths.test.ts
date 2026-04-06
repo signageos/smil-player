@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('relativeFilePaths.smil test', () => {
 	// FIXME: Relative path resolution in the player's download pipeline doesn't produce expected
@@ -14,20 +14,14 @@ test.describe('relativeFilePaths.smil test', () => {
 
 		await page.goto(`/?duid=${DUID}`);
 
-		try {
-			await expect(page.locator('video[src*="videos/loader_5c220733.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		await expect(page.locator('video[src*="videos/landscape1_0fbebf6f.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await testCoordinates(page.locator('video[src*="videos/landscape1_0fbebf6f.mp4"]'), 270, 480, 960, 540);
 		// await expect(page.locator('video[src*="videos/loader_5c220733.mp4"]')).toHaveCount(0);
-		await page.waitForTimeout(Timeouts.videoTransition);
-		await page.waitForTimeout(Timeouts.videoTransition);
-		await page.waitForTimeout(Timeouts.videoTransition);
 
-		await expect(page.locator('video[src*="videos/landscape1_0fbebf6f.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		// Wait for video to loop back (3x video transition duration = ~16s)
+		await expect(page.locator('video[src*="videos/landscape1_0fbebf6f.mp4"]')).toBeVisible({ timeout: Timeouts.videoTransition * 3 + Timeouts.elementAwait });
 		await testCoordinates(page.locator('video[src*="videos/landscape1_0fbebf6f.mp4"]'), 270, 480, 960, 540);
 	});
 });

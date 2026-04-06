@@ -531,4 +531,93 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			expect(setDefaultAwaitConditional(element, 'OtherPlayer', '')).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 	});
+
+	describe('error path tests', () => {
+		it('should return false for empty expression string', () => {
+			expect(checkConditionalExprSafe('')).to.be.equal(false);
+		});
+
+		it('should return false for unknown function name', () => {
+			expect(checkConditionalExprSafe("adapi-nonexistent()")).to.be.equal(false);
+		});
+
+		it('should return false for expression with too many comparators', () => {
+			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), '2030-01-01')<0<1")).to.be.equal(false);
+		});
+
+		it('should return false for malformed expression with no function', () => {
+			expect(checkConditionalExprSafe("just a plain string")).to.be.equal(false);
+		});
+
+		it('should return false for expression with unmatched parentheses', () => {
+			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), '2030-01-01'")).to.be.equal(false);
+		});
+
+		it('should return false for expression comparing two functions (unsupported)', () => {
+			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), adapi-gmdate())<0")).to.be.equal(false);
+		});
+	});
+
+	describe('compareValues non-zero characterization (known limitation)', () => {
+		// The compareValues function ignores comparable.compareValue (the TODO at line 397).
+		// These tests document current behavior for non-zero comparison targets.
+		// When the TODO is resolved, some of these may need updating.
+
+		it('should treat <0 and <1 the same (compareValue ignored)', () => {
+			// adapi-date() < '2030-01-01' → true regardless of compareValue being 0 or 1
+			const ltZero = checkConditionalExprSafe("adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0");
+			const ltOne = checkConditionalExprSafe("adapi-compare(adapi-date(),'2030-01-01T00:00:00')<1");
+			expect(ltZero).to.equal(ltOne);
+		});
+
+		it('should treat >0 and >1 the same (compareValue ignored)', () => {
+			// adapi-date() > '2010-01-01' → true regardless of compareValue
+			const gtZero = checkConditionalExprSafe("adapi-compare(adapi-date(),'2010-01-01T00:00:00')>0");
+			const gtOne = checkConditionalExprSafe("adapi-compare(adapi-date(),'2010-01-01T00:00:00')>1");
+			expect(gtZero).to.equal(gtOne);
+		});
+
+		it('should return true for =0 when values are equal (compareValue is the expected result)', () => {
+			// playerId comparison: adapi-compare(smil-playerId(), 'myId') = 0 means "equal"
+			const result = checkConditionalExprSafe("adapi-compare(smil-playerId(),'myId')=0", '', 'myId');
+			expect(result).to.be.true;
+		});
+	});
+
+	describe('nested AND/OR combinations', () => {
+		it('should evaluate nested AND with 3+ conditions', () => {
+			// All true: date in future AND matching player AND matching id
+			const expr = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0 AND adapi-compare(smil-playerName(),'test')=0 AND adapi-compare(smil-playerId(),'id1')=0";
+			expect(checkConditionalExprSafe(expr, 'test', 'id1')).to.be.true;
+		});
+
+		it('should return false if any AND condition fails', () => {
+			const expr = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0 AND adapi-compare(smil-playerName(),'wrong')=0";
+			expect(checkConditionalExprSafe(expr, 'test', '')).to.be.false;
+		});
+
+		it('should evaluate nested OR with 3+ conditions', () => {
+			// First false, second false, third true
+			const expr = "adapi-compare(smil-playerName(),'wrong1')=0 OR adapi-compare(smil-playerName(),'wrong2')=0 OR adapi-compare(smil-playerName(),'test')=0";
+			expect(checkConditionalExprSafe(expr, 'test', '')).to.be.true;
+		});
+
+		it('should return false if all OR conditions fail', () => {
+			const expr = "adapi-compare(smil-playerName(),'wrong1')=0 OR adapi-compare(smil-playerName(),'wrong2')=0";
+			expect(checkConditionalExprSafe(expr, 'test', '')).to.be.false;
+		});
+
+		it('should split AND first, making "A OR B AND C" evaluate as "(A OR B) AND C"', () => {
+			// AND splits first → ["A OR B", "C"]. Both must be true for AND.
+			// "A OR B" → A=true → true. "C" → false. Overall: false.
+			const expr = "adapi-compare(smil-playerName(),'match')=0 OR adapi-compare(smil-playerName(),'wrong')=0 AND adapi-compare(smil-playerId(),'wrong')=0";
+			expect(checkConditionalExprSafe(expr, 'match', '')).to.be.false;
+		});
+
+		it('should use brackets to override AND/OR precedence', () => {
+			// [A OR B] forces OR evaluation first, then the result is the whole expression
+			const expr = "[adapi-compare(smil-playerName(),'match')=0 OR adapi-compare(smil-playerName(),'wrong')=0]";
+			expect(checkConditionalExprSafe(expr, 'match', '')).to.be.true;
+		});
+	});
 });

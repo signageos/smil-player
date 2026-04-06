@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // Tests higher="stop" priority behavior with three priority levels.
 // Timeline: P3 always active → P2 stops P3 at +35s → P1 stops P2 at +60s →
@@ -19,11 +20,7 @@ test.describe('priorityStop.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader may be skipped if files are cached from a previous run
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// Phase 1: P3 plays (lowest priority, always active)
 		// Any P3 content: img_1 or img_2 in iframe, or video-test-1 on main page

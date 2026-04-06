@@ -1,14 +1,38 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { expect, FrameLocator, Locator, Page } from '@playwright/test';
+import { Timeouts } from './config';
+
+const COORDINATE_TOLERANCE = 2; // ±2px tolerance for sub-pixel rendering differences
 
 export async function testCoordinates(
 	locator: Locator, top: number, left: number, width: number, height: number,
 ) {
 	const box = await locator.boundingBox();
 	expect(box).not.toBeNull();
-	expect(box!.x).toBe(left);
-	expect(box!.y).toBe(top);
-	expect(box!.width).toBe(width);
-	expect(box!.height).toBe(height);
+	expect(Math.abs(box!.x - left)).toBeLessThanOrEqual(COORDINATE_TOLERANCE);
+	expect(Math.abs(box!.y - top)).toBeLessThanOrEqual(COORDINATE_TOLERANCE);
+	expect(Math.abs(box!.width - width)).toBeLessThanOrEqual(COORDINATE_TOLERANCE);
+	expect(Math.abs(box!.height - height)).toBeLessThanOrEqual(COORDINATE_TOLERANCE);
+}
+
+/**
+ * Wait for the applet iframe to be visible, then return a FrameLocator.
+ * Provides a clear error instead of silent null if the iframe never loads.
+ */
+export async function getAppletFrame(page: Page, timeout = Timeouts.firstElement): Promise<FrameLocator> {
+	await expect(page.locator('iframe')).toBeVisible({ timeout });
+	return page.frameLocator('iframe');
+}
+
+/**
+ * Wait for the loader video to appear, or skip if files are cached.
+ * Consolidates the try/catch loader pattern used across all e2e tests.
+ */
+export async function waitForLoaderOrSkip(page: Page) {
+	try {
+		await expect(page.locator('video[src*="loader"]')).toBeVisible({ timeout: 10000 });
+	} catch {
+		// Loader skipped — files cached from a previous test run
+	}
 }
 
 /**

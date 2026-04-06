@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // P_high has two wallclock windows (0-20s and 35-50s) with a gap between them.
 // P_low (always active) defers behind P_high. When window 1 ends, P_low plays
@@ -17,11 +18,7 @@ test.describe('priorityOscillation.smil test', () => {
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached
-		}
+		await waitForLoaderOrSkip(page);
 
 		// Window 1: P_high plays (video-test-1)
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });

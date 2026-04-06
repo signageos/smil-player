@@ -279,6 +279,109 @@ describe('PriorityConflictResolver', () => {
 		});
 	});
 
+	describe('recursion depth limiting', () => {
+		it('should recurse when deferred element released and peer/lower is now playing (depth 1)', async () => {
+			// Setup: 3 priority levels. P1 (highest) blocks P2 (defer). P1 finishes, P3 is now playing.
+			// P2 should resolve conflict with P3 via recursion (depth 0 → 1).
+			state['main'] = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 2, higher: PriorityRule.stop }),
+					parent: 'par-P1',
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1, higher: PriorityRule.stop, peer: PriorityRule.stop }),
+					parent: 'par-P2',
+				}),
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 0, higher: PriorityRule.stop }),
+					parent: 'par-P3',
+					player: { contentPause: 0, stop: false, endTime: 0, playing: false, timesPlayed: 0 },
+				}),
+			];
+			stateManager.setPlaying('main', 0);
+
+			// P1 finishes → P3 starts playing, P2 is released from defer
+			setTimeout(() => {
+				state['main'][0].player.playing = false;
+				stateManager.markFinished('main', 0);
+				stateManager.setPlaying('main', 2);
+			}, 20);
+
+			await resolver.handleDeferBehaviour(
+				'video1',
+				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				'main', 1, 0, 'par-P2', 0, 0,
+			);
+
+			// After recursion, P3 should be stopped by P2 (P2 has higher priority than P3)
+			expect(state['main'][2].player.stop).to.be.true;
+		});
+
+		it('should stop recursion at MAX_PRIORITY_RECURSION_DEPTH (depth 3)', async () => {
+			// Setup: deferred element released, peer is playing. But depth is already at max.
+			state['main'] = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1, peer: PriorityRule.stop }),
+					parent: 'par-A',
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1, peer: PriorityRule.stop }),
+					parent: 'par-B',
+				}),
+			];
+			stateManager.setPlaying('main', 0);
+
+			// Release blocker immediately
+			setTimeout(() => {
+				stateManager.markFinished('main', 0);
+				stateManager.setPlaying('main', 0); // simulate peer still playing after release
+			}, 10);
+
+			// Call with depth=3 (at the limit)
+			await resolver.handleDeferBehaviour(
+				'video1',
+				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				'main', 1, 0, 'par-B', 0, 3,
+			);
+
+			// Should NOT have stopped the peer (recursion stopped)
+			expect(state['main'][0].player.stop).to.be.false;
+		});
+
+		it('should allow recursion at depth 2 (below max of 3)', async () => {
+			state['main'] = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 0, higher: PriorityRule.stop }),
+					parent: 'par-low',
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1, higher: PriorityRule.stop }),
+					parent: 'par-high',
+				}),
+			];
+			stateManager.setPlaying('main', 0);
+
+			// Release blocker, low-priority is still playing
+			setTimeout(() => {
+				stateManager.markFinished('main', 0);
+				stateManager.setPlaying('main', 0);
+			}, 10);
+
+			// Call with depth=2 (one below max)
+			await resolver.handleDeferBehaviour(
+				'video1',
+				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				'main', 1, 0, 'par-high', 0, 2,
+			);
+
+			// Recursion should proceed — lower priority entry should be stopped
+			expect(state['main'][0].player.stop).to.be.true;
+		});
+	});
+
 	describe('handlePrecedingContentStop', () => {
 		it('should wait for blocker to finish then reset stop state', async () => {
 			state['main'] = [
