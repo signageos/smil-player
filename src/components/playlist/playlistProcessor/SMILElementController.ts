@@ -6,15 +6,13 @@ import { getSyncGroup } from '../tools/syncTools';
 import { SyncGroup } from '../tools/SyncGroup';
 import { TimedDebugger } from './TimedDebugger';
 import { RandomPlaylist } from '../../../models/playlistModels';
+import * as decisions from './smilElementDecisions';
+import { ProcessElementStateMutations } from './smilElementDecisions';
 
-// Process actions for element state handling
-export const ProcessAction = {
-	CONTINUE: 'CONTINUE', // Exact match - continue playing normally
-	RESYNC: 'RESYNC', // Slave behind master - trigger resync to skip elements
-	WAIT: 'WAIT', // Keep waiting for correct broadcast
-} as const;
-
-export type ProcessActionType = typeof ProcessAction[keyof typeof ProcessAction];
+// Re-export from decisions module (preserves existing imports elsewhere)
+export { ProcessAction, ProcessActionType } from './smilElementDecisions';
+const ProcessAction = decisions.ProcessAction;
+type ProcessActionType = decisions.ProcessActionType;
 
 /** Bundled context for slave command-wait operations (internal to controller) */
 interface SyncWaitContext {
@@ -300,12 +298,7 @@ export class SMILElementController {
 	 * Replaces the repeated ternary pattern accessing resyncTargets by state name.
 	 */
 	private getResyncTargetForState(state: 'prepared' | 'playing' | 'finished'): number | undefined {
-		if (!this.synchronization.resyncTargets) return undefined;
-		return state === 'prepared'
-			? this.synchronization.resyncTargets.prepare
-			: state === 'playing'
-				? this.synchronization.resyncTargets.play
-				: this.synchronization.resyncTargets.finish;
+		return decisions.getResyncTargetForState(state, this.synchronization.resyncTargets);
 	}
 
 	/**
@@ -349,10 +342,7 @@ export class SMILElementController {
 		regionName: string,
 		priorityLevel: number | undefined,
 	): { min: number; max: number } | undefined {
-		if (priorityLevel === undefined) {
-			return undefined;
-		}
-		return this.synchronization.syncIndexBoundsPerPriority?.[regionName]?.[priorityLevel];
+		return decisions.getPriorityBounds(regionName, priorityLevel, this.synchronization.syncIndexBoundsPerPriority);
 	}
 
 	/**
@@ -372,32 +362,18 @@ export class SMILElementController {
 		priorityMaxSyncIndex?: number,
 		priorityMinSyncIndex?: number,
 	): number {
-		// CASE 1: Priority playlist - use priority-specific bounds from message
-		if (priorityMaxSyncIndex !== undefined && nextIndex > priorityMaxSyncIndex) {
-			const minIndex = priorityMinSyncIndex ?? 1;
-			logDebug(undefined, 'Wrapping resync target from %d to %d (priority max=%d)',
-				nextIndex, minIndex, priorityMaxSyncIndex);
-			return minIndex;
+		const result = decisions.getWrappedSyncIndex(
+			nextIndex,
+			priorityMaxSyncIndex,
+			priorityMinSyncIndex,
+			this.syncState.slaveMaxSyncIndex.get(regionName),
+			this.syncState.slaveMinSyncIndex.get(regionName),
+			this.synchronization.maxSyncIndexPerRegion?.[regionName],
+		);
+		if (result !== nextIndex) {
+			logDebug(undefined, 'Wrapping resync target from %d to %d', nextIndex, result);
 		}
-
-		// CASE 1.5: Use slave's observed max (excludes wallclock-skipped elements)
-		const slaveMax = this.syncState.slaveMaxSyncIndex.get(regionName);
-		const slaveMin = this.syncState.slaveMinSyncIndex.get(regionName) ?? 1;
-		if (slaveMax !== undefined && nextIndex > slaveMax) {
-			logDebug(undefined, 'Wrapping resync target from %d to %d (slaveMaxSyncIndex=%d)',
-				nextIndex, slaveMin, slaveMax);
-			return slaveMin;
-		}
-
-		// CASE 2: Simple playlist (no priorityClass) - use global max
-		const globalMax = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-		if (globalMax !== undefined && nextIndex > globalMax) {
-			logDebug(undefined, 'Wrapping resync target from %d to %d (global max=%d)',
-				nextIndex, slaveMin, globalMax);
-			return slaveMin;
-		}
-
-		return nextIndex;
+		return result;
 	}
 
 	/**
@@ -407,57 +383,7 @@ export class SMILElementController {
 	 * Falls back to masterIndex + 1 when no playMode ranges exist (backwards compatible).
 	 */
 	private getNextEffectiveSyncIndex(masterIndex: number, regionName: string): number {
-		const ranges = this.synchronization.playModeSyncRanges?.[regionName];
-		if (ranges) {
-			for (const range of ranges) {
-				if (masterIndex >= range.start && masterIndex <= range.end) {
-					return range.end + 1;
-				}
-			}
-		}
-		return masterIndex + 1;
-	}
-
-	/**
-	 * Detects if slave wrapping to start of range while master message is from end of range.
-	 * This happens when slave checks for a new command before master's new command arrives.
-	 *
-	 * @param slaveIndex - The syncIndex the slave is waiting for
-	 * @param masterIndex - The syncIndex from the master's stored/received message
-	 * @param priorityMin - The minimum syncIndex in the current priority range (from message)
-	 * @param priorityMax - The maximum syncIndex in the current priority range (from message)
-	 * @param globalMax - The global maximum syncIndex for the region (fallback)
-	 * @param regionName - The region name, used to look up playMode=one sync ranges
-	 * @returns true if this is a wraparound scenario where slave should wait
-	 */
-	private isWraparoundScenario(
-		slaveIndex: number,
-		masterIndex: number,
-		priorityMin: number | undefined,
-		priorityMax: number | undefined,
-		globalMax: number | undefined,
-		regionName: string,
-		slaveEffectiveMax?: number,
-		slaveEffectiveMin?: number,
-	): boolean {
-		// Use priority bounds if available, otherwise prefer slave's observed min/max
-		// (excludes wallclock-skipped elements) over the potentially inflated global values
-		const minIndex = priorityMin ?? slaveEffectiveMin ?? 1;
-		const maxIndex = priorityMax ?? slaveEffectiveMax ?? globalMax;
-
-		if (!maxIndex) {
-			return false;
-		}
-
-		// Wraparound: slave at start of range, master message from end of range
-		// Allow some tolerance (slave within first 2 indices of range, master within last 2)
-		const slaveAtStart = slaveIndex <= minIndex + 1;
-		// Account for playMode=one ranges: if the master's effective next index
-		// would exceed maxIndex, the master is at the effective end of the playlist
-		const effectiveNext = this.getNextEffectiveSyncIndex(masterIndex, regionName);
-		const masterAtEnd = masterIndex >= maxIndex - 1 || effectiveNext > maxIndex;
-
-		return slaveAtStart && masterAtEnd;
+		return decisions.getNextEffectiveSyncIndex(masterIndex, regionName, this.synchronization.playModeSyncRanges);
 	}
 
 	/**
@@ -512,19 +438,11 @@ export class SMILElementController {
 		messagePriority: number | undefined,
 		expectedPriority: number | undefined,
 	): boolean {
-		const storedPriority = this.syncState.priorityLevel.get(regionName);
-
-		// Message differs from stored priority (actual transition detected)
-		if (storedPriority !== undefined && messagePriority !== storedPriority) return true;
-		if (storedPriority === undefined && messagePriority !== undefined) return true;
-
-		// Expected differs from message priority (covers case where stored not yet updated)
-		if (expectedPriority !== undefined && messagePriority !== undefined
-			&& expectedPriority !== messagePriority) return true;
-		if (expectedPriority !== undefined && messagePriority === undefined) return true;
-		if (expectedPriority === undefined && messagePriority !== undefined) return true;
-
-		return false;
+		return decisions.hasPriorityChanged(
+			this.syncState.priorityLevel.get(regionName),
+			messagePriority,
+			expectedPriority,
+		);
 	}
 
 	/**
@@ -609,11 +527,8 @@ export class SMILElementController {
 	}
 
 	/**
-	 * Process element state value and determine action
-	 * Returns action to take based on the broadcast:
-	 * - CONTINUE: Exact match found, continue playing normally
-	 * - RESYNC: Slave is behind master, trigger resync to skip elements
-	 * - WAIT: Keep waiting for the correct broadcast
+	 * Process element state value and determine action.
+	 * Delegates to the pure decision function and applies resulting mutations.
 	 */
 	private processElementState(
 		value: VirtualElementState,
@@ -621,190 +536,50 @@ export class SMILElementController {
 		syncIndex: number,
 		regionName: string,
 	): ProcessActionType {
-		// Log broadcast being processed
 		logDebug(
 			undefined,
 			'Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
-			value.state,
-			value.syncIndex,
-			value.timestamp,
-			regionName,
-			expectedState,
-			syncIndex,
+			value.state, value.syncIndex, value.timestamp, regionName, expectedState, syncIndex,
 		);
 
-		// Get maxIndex for wraparound detection
-		const maxIndex = this.synchronization.maxSyncIndexPerRegion?.[regionName];
-		// Use slave's observed max (previous cycle or current) to avoid inflated globalMax
-		// from wallclock-skipped elements
-		const slaveEffectiveMax = this.syncState.slavePreviousCycleMax.get(regionName);
-		const slaveEffectiveMin = this.syncState.slaveMinSyncIndex.get(regionName);
+		const result = decisions.processElementState(value, expectedState, syncIndex, regionName, {
+			maxSyncIndexPerRegion: this.synchronization.maxSyncIndexPerRegion?.[regionName],
+			slaveEffectiveMax: this.syncState.slavePreviousCycleMax.get(regionName),
+			slaveEffectiveMin: this.syncState.slaveMinSyncIndex.get(regionName),
+			syncingInAction: this.synchronization.syncingInAction,
+			playModeSyncRanges: this.synchronization.playModeSyncRanges,
+			slaveMaxSyncIndex: this.syncState.slaveMaxSyncIndex.get(regionName),
+			slaveMinSyncIndex: this.syncState.slaveMinSyncIndex.get(regionName),
+			globalMaxSyncIndex: this.synchronization.maxSyncIndexPerRegion?.[regionName],
+		});
 
-		if (value.state === expectedState && value.syncIndex === syncIndex) {
-			// Normal case: exact match
-			logDebug(undefined, 'Received expected state: %s for region=%s, syncIndex=%d', expectedState, regionName, syncIndex);
-
-			// Clear sync state when we achieve exact match
-			if (this.synchronization.syncingInAction) {
-				logDebug(undefined, 'Exact match found - clearing resync state');
-				if (this.synchronization.resyncTargets) {
-					delete this.synchronization.resyncTargets.prepare;
-					delete this.synchronization.resyncTargets.play;
-					delete this.synchronization.resyncTargets.finish;
-				}
-				this.synchronization.syncingInAction = false;
-			}
-
-			return ProcessAction.CONTINUE; // In sync, continue normally
-		} else if (value.syncIndex < syncIndex || this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName, slaveEffectiveMax, slaveEffectiveMin)) {
-			// Slave is ahead of master - wait for master to catch up
-			// Includes wraparound: slave at start of new iteration, master at end of previous
-			const isWraparound = this.isWraparoundScenario(syncIndex, value.syncIndex, value.priorityMinSyncIndex, value.priorityMaxSyncIndex, maxIndex, regionName, slaveEffectiveMax, slaveEffectiveMin);
-			logDebug(
-				undefined,
-				'Slave ahead of master %s- slave waiting for syncIndex=%d, master at syncIndex=%d for region=%s',
-				isWraparound ? '(wraparound) ' : '',
-				syncIndex,
-				value.syncIndex,
-				regionName,
-			);
-			return ProcessAction.WAIT; // Keep waiting for correct broadcast
-		} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
-			// Special case: We're waiting for 'prepared' but master is already playing a future element
-			// This means we missed our chance to prepare and need to catch up
-			logDebug(
-				undefined,
-				'Waiting for prepared but master playing future element - need resync. Master playing %d, we waiting at %d',
-				value.syncIndex,
-				syncIndex,
-			);
-
-			// Set target to prepare for the NEXT element after what master is playing
-			const nextIndex = this.getWrappedSyncIndex(
-				this.getNextEffectiveSyncIndex(value.syncIndex, regionName),
-				regionName,
-				value.priorityMaxSyncIndex,
-				value.priorityMinSyncIndex,
-			);
-
-			// Set state-specific resync target for preparation
-			if (!this.synchronization.resyncTargets) {
-				this.synchronization.resyncTargets = {};
-			}
-			this.synchronization.resyncTargets.prepare = nextIndex;
-			this.synchronization.syncingInAction = true;
-			logDebug(
-				undefined,
-				'Setting resync target for preparation: region=%s, targetIndex=%d (master playing %d)',
-				regionName,
-				nextIndex,
-				value.syncIndex,
-			);
-			logDebug(undefined, 'Returning false from waitForMasterState to trigger element skip');
-			return ProcessAction.RESYNC; // Trigger resync - skip current element
-		} else if (value.state === expectedState && value.syncIndex > syncIndex) {
-			// Master ahead with same state
-			logDebug(undefined, 'Master ahead - need resync. Master at %d, we are at %d', value.syncIndex, syncIndex);
-
-			// Handle wraparound for playlist looping using priority bounds if available
-			const nextIndex = this.getWrappedSyncIndex(
-				this.getNextEffectiveSyncIndex(value.syncIndex, regionName),
-				regionName,
-				value.priorityMaxSyncIndex,
-				value.priorityMinSyncIndex,
-			);
-
-			// Set state-specific resync target based on expected state
-			if (!this.synchronization.resyncTargets) {
-				this.synchronization.resyncTargets = {};
-			}
-
-			// Determine which target to set based on what state we're waiting for
-			if (expectedState === 'prepared') {
-				this.synchronization.resyncTargets.prepare = nextIndex;
-				logDebug(
-					undefined,
-					'Setting resync target for PREPARE: region=%s, targetIndex=%d (master at %d)',
-					regionName,
-					nextIndex,
-					value.syncIndex,
-				);
-			} else if (expectedState === 'playing') {
-				this.synchronization.resyncTargets.play = nextIndex;
-				logDebug(
-					undefined,
-					'Setting resync target for PLAY: region=%s, targetIndex=%d (master at %d)',
-					regionName,
-					nextIndex,
-					value.syncIndex,
-				);
-			} else if (expectedState === 'finished') {
-				this.synchronization.resyncTargets.finish = nextIndex;
-				logDebug(
-					undefined,
-					'Setting resync target for FINISH: region=%s, targetIndex=%d (master at %d)',
-					regionName,
-					nextIndex,
-					value.syncIndex,
-				);
-			}
-
-			this.synchronization.syncingInAction = true;
-			return ProcessAction.RESYNC; // Trigger resync - skip current element
-		} else if (value.syncIndex === syncIndex && value.state !== expectedState) {
-			// Same element but different state
-			// Determine if we're ahead or behind based on state progression
-			const stateOrder: SyncElementState[] = ['prepared', 'playing', 'finished'];
-			const expectedIndex = stateOrder.indexOf(expectedState);
-			const receivedIndex = stateOrder.indexOf(value.state);
-
-			if (receivedIndex > expectedIndex) {
-				// We're behind (e.g., we expect 'prepared' but master is at 'playing')
-				logDebug(
-					undefined,
-					'Behind in state progression - expected %s but master at %s for syncIndex=%d',
-					expectedState,
-					value.state,
-					syncIndex,
-				);
-
-				// Handle wraparound for playlist looping using priority bounds if available
-				const nextIndex = this.getWrappedSyncIndex(
-					this.getNextEffectiveSyncIndex(syncIndex, regionName),
-					regionName,
-					value.priorityMaxSyncIndex,
-					value.priorityMinSyncIndex,
-				);
-
-				// Set state-specific resync target for preparation
-				if (!this.synchronization.resyncTargets) {
-					this.synchronization.resyncTargets = {};
-				}
-				// When behind in state progression, we need to prepare the next element
-				this.synchronization.resyncTargets.prepare = nextIndex;
-				this.synchronization.syncingInAction = true;
-				logDebug(
-					undefined,
-					'Setting resync target due to state mismatch: region=%s, targetIndex=%d (behind in state progression)',
-					regionName,
-					nextIndex,
-				);
-			} else {
-				// We're ahead (e.g., we expect 'playing' but master is at 'prepared')
-				logDebug(
-					undefined,
-					'Ahead in state progression - expected %s but master at %s for syncIndex=%d',
-					expectedState,
-					value.state,
-					syncIndex,
-				);
-				// Wait for master to catch up - don't set resync flags
-			}
-			return receivedIndex <= expectedIndex ? ProcessAction.WAIT : ProcessAction.RESYNC;
+		if (result.mutations) {
+			this.applyProcessMutations(result.mutations);
 		}
 
-		// State doesn't match any condition - keep waiting
-		return ProcessAction.WAIT;
+		logDebug(undefined, 'processElementState result: %s for region=%s, syncIndex=%d', result.action, regionName, syncIndex);
+		return result.action;
+	}
+
+	/** Apply mutations from a processElementState result to synchronization state */
+	private applyProcessMutations(mutations: ProcessElementStateMutations): void {
+		if (mutations.clearResyncTargets && this.synchronization.resyncTargets) {
+			delete this.synchronization.resyncTargets.prepare;
+			delete this.synchronization.resyncTargets.play;
+			delete this.synchronization.resyncTargets.finish;
+		}
+		if (mutations.clearSyncingInAction) {
+			this.synchronization.syncingInAction = false;
+		}
+		if (mutations.setSyncingInAction) {
+			this.synchronization.syncingInAction = true;
+		}
+		if (mutations.setResyncTarget) {
+			if (!this.synchronization.resyncTargets) {
+				this.synchronization.resyncTargets = {};
+			}
+			this.synchronization.resyncTargets[mutations.setResyncTarget.field] = mutations.setResyncTarget.value;
+		}
 	}
 
 	/**
@@ -893,18 +668,12 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): boolean {
 		const resyncTarget = this.getResyncTargetForState(expectedState);
-
-		if (this.synchronization.syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
-			logDebug(
-				timedDebug,
-				'Skipping wait during resync: at syncIndex=%d, target=%d for %s',
-				syncIndex,
-				resyncTarget,
-				expectedState,
-			);
-			return true;
+		const skip = decisions.shouldSkipForResync(syncIndex, this.synchronization.syncingInAction, resyncTarget);
+		if (skip) {
+			logDebug(timedDebug, 'Skipping wait during resync: at syncIndex=%d, target=%d for %s',
+				syncIndex, resyncTarget, expectedState);
 		}
-		return false;
+		return skip;
 	}
 
 	/**
