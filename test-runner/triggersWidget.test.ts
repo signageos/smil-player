@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates, dispatchWidgetTrigger } from './helpers';
 
 test.describe('triggersWidget.smil test', () => {
-	test('processes widget triggers correctly', async ({ page, context }) => {
+	test('processes widget triggers correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.triggersWidget);
+		}, smilUrls.triggersWidget);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 

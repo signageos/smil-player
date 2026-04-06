@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests three-level defer with middle priority expiry: P1 (highest) plays, P2 (middle)
@@ -8,10 +8,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // Exercises the cascaded re-evaluation in handleDeferBehaviour (getIndexOfPlayingMedia
 // after defer release) combined with handlePriorityDeferStopWait endTime expiry.
 test.describe('priorityThreeLevelDeferExpiry.smil test', () => {
-	test('expired middle priority skipped, lowest priority plays after highest ends', async ({ page, context }) => {
+	test('expired middle priority skipped, lowest priority plays after highest ends', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityThreeLevelDeferExpiry);
+		}, smilUrls.priorityThreeLevelDeferExpiry);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

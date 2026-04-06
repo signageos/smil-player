@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // P_high has two wallclock windows (0-20s and 35-50s) with a gap between them.
@@ -10,10 +10,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // P_high content: video-test-1 (465b7757) + img_1
 // P_low content: img_2 (18b5d21f) + video-test-2 (0b02adc4)
 test.describe('priorityOscillation.smil test', () => {
-	test('low-priority content recovers correctly through multiple high-priority windows', async ({ page, context }) => {
+	test('low-priority content recovers correctly through multiple high-priority windows', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityOscillation);
+		}, smilUrls.priorityOscillation);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

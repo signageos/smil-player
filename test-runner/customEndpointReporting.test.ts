@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that the player sends PoP (Proof of Play) reports to a custom endpoint
@@ -9,14 +9,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // playing. The test server captures these payloads at /report and exposes them
 // via GET /report/history for assertion.
 test.describe('customEndpointReporting.smil test', () => {
-	test.beforeEach(async ({ request }) => {
-		await request.post('http://localhost:3000/reset');
-	});
-
-	test('sends PoP reports to custom endpoint on media playback', async ({ page, context, request }) => {
+	test('sends PoP reports to custom endpoint on media playback', async ({ page, context, request, smilUrls, testServerBaseUrl }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.customEndpointReporting);
+		}, smilUrls.customEndpointReporting);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
@@ -34,7 +30,7 @@ test.describe('customEndpointReporting.smil test', () => {
 		await expect(page.locator('video[src*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 
 		// Query report history from test server
-		const response = await request.get('http://localhost:3000/report/history');
+		const response = await request.get(`${testServerBaseUrl}/report/history`);
 		const reports = await response.json();
 
 		// Verify reports were received (at least video + image from first cycle)

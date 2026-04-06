@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that lower="stop" does NOT stop the higher-priority element when a lower
@@ -14,10 +14,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // (same limitation as priorityNever test). The key assertion is that P_high CONTINUES
 // playing — it was not stopped.
 test.describe('priorityLowerStop.smil test', () => {
-	test('lower="stop" does not kill higher-priority content', async ({ page, context }) => {
+	test('lower="stop" does not kill higher-priority content', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityLowerStop);
+		}, smilUrls.priorityLowerStop);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

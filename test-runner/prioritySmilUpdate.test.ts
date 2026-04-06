@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that a SMIL file update during active priority playback correctly cancels
@@ -13,15 +13,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // The /dynamic-update/ endpoint returns incrementing Last-Modified headers and
 // different wallclock values on each GET request (HEAD requests don't increment).
 test.describe('prioritySmilUpdate.smil test', () => {
-	test.beforeEach(async ({ request }) => {
-		// Reset server-side request counters so requestCount starts at 0
-		await request.post('http://localhost:3000/reset');
-	});
-
-	test('SMIL update during priority playback cancels and reloads correctly', async ({ page, context }) => {
+	test('SMIL update during priority playback cancels and reloads correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.prioritySmilUpdate);
+		}, smilUrls.prioritySmilUpdate);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

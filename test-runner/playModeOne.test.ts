@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('playModeOne.smil test', () => {
-	test('playMode="one" plays one element per cycle, advancing sequentially', async ({ page, context }) => {
+	test('playMode="one" plays one element per cycle, advancing sequentially', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.playModeOne);
+		}, smilUrls.playModeOne);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 

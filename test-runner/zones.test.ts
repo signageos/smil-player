@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('zonesCypress.smil test', () => {
-	test('processes smil file correctly', async ({ page, context }) => {
+	test('processes smil file correctly', async ({ page, context, smilUrls }) => {
 		page.on('console', msg => {
 			const text = msg.text();
 			if (text.includes('SMIL-PLAYER') || text.includes('Playing video') || text.includes('src=')) {
@@ -14,7 +14,7 @@ test.describe('zonesCypress.smil test', () => {
 		// Inject smilUrl into all frames before any script runs
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.zones);
+		}, smilUrls.zones);
 
 		await page.goto(`/?duid=${DUID}`);
 

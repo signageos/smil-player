@@ -1,15 +1,15 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 // Tests the lower="never" priority behavior: lower-priority content is
 // prevented from beginning while the higher-priority element is active
 // (SMIL 3.0 spec: "the begin of the new element is ignored").
 // After P_high wallclock expires, P_low plays normally.
 test.describe('priorityNever.smil test', () => {
-	test('lower-priority content blocked by never rule until higher ends', async ({ page, context }) => {
+	test('lower-priority content blocked by never rule until higher ends', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityNever);
+		}, smilUrls.priorityNever);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

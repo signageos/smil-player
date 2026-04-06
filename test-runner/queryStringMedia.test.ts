@@ -1,17 +1,17 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { DUID, Timeouts } from './config';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('queryStringMedia.smil test', () => {
-    test('media URLs with query params and 302 redirect load and play correctly', async ({ page, context }) => {
+    test('media URLs with query params and 302 redirect load and play correctly', async ({ page, context, smilUrls }) => {
         await context.addInitScript((url: string) => {
             (window as any).__SMIL_URL__ = url;
-        }, SMILUrls.queryStringMedia);
+        }, smilUrls.queryStringMedia);
         await page.goto(`/?duid=${DUID}`);
         const frame = page.frameLocator('iframe');
 
-        // Loader during prefetch
-        await expect(page.locator('video[src*="loader_871e2ff0"]')).toBeVisible({ timeout: Timeouts.firstElement });
+        // Loader during prefetch (may be skipped if assets are cached)
+        await waitForLoaderOrSkip(page);
 
         // First image (redirected from /redirect/landscape1.jpg?v=1) loads and displays
         await expect(frame.locator('img[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.elementAwait });

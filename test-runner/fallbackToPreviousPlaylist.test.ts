@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 
 // Tests that the player continues showing the previous playlist when the server
 // returns invalid SMIL on refresh, with fallbackToPreviousPlaylist="true".
@@ -10,18 +10,17 @@ import { DUID, Timeouts, SMILUrls } from './config';
 // 3. Restart triggers new GET — server returns broken XML (count > 1)
 // 4. Player enters fallbackToPreviousPlaylist mode — content stays visible
 test.describe('fallbackToPreviousPlaylist.smil test', () => {
-	test.beforeEach(async ({ request }) => {
-		await request.post('http://localhost:3000/reset');
+	test.beforeEach(async ({ request, testServerBaseUrl }) => {
 		// First request returns valid SMIL, subsequent requests return broken XML
-		await request.post('http://localhost:3000/fallback-config', {
+		await request.post(`${testServerBaseUrl}/fallback-config`, {
 			data: { fileName: 'fallbackToPrevious.smil', invalidAfterCount: 1 },
 		});
 	});
 
-	test('continues playing previous playlist when new SMIL is invalid', async ({ page, context }) => {
+	test('continues playing previous playlist when new SMIL is invalid', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.fallbackToPreviousPlaylist);
+		}, smilUrls.fallbackToPreviousPlaylist);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

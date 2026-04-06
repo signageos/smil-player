@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 // Tests higher="stop" priority behavior with three priority levels.
@@ -11,10 +11,10 @@ import { waitForLoaderOrSkip } from './helpers';
 // P2 content: img_3 (4ac1868a) + video-test-2 (0b02adc4)  (P2-exclusive)
 // P3 content: img_1 (aba14e1e) + img_2 (18b5d21f) + video-test-1 (465b7757)
 test.describe('priorityStop.smil test', () => {
-	test('processes smil file correctly', async ({ page, context }) => {
+	test('processes smil file correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.priorityStop);
+		}, smilUrls.priorityStop);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

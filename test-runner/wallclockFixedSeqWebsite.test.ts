@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('wallclockFixedSeqWebsite.smil test', () => {
-	test('processes smil file correctly', async ({ page, context }) => {
+	test('processes smil file correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.wallclockFixedSeqWebsite);
+		}, smilUrls.wallclockFixedSeqWebsite);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

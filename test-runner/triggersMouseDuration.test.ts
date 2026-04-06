@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates } from './helpers';
 
 test.describe('triggersMouseDuration.smil test', () => {
-    test('mouse click trigger plays for set duration then auto-stops', async ({ page, context }) => {
+    test('mouse click trigger plays for set duration then auto-stops', async ({ page, context, smilUrls }) => {
         await context.addInitScript((url: string) => {
             (window as any).__SMIL_URL__ = url;
-        }, SMILUrls.triggersMouseDuration);
+        }, smilUrls.triggersMouseDuration);
         await page.goto(`/?duid=${DUID}`);
         const frame = page.frameLocator('iframe');
 

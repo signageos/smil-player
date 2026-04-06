@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { waitForLoaderOrSkip } from './helpers';
 
 test.describe('prioritySeqCampaign.smil test', () => {
-	test('production-style seq campaign rotation with priority', async ({ page, context }) => {
+	test('production-style seq campaign rotation with priority', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.prioritySeqCampaign);
+		}, smilUrls.prioritySeqCampaign);
 
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');

@@ -1,15 +1,15 @@
 import { test, expect } from './fixtures';
-import { DUID, Timeouts, SMILUrls } from './config';
+import { DUID, Timeouts } from './config';
 import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('videoStreams.smil test', () => {
 	// FIXME: External streaming URL https://www.rmp-streaming.com/media/bbb-360p.mp4 has SSL
 	// certificate issues (curl exit code 60). The stream never loads, so the video sequence
 	// stalls at the local video and never transitions to stream playback.
-	test.fixme('processes smil file correctly', async ({ page, context }) => {
+	test.fixme('processes smil file correctly', async ({ page, context, smilUrls }) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
-		}, SMILUrls.videoStreams);
+		}, smilUrls.videoStreams);
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
