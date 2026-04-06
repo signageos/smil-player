@@ -3,9 +3,9 @@
         <meta http-equiv="refresh" content="20"/>
         <layout>
             <!-- define the screen resolution -->
-            <root-layout width="1920" height="1080"/>
-            <!-- define the screen layout, in this case single fullscreen zone -->
-            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <!-- define the screen layout zones in relative % -->
+            <region regionName="top-right" left="50%" top="0" width="50%" height="50%" z-index="1" backgroundColor="#fdc400"/>
         </layout>
     </head>
     <body>
@@ -19,16 +19,24 @@
                 </seq>
             </seq>
 
-            <par repeatCount="indefinite">
+            <!-- Downloading resources into the internal storage -->
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+
+            <!-- Wait for the prefetch of media files, once done, start the playback -->
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
                 <!-- indefinite loop of media files in the selected order -->
                 <seq repeatCount="indefinite">
                     <img dur="3"
                          src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
-                         region="main" fit="fill"/>
+                         region="top-right" fit="fill"/>
                     <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
-                           id="annons1" fit="hidden" region="main"/>
+                           id="annons1" fit="hidden" region="top-right"/>
                     <video src="https://www.rmp-streaming.com/media/bbb-360p.mp4" isStream="true" dur="10"
-                           region="main" soundLevel="0%"/>
+                           region="top-right" soundLevel="0%"/>
                 </seq>
             </par>
         </par>

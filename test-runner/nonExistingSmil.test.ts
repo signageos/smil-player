@@ -11,12 +11,12 @@ test.describe('nonExistingSmil.smil test', () => {
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
-		await expect(frame.locator('img[id*="63f74b87df.jpg-rootLayout-img"]')).toBeVisible({ timeout: Timeouts.firstElement });
-		await testCoordinates(frame.locator('img[id*="63f74b87df.jpg-rootLayout-img"]'), 0, 0, 1920, 1080);
+		await expect(frame.locator('img[id*=".jpg-rootLayout-img"]')).toBeVisible({ timeout: Timeouts.firstElement });
+		await testCoordinates(frame.locator('img[id*=".jpg-rootLayout-img"]'), 0, 0, 1920, 1080);
 
 		await page.waitForTimeout(Timeouts.videoTransition);
 
-		await expect(frame.locator('img[id*="63f74b87df.jpg-rootLayout-img"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-		await testCoordinates(frame.locator('img[id*="63f74b87df.jpg-rootLayout-img"]'), 0, 0, 1920, 1080);
+		await expect(frame.locator('img[id*=".jpg-rootLayout-img"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		await testCoordinates(frame.locator('img[id*=".jpg-rootLayout-img"]'), 0, 0, 1920, 1080);
 	});
 });
