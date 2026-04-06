@@ -38,9 +38,9 @@
             <par repeatCount="indefinite">
 
                 <!-- should play all day -->
-                <par repeatCount="indefinite">
+                <par begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
                     <!-- indefinite loop of media files in the selected order -->
-                    <seq begin="wallclock(R/2011-01-01T00:00:00/P1D)" end="wallclock(R/2011-01-01T23:59:59/P1D)">
+                    <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
                                region="top-left" soundLevel="0%"></video>
                         <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
@@ -56,9 +56,9 @@
                 </par>
 
                 <!-- should never play -->
-                <par repeatCount="indefinite">
+                <par begin="wallclock(2011-01-01T00:00:00)" end="wallclock(2011-01-01T23:59:59)">
                     <!-- indefinite loop of media files in the selected order -->
-                    <seq begin="wallclock(2011-01-01T00:00:00)" end="wallclock(2011-01-01T23:59:59)">
+                    <seq repeatCount="indefinite">
                         <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
                                region="bottom-left" soundLevel="0%"></video>
                         <img dur="5" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"

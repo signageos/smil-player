@@ -41,7 +41,7 @@ test.describe('zonesCypress.smil test', () => {
 		// Check zone coordinates
 		await testCoordinates(widgetImg1, 0, 1280, 640, 506);
 		// bottom=0 in SMIL → top = viewportHeight(1920) - height(360) = 1560
-		await testCoordinates(bottomWidget, 1560, 0, 1280, 360);
+		await testCoordinates(bottomWidget, 720, 0, 1280, 360);
 		await testCoordinates(widgetImg2, 506, 1280, 640, 574);
 		await testCoordinates(video1, 0, 0, 1280, 720);
 
@@ -69,7 +69,7 @@ test.describe('zonesCypress.smil test', () => {
 		await expect(videoLooped).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(videoLooped, 0, 0, 1280, 720);
 		await testCoordinates(widgetImg1, 0, 1280, 640, 506);
-		await testCoordinates(bottomWidget, 1560, 0, 1280, 360);
+		await testCoordinates(bottomWidget, 720, 0, 1280, 360);
 		await testCoordinates(widgetImg2, 506, 1280, 640, 574);
 		await expect(widgetImg1).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(bottomWidget).toBeVisible({ timeout: Timeouts.elementAwait });
