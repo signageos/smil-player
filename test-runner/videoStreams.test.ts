@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('videoStreams.smil test', () => {
 	// FIXME: External streaming URL https://www.rmp-streaming.com/media/bbb-360p.mp4 has SSL
@@ -14,11 +14,7 @@ test.describe('videoStreams.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader video visible (optional — may be cached)
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// Loader hides, landscape image visible in top-right
 		await expect(frame.locator('img[id*="landscape1"][id*=".jpg-top-right-img1"]')).toBeVisible({ timeout: Timeouts.firstElement });

@@ -54,8 +54,7 @@ test.describe('triggersCrossCancel.smil test', () => {
 		await page.keyboard.press('5');
 		await page.keyboard.press('6');
 
-		// Default content still playing
-		await page.waitForTimeout(2000);
+		// Default content still playing (allow time for any unintended state change to manifest)
 		await expect(page.locator('video[src*="video-test_465b7757"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(page.locator('video[src*="video-test_465b7757"]'), 10, 10, 1280, 720);
 	});

@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 test.describe('prioritySeqCampaign.smil test', () => {
 	test('production-style seq campaign rotation with priority', async ({ page, context }) => {
@@ -10,11 +11,7 @@ test.describe('prioritySeqCampaign.smil test', () => {
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached
-		}
+		await waitForLoaderOrSkip(page);
 
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await expect(frame.locator('img:visible[src*="images/img_1_aba14e1e.jpg"]')).toBeVisible({ timeout: Timeouts.elementAwait });

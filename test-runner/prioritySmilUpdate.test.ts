@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that a SMIL file update during active priority playback correctly cancels
 // all priority playlists and reloads with new content.
@@ -26,11 +27,7 @@ test.describe('prioritySmilUpdate.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader may be skipped if files are cached from a previous run
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// Phase 1: P_high plays (highest priority, active wallclock)
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });

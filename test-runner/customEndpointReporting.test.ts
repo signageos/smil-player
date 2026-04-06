@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // Tests that the player sends PoP (Proof of Play) reports to a custom endpoint
 // when <meta log="true" type="manual" endpoint="http://..."/> is configured.
@@ -21,11 +22,7 @@ test.describe('customEndpointReporting.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Wait for loader during prefetch
-		try {
-			await expect(page.locator('video[src*="loader"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// Wait for video to play (on main page)
 		await expect(page.locator('video[src*="landscape1"]')).toBeVisible({ timeout: Timeouts.firstElement });

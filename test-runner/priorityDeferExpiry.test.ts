@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 // Tests that a deferred element whose wallclock window expires while waiting is abandoned
 // and never plays. Exercises playlistPriority.ts handlePriorityDeferStopWait endTime check.
 test.describe('priorityDeferExpiry.smil test', () => {
@@ -12,11 +13,7 @@ test.describe('priorityDeferExpiry.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader may be skipped if files are cached from a previous run
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// P_high (highest priority) plays immediately: video-test-1 + img_1 loop
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });

@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 
 // P2 (middle priority, already active) plays first. P1 (highest) arrives at +30s and stops P2.
 // P3 (lowest, always active) defers behind P2, then re-defers behind P1.
@@ -14,11 +15,7 @@ test.describe('priorityDeferInterrupt.smil test', () => {
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached
-		}
+		await waitForLoaderOrSkip(page);
 
 		// P2 plays first: img_3 (P2 already active, highest currently-active priority)
 		await expect(frame.locator('img[src*="images/img_3_4ac1868a.jpg"]')).toBeVisible({ timeout: Timeouts.firstElement });

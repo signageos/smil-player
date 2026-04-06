@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('noAdditionalPar.smil test', () => {
 	test('processes smil file correctly', async ({ page, context }) => {
@@ -11,12 +11,7 @@ test.describe('noAdditionalPar.smil test', () => {
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-			await testCoordinates(page.locator('video[src*="videos/loader_871e2ff0.mp4"]'), 0, 0, 1920, 1080);
-		} catch {
-			// Files cached — loader skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
 		await expect(page.locator('video[src*="videos/video-test_0b02adc4.mp4"]').first()).toBeVisible({ timeout: Timeouts.elementAwait });

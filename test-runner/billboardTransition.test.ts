@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
-import { testCoordinates } from './helpers';
+import { testCoordinates, waitForLoaderOrSkip } from './helpers';
 
 test.describe('simpleBillboard.smil test', () => {
 	test('billboard transition displays images in sequence', async ({ page, context }) => {
@@ -11,11 +11,7 @@ test.describe('simpleBillboard.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader visible during prefetch (may be skipped if assets cached, or slow on first webpack compile)
-		try {
-			await expect(page.locator('video[src*="loader_871e2ff0"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached or webpack still compiling
-		}
+		await waitForLoaderOrSkip(page);
 
 		// First image appears with billboard transition (rendered as <ol> with <li> columns)
 		await expect(frame.locator('ol[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.firstElement });

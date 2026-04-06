@@ -42,10 +42,18 @@ import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { setElementDuration } from '../tools/scheduleTools';
 import { PriorityObject } from '../../../models/priorityModels';
-import { ENDTIME_REPEAT_THRESHOLD, PriorityBehaviour, WaitStatus } from '../../../enums/priorityEnums';
+import { PriorityBehaviour, WaitStatus } from '../../../enums/priorityEnums';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { findTriggerToCancel } from '../tools/triggerTools';
+import {
+	isPriorityBlockedOrPaused,
+	isWallclockEndTimeExpired,
+	isTriggerCancelled,
+	isDynamicPlaylistCancelled,
+	shouldCancelForVersionUpdate,
+	shouldCancelParentRegion,
+} from './playlistProcessorDecisions';
 import moment from 'moment';
 import {
 	changeZIndex,
@@ -494,7 +502,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 */
 	protected processVersionUpdate = async (version: number): Promise<boolean> => {
 		// Check if this is a version update: checkFilesLoop is false (update pending) and version is newer
-		if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
+		if (shouldCancelForVersionUpdate(this.getCheckFilesLoop(), version, this.getPlaylistVersion())) {
 			debug(
 				'[processor] processing version update: version=%s, playlistVersion=%s',
 				version,
@@ -555,7 +563,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// newer playlist starts its playback, cancel older one
 		// NOTE: This is a fallback path - version updates are now primarily handled in processVersionUpdate()
 		// called from shouldWaitAndContinue() BEFORE waiting for old promises
-		if (!this.getCheckFilesLoop() && version > this.getPlaylistVersion()) {
+		if (shouldCancelForVersionUpdate(this.getCheckFilesLoop(), version, this.getPlaylistVersion())) {
 			timedDebug.log(
 				'[processor] cancelling older playlist (fallback): version=%s, playlistVersion=%s',
 				version,
@@ -573,10 +581,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (
-			parentRegion.regionName !== regionInfo.regionName &&
-			this.currentlyPlaying[parentRegion.regionName]?.playing
-		) {
+		if (shouldCancelParentRegion(
+			parentRegion.regionName,
+			regionInfo.regionName,
+			!!this.currentlyPlaying[parentRegion.regionName]?.playing,
+		)) {
 			timedDebug.log(
 				'[processor] cancelling media in parent region: current=%s, new=%s',
 				this.currentlyPlaying[regionInfo.regionName].src,
@@ -1240,7 +1249,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (
 			media.hasOwnProperty(SMILTriggersEnum.triggerValue) &&
-			!this.triggers.triggersEndless[media.triggerValue as string]?.play
+			isTriggerCancelled(media.triggerValue as string, this.triggers.triggersEndless)
 		) {
 			timedDebug.log('[processor] trigger was cancelled prematurely: triggerValue=%s', media.triggerValue);
 			// Clean up before skipping
@@ -1250,11 +1259,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return WaitStatus.SKIP;
 		}
 
-		if (
-			media.dynamicValue &&
-			!this.triggers.dynamicPlaylist[media.dynamicValue!]?.play &&
-			media.src !== this.currentlyPlaying[regionInfo.regionName].src
-		) {
+		if (isDynamicPlaylistCancelled(
+			media.dynamicValue,
+			this.triggers.dynamicPlaylist,
+			media.src,
+			this.currentlyPlaying[regionInfo.regionName]?.src,
+		)) {
 			this.priority.stateManager.cancelAllInRegion(parentRegionName, (e) => !!e.media.dynamicValue);
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
 			timedDebug.log('[processor] dynamic playlist was cancelled prematurely: dynamicValue=%s', media.dynamicValue);
@@ -1273,11 +1283,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 		const currentIndexPriority = this.currentlyPlayingPriority[regionInfo.regionName][currentIndex];
 		// playlist was already stopped/paused during await
-		if (
-			currentIndexPriority?.player.stop ||
-			currentIndexPriority?.player.contentPause !== 0 ||
-			currentIndexPriority?.behaviour === PriorityBehaviour.pause
-		) {
+		if (isPriorityBlockedOrPaused(currentIndexPriority)) {
 			timedDebug.log(
 				'[processor] playlist stopped/paused by higher priority: region=%s, src=%s',
 				regionInfo.regionName,
@@ -1290,7 +1296,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return WaitStatus.SKIP;
 		}
 
-		if (currentIndexPriority?.player.endTime <= Date.now() && currentIndexPriority?.player.endTime > ENDTIME_REPEAT_THRESHOLD) {
+		if (isWallclockEndTimeExpired(currentIndexPriority)) {
 			timedDebug.log(
 				'[processor] playtime exceeded, exiting: region=%s, src=%s',
 				regionInfo.regionName,

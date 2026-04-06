@@ -14,14 +14,9 @@ test.describe('wallclockFuture.smil test', () => {
 		await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
 		await testCoordinates(page.locator('video[src*="videos/loader_871e2ff0.mp4"]'), 0, 0, 1920, 1080);
 
-		await page.waitForTimeout(Timeouts.videoTransition);
-
-		await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
-
-		await page.waitForTimeout(Timeouts.videoTransition);
-		await page.waitForTimeout(Timeouts.videoTransition);
-
-		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.elementAwait });
+		// Loader loops (plays ~2-3 times) before future wallclock content appears
+		// Use combined timeout instead of hard waits: 3x video duration + element await
+		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.videoTransition * 3 + Timeouts.elementAwait });
 		await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).not.toBeVisible({ timeout: Timeouts.elementAwait });
 		await testCoordinates(page.locator('video[src*="videos/video-test_465b7757.mp4"]'), 0, 0, 1280, 720);
 

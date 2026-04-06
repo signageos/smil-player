@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { DUID, Timeouts, SMILUrls } from './config';
+import { waitForLoaderOrSkip } from './helpers';
 // Tests the lower="never" priority behavior: lower-priority content is
 // prevented from beginning while the higher-priority element is active
 // (SMIL 3.0 spec: "the begin of the new element is ignored").
@@ -14,11 +15,7 @@ test.describe('priorityNever.smil test', () => {
 		const frame = page.frameLocator('iframe');
 
 		// Loader may be skipped if files are cached from a previous run
-		try {
-			await expect(page.locator('video[src*="videos/loader_871e2ff0.mp4"]')).toBeVisible({ timeout: 10000 });
-		} catch {
-			// Files cached — loader was hidden or skipped
-		}
+		await waitForLoaderOrSkip(page);
 
 		// P_high (highest priority, lower="never") plays: video-test-1 + img_1 loop
 		await expect(page.locator('video[src*="videos/video-test_465b7757.mp4"]')).toBeVisible({ timeout: Timeouts.firstElement });
