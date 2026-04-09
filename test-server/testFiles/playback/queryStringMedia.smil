@@ -1,6 +1,6 @@
 <smil>
     <head>
-        <meta http-equiv="refresh" content="60"/>
+        <meta http-equiv="refresh" content="60" updateMechanism="location"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#000000"/>
             <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
