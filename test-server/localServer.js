@@ -61,10 +61,11 @@ function createTestServer(serverPort) {
         res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml', 'Last-Modified': lastModified, 'Cache-Control': 'no-cache, no-store' });
         res.send(fileString);
     });
-    app.get('/redirect/:fileName', (req, res) => {
+    app.all('/redirect/:fileName', (req, res) => {
         const fileName = req.params.fileName;
         const actualUrl = `http://localhost:${port}/assets/${fileName}`;
-        res.redirect(302, actualUrl);
+        res.set('Location', actualUrl);
+        res.status(204).end();
     });
     app.post('/report', (req, res) => {
         reportHistory.push({ receivedAt: new Date().toISOString(), body: req.body });

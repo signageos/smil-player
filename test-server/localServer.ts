@@ -91,13 +91,14 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		res.send(fileString);
 	});
 
-	// Redirect endpoint: returns 302 with Location header to the actual static asset.
-	// Used for testing that the SMIL player correctly handles media URLs with query params
-	// that redirect to the real file location.
-	app.get('/redirect/:fileName', (req, res) => {
+	// Location header endpoint: returns 204 with Location header pointing to the actual static asset.
+	// Used for testing that the SMIL player correctly resolves media URLs via the
+	// location header fetch strategy (updateMechanism="location").
+	app.all('/redirect/:fileName', (req, res) => {
 		const fileName = req.params.fileName;
 		const actualUrl = `http://localhost:${port}/assets/${fileName}`;
-		res.redirect(302, actualUrl);
+		res.set('Location', actualUrl);
+		res.status(204).end();
 	});
 
 	// --- Custom endpoint reporting: capture POST payloads, expose via GET ---
