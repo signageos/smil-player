@@ -69,7 +69,6 @@ export class SmilPlayer implements ISmilPlayer {
 		// reference to persistent storage unit, where player stores all content
 		const internalStorageUnit = storageUnits.find((storageUnit) => !storageUnit.removable)!;
 
-		this.processor.setStorageUnit(internalStorageUnit);
 		this.files.setLocalStorageUnit(internalStorageUnit);
 
 		await this.files.createFileStructure();
@@ -169,7 +168,7 @@ export class SmilPlayer implements ISmilPlayer {
 		}
 	}
 
-	private async playBackupImage(internalStorageUnit: IStorageUnit, smilUrl: string): Promise<void> {
+	private async playBackupImage(smilUrl: string): Promise<void> {
 		const orientedBackupImage =
 			document.documentElement.clientWidth >= document.documentElement.clientHeight
 				? backupImageLandscape
@@ -182,7 +181,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
 		const regionInfo = <SMILFileObject>getDefaultRegion();
 
-		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, internalStorageUnit, smilUrl);
+		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, smilUrl);
 		if (isNil(sos.config.backupImageUrl)) {
 			backupPlaylist.seq.img.localFilePath = backupImageUrl;
 		}
@@ -305,7 +304,7 @@ export class SmilPlayer implements ISmilPlayer {
 					introPromises.push(
 						(async () => {
 							await this.files.prepareDownloadMediaSetup(smilObject);
-							await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+							await this.dataPrepare.manageFilesAndInfo(smilObject, smilUrl);
 							debug('SMIL media files download finished, stopping intro');
 						})(),
 					);
@@ -316,7 +315,7 @@ export class SmilPlayer implements ISmilPlayer {
 					debug('No intro element found');
 					await this.files.prepareDownloadMediaSetup(smilObject);
 					debug('SMIL media files download finished');
-					await this.dataPrepare.manageFilesAndInfo(smilObject, internalStorageUnit, smilUrl);
+					await this.dataPrepare.manageFilesAndInfo(smilObject, smilUrl);
 				}
 
 				// smil processing ok, end loop
@@ -347,7 +346,7 @@ export class SmilPlayer implements ISmilPlayer {
 
 					// Show backup image if nothing is currently playing (first startup)
 					if (firstIteration) {
-						await this.playBackupImage(internalStorageUnit, smilUrl);
+						await this.playBackupImage(smilUrl);
 					}
 
 					// Start polling and block until valid SMIL is found
@@ -385,7 +384,7 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
-				await this.playBackupImage(internalStorageUnit, smilUrl);
+				await this.playBackupImage(smilUrl);
 				await sleep(SMILEnums.defaultDownloadRetry * 1000);
 			}
 		}

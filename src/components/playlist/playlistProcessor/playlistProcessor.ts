@@ -8,7 +8,6 @@ import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { PlaylistPriority } from '../playlistPriority/playlistPriority';
 import { PlayingInfo, PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { MergedDownloadList, SMILFile, SMILFileObject } from '../../../models/filesModels';
@@ -101,7 +100,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			numberOfNonSync: number;
 		};
 	} = {};
-	private internalStorageUnit: IStorageUnit;
 	private smilObject: SMILFileObject;
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
@@ -118,10 +116,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	public setSmilObject = (smilObject: SMILFileObject) => {
 		this.smilObject = smilObject;
-	};
-
-	public setStorageUnit = (internalStorageUnit: IStorageUnit) => {
-		this.internalStorageUnit = internalStorageUnit;
 	};
 
 	public getCheckFilesLoop = () => {
@@ -2282,7 +2276,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private setupIntroVideo = async (video: SMILVideo, region: RegionsObject) => {
 		const currentVideoDetails =
-			await this.files.getFileDetails(video, this.internalStorageUnit, FileStructure.videos)
+			await this.files.getFileDetails(video, FileStructure.videos)
 
 		video.regionInfo = getRegionInfo(region, video.region);
 		video.localFilePath = currentVideoDetails ? currentVideoDetails.localUri : '';
@@ -2300,7 +2294,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private setupIntroImage = async (image: SMILImage, region: RegionsObject, key: string): Promise<HTMLElement> => {
 		const currentImageDetails =
-			await this.files.getFileDetails(image, this.internalStorageUnit, FileStructure.images);
+			await this.files.getFileDetails(image, FileStructure.images);
 		image.regionInfo = getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		debug('Setting-up intro image: %O', image);
@@ -3015,7 +3009,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							source: createSourceReportObject(
 								value.localFilePath,
 								value.src,
-								this.internalStorageUnit.type,
+								this.files.getStorageUnitType(),
 							),
 							startedAt: moment().toDate(),
 							groupName,
@@ -3043,7 +3037,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							source: createSourceReportObject(
 								value.localFilePath,
 								value.src,
-								this.internalStorageUnit.type,
+								this.files.getStorageUnitType(),
 							),
 							startedAt: moment().toDate(),
 							groupName,

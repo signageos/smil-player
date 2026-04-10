@@ -2,7 +2,7 @@
 import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { TriggerList } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
-import { IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
@@ -33,7 +33,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * recursively traverses through playlist and gets additional info for all media  specified in smil file
 	 * @param playlist - smil file playlist, set of rules which media should be played and when
 	 * @param smilObject
-	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilUrl
 	 * @param isSpecial - boolean value determining if function is processing trigger playlist, dynamic playlist or ordinary playlist
 	 * @param specialName - name of the trigger or dynamic element
@@ -41,7 +40,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	public getAllInfo = async (
 		playlist: PlaylistElement | PlaylistElement[] | TriggerList,
 		smilObject: SMILFileObject,
-		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 		isSpecial: boolean = false,
 		specialName: string = '',
@@ -121,7 +119,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 					const mediaFile = (await this.files.getFileDetails(
 						elem,
-						internalStorageUnit,
 						fileStructure,
 						widgetRootFile,
 					)) as IVideoFile;
@@ -172,7 +169,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				// reset widget expression for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName);
+				await this.getAllInfo(value, smilObject, smilUrl, isSpecial, specialName);
 			}
 		}
 	};
@@ -180,25 +177,23 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	/**
 	 * Performs all necessary actions needed to process playlist ( delete unused files, extract widgets, extract regionInfo for each media )
 	 * @param smilObject - JSON representation of parsed smil file
-	 * @param internalStorageUnit - persistent storage unit
 	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
 	 */
 	public manageFilesAndInfo = async (
 		smilObject: SMILFileObject,
-		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 	) => {
 		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
-		await this.getAllInfo(smilObject.triggers, smilObject, internalStorageUnit, smilUrl, true);
+		await this.getAllInfo(smilObject.triggers, smilObject, smilUrl, true);
 		debug('All triggers info extracted');
 
-		await this.getAllInfo(smilObject.dynamic, smilObject, internalStorageUnit, smilUrl, true);
+		await this.getAllInfo(smilObject.dynamic, smilObject, smilUrl, true);
 		debug('All dynamic playlist info extracted');
 
 		// extracts region info for all medias in playlist
-		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
+		await this.getAllInfo(smilObject.playlist, smilObject, smilUrl);
 		debug('All elements info extracted');
 	};
 }

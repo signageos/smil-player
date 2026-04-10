@@ -97,12 +97,32 @@ export class FilesManager implements IFilesManager {
 		this.sos = sos;
 	}
 
+	public getStorageUnitType = (): string => {
+		return this.internalStorageUnit?.type ?? '';
+	};
+
 	public setSmilUrl = (url: string) => {
 		this.smilFileUrl = url;
 	};
 
 	public setLocalStorageUnit = (internalStorageUnit: IStorageUnit) => {
+		const isFirstSet = !this.internalStorageUnit;
 		this.internalStorageUnit = internalStorageUnit;
+
+		// Keep storage unit fresh via reactive listener (register only once)
+		if (isFirstSet) {
+			this.sos.fileSystem.onStorageUnitsChanged(async () => {
+				try {
+					const updatedUnits = await this.sos.fileSystem.listStorageUnits();
+					const updatedInternal = updatedUnits.find((u) => !u.removable);
+					if (updatedInternal) {
+						this.internalStorageUnit = updatedInternal;
+					}
+				} catch (err) {
+					// Non-critical — stale values are acceptable as fallback
+				}
+			});
+		}
 	};
 
 	public setSmiLogging = (_smilLogging: SmilLogger) => {
@@ -355,13 +375,12 @@ export class FilesManager implements IFilesManager {
 
 	public getFileDetails = async (
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		internalStorageUnit: IStorageUnit,
 		fileStructure: string,
 		suffix: string = '',
 	) => {
 		debug(`Getting file details for file: %O`, media);
 		return this.sos.fileSystem.getFile({
-			storageUnit: internalStorageUnit,
+			storageUnit: this.internalStorageUnit,
 			filePath: `${fileStructure}/${getFileName(media.src)}${suffix}`,
 		});
 	};
@@ -2134,7 +2153,7 @@ export class FilesManager implements IFilesManager {
 	private checkAvailableSpace = async (estimatedRequiredSpace: number): Promise<boolean> => {
 		try {
 			// Get free space directly from the internal storage unit
-			const availableSpace = this.internalStorageUnit.freeSpace || 0;
+			const availableSpace = this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace || 0;
 
 			// Add safety margin - require at least 10% more space than estimated
 			const safetyMargin = 1.1;
@@ -3186,10 +3205,10 @@ export class FilesManager implements IFilesManager {
 	}
 
 	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
-		if (this.internalStorageUnit.freeSpace <= MINIMAL_STORAGE_FREE_SPACE) {
+		if ((this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace) <= MINIMAL_STORAGE_FREE_SPACE) {
 			debug(
 				'Not enough space on device to save custom endpoint report, free space: %s',
-				this.internalStorageUnit.freeSpace,
+				this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace,
 			);
 			return;
 		}

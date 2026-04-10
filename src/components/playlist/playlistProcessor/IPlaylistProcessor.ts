@@ -1,11 +1,9 @@
-import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILFile } from '../../../models/filesModels';
 import { PlaylistElement } from '../../../models/playlistModels';
 import { PriorityObject } from '../../../models/priorityModels';
 
 export interface IPlaylistProcessor {
 	setCheckFilesLoop: (checkFilesLoop: boolean) => void;
-	setStorageUnit: (internalStorageUnit: IStorageUnit) => void;
 	getCheckFilesLoop: () => boolean;
 	setPlaylistVersion: (num: number) => void;
 	getPlaylistVersion: () => number;

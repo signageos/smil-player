@@ -1,5 +1,5 @@
 import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
-import { IFile, IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
+import { IFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	SMILAudio,
 	SMILImage,
@@ -31,6 +31,7 @@ export interface ProcessedFileUpdate {
 }
 
 export interface IFilesManager {
+	getStorageUnitType: () => string;
 	setSmilUrl: (url: string) => void;
 	setSmiLogging: (smilLogging: SmilLogger) => void;
 	sendReport: (message: Report) => Promise<void>;
@@ -54,7 +55,6 @@ export interface IFilesManager {
 	currentFilesSetup: (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => Promise<void>;
 	getFileDetails: (
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		internalStorageUnit: IStorageUnit,
 		fileStructure: string,
 		suffix?: string,
 	) => Promise<IFile | null>;
