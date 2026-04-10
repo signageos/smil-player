@@ -92,6 +92,11 @@ export class FilesManager implements IFilesManager {
 	private activePrePlayDownloads: Map<string, Promise<void>> = new Map();
 	// Deferred wasUpdated flags: set during commitBatch after file migration, not during download
 	private pendingWasUpdated: Set<MergedDownloadList> = new Set();
+	// Self-tracked free space estimate (bytes). listStorageUnits() returns stale freeSpace
+	// from the native layer, so we maintain our own running estimate by tracking downloads,
+	// copies, and deletions.
+	private estimatedFreeSpace: number = 0;
+	private sizeBytesUnavailableWarned: boolean = false;
 
 	constructor(sos: FrontApplet) {
 		this.sos = sos;
@@ -106,23 +111,14 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public setLocalStorageUnit = (internalStorageUnit: IStorageUnit) => {
-		const isFirstSet = !this.internalStorageUnit;
 		this.internalStorageUnit = internalStorageUnit;
-
-		// Keep storage unit fresh via reactive listener (register only once)
-		if (isFirstSet) {
-			this.sos.fileSystem.onStorageUnitsChanged(async () => {
-				try {
-					const updatedUnits = await this.sos.fileSystem.listStorageUnits();
-					const updatedInternal = updatedUnits.find((u) => !u.removable);
-					if (updatedInternal) {
-						this.internalStorageUnit = updatedInternal;
-					}
-				} catch (err) {
-					// Non-critical — stale values are acceptable as fallback
-				}
-			});
-		}
+		this.estimatedFreeSpace = internalStorageUnit.usableSpace || internalStorageUnit.freeSpace || 0;
+		debug(
+			'Initialized estimated free space: %d MB (usableSpace: %d, freeSpace: %d)',
+			Math.round(this.estimatedFreeSpace / (1024 * 1024)),
+			internalStorageUnit.usableSpace,
+			internalStorageUnit.freeSpace,
+		);
 	};
 
 	public setSmiLogging = (_smilLogging: SmilLogger) => {
@@ -529,6 +525,14 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public deleteFile = async (filePath: string) => {
+		let freedBytes = 0;
+		try {
+			const fileInfo = await this.getFileByPath(filePath);
+			freedBytes = fileInfo?.sizeBytes || 0;
+		} catch (_) {
+			// Best-effort size lookup for space tracking
+		}
+
 		try {
 			debug('Deleting file from persistent storage: %s', filePath);
 			await this.sos.fileSystem.deleteFile(
@@ -538,6 +542,16 @@ export class FilesManager implements IFilesManager {
 				},
 				true,
 			);
+
+			if (freedBytes > 0) {
+				this.estimatedFreeSpace += freedBytes;
+				debug(
+					'Space freed: %d MB for %s (estimated free: %d MB)',
+					Math.round(freedBytes / (1024 * 1024)),
+					filePath,
+					Math.round(this.estimatedFreeSpace / (1024 * 1024)),
+				);
+			}
 		} catch (err) {
 			debug('Unexpected error occurred during deleting file from persistent storage: %s', filePath);
 			await this.sendGeneralErrorReport(err.message);
@@ -879,6 +893,7 @@ export class FilesManager implements IFilesManager {
 								task.file.src,
 								task.fileName,
 							);
+							await this.trackSpaceConsumed(task.actualDownloadPath);
 
 							// CRITICAL: Track in tempDownloads for migration
 							if (task.isNewContent) {
@@ -976,6 +991,7 @@ export class FilesManager implements IFilesManager {
 									);
 
 									debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
+									await this.trackSpaceConsumed(task.actualDownloadPath);
 
 									// Track in tempDownloads
 									if (task.isNewContent) {
@@ -1045,6 +1061,7 @@ export class FilesManager implements IFilesManager {
 								);
 
 								debug(`File downloaded to: %s`, task.actualDownloadPath);
+								await this.trackSpaceConsumed(task.actualDownloadPath);
 
 								// Track file in temp if using temp folder
 								if (task.isNewContent) {
@@ -1143,6 +1160,7 @@ export class FilesManager implements IFilesManager {
 								);
 
 								debug(`DEDUP: Primary file downloaded to: %s`, primaryTask.actualDownloadPath);
+								await this.trackSpaceConsumed(primaryTask.actualDownloadPath);
 
 								// Track file in temp if using temp folder
 								if (primaryTask.isNewContent) {
@@ -1196,6 +1214,7 @@ export class FilesManager implements IFilesManager {
 											duplicateTask.file.src,
 											duplicateTask.fileName,
 										);
+										await this.trackSpaceConsumed(duplicateTask.actualDownloadPath);
 
 										// Track the copied file in temp if using temp folder
 										if (duplicateTask.isNewContent) {
@@ -1394,6 +1413,7 @@ export class FilesManager implements IFilesManager {
 									);
 
 									debug(`File downloaded to: %s`, actualDownloadPath);
+									await this.trackSpaceConsumed(actualDownloadPath);
 
 									// Track file in temp if using temp folder
 									if (isNewContent) {
@@ -2025,6 +2045,7 @@ export class FilesManager implements IFilesManager {
 								.replace(FileStructure.imagesTmp, FileStructure.images)
 								.replace(FileStructure.audiosTmp, FileStructure.audios)
 								.replace(FileStructure.widgetsTmp, FileStructure.widgets);
+							const overwrittenSize = await this.getExistingFileSize(standardPath);
 							await this.sos.fileSystem.copyFile(
 								{ storageUnit: this.internalStorageUnit, filePath: ourTempPath },
 								{ storageUnit: this.internalStorageUnit, filePath: standardPath },
@@ -2034,6 +2055,7 @@ export class FilesManager implements IFilesManager {
 								{ storageUnit: this.internalStorageUnit, filePath: ourTempPath },
 								true,
 							);
+							this.reclaimOverwrittenSpace(overwrittenSize, standardPath);
 							debug('prePlayCheck: Migrated temp file to standard folder for %s', fileName);
 						}
 
@@ -2152,8 +2174,7 @@ export class FilesManager implements IFilesManager {
 	 */
 	private checkAvailableSpace = async (estimatedRequiredSpace: number): Promise<boolean> => {
 		try {
-			// Get free space directly from the internal storage unit
-			const availableSpace = this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace || 0;
+			const availableSpace = Math.max(this.estimatedFreeSpace, 0);
 
 			// Add safety margin - require at least 10% more space than estimated
 			const safetyMargin = 1.1;
@@ -2173,6 +2194,55 @@ export class FilesManager implements IFilesManager {
 			debug('Error checking available storage space: %O', err);
 			// If we can't check space, proceed anyway and handle errors later
 			return true;
+		}
+	};
+
+	private trackSpaceConsumed = async (filePath: string) => {
+		try {
+			const fileInfo = await this.getFileByPath(filePath);
+			if (fileInfo?.sizeBytes && fileInfo.sizeBytes > 0) {
+				this.estimatedFreeSpace -= fileInfo.sizeBytes;
+				debug(
+					'Space consumed: %d MB for %s (estimated free: %d MB)',
+					Math.round(fileInfo.sizeBytes / (1024 * 1024)),
+					filePath,
+					Math.round(this.estimatedFreeSpace / (1024 * 1024)),
+				);
+			} else if (fileInfo && !this.sizeBytesUnavailableWarned) {
+				this.sizeBytesUnavailableWarned = true;
+				debug('WARNING: sizeBytes unavailable for %s — space tracking may be inaccurate', filePath);
+			}
+		} catch (_) {
+			// Best-effort tracking
+		}
+	};
+
+	/**
+	 * Get the size of an existing file before it gets overwritten by copyFile.
+	 * Must be called BEFORE the copyFile, since after the copy the old file is gone.
+	 */
+	private getExistingFileSize = async (filePath: string): Promise<number> => {
+		try {
+			const fileInfo = await this.getFileByPath(filePath);
+			return fileInfo?.sizeBytes || 0;
+		} catch (_) {
+			return 0;
+		}
+	};
+
+	/**
+	 * Reclaim space that was freed when an existing file was overwritten by copyFile.
+	 * Call after a successful copy with the size obtained from getExistingFileSize.
+	 */
+	private reclaimOverwrittenSpace = (freedBytes: number, filePath: string) => {
+		if (freedBytes > 0) {
+			this.estimatedFreeSpace += freedBytes;
+			debug(
+				'Space reclaimed from overwritten file: %d MB at %s (estimated free: %d MB)',
+				Math.round(freedBytes / (1024 * 1024)),
+				filePath,
+				Math.round(this.estimatedFreeSpace / (1024 * 1024)),
+			);
 		}
 	};
 
@@ -2350,6 +2420,7 @@ export class FilesManager implements IFilesManager {
 					},
 				);
 
+				await this.trackSpaceConsumed(tempPath);
 				tempCopies.set(movement.sourceFilePath, tempPath);
 				debug('  ✓ Created temp copy for %s', movement.sourceFileName);
 			} catch (err) {
@@ -2439,6 +2510,7 @@ export class FilesManager implements IFilesManager {
 					debug('    Source: %s', sourcePath);
 					debug('    Destination: %s', finalDestPath);
 
+					const overwrittenSize = await this.getExistingFileSize(finalDestPath);
 					await this.sos.fileSystem.copyFile(
 						{
 							storageUnit: this.internalStorageUnit,
@@ -2452,7 +2524,9 @@ export class FilesManager implements IFilesManager {
 							overwrite: true,
 						},
 					);
+					this.reclaimOverwrittenSpace(overwrittenSize, finalDestPath);
 
+					await this.trackSpaceConsumed(finalDestPath);
 					successfulCopies++;
 					debug('  ✓ Successfully copied %s to %s', movement.sourceFileName, destFileName);
 				} catch (err) {
@@ -2612,6 +2686,7 @@ export class FilesManager implements IFilesManager {
 				try {
 					// Copy file from temp to standard location
 					debug('Copying file from %s to %s', tempPath, standardPath);
+					const overwrittenSize = await this.getExistingFileSize(standardPath);
 					await this.sos.fileSystem.copyFile(
 						{
 							storageUnit: this.internalStorageUnit,
@@ -2634,6 +2709,7 @@ export class FilesManager implements IFilesManager {
 						},
 						true,
 					);
+					this.reclaimOverwrittenSpace(overwrittenSize, standardPath);
 
 					debug('Successfully migrated: %s', fileName);
 				} catch (err) {
@@ -2767,11 +2843,14 @@ export class FilesManager implements IFilesManager {
 			const destPath = `${localFilePath}/${slotFileName}`;
 
 			if (actualFile.filePath !== destPath) {
+				const overwrittenSize = await this.getExistingFileSize(destPath);
 				await this.sos.fileSystem.copyFile(
 					{ storageUnit: this.internalStorageUnit, filePath: actualFile.filePath },
 					{ storageUnit: this.internalStorageUnit, filePath: destPath },
 					{ overwrite: true },
 				);
+				this.reclaimOverwrittenSpace(overwrittenSize, destPath);
+				await this.trackSpaceConsumed(destPath);
 				debug('Copied moved content from %s to %s for %s', actualFile.filePath, destPath, file.src);
 			}
 
@@ -3205,11 +3284,8 @@ export class FilesManager implements IFilesManager {
 	}
 
 	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
-		if ((this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace) <= MINIMAL_STORAGE_FREE_SPACE) {
-			debug(
-				'Not enough space on device to save custom endpoint report, free space: %s',
-				this.internalStorageUnit.usableSpace || this.internalStorageUnit.freeSpace,
-			);
+		if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+			debug('Not enough space on device to save custom endpoint report');
 			return;
 		}
 
@@ -3628,6 +3704,7 @@ export class FilesManager implements IFilesManager {
 					overwrite: true,
 				},
 			);
+			await this.trackSpaceConsumed(storagePath);
 
 			// Re-read storageInfo after ensureStorageSpace may have evicted entries
 			const storageInfo = await this.getStorageInfo(storageFolder);
@@ -3778,6 +3855,7 @@ export class FilesManager implements IFilesManager {
 			);
 
 			debug('Successfully restored from storage to temp: %s -> %s', storagePath, fullTargetPath);
+			await this.trackSpaceConsumed(fullTargetPath);
 			return fullTargetPath; // Return the temp path for tracking
 		} catch (err) {
 			debug('Failed to restore from storage: %s, error: %O', storagePath, err);
