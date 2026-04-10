@@ -7,6 +7,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ## [Unreleased]
 
+### Added
+
+- rewritten sync protocol from timing-based to ACK-based synchronization for more reliable multi-device sync
+- priority-aware sync coordination — sync respects priority level transitions without desynchronizing devices
+- playMode=one sync support for sequential content advancement across synchronized devices
+- phase-specific sync coordination (prepare, play, finish) for smoother sync transitions
+- automatic resync detection and recovery when devices fall out of sync
+- improved debug logging across the entire player for better diagnostics
+
+### Fixed
+
+- fixed 60-second slave delay on wallclock-triggered priority transitions
+- fixed false priority-change detection during SMIL playlist updates
+- fixed slave infinite resync loop with playMode=one playlists
+- fixed sync index wraparound causing unreachable resync targets
+- fixed stale sync messages from previous cycles causing false resyncs
+- fixed race conditions in master/slave sync coordination
+- fixed last-modified rollback detection to avoid false re-downloads when content is rolled back
+- fixed file type lookup not matching correctly due to leading slash
+
+## [3.2.10] - 2026-02-18
+
+### Added
+
+- add per-element `reportMode` attribute for batch reporting — elements with `reportMode="batch"` save reports to
+  offline CSV storage instead of HTTP POST
+
+### Fixed
+
+- fixed batch report files being uploaded before reaching the configured report file limit
+- fixed hardcoded report file limit constant instead of using parsed configuration value
+
 ## [3.2.9] - 2026-01-21
 
 ### Added
