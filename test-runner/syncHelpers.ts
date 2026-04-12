@@ -1,5 +1,6 @@
 import { Browser, BrowserContext, Page } from '@playwright/test';
 import { createConsoleCollector } from './helpers';
+import { DUID } from './config';
 
 export const DEFAULT_SYNC_SERVER_URL = 'https://sync.signage-cdn.com';
 
@@ -37,13 +38,13 @@ export async function createSyncGroup(
 
 	const devices: SyncDevice[] = [];
 	for (let i = 0; i < deviceCount; i++) {
-		const duid = `syncduid${groupName}dev${i}`.padEnd(50, '0').slice(0, 50);
+		const duid = DUID.slice(0, 48) + i.toString().padStart(2, '0');
 		const deviceId = `dev-${i}`;
 		const context = await browser.newContext({ viewport, bypassCSP: true });
 		const page = await context.newPage();
 		const collector = createConsoleCollector(page);
 		await context.addInitScript(
-			(cfg: { smilUrl: string; sync: Record<string, string> }) => {
+			(cfg: { smilUrl: string; sync: { syncGroupName: string; syncDeviceId: string; syncServerUrl: string } }) => {
 				(window as any).__SMIL_URL__ = cfg.smilUrl;
 				(window as any).__SYNC_CONFIG__ = cfg.sync;
 			},
@@ -59,9 +60,7 @@ export async function createSyncGroup(
 }
 
 export async function cleanupSyncGroup(devices: SyncDevice[]) {
-	for (const dev of devices) {
-		await dev.context.close();
-	}
+	await Promise.allSettled(devices.map((d) => d.context.close()));
 }
 
 export function uniqueGroupName(testTitle: string): string {
