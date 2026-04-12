@@ -429,6 +429,7 @@ export class FilesManager implements IFilesManager {
 				shouldUpdate: true,
 				value: currentValue,
 				statusCode,
+				contentLength: updateCheckResult.contentLength,
 			};
 		}
 
@@ -481,6 +482,7 @@ export class FilesManager implements IFilesManager {
 				shouldUpdate: true,
 				value: currentValue,
 				statusCode,
+				contentLength: updateCheckResult.contentLength,
 			};
 		}
 
@@ -490,6 +492,7 @@ export class FilesManager implements IFilesManager {
 				shouldUpdate: true,
 				value: currentValue,
 				statusCode,
+				contentLength: updateCheckResult.contentLength,
 			};
 		}
 
@@ -586,6 +589,8 @@ export class FilesManager implements IFilesManager {
 		// Set to true when detection already done (e.g., from processNewContentUpdates)
 		// to avoid duplicate HEAD requests
 		skipUpdateCheck: boolean = false,
+		// Content-Length from pre-existing detection (used with skipUpdateCheck)
+		latestContentLength?: number,
 	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
@@ -621,6 +626,7 @@ export class FilesManager implements IFilesManager {
 							shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
 							value: latestRemoteValue,
 							statusCode: 200,
+							contentLength: latestContentLength,
 						}
 						: forceDownload
 							? {
@@ -693,6 +699,7 @@ export class FilesManager implements IFilesManager {
 				existingFilePath?: string; // Path to existing file with same content (for reuse)
 				storageFilePath?: string; // Path to file in storage with same content (Step 7)
 				statusCode: number; // HTTP status code from HEAD request
+				contentLength?: number; // Content-Length from HEAD response for pre-download space check
 			}
 
 			const downloadTasks: DownloadTask[] = [];
@@ -757,6 +764,7 @@ export class FilesManager implements IFilesManager {
 					existingValue: existingValue || undefined,
 					statusCode,
 					shouldPreserve,
+					contentLength: updateCheck.contentLength,
 				});
 			}
 
@@ -1040,7 +1048,7 @@ export class FilesManager implements IFilesManager {
 					promises.push(
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
-							if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+							if (!(await this.checkAvailableSpace(task.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
 								debug('Skipping download for %s - insufficient storage space', task.file.src);
 								filesToUpdate.delete(task.fileName);
 								return;
@@ -1129,7 +1137,7 @@ export class FilesManager implements IFilesManager {
 					promises.push(
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
-							if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+							if (!(await this.checkAvailableSpace(primaryTask.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
 								debug('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
 								filesToUpdate.delete(primaryTask.fileName);
 								for (let i = 1; i < tasks.length; i++) {
@@ -1322,6 +1330,7 @@ export class FilesManager implements IFilesManager {
 						? {
 							shouldUpdate: forceDownload, // Respect forceDownload from detection (true for NEW_CONTENT, false for MOVED_CONTENT)
 							value: latestRemoteValue,
+							contentLength: latestContentLength,
 						}
 						: forceDownload
 							? {
@@ -1384,7 +1393,7 @@ export class FilesManager implements IFilesManager {
 						promises.push(
 							(async () => {
 								// Check storage before downloading to prevent wasted bandwidth
-								if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+								if (!(await this.checkAvailableSpace(updateCheck.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
 									debug('Skipping download for %s - insufficient storage space', file.src);
 									filesToUpdate.delete(getFileName(file.src));
 									return;
@@ -1816,7 +1825,9 @@ export class FilesManager implements IFilesManager {
 			return [];
 		}
 
-		if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+		const maxContentLength = Math.max(...detections.map((d) => d.contentLength || 0));
+		const requiredSpace = maxContentLength || MINIMAL_STORAGE_FREE_SPACE;
+		if (!(await this.checkAvailableSpace(requiredSpace))) {
 			debug('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
 			return [];
 		}
@@ -1881,6 +1892,7 @@ export class FilesManager implements IFilesManager {
 					allFilesList, // Pass full files list for accurate preservation check
 					allPendingUpdates, // Pass complete pending updates across all phases
 					true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
+					groupDetections[0].contentLength, // Content-Length from HEAD response
 				);
 
 				// Wait for all downloads to complete
@@ -3129,6 +3141,7 @@ export class FilesManager implements IFilesManager {
 					needsDownload: false, // MOVED_CONTENT - copy only
 					mediaInfoObject: detection.mediaInfoObject,
 					fetchStrategy,
+					contentLength: detection.updateCheck.contentLength,
 				};
 			}
 
@@ -3148,6 +3161,7 @@ export class FilesManager implements IFilesManager {
 					needsDownload: false,
 					mediaInfoObject: detection.mediaInfoObject,
 					fetchStrategy,
+					contentLength: detection.updateCheck.contentLength,
 				};
 			}
 
@@ -3177,6 +3191,7 @@ export class FilesManager implements IFilesManager {
 			needsDownload, // true = NEW_CONTENT, false = MOVED_CONTENT
 			mediaInfoObject: detection.mediaInfoObject,
 			fetchStrategy,
+			contentLength: detection.updateCheck.contentLength,
 		};
 	};
 

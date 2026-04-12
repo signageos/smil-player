@@ -13,6 +13,7 @@ export type UpdateDetection = {
 	needsDownload: boolean;  // true = NEW_CONTENT (needs download), false = MOVED_CONTENT (just update mapping)
 	mediaInfoObject: MediaInfoObject;
 	fetchStrategy: FetchStrategy;
+	contentLength?: number;
 };
 
 export type Resource = {

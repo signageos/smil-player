@@ -14,7 +14,7 @@ app.use((_req: Request, res: Response, next: () => void) => {
 		'Access-Control-Allow-Origin': '*',
 		'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
 		'Access-Control-Allow-Headers': '*',
-		'Access-Control-Expose-Headers': 'Last-Modified, Location',
+		'Access-Control-Expose-Headers': 'Last-Modified, Location, Content-Length',
 	});
 	if (_req.method === 'OPTIONS') {
 		res.sendStatus(204);
@@ -55,7 +55,7 @@ const CBP_CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
 	'Access-Control-Allow-Headers': '*',
-	'Access-Control-Expose-Headers': 'Last-Modified, Location',
+	'Access-Control-Expose-Headers': 'Last-Modified, Location, Content-Length',
 	'Cache-Control': 'no-cache, no-store',
 };
 
@@ -184,7 +184,7 @@ const CBP_LOC_CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
 	'Access-Control-Allow-Headers': '*',
-	'Access-Control-Expose-Headers': 'Last-Modified, Location',
+	'Access-Control-Expose-Headers': 'Last-Modified, Location, Content-Length',
 	'Cache-Control': 'no-cache, no-store',
 };
 

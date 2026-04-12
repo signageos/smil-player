@@ -62,6 +62,21 @@ const locationHeaderStrategy: FetchStrategy = async (
 
 	const resourceLocation = response?.headers?.get('location') ?? response.url;
 
+	// Get Content-Length from the actual content URL (resourceLocation), not the API response.
+	// The API may return 204 with Content-Length: 0 while the real file size is on the CDN URL.
+	let contentLength = parseInt(response?.headers?.get('content-length') || '0', 10) || 0;
+	if (resourceLocation && resourceLocation !== downloadUrl && contentLength === 0) {
+		try {
+			const cdnAuthHeaders = window.getAuthHeaders?.(resourceLocation);
+			const cdnResponse = await makeXhrRequest('HEAD', resourceLocation, timeOut, cdnAuthHeaders);
+			contentLength = parseInt(cdnResponse?.headers?.get('content-length') || '0', 10) || 0;
+			debug('Content-Length from CDN HEAD: %d bytes for %s', contentLength, resourceLocation);
+		} catch (err) {
+			debug('CDN HEAD request failed for %s: %O', resourceLocation, err);
+			// Best-effort: fall back to 0 (will use MINIMAL_STORAGE_FREE_SPACE)
+		}
+	}
+
 	debug('Received response when calling HEAD request for url: %s: %O, %d', downloadUrl, response, timeOut);
 
 	// Handle server errors (5xx)
@@ -99,12 +114,12 @@ const locationHeaderStrategy: FetchStrategy = async (
 			updateContentHttpStatusCodes,
 		);
 		// if there is no location return url
-		return { shouldUpdate: true, value: resourceLocation ?? media.src, statusCode: response.status };
+		return { shouldUpdate: true, value: resourceLocation ?? media.src, statusCode: response.status, contentLength };
 	}
 
 	// Return the Location header after redirects or original URL if not available
 	debug('Final Location header for media: %s, location: %s', media.src, resourceLocation);
-	return { shouldUpdate: true, value: resourceLocation || media.src, statusCode: response.status };
+	return { shouldUpdate: true, value: resourceLocation || media.src, statusCode: response.status, contentLength };
 };
 
 const lastModifiedStrategy: FetchStrategy = async (
@@ -144,6 +159,8 @@ const lastModifiedStrategy: FetchStrategy = async (
 		}
 		return { shouldUpdate: false, value: undefined, statusCode: 503 };
 	}
+
+	const contentLength = parseInt(response?.headers?.get('content-length') || '0', 10) || 0;
 
 	debug('Received response when calling HEAD request for url: %s: %O', media.src, response, timeOut);
 
@@ -188,13 +205,13 @@ const lastModifiedStrategy: FetchStrategy = async (
 		const futureDateString = futureDate.toUTCString();
 
 		debug('Forcing update by returning future date: %s', futureDateString);
-		return { shouldUpdate: true, value: futureDateString, statusCode: response.status };
+		return { shouldUpdate: true, value: futureDateString, statusCode: response.status, contentLength };
 	}
 
 	// Get last-modified header or use default
 	const newLastModified = response?.headers?.get('last-modified');
 	debug('New last-modified header received for media: %s, last-modified: %s', media.src, newLastModified);
-	return { shouldUpdate: true, value: newLastModified || DEFAULT_LAST_MODIFIED, statusCode: response.status };
+	return { shouldUpdate: true, value: newLastModified || DEFAULT_LAST_MODIFIED, statusCode: response.status, contentLength };
 };
 
 // Add strategy type identifiers

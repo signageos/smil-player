@@ -19,6 +19,7 @@ export interface UpdateCheckResult {
 	shouldUpdate: boolean;
 	value?: string;
 	statusCode?: number;
+	contentLength?: number;
 }
 
 // Per-file result from processNewContentUpdates, used by prePlayCheck to avoid
