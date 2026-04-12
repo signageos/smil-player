@@ -1,0 +1,38 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Short-duration seq so wraps happen quickly and the test can run
+                     3+ full cycles in well under 2 minutes. -->
+                <seq repeatCount="indefinite">
+                    <img dur="4s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"/>
+                    <img dur="4s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         region="main" fit="fill"/>
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                           region="main" soundLevel="0%"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>
