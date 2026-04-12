@@ -70,8 +70,6 @@ export function getSmilUrls(port: number = 3000) {
 		playModeOneSync: `${base}/syncFiles/playModeOneSync.smil`,
 		wallclockInflatedBounds: `${base}/syncFiles/wallclockInflatedBounds.smil`,
 		cycleWrapBoundary: `${base}/syncFiles/cycleWrapBoundary.smil`,
-		// Group E uses the dynamic-update wallclock-substituting route.
-		smilUpdateStability: `${base}/dynamic-update/smilUpdateStability.smil`,
 	};
 }
 
