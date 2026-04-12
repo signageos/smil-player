@@ -61,6 +61,38 @@ function createTestServer(serverPort) {
         res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml', 'Last-Modified': lastModified, 'Cache-Control': 'no-cache, no-store' });
         res.send(fileString);
     });
+    // Time-bucket refresh endpoint for multi-device sync tests. Same body on
+    // every GET; Last-Modified advances in wall-clock buckets so all devices
+    // sharing this server refresh in lockstep (unlike /dynamic-update/).
+    const REFRESH_BUCKET_MS = 10000;
+    const REFRESH_STOP_AFTER_MS = 30000;
+    const refreshOrigin = Date.now();
+    const computeRefreshLastModified = () => {
+        const elapsed = Date.now() - refreshOrigin;
+        const bucketBase = Math.min(elapsed, REFRESH_STOP_AFTER_MS);
+        const bucket = Math.floor(bucketBase / REFRESH_BUCKET_MS);
+        return new Date(refreshOrigin + bucket * REFRESH_BUCKET_MS).toUTCString();
+    };
+    app.head('/dynamic-refresh/:fileName', (_req, res) => {
+        res.set({
+            'Content-type': 'text/xml',
+            'Last-Modified': computeRefreshLastModified(),
+            'Cache-Control': 'no-cache, no-store',
+        });
+        res.end();
+    });
+    app.get('/dynamic-refresh/:fileName', async (req, res) => {
+        const fileName = req.params.fileName;
+        let fileString = await fs.readFile(`./${enums_1.TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
+        fileString = rewriteSmilPort(fileString);
+        res.set({
+            'Content-Disposition': `attachment; filename="${fileName}"`,
+            'Content-type': 'text/xml',
+            'Last-Modified': computeRefreshLastModified(),
+            'Cache-Control': 'no-cache, no-store',
+        });
+        res.send(fileString);
+    });
     app.all('/redirect/:fileName', (req, res) => {
         const fileName = req.params.fileName;
         const actualUrl = `http://localhost:${port}/assets/${fileName}`;
