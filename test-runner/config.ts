@@ -67,6 +67,12 @@ export function getSmilUrls(port: number = 3000) {
 		customEndpointReporting: `${base}/reporting/customEndpointReporting.smil`,
 		skipContentOnHttpStatus: `${base}/reporting/skipOnHttpStatus.smil`,
 		fallbackToPreviousPlaylist: `${base}/fallback-smil/fallbackToPrevious.smil`,
+		playModeOneSync: `${base}/syncFiles/playModeOneSync.smil`,
+		wallclockInflatedBounds: `${base}/syncFiles/wallclockInflatedBounds.smil`,
+		cycleWrapBoundary: `${base}/syncFiles/cycleWrapBoundary.smil`,
+		// Group D and E use the wallclock-substituting routes; fixtures live in test-server/testFiles/dynamic/ or dynamic-update/
+		wallclockPriorityTransition: `${base}/dynamic/wallclockPriorityTransition.smil`,
+		smilUpdateStability: `${base}/dynamic-update/smilUpdateStability.smil`,
 	};
 }
 
