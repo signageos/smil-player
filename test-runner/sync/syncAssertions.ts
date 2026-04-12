@@ -1,6 +1,20 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { SyncDevice } from '../syncHelpers';
 
+/**
+ * Playwright's `msg.text()` concatenates the console format string with its
+ * args rather than substituting `%s` / `%c`, so logs look like:
+ *   `%c[syncGroup] initial master status: group=%s, isMaster=%s%c +0ms color1 color2 <groupname> true color3`
+ * We match master-signalling logs from three sources in order of strongest evidence:
+ *  1. `playlistProcessor.ts` "Master received all ... ACKs for ..." — only logged by
+ *     the master after collecting ACKs, so a hard signal.
+ *  2. `SyncGroup.ts` `isMaster()` initial-status log with the args ending in `true`.
+ *  3. `SyncGroup.ts` onStatus handler logging "master status changed: ... false -> true".
+ *  4. Generic "becoming master" phrase (defensive, may appear from native code).
+ */
+const MASTER_ELECTED_RE =
+	/Master received all|isMaster[\s\S]*?\btrue\b|master status changed[\s\S]*?\bfalse\b[\s\S]*?\btrue\b|becoming\s+master/i;
+
 export async function waitForMasterElection(
 	devices: SyncDevice[],
 	timeoutMs = 20000,
@@ -8,7 +22,7 @@ export async function waitForMasterElection(
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		for (const dev of devices) {
-			if (dev.console.messages.some((m) => /\bisMaster\b[^a-z]*(?:=|:|\s)\s*true|becoming\s+master/i.test(m.text))) {
+			if (dev.console.messages.some((m) => MASTER_ELECTED_RE.test(m.text))) {
 				return dev;
 			}
 		}
