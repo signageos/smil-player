@@ -1,0 +1,50 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <!-- Expired wallclock at playlist start: left-clips syncIndex range.
+                         Pre-c34f811, slave would wrap to hardcoded 1 and try to play this
+                         unreachable element in a loop. -->
+                    <img dur="6s"
+                         begin="wallclock(2020-01-01T00:00:00)"
+                         end="wallclock(2020-01-02T00:00:00)"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"/>
+                    <!-- Real playable content. -->
+                    <img dur="6s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                         region="main" fit="fill"/>
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                           region="main" soundLevel="0%"/>
+                    <!-- Future wallclock: inflates maxSyncIndexPerRegion beyond what the
+                         slave will actually reach. Pre-0484bc9, slave computed resync
+                         target=5 (including this element) and timed out. -->
+                    <img dur="6s"
+                         begin="wallclock(2099-01-01T00:00:00)"
+                         end="wallclock(2099-01-02T00:00:00)"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         region="main" fit="fill"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>
