@@ -1,6 +1,8 @@
 import { Browser, BrowserContext, Page } from '@playwright/test';
 import { createConsoleCollector } from './helpers';
 
+export const DEFAULT_SYNC_SERVER_URL = 'https://sync.signage-cdn.com';
+
 export interface SyncDevice {
 	context: BrowserContext;
 	page: Page;
@@ -9,52 +11,60 @@ export interface SyncDevice {
 	deviceId: string;
 }
 
-/**
- * Create a sync-enabled device (browser context) for multi-device tests.
- *
- * Each device gets:
- * - Unique DUID and syncDeviceId
- * - Shared syncGroupName and syncServerUrl
- * - Console log collector
- *
- * Usage:
- *   const dev1 = await createSyncDevice(browser, smilUrl, {
- *     syncGroupName: 'test-group',
- *     syncDeviceId: 'device-0',
- *     syncServerUrl: 'http://sync-server:port',
- *   }, 'duid-0');
- */
-export async function createSyncDevice(
-	browser: Browser,
-	smilUrl: string,
-	syncConfig: { syncGroupName: string; syncDeviceId: string; syncServerUrl: string },
-	duid: string,
-): Promise<SyncDevice> {
-	const context = await browser.newContext({
-		viewport: { width: 1080, height: 1920 },
-		bypassCSP: true,
-	});
-	const page = await context.newPage();
-	const collector = createConsoleCollector(page);
-
-	await context.addInitScript(
-		(cfg: { smilUrl: string; syncConfig: Record<string, string> }) => {
-			(window as any).__SMIL_URL__ = cfg.smilUrl;
-			(window as any).__SYNC_CONFIG__ = cfg.syncConfig;
-		},
-		{ smilUrl, syncConfig },
-	);
-
-	await page.goto(`http://localhost:8090/?duid=${duid}`);
-
-	return { context, page, console: collector, duid, deviceId: syncConfig.syncDeviceId };
+export interface SyncGroupOptions {
+	smilUrl: string;
+	groupName: string;
+	syncServerUrl?: string;
+	deviceCount?: number;
+	launchStaggerMs?: number;
+	emulatorUrl?: string;
+	viewport?: { width: number; height: number };
 }
 
-/**
- * Close all sync device contexts.
- */
-export async function cleanupSyncDevices(devices: SyncDevice[]) {
+export async function createSyncGroup(
+	browser: Browser,
+	opts: SyncGroupOptions,
+): Promise<SyncDevice[]> {
+	const {
+		smilUrl,
+		groupName,
+		syncServerUrl = DEFAULT_SYNC_SERVER_URL,
+		deviceCount = 3,
+		launchStaggerMs = 1500,
+		emulatorUrl = 'http://localhost:8090',
+		viewport = { width: 1080, height: 1920 },
+	} = opts;
+
+	const devices: SyncDevice[] = [];
+	for (let i = 0; i < deviceCount; i++) {
+		const duid = `syncduid${groupName}dev${i}`.padEnd(50, '0').slice(0, 50);
+		const deviceId = `dev-${i}`;
+		const context = await browser.newContext({ viewport, bypassCSP: true });
+		const page = await context.newPage();
+		const collector = createConsoleCollector(page);
+		await context.addInitScript(
+			(cfg: { smilUrl: string; sync: Record<string, string> }) => {
+				(window as any).__SMIL_URL__ = cfg.smilUrl;
+				(window as any).__SYNC_CONFIG__ = cfg.sync;
+			},
+			{ smilUrl, sync: { syncGroupName: groupName, syncDeviceId: deviceId, syncServerUrl } },
+		);
+		await page.goto(`${emulatorUrl}/?duid=${duid}`);
+		devices.push({ context, page, console: collector, duid, deviceId });
+		if (i < deviceCount - 1) {
+			await new Promise((r) => setTimeout(r, launchStaggerMs));
+		}
+	}
+	return devices;
+}
+
+export async function cleanupSyncGroup(devices: SyncDevice[]) {
 	for (const dev of devices) {
 		await dev.context.close();
 	}
+}
+
+export function uniqueGroupName(testTitle: string): string {
+	const slug = testTitle.replace(/[^a-z0-9]/gi, '').slice(0, 20).toLowerCase();
+	return `smil-e2e-${slug}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
