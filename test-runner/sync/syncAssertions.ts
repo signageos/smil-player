@@ -65,6 +65,80 @@ export async function assertAllDevicesHide(
 	);
 }
 
+/**
+ * Extract the most recent syncIndex the device has seen in any log line.
+ *
+ * The player emits two flavours of sync log:
+ *  - `logDebug(...)` — substitutes inline, yielding literal "syncIndex=3".
+ *  - `debug(...)` (npm) + Playwright's msg.text() — preserves the raw format,
+ *    so "syncIndex=%d" survives with the numeric value appearing later in the
+ *    arg tail. The master side uses this path for "Broadcasted sync message"
+ *    and the [syncGroup] "received" lines.
+ *
+ * Master-side lines we can still mine:
+ *  - "Broadcasted sync message: type=%s, region=%s, syncIndex=%d, priorityBounds=%s"
+ *    → tail: "... <region> <syncIndex> [<min>-<max>]" — match "(\\d+) \\[[\\d-]+\\]".
+ *  - "Master received all %s ACKs for %s" where the second arg has form
+ *    "<region>-<syncIndex>-ack-<type>" — match "-(\\d+)-ack-".
+ *  - ACK / coordination keys like "...-<syncIndex>-ack-finished" in slaves too.
+ */
+const SYNC_INDEX_PATTERNS: RegExp[] = [
+	/\bsyncIndex=(\d+)\b/, // literal (timedDebug)
+	/-(\d+)-ack-(?:prepared|playing|finished)\b/, // ACK key used by both roles
+	/Broadcasted sync message:.*?\s(\d+)\s\[[\d-]+\]/, // master broadcast arg tail
+];
+
+export function getLatestSyncIndex(dev: SyncDevice): number | null {
+	const msgs = dev.console.messages;
+	for (let i = msgs.length - 1; i >= 0; i--) {
+		for (const p of SYNC_INDEX_PATTERNS) {
+			const m = msgs[i].text.match(p);
+			if (m) return parseInt(m[1], 10);
+		}
+	}
+	return null;
+}
+
+/**
+ * Poll all devices until every one reports the same syncIndex, or timeout.
+ * Returns the agreed index and the measured controller-side skew — how many
+ * ms elapsed between the first and last device landing on that value.
+ *
+ * Implementation: snapshot each device's `getLatestSyncIndex` every `pollMs`;
+ * once all match, walk backwards through each device's console to find the
+ * first message where that index appeared and use its timestamp for skew.
+ */
+export async function waitForSyncIndexAgreement(
+	devices: SyncDevice[],
+	opts: { timeoutMs?: number; pollMs?: number } = {},
+): Promise<{ syncIndex: number; skewMs: number; firstSeenTs: number[] }> {
+	const { timeoutMs = 30_000, pollMs = 200 } = opts;
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const values = devices.map((d) => getLatestSyncIndex(d));
+		if (values.every((v) => v !== null) && values.every((v) => v === values[0])) {
+			const target = values[0] as number;
+			const extract = (text: string): number | null => {
+				for (const p of SYNC_INDEX_PATTERNS) {
+					const m = text.match(p);
+					if (m) return parseInt(m[1], 10);
+				}
+				return null;
+			};
+			const firstSeenTs = devices.map((d) => {
+				const hit = d.console.messages.find((m) => extract(m.text) === target);
+				return hit ? hit.time : Date.now();
+			});
+			const minTs = Math.min(...firstSeenTs);
+			const maxTs = Math.max(...firstSeenTs);
+			return { syncIndex: target, skewMs: maxTs - minTs, firstSeenTs };
+		}
+		await new Promise((r) => setTimeout(r, pollMs));
+	}
+	const snapshot = devices.map((d, i) => `dev${i}: syncIndex=${getLatestSyncIndex(d)}`).join(', ');
+	throw new Error(`Devices did not agree on syncIndex within ${timeoutMs}ms. Last: ${snapshot}`);
+}
+
 export function countSyncEvents(dev: SyncDevice, pattern: RegExp): number {
 	return dev.console.messages.filter((m) => pattern.test(m.text)).length;
 }
