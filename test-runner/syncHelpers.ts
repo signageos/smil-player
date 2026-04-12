@@ -44,11 +44,32 @@ export async function createSyncGroup(
 		const page = await context.newPage();
 		const collector = createConsoleCollector(page);
 		await context.addInitScript(
-			(cfg: { smilUrl: string; sync: { syncGroupName: string; syncDeviceId: string; syncServerUrl: string } }) => {
+			(cfg: {
+				smilUrl: string;
+				sync: {
+					syncGroupName: string;
+					syncDeviceId: string;
+					syncServerUrl: string;
+					debugEnabled: string;
+				};
+			}) => {
 				(window as any).__SMIL_URL__ = cfg.smilUrl;
+				// __SYNC_CONFIG__ flows to smilPlayer.ts as configOverrides and is
+				// applied key-by-key to sos.config. Including `debugEnabled: 'true'`
+				// is what makes the player re-enable @signageos/smil-player:* debug
+				// logs after its Debug.disable() call — the sync assertions grep
+				// console for [sync]/[syncGroup] lines that only appear then.
 				(window as any).__SYNC_CONFIG__ = cfg.sync;
 			},
-			{ smilUrl, sync: { syncGroupName: groupName, syncDeviceId: deviceId, syncServerUrl } },
+			{
+				smilUrl,
+				sync: {
+					syncGroupName: groupName,
+					syncDeviceId: deviceId,
+					syncServerUrl,
+					debugEnabled: 'true',
+				},
+			},
 		);
 		await page.goto(`${emulatorUrl}/?duid=${duid}`);
 		devices.push({ context, page, console: collector, duid, deviceId });
