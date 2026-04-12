@@ -8,7 +8,7 @@ export async function waitForMasterElection(
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		for (const dev of devices) {
-			if (dev.console.matching('isMaster').some((m) => /true|becoming master/i.test(m.text))) {
+			if (dev.console.messages.some((m) => /\bisMaster\b[^a-z]*(?:=|:|\s)\s*true|becoming\s+master/i.test(m.text))) {
 				return dev;
 			}
 		}
@@ -22,30 +22,44 @@ export async function waitForMasterElection(
 	);
 }
 
+/**
+ * Asserts each device's locator becomes visible within `timeoutMs`.
+ * NOTE: This checks **eventual** visibility per device, not simultaneous visibility.
+ * For "all devices show the same element at the same moment" use `waitForConvergence`.
+ */
 export async function assertAllDevicesShow(
 	devices: SyncDevice[],
 	locatorForPage: (p: Page) => Locator,
 	timeoutMs = 15000,
 ) {
-	for (const dev of devices) {
-		await expect(locatorForPage(dev.page)).toBeVisible({ timeout: timeoutMs });
-	}
+	await Promise.all(
+		devices.map((d) => expect(locatorForPage(d.page)).toBeVisible({ timeout: timeoutMs })),
+	);
 }
 
+/**
+ * Asserts each device's locator becomes hidden within `timeoutMs`.
+ * NOTE: This checks **eventual** non-visibility per device, not simultaneous.
+ */
 export async function assertAllDevicesHide(
 	devices: SyncDevice[],
 	locatorForPage: (p: Page) => Locator,
 	timeoutMs = 15000,
 ) {
-	for (const dev of devices) {
-		await expect(locatorForPage(dev.page)).not.toBeVisible({ timeout: timeoutMs });
-	}
+	await Promise.all(
+		devices.map((d) => expect(locatorForPage(d.page)).not.toBeVisible({ timeout: timeoutMs })),
+	);
 }
 
 export function countSyncEvents(dev: SyncDevice, pattern: RegExp): number {
 	return dev.console.messages.filter((m) => pattern.test(m.text)).length;
 }
 
+/**
+ * Returns true if ANY matching line appears in either `errors` or `messages`.
+ * Despite the name, this searches logs at every level — use for "did this string
+ * ever appear in the console" assertions regardless of log level.
+ */
 export function hasConsoleError(dev: SyncDevice, pattern: RegExp): boolean {
 	return (
 		dev.console.errors.some((e) => pattern.test(e)) ||
