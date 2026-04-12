@@ -2,6 +2,10 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
 	testDir: './test-runner',
+	// Sync tests depend on a reachable remote sync server (https://sync.signage-cdn.com)
+	// and run serially — they're slow and network-dependent, so opt-in only.
+	// Run them explicitly with `npm run test:sync`.
+	testIgnore: process.env.RUN_SYNC_TESTS ? undefined : ['**/sync/**'],
 	timeout: 180000,
 	retries: 1,
 	use: {

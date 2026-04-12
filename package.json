@@ -19,6 +19,7 @@
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "test:manual": "playwright test testing --headed --timeout 0",
+    "test:sync": "cross-env RUN_SYNC_TESTS=1 playwright test test-runner/sync --workers=1 --timeout=300000",
     "e2e:servers": "bash tools/e2e-servers.sh",
     "e2e:servers:stop": "bash tools/e2e-servers.sh --stop",
     "e2e:servers:status": "bash tools/e2e-servers.sh --status",
