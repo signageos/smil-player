@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smil>
+    <head>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <img src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" dur="6s"/>
+                    <img src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" dur="6s"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>
