@@ -10,13 +10,12 @@ import {
 // `assertSynchronizedTransition` (not just eventual convergence) so a device
 // that drifts more than MAX_SKEW_MS from the others fails the test.
 //
-// Tolerance chosen deliberately:
-//  - The pathfinder proves connection+election in ~9s.
-//  - Once sync is up, cmd-prepare/ack-prepared round trips are sub-second in
-//    practice. 1500ms leaves headroom for network jitter without masking
-//    real regressions.
+// Tolerance chosen deliberately: 500ms. Observed skew against
+// sync.signage-cdn.com has been <200ms on first transition and ~0ms on later
+// cycles, so 500ms catches regressions while still tolerating first-load
+// jitter from different bundle-parse times across devices.
 
-const MAX_SKEW_MS = 1500;
+const MAX_SKEW_MS = 500;
 
 test.describe.configure({ mode: 'serial' });
 test.describe('sync diagnostic', () => {
@@ -27,7 +26,7 @@ test.describe('sync diagnostic', () => {
 		devices = [];
 	});
 
-	test('3 devices transition landscape1 ↔ landscape2 within 1.5s of each other', async ({
+	test('3 devices transition landscape1 ↔ landscape2 within 500ms of each other', async ({
 		browser,
 		testServerBaseUrl,
 	}, testInfo) => {

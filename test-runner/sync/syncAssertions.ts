@@ -149,7 +149,7 @@ export async function assertSynchronizedTransition(
 	locatorForPage: (p: Page) => Locator,
 	opts: { maxSkewMs?: number; timeoutMs?: number; label?: string } = {},
 ): Promise<TransitionSkew> {
-	const { maxSkewMs = 1500, timeoutMs = 60000, label = 'transition' } = opts;
+	const { maxSkewMs = 500, timeoutMs = 60000, label = 'transition' } = opts;
 	const result = await measureTransitionSkew(devices, locatorForPage, timeoutMs);
 	const offsets = result.timestamps.map((t) => t - result.minTs).join('ms, ');
 	if (result.skewMs > maxSkewMs) {
