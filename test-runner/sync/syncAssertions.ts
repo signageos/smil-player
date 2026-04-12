@@ -83,7 +83,8 @@ export function hasConsoleError(dev: SyncDevice, pattern: RegExp): boolean {
 
 /**
  * Poll until every device's locator is visible simultaneously. Used to prove
- * master/slave converge to the same element.
+ * master/slave converge to the same element. Loose check — does NOT measure
+ * skew. Use `assertSynchronizedTransition` when you need to bound the gap.
  */
 export async function waitForConvergence(
 	devices: SyncDevice[],
@@ -102,4 +103,60 @@ export async function waitForConvergence(
 				.map((d, i) => `dev${i}:\n${d.console.messages.slice(-10).map((m) => m.text).join('\n')}`)
 				.join('\n\n'),
 	);
+}
+
+export interface TransitionSkew {
+	/** Controller-side wall-clock time each device reported the locator visible. */
+	timestamps: number[];
+	/** max(timestamps) - min(timestamps), the measured drift between devices. */
+	skewMs: number;
+	minTs: number;
+	maxTs: number;
+}
+
+/**
+ * Start `waitFor({ state: 'visible' })` concurrently on every device and
+ * record `Date.now()` on each resolution. The spread across devices is the
+ * observed sync drift. Call with a locator that is NOT yet visible — this
+ * measures the transition into visibility, not the steady state.
+ *
+ * Measurement has some jitter from Playwright's internal ~100ms polling plus
+ * websocket round-trip; that jitter is roughly symmetric across devices so
+ * for tolerances ≥ ~500ms the measurement is meaningful.
+ */
+export async function measureTransitionSkew(
+	devices: SyncDevice[],
+	locatorForPage: (p: Page) => Locator,
+	timeoutMs = 60000,
+): Promise<TransitionSkew> {
+	const timestamps = await Promise.all(
+		devices.map(async (d) => {
+			await locatorForPage(d.page).waitFor({ state: 'visible', timeout: timeoutMs });
+			return Date.now();
+		}),
+	);
+	const minTs = Math.min(...timestamps);
+	const maxTs = Math.max(...timestamps);
+	return { timestamps, skewMs: maxTs - minTs, minTs, maxTs };
+}
+
+/**
+ * Measure a transition and fail if skew exceeds `maxSkewMs`. Returns the
+ * measured TransitionSkew so the caller can log or aggregate it.
+ */
+export async function assertSynchronizedTransition(
+	devices: SyncDevice[],
+	locatorForPage: (p: Page) => Locator,
+	opts: { maxSkewMs?: number; timeoutMs?: number; label?: string } = {},
+): Promise<TransitionSkew> {
+	const { maxSkewMs = 1500, timeoutMs = 60000, label = 'transition' } = opts;
+	const result = await measureTransitionSkew(devices, locatorForPage, timeoutMs);
+	const offsets = result.timestamps.map((t) => t - result.minTs).join('ms, ');
+	if (result.skewMs > maxSkewMs) {
+		throw new Error(
+			`Sync skew for "${label}" was ${result.skewMs}ms, exceeds tolerance ${maxSkewMs}ms. ` +
+				`Per-device offsets from first: [${offsets}ms].`,
+		);
+	}
+	return result;
 }
