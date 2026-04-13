@@ -4,9 +4,7 @@ import {
 	waitForMasterElection,
 	waitForConvergence,
 	assertSynchronizedTransition,
-	countSyncEvents,
 } from './syncAssertions';
-import { expect } from '@playwright/test';
 
 // Group B regression test for wallclock-bounded resync bugs.
 //
@@ -101,13 +99,11 @@ test.describe('sync · wallclock-bounded resync [0484bc9, c34f811]', () => {
 				.join(', ')}]`,
 		);
 
-		// Pre-fix symptom: "unreachable resync target" appeared in console when
-		// the slave could not reach the inflated max. Post-fix it must not.
-		for (const dev of devices) {
-			expect(
-				countSyncEvents(dev, /unreachable resync target/i),
-				`dev ${dev.deviceId} logged "unreachable resync target"`,
-			).toBe(0);
-		}
+		// The pre-fix symptom is that the slave cannot reach an inflated max
+		// and stalls; that is caught directly by the 30 s transition timeout
+		// on each assertSynchronizedTransition above. (An earlier version of
+		// this test also grepped for "unreachable resync target" in console
+		// logs, but that string never existed in the source — it was a dead
+		// assertion providing false confidence.)
 	});
 });
