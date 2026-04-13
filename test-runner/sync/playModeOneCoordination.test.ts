@@ -9,6 +9,7 @@ import {
 	assertBroadcastReceiptSpread,
 	assertFrameContentEquality,
 } from './syncAssertions';
+import { recordSkew } from '../../tools/record-sync-skew.mjs';
 
 // Group A regression test for playMode=one coordination bugs.
 //
@@ -75,6 +76,12 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 				.map((t) => t - s1.minTs)
 				.join(', ')}]`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'video→landscape1',
+			skewMs: s1.skewMs,
+			offsets: s1.timestamps.map((t) => t - s1.minTs),
+		});
 
 		// landscape1 → landscape2 (cycle 3)
 		await Promise.all(
@@ -90,6 +97,12 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 				.map((t) => t - s2.minTs)
 				.join(', ')}]`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'landscape1→landscape2',
+			skewMs: s2.skewMs,
+			offsets: s2.timestamps.map((t) => t - s2.minTs),
+		});
 
 		// landscape2 → video (playMode wrap — back to child 0). This is the
 		// transition db8da71 makes most likely to fail: a buggy slave would
@@ -107,6 +120,12 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 				.map((t) => t - s3.minTs)
 				.join(', ')}]`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'landscape2→video (wrap)',
+			skewMs: s3.skewMs,
+			offsets: s3.timestamps.map((t) => t - s3.minTs),
+		});
 
 		// One more wrap to prove stability across cycles 4→5. This is where
 		// 5a59d20 would bite: a stale cmd-playMode from cycle 1 could be
@@ -124,6 +143,12 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 				.map((t) => t - s4.minTs)
 				.join(', ')}]`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'video→landscape1 (2nd wrap)',
+			skewMs: s4.skewMs,
+			offsets: s4.timestamps.map((t) => t - s4.minTs),
+		});
 
 		// Let the last broadcast settle across receivers before inspecting WS state.
 		await devices[0].page.waitForTimeout(500);

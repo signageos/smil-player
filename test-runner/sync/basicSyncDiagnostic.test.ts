@@ -5,6 +5,7 @@ import {
 	waitForConvergence,
 	assertSynchronizedTransition,
 } from './syncAssertions';
+import { recordSkew } from '../../tools/record-sync-skew.mjs';
 
 // Diagnostic test: proves sync is operational AND transitions are tight. Uses
 // `assertSynchronizedTransition` (not just eventual convergence) so a device
@@ -62,6 +63,12 @@ test.describe('sync diagnostic', () => {
 				.map((t) => t - l2.minTs)
 				.join('ms, ')}ms)`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'landscape1→landscape2',
+			skewMs: l2.skewMs,
+			offsets: l2.timestamps.map((t) => t - l2.minTs),
+		});
 
 		// Wait for landscape1 to be hidden everywhere so the next waitFor(visible)
 		// captures the fresh cycle-2 appearance rather than the stale cycle-1 DOM.
@@ -80,5 +87,11 @@ test.describe('sync diagnostic', () => {
 				.map((t) => t - l1.minTs)
 				.join('ms, ')}ms)`,
 		);
+		recordSkew({
+			test: testInfo.title,
+			label: 'landscape2→landscape1',
+			skewMs: l1.skewMs,
+			offsets: l1.timestamps.map((t) => t - l1.minTs),
+		});
 	});
 });
