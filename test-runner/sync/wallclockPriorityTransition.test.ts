@@ -8,6 +8,10 @@ import {
 	getVisibleElement,
 	countSyncEvents,
 	ElementCandidate,
+	assertFrameCountSymmetry,
+	assertSyncMessageInventory,
+	assertBroadcastReceiptSpread,
+	assertFrameContentEquality,
 } from './syncAssertions';
 
 // Group D regression test for bug 8ef7571 — 60-second slave delay on
@@ -150,5 +154,26 @@ test.describe('sync · wallclock-triggered priority transition [8ef7571]', () =>
 				`dev ${dev.deviceId} saw a cmd-prepare with undefined priority`,
 			).toBe(0);
 		}
+
+		// Let any in-flight WS frames settle before the cross-device WebSocket
+		// assertions read the per-device wsFrames arrays.
+		await devices[0].page.waitForTimeout(500);
+
+		// eslint-disable-next-line no-console
+		console.log(
+			'[wallclock-priority] WS totals: ' +
+				JSON.stringify(
+					devices.map((d) => ({
+						dev: d.deviceId,
+						sent: d.wsFrames.filter((f) => f.direction === 'sent').length,
+						received: d.wsFrames.filter((f) => f.direction === 'received').length,
+					})),
+				),
+		);
+
+		assertFrameCountSymmetry(devices);
+		assertSyncMessageInventory(devices);
+		assertBroadcastReceiptSpread(devices);
+		assertFrameContentEquality(devices);
 	});
 });
