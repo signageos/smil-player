@@ -4,6 +4,10 @@ import {
 	waitForMasterElection,
 	waitForConvergence,
 	assertSynchronizedTransition,
+	assertFrameCountSymmetry,
+	assertSyncMessageInventory,
+	assertBroadcastReceiptSpread,
+	assertFrameContentEquality,
 } from './syncAssertions';
 
 // Group C regression test for cycle-wrap boundary bugs.
@@ -92,5 +96,12 @@ test.describe('sync · cycle-wrap boundary [7cda9a4, a517e8d, dde1c2f]', () => {
 					.map((m) => `  cycle ${m.cycle} ${m.label}: ${m.skewMs}ms offsets=[${m.offsets.join(', ')}]`)
 					.join('\n'),
 		);
+
+		// Let the last broadcast settle across receivers before inspecting WS state.
+		await devices[0].page.waitForTimeout(500);
+		assertFrameCountSymmetry(devices);
+		assertSyncMessageInventory(devices);
+		assertBroadcastReceiptSpread(devices);
+		assertFrameContentEquality(devices);
 	});
 });

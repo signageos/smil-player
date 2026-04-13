@@ -465,10 +465,16 @@ export function assertSyncMessageInventory(
 	const expectedAckRecv = masterCmdSent * slaves.length;
 	const lower = expectedAckRecv * (1 - tolerancePct);
 	const upper = expectedAckRecv * (1 + tolerancePct);
+	const masterBreakdown = [...cmdTypes, ...ackTypes]
+		.map((t) => {
+			const s = masterCats.get(t) ?? { sent: 0, received: 0 };
+			return `${t}:s=${s.sent}/r=${s.received}`;
+		})
+		.join(' ');
 	expect(
 		masterAckRecv >= lower && masterAckRecv <= upper,
 		`master received ${masterAckRecv} ACKs but expected ~${expectedAckRecv} (${slaves.length} slaves × ` +
-			`${masterCmdSent} cmd, ±${(tolerancePct * 100).toFixed(0)} %)`,
+			`${masterCmdSent} cmd, ±${(tolerancePct * 100).toFixed(0)} %). Master breakdown: ${masterBreakdown}`,
 	).toBe(true);
 }
 

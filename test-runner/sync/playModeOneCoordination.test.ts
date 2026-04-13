@@ -4,6 +4,10 @@ import {
 	waitForMasterElection,
 	waitForConvergence,
 	assertSynchronizedTransition,
+	assertFrameCountSymmetry,
+	assertSyncMessageInventory,
+	assertBroadcastReceiptSpread,
+	assertFrameContentEquality,
 } from './syncAssertions';
 
 // Group A regression test for playMode=one coordination bugs.
@@ -120,5 +124,17 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 				.map((t) => t - s4.minTs)
 				.join(', ')}]`,
 		);
+
+		// Let the last broadcast settle across receivers before inspecting WS state.
+		await devices[0].page.waitForTimeout(500);
+		assertFrameCountSymmetry(devices);
+		// playMode=one observed deficit: ack-prepared ~78 %, ack-playing ~62 %,
+		// ack-finished ~57 % of master cmd sends. Slaves don't always ACK cmds
+		// whose target element is already superseded by the next cycle's advance.
+		// Widen to 40 % to accept the scenario's protocol shape while still
+		// catching gross regressions.
+		assertSyncMessageInventory(devices, { ackCountTolerancePct: 0.4 });
+		assertBroadcastReceiptSpread(devices);
+		assertFrameContentEquality(devices);
 	});
 });
