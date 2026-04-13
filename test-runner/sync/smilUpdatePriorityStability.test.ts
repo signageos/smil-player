@@ -8,6 +8,10 @@ import {
 	getVisibleElement,
 	countSyncEvents,
 	ElementCandidate,
+	assertFrameCountSymmetry,
+	assertSyncMessageInventory,
+	assertBroadcastReceiptSpread,
+	assertFrameContentEquality,
 } from './syncAssertions';
 
 // Group E regression test for bug 54f1a10 — false priority-change detection
@@ -147,5 +151,26 @@ test.describe('sync · SMIL update priority stability [54f1a10]', () => {
 				`dev ${dev.deviceId} broadcast a cmd-prepare with undefined priority`,
 			).toBe(0);
 		}
+
+		// Let any in-flight WS frames settle before the cross-device WebSocket
+		// assertions read the per-device wsFrames arrays.
+		await devices[0].page.waitForTimeout(500);
+
+		// eslint-disable-next-line no-console
+		console.log(
+			'[smil-update-stability] WS totals: ' +
+				JSON.stringify(
+					devices.map((d) => ({
+						dev: d.deviceId,
+						sent: d.wsFrames.filter((f) => f.direction === 'sent').length,
+						received: d.wsFrames.filter((f) => f.direction === 'received').length,
+					})),
+				),
+		);
+
+		assertFrameCountSymmetry(devices);
+		assertSyncMessageInventory(devices);
+		assertBroadcastReceiptSpread(devices);
+		assertFrameContentEquality(devices);
 	});
 });

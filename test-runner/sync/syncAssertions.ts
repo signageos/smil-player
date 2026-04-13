@@ -1,5 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
-import { SyncDevice } from '../syncHelpers';
+import { SyncDevice, WsFrame } from '../syncHelpers';
 
 /**
  * Playwright's `msg.text()` concatenates the console format string with its
@@ -265,4 +265,299 @@ export async function assertSynchronizedTransition(
 		);
 	}
 	return result;
+}
+
+// ============================================================================
+// WebSocket cross-device assertions (calibrated 2026-04-13).
+//
+// Wire format on the sync server is Socket.IO over WebSocket. Application
+// frames are `42[<event>, <args>]`. Outbound and inbound use different shapes:
+//   sender → server:   42["request_set_value", { groupName, key, value }]
+//   server → receiver: 42["set_value", "groupName", "key", { ... }]
+// The inner `value` object is byte-identical end-to-end. Engine.IO control
+// frames ("2probe", "5", …) and server-pushed `device_status` events are
+// filtered out before any application processing.
+//
+// Correlation key for cross-device matching: (value.type, value.syncIndex,
+// value.timestamp). value.timestamp is producer-side ms and unique per
+// broadcast.
+// ============================================================================
+
+/** Inner sync-coordination payload — the `value` object from a Socket.IO frame.
+ * Kept loose because the sync library is closed-source and the schema may grow. */
+interface SyncValue {
+	type: string;
+	regionName?: string;
+	syncIndex?: number;
+	timestamp?: number;
+	priorityLevel?: number;
+	priorityMinSyncIndex?: number;
+	priorityMaxSyncIndex?: number;
+	[key: string]: unknown;
+}
+
+/** A parsed sync application frame. `null` for frames that aren't application
+ * traffic (Engine.IO probes, device_status, malformed JSON). */
+interface ParsedSyncFrame {
+	frame: WsFrame;
+	event: string;            // "request_set_value" | "set_value"
+	value: SyncValue;
+}
+
+/** Stable correlation key for matching one logical broadcast across devices. */
+function broadcastKey(v: SyncValue): string {
+	return `${v.type}|${v.syncIndex ?? '?'}|${v.timestamp ?? '?'}`;
+}
+
+/** Parse a captured WS frame into a sync application frame, or null if it's
+ * a non-application frame (Engine.IO probe, device_status, malformed). */
+function parseSyncFrame(frame: WsFrame): ParsedSyncFrame | null {
+	if (frame.isBinary) return null;
+	const text = frame.payload;
+	if (!text.startsWith('42[')) return null; // Engine.IO control frame
+	let parsed: unknown;
+	try {
+		// Socket.IO event packet format: "42" prefix + JSON-array body.
+		parsed = JSON.parse(text.slice(2));
+	} catch {
+		return null;
+	}
+	if (!Array.isArray(parsed) || typeof parsed[0] !== 'string') return null;
+	const event = parsed[0];
+	if (event === 'request_set_value') {
+		// [event, { groupName, key, value }]
+		const obj = parsed[1] as { value?: SyncValue } | undefined;
+		if (!obj || typeof obj.value !== 'object' || obj.value === null) return null;
+		if (typeof (obj.value as SyncValue).type !== 'string') return null;
+		return { frame, event, value: obj.value as SyncValue };
+	}
+	if (event === 'set_value') {
+		// [event, "groupName", "key", { ... }]
+		const value = parsed[3] as SyncValue | undefined;
+		if (!value || typeof value !== 'object' || typeof value.type !== 'string') return null;
+		return { frame, event, value };
+	}
+	// device_status, connect/disconnect, etc — not application broadcasts.
+	return null;
+}
+
+/** All parsed application frames on a device, in capture order. */
+function parsedFrames(dev: SyncDevice): ParsedSyncFrame[] {
+	const out: ParsedSyncFrame[] = [];
+	for (const f of dev.wsFrames) {
+		const p = parseSyncFrame(f);
+		if (p !== null) out.push(p);
+	}
+	return out;
+}
+
+/** Per-device counts of sync-coordination message types, split by direction.
+ * Drives `assertSyncMessageInventory`. */
+export function categorizeWsFrames(dev: SyncDevice): Map<string, { sent: number; received: number }> {
+	const out = new Map<string, { sent: number; received: number }>();
+	for (const p of parsedFrames(dev)) {
+		const slot = out.get(p.value.type) ?? { sent: 0, received: 0 };
+		if (p.frame.direction === 'sent') slot.sent++;
+		else slot.received++;
+		out.set(p.value.type, slot);
+	}
+	return out;
+}
+
+interface FrameCountSymmetryOptions {
+	/** Max allowed spread (max - min) between slave received counts.
+	 * Default `Math.max(10, 0.10 * mean)` per calibration. */
+	slaveReceivedMaxSpread?: (mean: number) => number;
+	/** Max allowed spread between slave sent counts. Default
+	 * `Math.max(10, 0.25 * mean)` (slave sent counts are smaller, so wider). */
+	slaveSentMaxSpread?: (mean: number) => number;
+	/** Index of the master device in `devices`. Defaults to 0 (first-launched
+	 * device wins master election in `createSyncGroup`'s staggered launch). */
+	masterIndex?: number;
+}
+
+/** Assert per-device WebSocket frame counts cluster as expected for one master
+ * and N-1 slaves. Counts only application sync frames (excludes Engine.IO
+ * probes and `device_status` events). */
+export function assertFrameCountSymmetry(
+	devices: SyncDevice[],
+	opts: FrameCountSymmetryOptions = {},
+): void {
+	const masterIndex = opts.masterIndex ?? 0;
+	const slaveRecvSpread = opts.slaveReceivedMaxSpread ?? ((mean) => Math.max(10, 0.10 * mean));
+	const slaveSentSpread = opts.slaveSentMaxSpread ?? ((mean) => Math.max(10, 0.25 * mean));
+
+	const counts = devices.map((d) => {
+		const parsed = parsedFrames(d);
+		return {
+			deviceId: d.deviceId,
+			sent: parsed.filter((p) => p.frame.direction === 'sent').length,
+			received: parsed.filter((p) => p.frame.direction === 'received').length,
+		};
+	});
+	const slaveCounts = counts.filter((_, i) => i !== masterIndex);
+
+	const slaveRecvMean = slaveCounts.reduce((s, c) => s + c.received, 0) / slaveCounts.length;
+	const slaveRecvMax = Math.max(...slaveCounts.map((c) => c.received));
+	const slaveRecvMin = Math.min(...slaveCounts.map((c) => c.received));
+	const slaveRecvAllowed = slaveRecvSpread(slaveRecvMean);
+	expect(
+		slaveRecvMax - slaveRecvMin,
+		`slave received-count spread ${slaveRecvMax - slaveRecvMin} > allowed ${slaveRecvAllowed.toFixed(1)} ` +
+			`(counts: ${JSON.stringify(counts)})`,
+	).toBeLessThanOrEqual(slaveRecvAllowed);
+
+	const slaveSentMean = slaveCounts.reduce((s, c) => s + c.sent, 0) / slaveCounts.length;
+	const slaveSentMax = Math.max(...slaveCounts.map((c) => c.sent));
+	const slaveSentMin = Math.min(...slaveCounts.map((c) => c.sent));
+	const slaveSentAllowed = slaveSentSpread(slaveSentMean);
+	expect(
+		slaveSentMax - slaveSentMin,
+		`slave sent-count spread ${slaveSentMax - slaveSentMin} > allowed ${slaveSentAllowed.toFixed(1)} ` +
+			`(counts: ${JSON.stringify(counts)})`,
+	).toBeLessThanOrEqual(slaveSentAllowed);
+}
+
+/** Assert the protocol shape using per-type counts: master sends `cmd-*`
+ * messages; each slave sends matching ACKs; master's received-ACK count
+ * approximates `(devices.length - 1) × master's sent cmd count`. */
+export function assertSyncMessageInventory(
+	devices: SyncDevice[],
+	opts: { masterIndex?: number; ackCountTolerancePct?: number } = {},
+): void {
+	const masterIndex = opts.masterIndex ?? 0;
+	const tolerancePct = opts.ackCountTolerancePct ?? 0.25;
+	const slaves = devices.filter((_, i) => i !== masterIndex);
+
+	const masterCats = categorizeWsFrames(devices[masterIndex]);
+	const cmdTypes = ['cmd-prepare', 'cmd-play', 'cmd-finish'] as const;
+	const ackTypes = ['ack-prepared', 'ack-playing', 'ack-finished'] as const;
+
+	let masterCmdSent = 0;
+	for (const t of cmdTypes) masterCmdSent += masterCats.get(t)?.sent ?? 0;
+	expect(masterCmdSent, `master sent zero cmd-* frames (cats: ${[...masterCats]})`).toBeGreaterThan(0);
+
+	for (const dev of slaves) {
+		const cats = categorizeWsFrames(dev);
+		let slaveAckSent = 0;
+		for (const t of ackTypes) slaveAckSent += cats.get(t)?.sent ?? 0;
+		expect(slaveAckSent, `slave ${dev.deviceId} sent zero ack-* frames (cats: ${[...cats]})`).toBeGreaterThan(0);
+	}
+
+	let masterAckRecv = 0;
+	for (const t of ackTypes) masterAckRecv += masterCats.get(t)?.received ?? 0;
+	const expectedAckRecv = masterCmdSent * slaves.length;
+	const lower = expectedAckRecv * (1 - tolerancePct);
+	const upper = expectedAckRecv * (1 + tolerancePct);
+	expect(
+		masterAckRecv >= lower && masterAckRecv <= upper,
+		`master received ${masterAckRecv} ACKs but expected ~${expectedAckRecv} (${slaves.length} slaves × ` +
+			`${masterCmdSent} cmd, ±${(tolerancePct * 100).toFixed(0)} %)`,
+	).toBe(true);
+}
+
+/**
+ * Per-device, per-key list of received frames (in arrival order). All frame
+ * events on a given Socket.IO connection are FIFO-ordered, so the Nth-of-key-K
+ * inbound on every receiver corresponds to the same logical broadcast even
+ * when multiple senders happen to broadcast frames whose `(type, syncIndex,
+ * timestamp)` collide on the same millisecond — a real case observed for
+ * `ack-prepared` when two slaves ACK the same cmd in lockstep.
+ */
+function receivedFramesByKey<T>(
+	devices: SyncDevice[],
+	pick: (p: ParsedSyncFrame) => T,
+): Array<{ deviceId: string; map: Map<string, T[]> }> {
+	return devices.map((d) => {
+		const map = new Map<string, T[]>();
+		for (const p of parsedFrames(d)) {
+			if (p.frame.direction !== 'received') continue;
+			if (p.value.timestamp === undefined) continue;
+			const k = broadcastKey(p.value);
+			const list = map.get(k) ?? [];
+			list.push(pick(p));
+			map.set(k, list);
+		}
+		return { deviceId: d.deviceId, map };
+	});
+}
+
+/** Assert per-broadcast receipt-time spread across receivers stays within
+ * `maxSpreadMs`. For each broadcast key K, compares the Nth-of-K arrival
+ * timestamp on every receiver that observed at least N frames for that key.
+ * Skips ordinals where fewer than 2 receivers have an Nth occurrence. */
+export function assertBroadcastReceiptSpread(
+	devices: SyncDevice[],
+	opts: { maxSpreadMs?: number } = {},
+): void {
+	const maxSpreadMs = opts.maxSpreadMs ?? 1000;
+	const perDevice = receivedFramesByKey(devices, (p) => p.frame.timestamp);
+
+	const allKeys = new Set<string>();
+	for (const { map } of perDevice) for (const k of map.keys()) allKeys.add(k);
+
+	const violations: string[] = [];
+	for (const key of allKeys) {
+		const lists = perDevice
+			.map(({ deviceId, map }) => ({ deviceId, ts: map.get(key) ?? [] }))
+			.filter((l) => l.ts.length > 0);
+		if (lists.length < 2) continue;
+		const minCount = Math.min(...lists.map((l) => l.ts.length));
+		for (let i = 0; i < minCount; i++) {
+			const tss = lists.map((l) => l.ts[i]);
+			const spread = Math.max(...tss) - Math.min(...tss);
+			if (spread > maxSpreadMs) {
+				violations.push(
+					`broadcast ${key} #${i} receipt spread ${spread}ms > ${maxSpreadMs}ms ` +
+						`(devices: ${lists.map((l) => `${l.deviceId}=${l.ts[i]}`).join(', ')})`,
+				);
+			}
+		}
+	}
+
+	expect(
+		violations.length,
+		`${violations.length} broadcast(s) violated receipt-time spread:\n  ` + violations.slice(0, 10).join('\n  '),
+	).toBe(0);
+}
+
+/** Assert that for each broadcast received by ≥ 2 devices, their received
+ * `value` payloads are byte-identical. Uses ordinal-within-key matching
+ * (Nth-of-K on each receiver corresponds to the same logical broadcast,
+ * because Socket.IO frame order is preserved per receiver and the server
+ * broadcasts in a serialised order). The inner `value` object is byte-
+ * identical end-to-end per calibration; no normalisation needed. */
+export function assertFrameContentEquality(devices: SyncDevice[]): void {
+	const perDevice = receivedFramesByKey(devices, (p) => p.value);
+
+	const allKeys = new Set<string>();
+	for (const { map } of perDevice) for (const k of map.keys()) allKeys.add(k);
+
+	const violations: string[] = [];
+	for (const key of allKeys) {
+		const lists = perDevice
+			.map(({ deviceId, map }) => ({ deviceId, vals: map.get(key) ?? [] }))
+			.filter((l) => l.vals.length > 0);
+		if (lists.length < 2) continue;
+		const minCount = Math.min(...lists.map((l) => l.vals.length));
+		for (let i = 0; i < minCount; i++) {
+			const refJson = JSON.stringify(lists[0].vals[i]);
+			for (let j = 1; j < lists.length; j++) {
+				const otherJson = JSON.stringify(lists[j].vals[i]);
+				if (otherJson !== refJson) {
+					violations.push(
+						`broadcast ${key} #${i}: ${lists[0].deviceId} and ${lists[j].deviceId} differ\n` +
+							`    ${lists[0].deviceId}: ${refJson}\n` +
+							`    ${lists[j].deviceId}: ${otherJson}`,
+					);
+				}
+			}
+		}
+	}
+
+	expect(
+		violations.length,
+		`${violations.length} broadcast(s) had non-identical content across receivers:\n  ` +
+			violations.slice(0, 5).join('\n  '),
+	).toBe(0);
 }
