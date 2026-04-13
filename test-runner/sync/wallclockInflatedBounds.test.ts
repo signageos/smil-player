@@ -4,6 +4,10 @@ import {
 	waitForMasterElection,
 	waitForConvergence,
 	assertSynchronizedTransition,
+	assertFrameCountSymmetry,
+	assertSyncMessageInventory,
+	assertBroadcastReceiptSpread,
+	assertFrameContentEquality,
 } from './syncAssertions';
 
 // Group B regression test for wallclock-bounded resync bugs.
@@ -105,5 +109,16 @@ test.describe('sync · wallclock-bounded resync [0484bc9, c34f811]', () => {
 		// this test also grepped for "unreachable resync target" in console
 		// logs, but that string never existed in the source — it was a dead
 		// assertion providing false confidence.)
+
+		// Let the last broadcast settle across receivers before inspecting WS state.
+		await devices[0].page.waitForTimeout(500);
+		assertFrameCountSymmetry(devices);
+		// Wallclock-gated fixture: slaves skip expired/future siblings, so
+		// master-broadcast cmd-* frames targeting those elements go unack'd.
+		// Observed ratio ~65 % (~35 % deficit). 40 % tolerance accepts the
+		// scenario's protocol shape while catching major regressions.
+		assertSyncMessageInventory(devices, { ackCountTolerancePct: 0.4 });
+		assertBroadcastReceiptSpread(devices);
+		assertFrameContentEquality(devices);
 	});
 });
