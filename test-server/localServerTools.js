@@ -164,6 +164,15 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('OSC_LOW_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('OSC_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
+        case 'wallclockPriorityTransition.smil':
+            // Group D sync regression — 8ef7571 (wallclock-triggered priority transition).
+            // P_high active at fetch (begin=-5s), ends at +45s → wallclock-end fires
+            // cross-priority cmd-prepare that exercises the fix's hasPriorityChanged branches.
+            parsedFileString = parsedFileString.replace('WPT_HIGH_BEGIN', `wallclock(R/${formatDate(moment().subtract(5, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('WPT_HIGH_END', `wallclock(R/${formatDate(moment().add(45, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('WPT_LOW_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('WPT_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
+            break;
         case enums_1.SMILUrls.priorityPeerStop.split('/').pop():
             // Peer A active 0-75s, Peer B active 30-45s. Both are peers (same priorityClass).
             // At +30s Peer B stops Peer A. At +45s Peer B ends, Peer A recovers via handlePrecedingContentStop.

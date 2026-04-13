@@ -1,0 +1,47 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl repeatCount="indefinite">
+                    <!-- P_high: already active at fetch, ends at +45s → wallclock-end fires the cross-priority transition. -->
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="WPT_HIGH_BEGIN" end="WPT_HIGH_END">
+                            <seq repeatCount="indefinite">
+                                <img dur="4s"
+                                     src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                                     region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                    <!-- P_low: always active; takes over when P_high's wallclock end fires. -->
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="WPT_LOW_BEGIN" end="WPT_LOW_END">
+                            <seq repeatCount="indefinite">
+                                <img dur="4s"
+                                     src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                                     region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>
