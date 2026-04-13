@@ -5,7 +5,9 @@ import {
 	waitForMasterElection,
 	waitForSyncIndexAgreement,
 	getLatestSyncIndex,
+	getVisibleElement,
 	countSyncEvents,
+	ElementCandidate,
 } from './syncAssertions';
 
 // Group E regression test for bug 54f1a10 — false priority-change detection
@@ -56,24 +58,50 @@ test.describe('sync · SMIL update priority stability [54f1a10]', () => {
 		// eslint-disable-next-line no-console
 		console.log(`[smil-update-stability] initial agreement: syncIndex=${start.syncIndex}`);
 
-		// Snapshot each device's currently-reported syncIndex every SAMPLE_GAP_MS.
-		// Across SAMPLES, spans ~48s — covers 3+ refresh buckets (server
-		// REFRESH_BUCKET_MS=10_000, REFRESH_STOP_AFTER_MS=30_000) plus stable
-		// tail.
-		const snapshots: Array<{ t: number; values: Array<number | null>; spread: number | null }> = [];
+		// Element candidates for the rendered-state half of each snapshot. The
+		// fixture's seq alternates landscape1 ↔ landscape2; this candidate set
+		// is exhaustive.
+		const candidates: ElementCandidate[] = [
+			{ name: 'landscape1', locator: (p) => p.frameLocator('iframe').locator('img[src*="landscape1"]') },
+			{ name: 'landscape2', locator: (p) => p.frameLocator('iframe').locator('img[src*="landscape2"]') },
+		];
+
+		// Snapshot every SAMPLE_GAP_MS. Each tick captures the (syncIndex, visibleElement)
+		// tuple per device — both axes must hold lockstep for sync to be considered
+		// valid. Across SAMPLES, spans ~48s — covers 3+ refresh buckets (server
+		// REFRESH_BUCKET_MS=10_000, REFRESH_STOP_AFTER_MS=30_000) plus stable tail.
+		type Snapshot = {
+			t: number;
+			tuples: Array<{ syncIndex: number | null; visible: string | null }>;
+			spread: number | null;
+			uniqueTuples: number;
+		};
+		const snapshots: Snapshot[] = [];
 		for (let i = 0; i < SAMPLES; i++) {
 			await devices[0].page.waitForTimeout(SAMPLE_GAP_MS);
-			const values = devices.map((d) => getLatestSyncIndex(d));
-			const known = values.filter((v): v is number => v !== null);
+			const tuples = await Promise.all(
+				devices.map(async (d) => ({
+					syncIndex: getLatestSyncIndex(d),
+					visible: await getVisibleElement(d.page, candidates),
+				})),
+			);
+			const indices = tuples.map((t) => t.syncIndex);
+			const known = indices.filter((v): v is number => v !== null);
 			const spread = known.length === devices.length ? Math.max(...known) - Math.min(...known) : null;
-			snapshots.push({ t: (i + 1) * SAMPLE_GAP_MS, values, spread });
+			const uniqueTuples = new Set(tuples.map((t) => `${t.syncIndex}|${t.visible}`)).size;
+			snapshots.push({ t: (i + 1) * SAMPLE_GAP_MS, tuples, spread, uniqueTuples });
 		}
 
 		// eslint-disable-next-line no-console
 		console.log(
 			'[smil-update-stability] snapshots:\n' +
 				snapshots
-					.map((s) => `  +${s.t}ms values=${JSON.stringify(s.values)} spread=${s.spread}`)
+					.map(
+						(s) =>
+							`  +${s.t}ms syncIndex=${JSON.stringify(s.tuples.map((t) => t.syncIndex))} ` +
+							`visible=${JSON.stringify(s.tuples.map((t) => t.visible))} ` +
+							`spread=${s.spread} uniqueTuples=${s.uniqueTuples}`,
+					)
 					.join('\n'),
 		);
 
@@ -91,11 +119,21 @@ test.describe('sync · SMIL update priority stability [54f1a10]', () => {
 				`(${divergent.map((s) => `+${s.t}ms=${s.spread}`).join(', ')})`,
 		).toBe(0);
 
+		// Combined-state lockstep: at every snapshot, the (syncIndex, visibleElement)
+		// tuples across the 3 devices must cluster into at most 2 distinct tuples
+		// (1 = perfect lockstep; 2 = at most one device mid-transition).
+		const tupleDivergent = snapshots.filter((s) => s.uniqueTuples > 2);
+		expect(
+			tupleDivergent.length,
+			`${tupleDivergent.length}/${snapshots.length} snapshots had >2 unique (syncIndex, visible) tuples ` +
+				`(${tupleDivergent.map((s) => `+${s.t}ms`).join(', ')})`,
+		).toBe(0);
+
 		// Player must have advanced past the initial syncIndex at some point,
 		// proving it kept playing across the refresh. Track highest observed
 		// index across all snapshots.
 		const peak = Math.max(
-			...snapshots.flatMap((s) => s.values.filter((v): v is number => v !== null)),
+			...snapshots.flatMap((s) => s.tuples.map((t) => t.syncIndex).filter((v): v is number => v !== null)),
 		);
 		expect(peak, 'syncIndex never advanced past initial — player froze through refresh').toBeGreaterThan(
 			start.syncIndex,

@@ -5,7 +5,9 @@ import {
 	waitForMasterElection,
 	waitForSyncIndexAgreement,
 	getLatestSyncIndex,
+	getVisibleElement,
 	countSyncEvents,
+	ElementCandidate,
 } from './syncAssertions';
 
 // Group D regression test for bug 8ef7571 — 60-second slave delay on
@@ -58,23 +60,50 @@ test.describe('sync · wallclock-triggered priority transition [8ef7571]', () =>
 		// eslint-disable-next-line no-console
 		console.log(`[wallclock-priority] initial agreement: syncIndex=${start.syncIndex}`);
 
-		// Snapshot every 4s for ~60s. P_high's end-wallclock fires at +45s from
-		// fetch, so the sampled window covers: pre-transition (P_high playing),
-		// the transition itself, and post-transition (P_low playing).
-		const snapshots: Array<{ t: number; values: Array<number | null>; spread: number | null }> = [];
+		// Element candidates for the rendered-state half of each snapshot.
+		// Both P_high and P_low render images in the iframe; the candidate set
+		// is exhaustive for this fixture so a snapshot reporting `null` means
+		// nothing visible at all (legitimate during very brief swap moments).
+		const candidates: ElementCandidate[] = [
+			{ name: 'landscape1', locator: (p) => p.frameLocator('iframe').locator('img[src*="landscape1"]') },
+			{ name: 'landscape2', locator: (p) => p.frameLocator('iframe').locator('img[src*="landscape2"]') },
+		];
+
+		// Snapshot every 4s for ~60s. Each tick captures the (syncIndex, visibleElement)
+		// tuple per device — both axes must hold lockstep for sync to be considered valid.
+		// P_high's end-wallclock fires at +45s from fetch.
+		type Snapshot = {
+			t: number;
+			tuples: Array<{ syncIndex: number | null; visible: string | null }>;
+			spread: number | null;       // syncIndex max - min
+			uniqueTuples: number;        // distinct (syncIndex, visible) tuples across devices
+		};
+		const snapshots: Snapshot[] = [];
 		for (let i = 0; i < SAMPLES; i++) {
 			await devices[0].page.waitForTimeout(SAMPLE_GAP_MS);
-			const values = devices.map((d) => getLatestSyncIndex(d));
-			const known = values.filter((v): v is number => v !== null);
+			const tuples = await Promise.all(
+				devices.map(async (d) => ({
+					syncIndex: getLatestSyncIndex(d),
+					visible: await getVisibleElement(d.page, candidates),
+				})),
+			);
+			const indices = tuples.map((t) => t.syncIndex);
+			const known = indices.filter((v): v is number => v !== null);
 			const spread = known.length === devices.length ? Math.max(...known) - Math.min(...known) : null;
-			snapshots.push({ t: (i + 1) * SAMPLE_GAP_MS, values, spread });
+			const uniqueTuples = new Set(tuples.map((t) => `${t.syncIndex}|${t.visible}`)).size;
+			snapshots.push({ t: (i + 1) * SAMPLE_GAP_MS, tuples, spread, uniqueTuples });
 		}
 
 		// eslint-disable-next-line no-console
 		console.log(
 			'[wallclock-priority] snapshots:\n' +
 				snapshots
-					.map((s) => `  +${s.t}ms values=${JSON.stringify(s.values)} spread=${s.spread}`)
+					.map(
+						(s) =>
+							`  +${s.t}ms syncIndex=${JSON.stringify(s.tuples.map((t) => t.syncIndex))} ` +
+							`visible=${JSON.stringify(s.tuples.map((t) => t.visible))} ` +
+							`spread=${s.spread} uniqueTuples=${s.uniqueTuples}`,
+					)
 					.join('\n'),
 		);
 
@@ -83,7 +112,7 @@ test.describe('sync · wallclock-triggered priority transition [8ef7571]', () =>
 			expect(s.spread, `a device never reported a syncIndex by +${s.t}ms`).not.toBeNull();
 		}
 
-		// Persistent divergence is the 8ef7571 regression signature.
+		// Persistent syncIndex divergence is the 8ef7571 regression signature.
 		const divergent = snapshots.filter((s) => (s.spread as number) > SYNC_SPREAD_MAX);
 		expect(
 			divergent.length,
@@ -91,11 +120,23 @@ test.describe('sync · wallclock-triggered priority transition [8ef7571]', () =>
 				`(${divergent.map((s) => `+${s.t}ms=${s.spread}`).join(', ')})`,
 		).toBe(0);
 
+		// Combined-state lockstep: at every snapshot, the (syncIndex, visibleElement)
+		// tuples across the 3 devices must cluster into at most 2 distinct tuples
+		// (1 = perfect lockstep; 2 = at most one device mid-transition). 3 distinct
+		// tuples means at least one device's rendered state has drifted from its
+		// protocol state in a way that doesn't align with the others.
+		const tupleDivergent = snapshots.filter((s) => s.uniqueTuples > 2);
+		expect(
+			tupleDivergent.length,
+			`${tupleDivergent.length}/${snapshots.length} snapshots had >2 unique (syncIndex, visible) tuples ` +
+				`(${tupleDivergent.map((s) => `+${s.t}ms`).join(', ')})`,
+		).toBe(0);
+
 		// Player must have advanced past the initial syncIndex — proves it did
 		// not freeze, and in particular that the transition past the wallclock
 		// boundary actually happened.
 		const peak = Math.max(
-			...snapshots.flatMap((s) => s.values.filter((v): v is number => v !== null)),
+			...snapshots.flatMap((s) => s.tuples.map((t) => t.syncIndex).filter((v): v is number => v !== null)),
 		);
 		expect(peak, 'syncIndex never advanced — player froze through transition').toBeGreaterThan(
 			start.syncIndex,
