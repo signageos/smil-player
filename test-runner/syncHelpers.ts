@@ -4,10 +4,31 @@ import { DUID } from './config';
 
 export const DEFAULT_SYNC_SERVER_URL = 'https://sync.signage-cdn.com';
 
+/** Hostname substring used to filter sync-server WebSocket frames from any
+ * incidental WS traffic the page might open. Matches DEFAULT_SYNC_SERVER_URL. */
+const SYNC_WS_HOST_FILTER = 'sync.signage-cdn.com';
+
+/**
+ * One captured WebSocket frame on a SyncDevice. Buffer payloads are base64-
+ * encoded into `payload` and flagged with `isBinary: true`; text frames keep
+ * their string verbatim. `timestamp` is controller-side `Date.now()` at the
+ * moment Playwright fired the frame event.
+ */
+export interface WsFrame {
+	direction: 'sent' | 'received';
+	timestamp: number;
+	payload: string;
+	isBinary: boolean;
+	url: string;
+}
+
 export interface SyncDevice {
 	context: BrowserContext;
 	page: Page;
 	console: ReturnType<typeof createConsoleCollector>;
+	/** All WebSocket frames captured from sync-server connections opened by
+	 * this device's page. Populated automatically by `createSyncGroup`. */
+	wsFrames: WsFrame[];
 	duid: string;
 	deviceId: string;
 }
@@ -43,6 +64,35 @@ export async function createSyncGroup(
 		const context = await browser.newContext({ viewport, bypassCSP: true });
 		const page = await context.newPage();
 		const collector = createConsoleCollector(page);
+		// WebSocket frame capture. Listener attaches before page.goto so the
+		// sync-server WS opened later by the player (after connectSyncSafe) is
+		// caught from its first frame. Filter by host to ignore incidental WS
+		// traffic. Buffer payloads are base64-encoded; text payloads pass through.
+		const wsFrames: WsFrame[] = [];
+		page.on('websocket', (ws) => {
+			if (!ws.url().includes(SYNC_WS_HOST_FILTER)) return;
+			const url = ws.url();
+			ws.on('framesent', (event) => {
+				const payload = event.payload;
+				wsFrames.push({
+					direction: 'sent',
+					timestamp: Date.now(),
+					payload: typeof payload === 'string' ? payload : payload.toString('base64'),
+					isBinary: typeof payload !== 'string',
+					url,
+				});
+			});
+			ws.on('framereceived', (event) => {
+				const payload = event.payload;
+				wsFrames.push({
+					direction: 'received',
+					timestamp: Date.now(),
+					payload: typeof payload === 'string' ? payload : payload.toString('base64'),
+					isBinary: typeof payload !== 'string',
+					url,
+				});
+			});
+		});
 		await context.addInitScript(
 			(cfg: {
 				smilUrl: string;
@@ -72,7 +122,7 @@ export async function createSyncGroup(
 			},
 		);
 		await page.goto(`${emulatorUrl}/?duid=${duid}`);
-		devices.push({ context, page, console: collector, duid, deviceId });
+		devices.push({ context, page, console: collector, wsFrames, duid, deviceId });
 		if (i < deviceCount - 1) {
 			await new Promise((r) => setTimeout(r, launchStaggerMs));
 		}
