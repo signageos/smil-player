@@ -9,6 +9,7 @@ import {
 	assertBroadcastReceiptSpread,
 	assertFrameContentEquality,
 } from './syncAssertions';
+import { recordSkew } from '../../tools/record-sync-skew.mjs';
 
 // Group C regression test for cycle-wrap boundary bugs.
 //
@@ -80,11 +81,13 @@ test.describe('sync · cycle-wrap boundary [7cda9a4, a517e8d, dde1c2f]', () => {
 					label: `cycle ${c} ${step.label}`,
 					timeoutMs: step.timeoutMs,
 				});
-				measured.push({
-					cycle: c,
-					label: step.label,
+				const offsets = skew.timestamps.map((t) => t - skew.minTs);
+				measured.push({ cycle: c, label: step.label, skewMs: skew.skewMs, offsets });
+				recordSkew({
+					test: testInfo.title,
+					label: `cycle ${c} ${step.label}`,
 					skewMs: skew.skewMs,
-					offsets: skew.timestamps.map((t) => t - skew.minTs),
+					offsets,
 				});
 			}
 		}
