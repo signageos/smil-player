@@ -82,19 +82,28 @@ export async function assertAllDevicesHide(
  *    "<region>-<syncIndex>-ack-<type>" — match "-(\\d+)-ack-".
  *  - ACK / coordination keys like "...-<syncIndex>-ack-finished" in slaves too.
  */
-const SYNC_INDEX_PATTERNS: RegExp[] = [
+export const SYNC_INDEX_PATTERNS: RegExp[] = [
 	/\bsyncIndex=(\d+)\b/, // literal (timedDebug)
 	/-(\d+)-ack-(?:prepared|playing|finished)\b/, // ACK key used by both roles
 	/Broadcasted sync message:.*?\s(\d+)\s\[[\d-]+\]/, // master broadcast arg tail
 ];
 
+/** Extract a syncIndex from a single log line. Returns the first match across
+ * SYNC_INDEX_PATTERNS in declaration order, or null if none match. Separated
+ * from `getLatestSyncIndex` so the regex contract can be unit-tested. */
+export function extractSyncIndex(text: string): number | null {
+	for (const p of SYNC_INDEX_PATTERNS) {
+		const m = text.match(p);
+		if (m) return parseInt(m[1], 10);
+	}
+	return null;
+}
+
 export function getLatestSyncIndex(dev: SyncDevice): number | null {
 	const msgs = dev.console.messages;
 	for (let i = msgs.length - 1; i >= 0; i--) {
-		for (const p of SYNC_INDEX_PATTERNS) {
-			const m = msgs[i].text.match(p);
-			if (m) return parseInt(m[1], 10);
-		}
+		const v = extractSyncIndex(msgs[i].text);
+		if (v !== null) return v;
 	}
 	return null;
 }
@@ -118,15 +127,8 @@ export async function waitForSyncIndexAgreement(
 		const values = devices.map((d) => getLatestSyncIndex(d));
 		if (values.every((v) => v !== null) && values.every((v) => v === values[0])) {
 			const target = values[0] as number;
-			const extract = (text: string): number | null => {
-				for (const p of SYNC_INDEX_PATTERNS) {
-					const m = text.match(p);
-					if (m) return parseInt(m[1], 10);
-				}
-				return null;
-			};
 			const firstSeenTs = devices.map((d) => {
-				const hit = d.console.messages.find((m) => extract(m.text) === target);
+				const hit = d.console.messages.find((m) => extractSyncIndex(m.text) === target);
 				return hit ? hit.time : Date.now();
 			});
 			const minTs = Math.min(...firstSeenTs);
