@@ -50,13 +50,18 @@ export async function dispatchWidgetTrigger(page: Page, triggerData: string) {
 /**
  * Creates a console log collector. Attach to a page BEFORE navigation.
  * Returns live arrays and helper methods for querying collected messages.
+ * `maxMessages` caps the rolling buffer (default 10_000) to keep long-running
+ * tests from growing the array without bound. Errors are uncapped — they are
+ * expected to be rare and each one matters for diagnosis.
  */
-export function createConsoleCollector(page: Page) {
+export function createConsoleCollector(page: Page, opts: { maxMessages?: number } = {}) {
 	const messages: Array<{ level: string; text: string; time: number }> = [];
 	const errors: string[] = [];
+	const maxMessages = opts.maxMessages ?? 10_000;
 
 	page.on('console', (msg) => {
 		messages.push({ level: msg.type(), text: msg.text(), time: Date.now() });
+		if (messages.length > maxMessages) messages.shift();
 		if (msg.type() === 'error') errors.push(msg.text());
 	});
 	page.on('pageerror', (err) => errors.push(err.message));
