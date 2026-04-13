@@ -139,6 +139,38 @@ export async function waitForSyncIndexAgreement(
 	throw new Error(`Devices did not agree on syncIndex within ${timeoutMs}ms. Last: ${snapshot}`);
 }
 
+/**
+ * A named DOM-element candidate that can be checked for current visibility on a
+ * given device. Used by `getVisibleElement` to build the rendered-state half of
+ * the (syncIndex, visibleElement) snapshot.
+ */
+export interface ElementCandidate {
+	name: string;
+	locator: (p: Page) => Locator;
+}
+
+/**
+ * Snapshot helper: returns the *names* of currently-visible candidates on the
+ * page, joined with `+` if more than one is visible (briefly possible during a
+ * transition where the new element mounts before the old hides). Returns null
+ * if none are visible. Uses `isVisible()` (immediate; no polling) so it's safe
+ * to call inside a tight snapshot loop.
+ */
+export async function getVisibleElement(
+	page: Page,
+	candidates: ElementCandidate[],
+): Promise<string | null> {
+	const results = await Promise.all(
+		candidates.map(async (c) => ({
+			name: c.name,
+			visible: await c.locator(page).first().isVisible().catch(() => false),
+		})),
+	);
+	const visible = results.filter((r) => r.visible).map((r) => r.name);
+	if (visible.length === 0) return null;
+	return visible.join('+');
+}
+
 export function countSyncEvents(dev: SyncDevice, pattern: RegExp): number {
 	return dev.console.messages.filter((m) => pattern.test(m.text)).length;
 }
