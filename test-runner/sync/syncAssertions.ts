@@ -285,6 +285,20 @@ export async function assertSynchronizedTransition(
 // broadcast.
 // ============================================================================
 
+/** JSON.stringify with sorted object keys, so two semantically-equal values
+ * compare equal even if the producer emitted keys in different order. Handles
+ * nested objects recursively; arrays keep order. */
+function stableStringify(v: unknown): string {
+	return JSON.stringify(v, (_k, val) => {
+		if (val && typeof val === 'object' && !Array.isArray(val)) {
+			const out: Record<string, unknown> = {};
+			for (const k of Object.keys(val).sort()) out[k] = (val as Record<string, unknown>)[k];
+			return out;
+		}
+		return val;
+	});
+}
+
 /** Inner sync-coordination payload — the `value` object from a Socket.IO frame.
  * Kept loose because the sync library is closed-source and the schema may grow. */
 interface SyncValue {
@@ -543,9 +557,9 @@ export function assertFrameContentEquality(devices: SyncDevice[]): void {
 		if (lists.length < 2) continue;
 		const minCount = Math.min(...lists.map((l) => l.vals.length));
 		for (let i = 0; i < minCount; i++) {
-			const refJson = JSON.stringify(lists[0].vals[i]);
+			const refJson = stableStringify(lists[0].vals[i]);
 			for (let j = 1; j < lists.length; j++) {
-				const otherJson = JSON.stringify(lists[j].vals[i]);
+				const otherJson = stableStringify(lists[j].vals[i]);
 				if (otherJson !== refJson) {
 					violations.push(
 						`broadcast ${key} #${i}: ${lists[0].deviceId} and ${lists[j].deviceId} differ\n` +
