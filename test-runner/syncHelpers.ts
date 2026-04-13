@@ -41,6 +41,12 @@ export interface SyncGroupOptions {
 	launchStaggerMs?: number;
 	emulatorUrl?: string;
 	viewport?: { width: number; height: number };
+	/** Hard cap on per-device captured WS frames. Default 20_000 handles ~10 min
+	 * of typical sync traffic; longer tests should raise or disable this. */
+	wsFramesMaxLen?: number;
+	/** Hard cap on collected console messages per device. Default 10_000 keeps
+	 * typical 1–2 min sync runs well within memory; raise for long-running tests. */
+	consoleMaxMessages?: number;
 }
 
 export async function createSyncGroup(
@@ -55,6 +61,8 @@ export async function createSyncGroup(
 		launchStaggerMs = 1500,
 		emulatorUrl = 'http://localhost:8090',
 		viewport = { width: 1080, height: 1920 },
+		wsFramesMaxLen = 20_000,
+		consoleMaxMessages = 10_000,
 	} = opts;
 
 	const devices: SyncDevice[] = [];
@@ -63,7 +71,7 @@ export async function createSyncGroup(
 		const deviceId = `dev-${i}`;
 		const context = await browser.newContext({ viewport, bypassCSP: true });
 		const page = await context.newPage();
-		const collector = createConsoleCollector(page);
+		const collector = createConsoleCollector(page, { maxMessages: consoleMaxMessages });
 		// WebSocket frame capture. Listener attaches before page.goto so the
 		// sync-server WS opened later by the player (after connectSyncSafe) is
 		// caught from its first frame. Filter by host to ignore incidental WS
@@ -81,6 +89,7 @@ export async function createSyncGroup(
 					isBinary: typeof payload !== 'string',
 					url,
 				});
+				if (wsFrames.length > wsFramesMaxLen) wsFrames.shift();
 			});
 			ws.on('framereceived', (event) => {
 				const payload = event.payload;
@@ -91,6 +100,7 @@ export async function createSyncGroup(
 					isBinary: typeof payload !== 'string',
 					url,
 				});
+				if (wsFrames.length > wsFramesMaxLen) wsFrames.shift();
 			});
 		});
 		await context.addInitScript(
