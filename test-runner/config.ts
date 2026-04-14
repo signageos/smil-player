@@ -69,6 +69,7 @@ export function getSmilUrls(port: number = 3000) {
 		skipContentOnHttpStatus: `${base}/reporting/skipOnHttpStatus.smil`,
 		fallbackToPreviousPlaylist: `${base}/fallback-smil/fallbackToPrevious.smil`,
 		playModeOneSync: `${base}/syncFiles/playModeOneSync.smil`,
+		linearPlaylistAckParity: `${base}/syncFiles/linearPlaylistAckParity.smil`,
 		wallclockInflatedBounds: `${base}/syncFiles/wallclockInflatedBounds.smil`,
 		cycleWrapBoundary: `${base}/syncFiles/cycleWrapBoundary.smil`,
 		// Group D: served via /dynamic/ (fillWallclock substitutes priority windows).
