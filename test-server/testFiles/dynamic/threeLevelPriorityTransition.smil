@@ -1,0 +1,55 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/zones/files/img_1.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl repeatCount="indefinite">
+                    <!-- P1 highest: active at fetch, ends at +30 s -->
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="TLP_P1_BEGIN" end="TLP_P1_END">
+                            <seq repeatCount="indefinite">
+                                <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                    <!-- P2 middle: active at fetch, ends at +60 s (outlasts P1) -->
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="TLP_P2_BEGIN" end="TLP_P2_END">
+                            <seq repeatCount="indefinite">
+                                <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                    <!-- P3 lowest: always active. Image (not video) keeps the test
+                         insensitive to asset download latency — P3 takes over as soon
+                         as P2's wallclock end fires, not when a multi-MB video finishes
+                         downloading. -->
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="TLP_P3_BEGIN" end="TLP_P3_END">
+                            <seq repeatCount="indefinite">
+                                <img dur="3s" src="https://demo.signageos.io/smil/zones/files/img_1.jpg" region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>
