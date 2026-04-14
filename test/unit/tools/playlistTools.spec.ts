@@ -27,6 +27,7 @@ import {
 	getRegionInfo,
 	getStringToIntDefault,
 	orderJsonObject,
+	pickRandomOne,
 	processRandomPlayMode,
 	removeDigits,
 	removeLastArrayItem,
@@ -906,6 +907,63 @@ describe('Playlist tools component', () => {
 				video0: { src: 'a.mp4', regionInfo: { regionName: 'main' }, syncIndex: 7 },
 			};
 			expect(findFirstMediaDescendant(node)).to.deep.equal({ regionName: 'main', syncIndex: 7 });
+		});
+	});
+
+	describe('pickRandomOne nested-array handling', () => {
+		// Math.floor(0.5 * N) picks the middle index deterministically.
+		let origRandom: () => number;
+		beforeEach(() => { origRandom = Math.random; Math.random = () => 0.5; });
+		afterEach(() => { Math.random = origRandom; });
+
+		it('should return exactly one item when playable children are an array under a single key', () => {
+			const playlist = {
+				playMode: 'random_one',
+				seq: [
+					{ video: { src: 'a.mp4' } },
+					{ img: { src: 'b.jpg' } },
+					{ img: { src: 'c.jpg' } },
+				],
+			};
+			const result = pickRandomOne(playlist) as any;
+			// Picked index = floor(0.5 * 3) = 1 → the middle element. Assert the
+			// returned array contains exactly that one element, NOT the other two.
+			expect(result.seq).to.deep.equal([{ img: { src: 'b.jpg' } }]);
+		});
+
+		it('should preserve non-playable sibling keys (playMode, begin, etc.)', () => {
+			const playlist = {
+				playMode: 'random_one',
+				begin: 'wallclock(2025-01-01)',
+				seq: [{ video: { src: 'a.mp4' } }, { img: { src: 'b.jpg' } }],
+			};
+			const result = pickRandomOne(playlist) as any;
+			expect(result.playMode).to.be.equal('random_one');
+			expect(result.begin).to.be.equal('wallclock(2025-01-01)');
+			expect(result.seq).to.have.length(1);
+		});
+
+		it('should return the single item when the array has only one entry', () => {
+			const playlist = {
+				playMode: 'random_one',
+				seq: [{ video: { src: 'only.mp4' } }],
+			};
+			const result = pickRandomOne(playlist) as any;
+			expect(result.seq).to.deep.equal([{ video: { src: 'only.mp4' } }]);
+		});
+
+		it('should preserve existing flat-keys behavior (picks one distinct key)', () => {
+			const playlist = {
+				playMode: 'random_one',
+				img0: { src: 'a.jpg' },
+				video1: { src: 'b.mp4' },
+				img2: { src: 'c.jpg' },
+			};
+			const result = pickRandomOne(playlist) as any;
+			// Picked index = floor(0.5 * 3) = 1 → 'video1'
+			const keys = Object.keys(result).filter((k) => k !== 'playMode');
+			expect(keys).to.deep.equal(['video1']);
+			expect(result.video1).to.deep.equal({ src: 'b.mp4' });
 		});
 	});
 
