@@ -164,6 +164,18 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('OSC_LOW_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
             parsedFileString = parsedFileString.replace('OSC_LOW_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
             break;
+        case 'threeLevelPriorityTransition.smil':
+            // Group J sync regression — 3-level priority cascade.
+            // P1 active at fetch, ends at +30s → P2 takes over.
+            // P2 active at fetch, ends at +60s → P3 takes over. Two consecutive
+            // priority boundaries catch any residual state from the first transition.
+            parsedFileString = parsedFileString.replace('TLP_P1_BEGIN', `wallclock(R/${formatDate(moment().subtract(5, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('TLP_P1_END', `wallclock(R/${formatDate(moment().add(30, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('TLP_P2_BEGIN', `wallclock(R/${formatDate(moment().subtract(5, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('TLP_P2_END', `wallclock(R/${formatDate(moment().add(60, 'seconds'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('TLP_P3_BEGIN', `wallclock(R/${formatDate(moment().subtract(10, 'minute'))}/P1D)`);
+            parsedFileString = parsedFileString.replace('TLP_P3_END', `wallclock(R/${formatDate(moment().add(10, 'minute'))}/P1D)`);
+            break;
         case 'wallclockPriorityTransition.smil':
             // Group D sync regression — 8ef7571 (wallclock-triggered priority transition).
             // P_high active at fetch (begin=-5s), ends at +45s → wallclock-end fires

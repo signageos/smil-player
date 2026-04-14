@@ -72,6 +72,8 @@ export function getSmilUrls(port: number = 3000) {
 		cycleWrapBoundary: `${base}/syncFiles/cycleWrapBoundary.smil`,
 		// Group D: served via /dynamic/ (fillWallclock substitutes priority windows).
 		wallclockPriorityTransition: `${base}/dynamic/wallclockPriorityTransition.smil`,
+		// Group J: 3-level priority cascade (P1→P2→P3). Also served via /dynamic/.
+		threeLevelPriorityTransition: `${base}/dynamic/threeLevelPriorityTransition.smil`,
 		// Group E: served via /dynamic-refresh/ (time-bucket Last-Modified, constant body).
 		smilUpdateStability: `${base}/dynamic-refresh/smilUpdateStability.smil`,
 	};
