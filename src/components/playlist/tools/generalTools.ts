@@ -361,6 +361,61 @@ export function getNextElementToPlay(
 	return result;
 }
 
+/**
+ * Walks a playlist subtree and returns the first leaf media descendant's
+ * region + syncIndex. A leaf is any playable node carrying `regionInfo.regionName`
+ * and a numeric `syncIndex` (set by playlistDataPrepare). Structure wrappers
+ * (<seq>, <par>, <excl>, <priorityClass>) carry neither and are walked through.
+ *
+ * Used by the traverser to derive a deterministic sync key for playMode="one"
+ * parents whose children are structure wrappers rather than direct media —
+ * a one-level-deep lookup would miss the leaf and cause the cmd-playMode
+ * broadcast branch to be silently skipped.
+ */
+export function findFirstMediaDescendant(
+	node: { [key: string]: unknown } | undefined,
+): { regionName: string; syncIndex: number } | undefined {
+	if (!node || typeof node !== 'object') return undefined;
+	for (const key of Object.keys(node)) {
+		if (!randomPlaylistPlayableTagsRegex.test(key)) continue;
+		const val = node[key];
+		const candidates = Array.isArray(val) ? val : [val];
+		for (const c of candidates) {
+			if (!c || typeof c !== 'object') continue;
+			const regionName = (c as { regionInfo?: { regionName?: unknown } }).regionInfo?.regionName;
+			const syncIndex = (c as { syncIndex?: unknown }).syncIndex;
+			if (typeof regionName === 'string' && typeof syncIndex === 'number') {
+				return { regionName, syncIndex };
+			}
+			const nested = findFirstMediaDescendant(c as { [key: string]: unknown });
+			if (nested) return nested;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Given two per-region syncIndex snapshots taken before and after processing
+ * a playMode="one" parent's descendants, returns the per-region range of
+ * syncIndices assigned inside the subtree. Used by playlistDataPrepare to
+ * populate `synchronization.playModeSyncRanges` uniformly whether the media
+ * is a direct child of the playMode parent or nested one level deeper.
+ */
+export function computePlayModeSyncRanges(
+	before: { [regionName: string]: number },
+	after: { [regionName: string]: number },
+): { [regionName: string]: { start: number; end: number } } {
+	const ranges: { [regionName: string]: { start: number; end: number } } = {};
+	for (const region of Object.keys(after)) {
+		const b = before[region] ?? 0;
+		const a = after[region];
+		if (a > b) {
+			ranges[region] = { start: b + 1, end: a };
+		}
+	}
+	return ranges;
+}
+
 export function processRandomPlayMode(
 	playlist: { [key in string]: string },
 	randomPlaylistInfo: RandomPlaylist,

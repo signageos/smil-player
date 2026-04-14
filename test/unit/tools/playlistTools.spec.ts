@@ -11,8 +11,10 @@ import {
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import {
 	checkSlowDevice,
+	computePlayModeSyncRanges,
 	computeSyncIndex,
 	extractAdditionalInfo,
+	findFirstMediaDescendant,
 	generateBackupImagePlaylist,
 	generateElementId,
 	generateParentId,
@@ -857,6 +859,93 @@ describe('Playlist tools component', () => {
 			const info = {};
 			const result = getNextElementToPlay(playlist, info, 'parent1');
 			expect(result).to.deep.equal({ playMode: 'one' });
+		});
+	});
+
+	describe('findFirstMediaDescendant', () => {
+		it('should return regionName + syncIndex from a direct leaf media child', () => {
+			const node = {
+				playMode: 'one',
+				video0: { src: 'a.mp4', regionInfo: { regionName: 'main' }, syncIndex: 2 },
+				img1: { src: 'b.jpg', regionInfo: { regionName: 'main' }, syncIndex: 3 },
+			};
+			expect(findFirstMediaDescendant(node)).to.deep.equal({ regionName: 'main', syncIndex: 2 });
+		});
+
+		it('should walk into an array-valued structure-tag child (nested seq case)', () => {
+			const node = {
+				playMode: 'one',
+				seq: [
+					{ video0: { src: 'a.mp4', regionInfo: { regionName: 'main' }, syncIndex: 2 } },
+					{ img1: { src: 'b.jpg', regionInfo: { regionName: 'main' }, syncIndex: 3 } },
+				],
+			};
+			expect(findFirstMediaDescendant(node)).to.deep.equal({ regionName: 'main', syncIndex: 2 });
+		});
+
+		it('should walk past an empty wrapper to reach the first leaf', () => {
+			const node = {
+				seq: [
+					{},
+					{ video0: { src: 'a.mp4', regionInfo: { regionName: 'side' }, syncIndex: 5 } },
+				],
+			};
+			expect(findFirstMediaDescendant(node)).to.deep.equal({ regionName: 'side', syncIndex: 5 });
+		});
+
+		it('should return undefined when no media descendant exists', () => {
+			expect(findFirstMediaDescendant({ playMode: 'one' })).to.be.undefined;
+			expect(findFirstMediaDescendant(undefined as any)).to.be.undefined;
+			expect(findFirstMediaDescendant({ seq: [{}] })).to.be.undefined;
+		});
+
+		it('should skip non-playable keys when searching for a leaf', () => {
+			const node = {
+				begin: 'wallclock(2025-01-01)',
+				end: 'wallclock(2026-01-01)',
+				video0: { src: 'a.mp4', regionInfo: { regionName: 'main' }, syncIndex: 7 },
+			};
+			expect(findFirstMediaDescendant(node)).to.deep.equal({ regionName: 'main', syncIndex: 7 });
+		});
+	});
+
+	describe('computePlayModeSyncRanges', () => {
+		it('should record a single-region delta as one range', () => {
+			const before = { main: 1 };
+			const after = { main: 4 };
+			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+				main: { start: 2, end: 4 },
+			});
+		});
+
+		it('should record separate ranges per region when multiple regions advance', () => {
+			const before = { main: 1, side: 5 };
+			const after = { main: 3, side: 8 };
+			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+				main: { start: 2, end: 3 },
+				side: { start: 6, end: 8 },
+			});
+		});
+
+		it('should skip regions with no index advance', () => {
+			const before = { main: 4, side: 2 };
+			const after = { main: 4, side: 5 };
+			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+				side: { start: 3, end: 5 },
+			});
+		});
+
+		it('should treat a region absent from the before snapshot as starting at 0', () => {
+			const before = { main: 2 };
+			const after = { main: 2, side: 3 };
+			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+				side: { start: 1, end: 3 },
+			});
+		});
+
+		it('should return an empty object when nothing advanced', () => {
+			expect(computePlayModeSyncRanges({ main: 4 }, { main: 4 })).to.deep.equal({});
+			expect(computePlayModeSyncRanges({}, {})).to.deep.equal({});
 		});
 	});
 
