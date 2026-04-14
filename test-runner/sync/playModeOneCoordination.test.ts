@@ -188,11 +188,15 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 		// Let the last broadcast settle across receivers before inspecting WS state.
 		await devices[0].page.waitForTimeout(500);
 		assertFrameCountSymmetry(devices);
-		// playMode=one observed deficit: ack-prepared ~78 %, ack-playing ~62 %,
-		// ack-finished ~57 % of master cmd sends. Slaves don't always ACK cmds
-		// whose target element is already superseded by the next cycle's advance.
-		// Widen to 40 % to accept the scenario's protocol shape while still
-		// catching gross regressions.
+		// This fixture wraps syncIndex every cycle (<seq repeatCount="indefinite">
+		// around the inner playMode seq). Wraps trigger slave resyncs via
+		// isWraparoundScenario (smilElementDecisions.ts:130-156); during the
+		// resync skip, slaves don't ACK elements they're passing through —
+		// legitimate protocol behaviour, not a bug. Empirically 60-67 % of
+		// master cmds get ACKed per slave; 40 % tolerance absorbs that with
+		// margin. The separate `linearPlaylistAckParity` test guards non-wrap
+		// ACK parity at 5 % tolerance, so regressions that leak ACKs outside
+		// the wrap window still fail loudly.
 		assertSyncMessageInventory(devices, { ackCountTolerancePct: 0.4 });
 		assertBroadcastReceiptSpread(devices);
 		assertFrameContentEquality(devices);
