@@ -196,5 +196,60 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 		assertSyncMessageInventory(devices, { ackCountTolerancePct: 0.4 });
 		assertBroadcastReceiptSpread(devices);
 		assertFrameContentEquality(devices);
+
+		// ------------------------------------------------------------------
+		// Option-C guardrails — fail hard if the playMode=one coordination
+		// path (fixed in the commits below) ever regresses to "silently
+		// skipped" without surface-level sync drift:
+		//
+		//  • 5ab5829 — getNextElementToPlay array handling. If reverted, the
+		//    middle seq plays all three children per outer iteration; the
+		//    visible sequence is indistinguishable but cycle-count semantics
+		//    diverge.
+		//  • cc9d6c5 — traverser regionName walk + data-prepare snapshot-delta
+		//    range tracking. If reverted, cmd-playMode broadcasts cease
+		//    entirely and [prepare] stored playMode range never logs.
+		// ------------------------------------------------------------------
+
+		// Part 2 catcher: playModeSyncRanges is populated only when the
+		// playlistDataPrepare snapshot-delta tracker actually fires for this
+		// SMIL shape. Before cc9d6c5 this log never appeared for nested-seq
+		// children.
+		const storedRangeMax = Math.max(
+			...devices.map((d) => d.console.count('[prepare] stored playMode range')),
+		);
+		expect(
+			storedRangeMax,
+			'no device logged `[prepare] stored playMode range` — playModeSyncRanges tracker stopped entering the media branch for the nested-seq shape',
+		).toBeGreaterThan(0);
+
+		// Part 1 master-side catcher: the master's coordinatePlayModeSync
+		// branch actually runs. Before cc9d6c5 the `if (regionName)` guard
+		// was silently false because regionName was extracted from a non-leaf
+		// wrapper, so no cmd-playMode went on the wire.
+		const cmdPlayModeMax = Math.max(
+			...devices.map((d) => d.console.count('Master sent cmd-playMode')),
+		);
+		expect(
+			cmdPlayModeMax,
+			'no device logged `Master sent cmd-playMode` — the coordinatePlayModeSync master path appears to be silently skipped',
+		).toBeGreaterThan(0);
+
+		// Part 1 slave-side catcher: at least one slave consumed a cmd-playMode
+		// either via the stored-message fast path or by overriding its local
+		// previousIndex on receipt. If master broadcasts but slaves ignore,
+		// devices stay in lockstep only by parallel incrementing; this
+		// assertion still fires regardless of whether the stored-message path
+		// or the live-listener path wins the race.
+		const slaveConsumedMax = Math.max(
+			...devices.map((d) =>
+				d.console.count('Slave overrode previousIndex')
+				+ d.console.count('Found stored cmd-playMode'),
+			),
+		);
+		expect(
+			slaveConsumedMax,
+			'no device logged slave-side playMode consumption (`Slave overrode previousIndex` or `Found stored cmd-playMode`) — slaves may be ignoring master broadcasts',
+		).toBeGreaterThan(0);
 	});
 });

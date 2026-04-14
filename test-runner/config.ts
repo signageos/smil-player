@@ -61,6 +61,7 @@ export function getSmilUrls(port: number = 3000) {
 		crossfadeTransition: `${base}/transitions/simpleCrossfade.smil`,
 		billboardTransition: `${base}/transitions/simpleBillboard.smil`,
 		playModeOne: `${base}/playback/playModeOne.smil`,
+		playModeOneFiniteRepeat: `${base}/playback/playModeOneFiniteRepeat.smil`,
 		queryStringMedia: `${base}/playback/queryStringMedia.smil`,
 		triggersMouseDuration: `${base}/triggers/triggersMouseDuration.smil`,
 		triggersCrossCancel: `${base}/triggers/triggersCrossCancel.smil`,
