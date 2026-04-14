@@ -328,10 +328,37 @@ export function getNextElementToPlay(
 		};
 	}
 	const localPlaylist = cloneDeep(playlist);
-	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
-	const picked = playableParts[randomPlaylistInfo[parent].previousIndex++ % playableParts.length];
-	const diff = difference(playableParts, [picked]);
-	return omit(localPlaylist, diff);
+	const playableKeys = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
+
+	// xml2js collapses duplicate structure-tag siblings (<seq>, <par>, ...) under
+	// a single key with an array value. Flatten array items into individual slots
+	// so playMode="one" cycles per child, not per key.
+	const slots: { key: string; itemIndex: number | null }[] = [];
+	for (const key of playableKeys) {
+		const val = localPlaylist[key];
+		if (Array.isArray(val)) {
+			for (let i = 0; i < val.length; i++) {
+				slots.push({ key, itemIndex: i });
+			}
+		} else {
+			slots.push({ key, itemIndex: null });
+		}
+	}
+
+	if (slots.length === 0) {
+		return localPlaylist;
+	}
+
+	const pickedSlot = slots[randomPlaylistInfo[parent].previousIndex++ % slots.length];
+
+	const dropKeys = playableKeys.filter((k) => k !== pickedSlot.key);
+	const result = omit(localPlaylist, dropKeys) as { [key: string]: unknown };
+
+	if (pickedSlot.itemIndex !== null) {
+		const arr = result[pickedSlot.key] as unknown[];
+		result[pickedSlot.key] = [arr[pickedSlot.itemIndex]];
+	}
+	return result;
 }
 
 export function processRandomPlayMode(
