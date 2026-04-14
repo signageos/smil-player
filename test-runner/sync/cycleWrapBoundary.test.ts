@@ -1,4 +1,4 @@
-import { test } from '../fixtures';
+import { test, expect } from '../fixtures';
 import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '../syncHelpers';
 import {
 	waitForMasterElection,
@@ -8,8 +8,24 @@ import {
 	assertSyncMessageInventory,
 	assertBroadcastReceiptSpread,
 	assertFrameContentEquality,
+	countSyncEvents,
 } from './syncAssertions';
 import { recordSkew } from '../../tools/record-sync-skew.mjs';
+
+// Per-cycle cmd-prepare clear-event bound. dde1c2f's guard restricts
+// cycle-wrap detection to state === 'prepared'; pre-fix, a finish(N) after
+// prepare(N+1) would trigger spurious wrap cleanup mid-cycle. The current
+// Group C skew assertions only catch regressions through their downstream
+// effect (transitions eventually drift past 500 ms). This direct count
+// bounds at ≤ 1 clear per wrap × 3 cycles = 3 clears per device; an
+// over-count means finish-after-prepare is triggering spurious cleanup.
+//
+// Log sentinel: SyncGroup.ts:138 `debug('[syncGroup] cleared sync-coordination:
+// group=%s, key=%s', ...)` with key = `sync-coord-cmd-prepare-<region>`.
+// Playwright's msg.text() on a debug(...) call preserves the format string;
+// the key (containing "cmd-prepare") appears later in the line as the %s arg.
+const CMD_PREPARE_CLEAR_RE = /cleared sync-coordination.*cmd-prepare/;
+const MAX_CMD_PREPARE_CLEARS_PER_3_CYCLES = 3;
 
 // Group C regression test for cycle-wrap boundary bugs.
 //
@@ -106,5 +122,24 @@ test.describe('sync · cycle-wrap boundary [7cda9a4, a517e8d, dde1c2f]', () => {
 		assertSyncMessageInventory(devices);
 		assertBroadcastReceiptSpread(devices);
 		assertFrameContentEquality(devices);
+
+		// dde1c2f direct sensor: at most one cmd-prepare clear per cycle wrap.
+		// The test runs 3 cycles → ≤ 3 clears per device. An over-count means
+		// finish-after-prepare is triggering spurious cleanup mid-cycle.
+		// Only slaves clear cmd-prepare in their local state (the master is
+		// the producer, not a receiver), so 0 on the master is expected;
+		// we require at least one slave to have a positive count so the
+		// assertion isn't silently vacuous if the log sentinel shifts.
+		const clearCounts = devices.map((d) => countSyncEvents(d, CMD_PREPARE_CLEAR_RE));
+		// eslint-disable-next-line no-console
+		console.log(`[cycle-wrap] cmd-prepare clears per device: [${clearCounts.join(', ')}]`);
+		expect(
+			Math.max(...clearCounts),
+			`cmd-prepare clears per device: [${clearCounts.join(', ')}], max exceeds ${MAX_CMD_PREPARE_CLEARS_PER_3_CYCLES} (dde1c2f watchdog)`,
+		).toBeLessThanOrEqual(MAX_CMD_PREPARE_CLEARS_PER_3_CYCLES);
+		expect(
+			Math.max(...clearCounts),
+			`no device reported any cmd-prepare clears — regex drifted from the actual log format (expected 2–3 per slave across 3 cycles)`,
+		).toBeGreaterThan(0);
 	});
 });
