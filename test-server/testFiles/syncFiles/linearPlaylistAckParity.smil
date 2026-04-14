@@ -1,0 +1,53 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- 20 linear elements, 3s each = 60s single pass. The
+                     observation window in the test is capped before the
+                     wrap so no wrap-induced resync skews the ACK count.
+                     Startup ACK-drop (slaves catching up during first few
+                     elements) is amortised across a larger cmd count so
+                     the steady-state tolerance can stay tight. -->
+                <seq repeatCount="indefinite">
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg" region="main" fit="fill"/>
+                    <img dur="3s" src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg" region="main" fit="fill"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>
