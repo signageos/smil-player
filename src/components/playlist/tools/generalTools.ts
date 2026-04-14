@@ -303,16 +303,23 @@ export function shuffleObject(playlist: { [key in string]: unknown }): { [key in
 export function pickRandomOne(playlist: { [key in string]: unknown }) {
 	const localPlaylist = cloneDeep(playlist);
 	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
-	let picked = playableParts[Math.floor(Math.random() * playableParts.length)];
-	// case playmode is set seq/par containing other seq/par tags and not directly img, video etc...
+	const picked = playableParts[Math.floor(Math.random() * playableParts.length)];
+	// Array case: xml2js collapses duplicate structure-tag siblings (<seq>, <par>)
+	// under one key. Pick one array item and drop the rest; retain the picked key
+	// holding a single-element array so downstream code that assumes the tag is
+	// present stays happy. (The previous implementation used omit with path
+	// `seq[i]` + filter-truthy, which inverted the semantics: it dropped ONE
+	// random item and kept the rest, producing N-1 instead of 1.)
 	if (Array.isArray(localPlaylist[picked])) {
-		const pickedWithIndex = `${picked}[${Math.floor(
-			Math.random() * (localPlaylist[picked] as Array<{ [key in string]: unknown }>).length,
-		)}]`;
-		const finalObject: { [key in string]: unknown } = omit(localPlaylist, pickedWithIndex);
-		finalObject[picked] = (finalObject[picked] as Array<{ [key in string]: unknown }>).filter((elem) => elem);
-		return finalObject;
+		const arr = localPlaylist[picked] as Array<{ [key in string]: unknown }>;
+		const pickedIdx = Math.floor(Math.random() * arr.length);
+		const diff = difference(playableParts, [picked]);
+		const result = omit(localPlaylist, diff) as { [key: string]: unknown };
+		result[picked] = [arr[pickedIdx]];
+		return result;
 	}
+	// Flat case: multiple distinct playable keys (e.g. video0 + img1). Keep the
+	// picked key, drop the others.
 	const diff = difference(playableParts, [picked]);
 	return omit(localPlaylist, diff);
 }
