@@ -747,6 +747,8 @@ describe('Playlist tools component', () => {
 			const result2 = getNextElementToPlay(playlist, randomPlaylistInfo, 'parent1');
 			const keys1 = Object.keys(result1).filter((k) => k !== 'playMode');
 			const keys2 = Object.keys(result2).filter((k) => k !== 'playMode');
+			expect(keys1[0]).to.be.equal('img');
+			expect(keys2[0]).to.be.equal('video');
 			expect(keys1[0]).to.not.be.equal(keys2[0]);
 		});
 
@@ -790,6 +792,71 @@ describe('Playlist tools component', () => {
 			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
+		});
+	});
+
+	describe('getNextElementToPlay nested-array handling', () => {
+		it('should pick one child per call when playable children are an array under a single key', () => {
+			const playlist = {
+				playMode: 'one',
+				seq: [
+					{ video: { src: 'a.mp4' } },
+					{ img: { src: 'b.jpg' } },
+					{ img: { src: 'c.jpg' } },
+				],
+			};
+			const info = {};
+			const r0 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r1 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r2 = getNextElementToPlay(playlist, info, 'parent1') as any;
+
+			expect(r0.seq).to.deep.equal([{ video: { src: 'a.mp4' } }]);
+			expect(r1.seq).to.deep.equal([{ img: { src: 'b.jpg' } }]);
+			expect(r2.seq).to.deep.equal([{ img: { src: 'c.jpg' } }]);
+		});
+
+		it('should wrap around after reaching the end of the array', () => {
+			const playlist = {
+				playMode: 'one',
+				seq: [{ video: { src: 'a.mp4' } }, { img: { src: 'b.jpg' } }],
+			};
+			const info = {};
+			getNextElementToPlay(playlist, info, 'parent1');
+			getNextElementToPlay(playlist, info, 'parent1');
+			const r3 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			expect(r3.seq).to.deep.equal([{ video: { src: 'a.mp4' } }]);
+		});
+
+		it('should cycle across mixed array-key + scalar-playable-key children in declaration order', () => {
+			const playlist = {
+				playMode: 'one',
+				seq: [{ img: { src: 'a.jpg' } }, { img: { src: 'b.jpg' } }],
+				video0: { src: 'c.mp4' },
+			};
+			const info = {};
+			const r0 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r1 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r2 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r3 = getNextElementToPlay(playlist, info, 'parent1') as any;
+
+			expect(r0).to.not.have.property('video0');
+			expect(r0.seq).to.deep.equal([{ img: { src: 'a.jpg' } }]);
+
+			expect(r1).to.not.have.property('video0');
+			expect(r1.seq).to.deep.equal([{ img: { src: 'b.jpg' } }]);
+
+			expect(r2).to.not.have.property('seq');
+			expect(r2.video0).to.deep.equal({ src: 'c.mp4' });
+
+			expect(r3).to.not.have.property('video0');
+			expect(r3.seq).to.deep.equal([{ img: { src: 'a.jpg' } }]);
+		});
+
+		it('should return the playlist unchanged when there are no playable children', () => {
+			const playlist = { playMode: 'one' };
+			const info = {};
+			const result = getNextElementToPlay(playlist, info, 'parent1');
+			expect(result).to.deep.equal({ playMode: 'one' });
 		});
 	});
 
