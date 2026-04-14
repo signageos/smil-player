@@ -5,7 +5,7 @@ import { SMILFileObject } from '../../../models/filesModels';
 import { IStorageUnit, IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
+import { computePlayModeSyncRanges, computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -45,18 +45,27 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		smilUrl: string,
 		isSpecial: boolean = false,
 		specialName: string = '',
+		underPlayModeParent: boolean = false,
 	): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
 		let localRegionSyncIndex: { [key: string]: number } = {};
 
-		// Track playMode=one syncIndex ranges for resync target computation
-		const isPlayModeParent = !isNil((playlist as any)?.playMode)
-			&& String((playlist as any).playMode).toLowerCase() === 'one';
-		let playModeRangeStart: number | undefined;
-		let playModeRangeEnd: number | undefined;
-		let playModeRegionName: string | undefined;
+		// Track playMode=one syncIndex ranges via a per-region snapshot of
+		// globalRegionSyncIndex taken at the outermost playMode parent. The delta
+		// after processing the subtree captures every media syncIndex assigned
+		// inside, regardless of whether media is a direct child or nested inside
+		// structure wrappers (<seq>, <par>). `underPlayModeParent` suppresses
+		// snapshotting at nested playMode parents so the outer range is not
+		// double-counted or split.
+		const isThisPlayMode = !isNil((playlist as { playMode?: unknown })?.playMode)
+			&& String((playlist as { playMode?: unknown }).playMode).toLowerCase() === 'one';
+		const recordRange = isThisPlayMode && !underPlayModeParent && !isSpecial;
+		const snapshotBefore: { [regionName: string]: number } | undefined = recordRange
+			? { ...this.globalRegionSyncIndex }
+			: undefined;
+		const childUnderPlayMode = underPlayModeParent || isThisPlayMode;
 
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			specialName =
@@ -125,15 +134,6 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 							elem.regionInfo.regionName,
 						);
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
-
-						// Track playMode=one syncIndex range
-						if (isPlayModeParent) {
-							if (playModeRangeStart === undefined) {
-								playModeRangeStart = elem.syncIndex;
-								playModeRegionName = elem.regionInfo.regionName;
-							}
-							playModeRangeEnd = elem.syncIndex;
-						}
 					}
 
 					const mediaFile = (await this.sos.fileSystem.getFile({
@@ -186,25 +186,25 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				// reset widget expression for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName);
+				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName, childUnderPlayMode);
 			}
 		}
 
-		// Store completed playMode range
-		if (isPlayModeParent && playModeRangeStart !== undefined
-			&& playModeRangeEnd !== undefined && playModeRegionName
-			&& this.synchronization) {
-			if (!this.synchronization.playModeSyncRanges) {
-				this.synchronization.playModeSyncRanges = {};
+		// Record per-region playMode ranges from the snapshot delta.
+		if (snapshotBefore && this.synchronization) {
+			const deltas = computePlayModeSyncRanges(snapshotBefore, this.globalRegionSyncIndex);
+			if (Object.keys(deltas).length > 0) {
+				if (!this.synchronization.playModeSyncRanges) {
+					this.synchronization.playModeSyncRanges = {};
+				}
+				for (const [region, range] of Object.entries(deltas)) {
+					if (!this.synchronization.playModeSyncRanges[region]) {
+						this.synchronization.playModeSyncRanges[region] = [];
+					}
+					this.synchronization.playModeSyncRanges[region].push(range);
+					debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', region, range.start, range.end);
+				}
 			}
-			if (!this.synchronization.playModeSyncRanges[playModeRegionName]) {
-				this.synchronization.playModeSyncRanges[playModeRegionName] = [];
-			}
-			this.synchronization.playModeSyncRanges[playModeRegionName].push({
-				start: playModeRangeStart,
-				end: playModeRangeEnd,
-			});
-			debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
 		}
 	};
 

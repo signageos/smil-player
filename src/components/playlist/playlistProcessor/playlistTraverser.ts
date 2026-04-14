@@ -6,12 +6,12 @@ import { SMILMedia } from '../../../models/mediaModels';
 import { RandomPlaylist } from '../../../models/playlistModels';
 import {
 	debug,
+	findFirstMediaDescendant,
 	generateParentId,
 	getLastArrayItem,
 	processRandomPlayMode,
 	removeDigits,
 } from '../tools/generalTools';
-import { randomPlaylistPlayableTagsRegex } from '../../../enums/generalEnums';
 import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
@@ -533,27 +533,25 @@ export class PlaylistTraverser {
 						const playModeParentId = generateParentId('seq', valueElement);
 						debug('[traverser-seq] processing random play mode: parent=%s', playModeParentId);
 
-						// Coordinate playMode=one index BEFORE element selection
+						// Coordinate playMode=one index BEFORE element selection.
+						// Walks into nested structure-tag children so the nested-seq shape
+						// (xml2js collapses duplicate <seq> siblings into one array) still
+						// derives a deterministic region + first-leaf syncIndex for the
+						// sync key — a one-level-deep lookup would miss the leaf entirely.
 						if (valueElement.playMode.toLowerCase() === 'one' && this.config.shouldSync) {
-							// Extract region from first playable child for sync group lookup
-							const playableKey = Object.keys(valueElement).find((k) => randomPlaylistPlayableTagsRegex.test(k));
-							const firstChild = playableKey ? valueElement[playableKey] : undefined;
-							const regionName = (Array.isArray(firstChild) ? firstChild[0] : firstChild)?.regionInfo?.regionName;
-
-							if (regionName) {
+							const firstMedia = findFirstMediaDescendant(valueElement);
+							if (firstMedia) {
 								if (!this.control.randomPlaylist[playModeParentId]) {
 									this.control.randomPlaylist[playModeParentId] = { previousIndex: 0 };
 								}
 
-								// Build deterministic sync key from first child's syncIndex (identical on all devices)
-								// Hash-based playModeParentId can differ across devices due to runtime mutations
-								const firstChildSyncIndex = (Array.isArray(firstChild) ? firstChild[0] : firstChild)?.syncIndex;
-								const syncParentId = firstChildSyncIndex !== undefined
-									? `seq-playMode-${regionName}-${firstChildSyncIndex}`
-									: playModeParentId;
+								// Build deterministic sync key from first leaf's syncIndex (identical
+								// on all devices). Hash-based playModeParentId can differ across
+								// devices due to runtime mutations.
+								const syncParentId = `seq-playMode-${firstMedia.regionName}-${firstMedia.syncIndex}`;
 
 								const syncedIndex = await this.actions.coordinatePlayModeSync(
-									regionName,
+									firstMedia.regionName,
 									syncParentId,
 									playModeParentId,
 									this.control.randomPlaylist[playModeParentId].previousIndex,
