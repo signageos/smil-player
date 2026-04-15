@@ -12,6 +12,7 @@ import { SMILImage, SMILMediaNoVideo, SMILWidget, SosHtmlElement } from '../../.
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { ParsedTriggerCondition, TriggerEndless } from '../../../models/triggerModels';
+import { ListenerScope } from './listenerScope';
 import { SMILFileObject } from '../../../models/filesModels';
 import { copyQueryParameters, createVersionedUrl } from '../../files/tools';
 import { CssElementsPosition } from '../../../models/htmlModels';
@@ -324,13 +325,14 @@ export function addEventOnTriggerWidget(
 	elem: PlaylistElement,
 	triggerEndless: TriggerEndless,
 	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+	scope: ListenerScope,
 ): void {
 	for (let [key, value] of Object.entries(elem)) {
 		if (removeDigits(key) === 'ref') {
-			setupIframeEventListeners(get(value, 'id'), triggerEndless, triggerInfo);
+			setupIframeEventListeners(get(value, 'id'), triggerEndless, triggerInfo, scope);
 		}
 		if (isObject(value)) {
-			return addEventOnTriggerWidget(value, triggerEndless, triggerInfo);
+			return addEventOnTriggerWidget(value, triggerEndless, triggerInfo, scope);
 		}
 	}
 }
@@ -339,16 +341,16 @@ function setupIframeEventListeners(
 	iframeId: string,
 	triggerEndless: TriggerEndless,
 	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+	scope: ListenerScope,
 ) {
 	const iframe: any = document.getElementById(iframeId);
 	let iDoc = iframe.contentWindow || iframe.contentDocument;
 	if (iDoc.document) {
 		iDoc = iDoc.document;
-		iDoc.body.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+		scope.add(iDoc.body, SMILTriggersEnum.mouseEventType, async () => {
 			set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 		});
-
-		iDoc.body.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+		scope.add(iDoc.body, SMILTriggersEnum.touchEventType, async () => {
 			set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 		});
 	}
