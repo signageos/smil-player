@@ -32,7 +32,7 @@ export enum SMILUrls {
 	priorityStop = 'http://localhost:3000/dynamic/priorityStop.smil',
 	priorityPause = 'http://localhost:3000/dynamic/priorityPause.smil',
 	priorityDefer = 'http://localhost:3000/dynamic/priorityDefer.smil',
-	wallclockFuture = 'http://localhost:3000/dynamic/wallclockFuture.smil',
+	wallclockFuture = 'http://localhost:3000/wallclock/wallclockFuture.smil',
 	correctOrder = 'http://localhost:3000/playback/correctOrder.smil',
 	noAdditionalPar = 'http://localhost:3000/layout/noAdditionalPar.smil',
 	noAdditionalSeq = 'http://localhost:3000/layout/noAdditionalSeq.smil',

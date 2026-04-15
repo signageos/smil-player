@@ -1,26 +1,34 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createTestServer = createTestServer;
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const enums_1 = require("./enums");
 const localServerTools_1 = require("./localServerTools");
-function createTestServer(serverPort) {
-    if (serverPort === undefined) serverPort = enums_1.TestServer.port;
+/**
+ * Create a test server Express app on the given port.
+ * Returns an object with start() to begin listening.
+ */
+function createTestServer(serverPort = enums_1.TestServer.port) {
     const app = express();
     const port = serverPort;
     app.use(express.json());
+    // In-memory request count per file for the /dynamic-update/ endpoint
     const requestCounts = {};
+    // In-memory report capture for custom endpoint reporting tests
     const reportHistory = [];
+    // Configurable HTTP status codes for /status-check/ endpoint
     const statusConfig = {};
+    // Fallback SMIL config: returns valid SMIL for first N requests, then broken XML
     const fallbackConfig = {};
+    // Allow cross-origin requests from the emulator (localhost:8090)
     app.use((_req, res, next) => {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, POST');
         res.header('Access-Control-Allow-Headers', '*');
         next();
     });
+    // Reset server state between tests
     app.post('/reset', (_req, res) => {
         Object.keys(requestCounts).forEach(key => delete requestCounts[key]);
         reportHistory.length = 0;
@@ -28,8 +36,10 @@ function createTestServer(serverPort) {
         Object.keys(fallbackConfig).forEach(key => delete fallbackConfig[key]);
         res.json({ ok: true });
     });
+    /** Replace hardcoded localhost:3000 in SMIL content with actual port */
     function rewriteSmilPort(content) {
-        if (port === 3000) return content;
+        if (port === 3000)
+            return content;
         return content.replace(/localhost:3000/g, `localhost:${port}`);
     }
     app.get('/dynamic/:fileName', async (req, res) => {
@@ -40,9 +50,15 @@ function createTestServer(serverPort) {
         res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml' });
         res.send(fileString);
     });
+    // Stateful endpoint: tracks GET request count per file, returns incrementing Last-Modified
+    // header to trigger the player's SMIL update detection via ResourceChecker.
+    // Only GET requests increment the counter — HEAD requests (used by ResourceChecker to
+    // check for updates) return a stable Last-Modified based on the current count.
     app.head('/dynamic-update/:fileName', (req, res) => {
         const fileName = req.params.fileName;
         const count = requestCounts[fileName] || 1;
+        // After Phase 2 (count >= 2), return stable Last-Modified to prevent infinite reload cycle.
+        // Phase 1: varying Last-Modified triggers the first update detection.
         const lastModified = count >= 2
             ? new Date(2000000000000).toUTCString()
             : new Date(Date.now() + count * 1000).toUTCString();
@@ -55,15 +71,19 @@ function createTestServer(serverPort) {
         let fileString = await fs.readFile(`./${enums_1.TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
         fileString = localServerTools_1.fillWallclock(fileString, fileName, count);
         fileString = rewriteSmilPort(fileString);
+        // After Phase 2 (count >= 2), return stable Last-Modified matching HEAD to stop reloads.
         const lastModified = count >= 2
             ? new Date(2000000000000).toUTCString()
             : new Date(Date.now() + count * 1000).toUTCString();
         res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml', 'Last-Modified': lastModified, 'Cache-Control': 'no-cache, no-store' });
         res.send(fileString);
     });
-    // Time-bucket refresh endpoint for multi-device sync tests. Same body on
-    // every GET; Last-Modified advances in wall-clock buckets so all devices
-    // sharing this server refresh in lockstep (unlike /dynamic-update/).
+    // Time-bucket refresh endpoint for multi-device sync tests. Serves the same
+    // SMIL body on every GET; Last-Modified advances only after REFRESH_BUCKET_MS
+    // of wall-clock has elapsed since a fixed epoch and then stabilises again at
+    // REFRESH_STOP_AFTER_MS. All devices sharing the same test server see the
+    // same Last-Modified at any instant, so they refresh in lockstep (unlike
+    // /dynamic-update/ which is GET-count based).
     const REFRESH_BUCKET_MS = 10000;
     const REFRESH_STOP_AFTER_MS = 30000;
     const refreshOrigin = Date.now();
@@ -93,12 +113,16 @@ function createTestServer(serverPort) {
         });
         res.send(fileString);
     });
+    // Location header endpoint: returns 204 with Location header pointing to the actual static asset.
+    // Used for testing that the SMIL player correctly resolves media URLs via the
+    // location header fetch strategy (updateMechanism="location").
     app.all('/redirect/:fileName', (req, res) => {
         const fileName = req.params.fileName;
         const actualUrl = `http://localhost:${port}/assets/${fileName}`;
         res.set('Location', actualUrl);
         res.status(204).end();
     });
+    // --- Custom endpoint reporting: capture POST payloads, expose via GET ---
     app.post('/report', (req, res) => {
         reportHistory.push({ receivedAt: new Date().toISOString(), body: req.body });
         res.json({ ok: true });
@@ -106,6 +130,7 @@ function createTestServer(serverPort) {
     app.get('/report/history', (_req, res) => {
         res.json(reportHistory);
     });
+    // --- Configurable HTTP status for HEAD requests (skipContentOnHttpStatus tests) ---
     app.post('/status-config', (req, res) => {
         const { fileName, statusCode } = req.body;
         statusConfig[fileName] = statusCode;
@@ -120,6 +145,7 @@ function createTestServer(serverPort) {
             'Cache-Control': 'no-cache, no-store',
         }).end();
     });
+    // --- Fallback SMIL: valid for first N requests, then broken XML ---
     app.post('/fallback-config', (req, res) => {
         const { fileName, invalidAfterCount } = req.body;
         fallbackConfig[fileName] = { invalidAfterCount, count: 0 };
@@ -142,7 +168,7 @@ function createTestServer(serverPort) {
             res.send('THIS IS NOT VALID XML <broken>');
         }
         else {
-            let fileString = await fs.readFile(`./${enums_1.TestServer.testFilesPath}/dynamic/${fileName}`, 'utf8');
+            let fileString = await fs.readFile(`./${enums_1.TestServer.testFilesPath}/errorHandling/${fileName}`, 'utf8');
             fileString = rewriteSmilPort(fileString);
             res.set({
                 'Content-Disposition': `attachment; filename=\"${fileName}\"`,
@@ -152,20 +178,25 @@ function createTestServer(serverPort) {
             res.send(fileString);
         }
     });
-    if (port !== 3000) {
-        app.get(/\.smil$/, async (req, res, next) => {
-            const filePath = path.join(process.env.PWD, enums_1.TestServer.testFilesPath, req.path);
-            try {
-                let content = await fs.readFile(filePath, 'utf8');
-                content = rewriteSmilPort(content);
-                res.set('Content-type', 'text/xml');
-                res.send(content);
-            }
-            catch (_e) {
-                next();
-            }
-        });
-    }
+    // Serve .smil files from any folder with fillWallclock templating and port rewriting,
+    // so fixtures can live in whichever semantic folder makes sense regardless of whether
+    // they need wallclock substitution. fillWallclock is a no-op for filenames it doesn't
+    // recognise, so it's safe to apply universally. More specific routes registered above
+    // (/dynamic/, /dynamic-update/, /dynamic-refresh/, /fallback-smil/) still take precedence.
+    app.get(/\.smil$/, async (req, res, next) => {
+        const filePath = path.join(process.env.PWD, enums_1.TestServer.testFilesPath, req.path);
+        const fileName = path.basename(req.path);
+        try {
+            let content = await fs.readFile(filePath, 'utf8');
+            content = localServerTools_1.fillWallclock(content, fileName);
+            content = rewriteSmilPort(content);
+            res.set('Content-type', 'text/xml');
+            res.send(content);
+        }
+        catch (_a) {
+            next();
+        }
+    });
     app.use(express.static(path.join(process.env.PWD, enums_1.TestServer.testFilesPath)));
     return {
         start: () => {
@@ -181,7 +212,8 @@ function createTestServer(serverPort) {
         },
     };
 }
-// Standalone mode
+exports.createTestServer = createTestServer;
+// Standalone mode: run directly via `node test-server/localServer.js`
 if (require.main === module) {
     const port = parseInt(process.env.TEST_SERVER_PORT || String(enums_1.TestServer.port), 10);
     createTestServer(port).start();

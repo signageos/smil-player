@@ -191,7 +191,7 @@ export function createTestServer(serverPort: number = TestServer.port) {
 			res.set({ 'Content-type': 'text/xml', 'Cache-Control': 'no-cache, no-store' });
 			res.send('THIS IS NOT VALID XML <broken>');
 		} else {
-			let fileString = await fs.readFile(`./${TestServer.testFilesPath}/dynamic/${fileName}`, 'utf8');
+			let fileString = await fs.readFile(`./${TestServer.testFilesPath}/errorHandling/${fileName}`, 'utf8');
 			fileString = rewriteSmilPort(fileString);
 			res.set({
 				'Content-Disposition': `attachment; filename=\"${fileName}\"`,
@@ -202,20 +202,24 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		}
 	});
 
-	// Serve static .smil files with port rewriting (before express.static)
-	if (port !== 3000) {
-		app.get(/\.smil$/, async (req, res, next) => {
-			const filePath = path.join(process.env.PWD!, TestServer.testFilesPath, req.path);
-			try {
-				let content = await fs.readFile(filePath, 'utf8');
-				content = rewriteSmilPort(content);
-				res.set('Content-type', 'text/xml');
-				res.send(content);
-			} catch {
-				next();
-			}
-		});
-	}
+	// Serve .smil files from any folder with fillWallclock templating and port rewriting,
+	// so fixtures can live in whichever semantic folder makes sense regardless of whether
+	// they need wallclock substitution. fillWallclock is a no-op for filenames it doesn't
+	// recognise, so it's safe to apply universally. More specific routes registered above
+	// (/dynamic/, /dynamic-update/, /dynamic-refresh/, /fallback-smil/) still take precedence.
+	app.get(/\.smil$/, async (req, res, next) => {
+		const filePath = path.join(process.env.PWD!, TestServer.testFilesPath, req.path);
+		const fileName = path.basename(req.path);
+		try {
+			let content = await fs.readFile(filePath, 'utf8');
+			content = fillWallclock(content, fileName);
+			content = rewriteSmilPort(content);
+			res.set('Content-type', 'text/xml');
+			res.send(content);
+		} catch {
+			next();
+		}
+	});
 
 	app.use(express.static(path.join(process.env.PWD!, TestServer.testFilesPath)));
 
