@@ -49,9 +49,21 @@ export function getFileName(url: string) {
 		.extname(parsedUrl.pathname ?? url)
 		.replace(/[^\w\.\-]+/gi, '')
 		.substr(0, 10);
-	const sanitizedFileName = decodeURIComponent(fileName.substr(0, fileName.length - sanitizedExtname.length))
-		.replace(/[^\w\.\-]+/gi, '-')
-		.substr(0, 10);
+	const rawStem = fileName.substr(0, fileName.length - sanitizedExtname.length);
+	// decodeURIComponent throws URIError on malformed `%XX` sequences. This
+	// function is upstream of ~18 callers (storage keys, download paths,
+	// widget extraction), so letting the throw propagate would blow up
+	// large swaths of the file pipeline. Fall back to the raw stem —
+	// the sanitization below (.replace(/[^\w\.\-]+/gi, '-')) strips `%`
+	// characters down to `-`, so the output is still deterministic.
+	let decodedStem: string;
+	try {
+		decodedStem = decodeURIComponent(rawStem);
+	} catch (err) {
+		debug('[files] malformed %XX in URL stem, using raw: stem=%s, error=%O', rawStem.slice(0, 50), err);
+		decodedStem = rawStem;
+	}
+	const sanitizedFileName = decodedStem.replace(/[^\w\.\-]+/gi, '-').substr(0, 10);
 	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
 }
 
