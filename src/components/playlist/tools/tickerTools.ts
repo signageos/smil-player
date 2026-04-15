@@ -85,6 +85,15 @@ export function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttrib
 type TextChild = { element: HTMLSpanElement; left: number; width: number };
 
 export function startTickerAnimation(wrapperElement: HTMLElement, ticker: SMILTicker) {
+	// Idempotent start: if this ticker is already animating (e.g. the
+	// playlistProcessor guard at playlistProcessor.ts ~780 misses a state
+	// change and invokes us twice on the same ticker object), detach the
+	// prior setTimeout chain and drop its orphan text <span> children
+	// before building a fresh one. Without this the old chain keeps
+	// scheduling itself forever from its closed-over state and the old
+	// spans linger in the DOM — a slow memory + CPU leak.
+	stopTickerAnimation(ticker);
+
 	const texts = Array.isArray(ticker.text) ? ticker.text : [ticker.text];
 	const fontSizeOrNaN = Number.parseInt(String(ticker.fontSize), 10);
 	const fontSize = Number.isInteger(fontSizeOrNaN)
