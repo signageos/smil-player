@@ -39,6 +39,18 @@ describe('Files tools component', () => {
 			`https://butikstv.test.com/play/smil/234.smil?some=var&xxx=yyy`,
 			`filesystem:https://butikstv.tests.com/persistent/play/smil/234.smil?some=var&xxx=yyy`,
 			'',
+			// 4G regression: malformed %XX → must fall through to raw stem,
+			// not throw. decodeURIComponent('my%XXvideo') throws; the sanitize
+			// regex strips the `%` to `-`, so the output is still
+			// deterministic. Guards src/components/files/tools/index.ts:52.
+			'https://example.com/assets/my%XXvideo.mp4',
+			// Truncated %E (one-hex-digit escape) at end of stem — another
+			// common malformed-URL shape (e.g. a CDN response cut mid-UTF-8).
+			'https://example.com/assets/clip%E.mp4',
+			// URL with literal '?' in a fragment. The `#` consumes it so
+			// `parsedUrl.query` stays empty — the stem still derives from
+			// the pathname alone.
+			'https://example.com/assets/report.pdf#section-2?highlight=1',
 		];
 		const fileNames = [
 			'234_26f2f779.smil',
@@ -51,6 +63,13 @@ describe('Files tools component', () => {
 			'234_79ca0eb1.smil',
 			'234_03fd5246.smil',
 			'',
+			// Malformed %XX → rawStem fallback, `%` sanitized to `-`.
+			'my-XXvideo_684a0d8a.mp4',
+			// Truncated %E (one-hex-digit) → same path as malformed %XX.
+			'clip-E_6d3f9c49.mp4',
+			// Fragment with `?` inside is not a query string; checksum is
+			// the same as for the URL without the fragment.
+			'report_26538c14.pdf',
 		];
 
 		filesPaths.forEach((filePath, i) => {
