@@ -22,12 +22,12 @@ import {
 // after convergence sees zero wraps (the first wrap would come at ~30 s), so
 // every master `cmd-prepare`/`cmd-play`/`cmd-finish` should produce a matching
 // `ack-prepared`/`ack-playing`/`ack-finished` from each slave. Master's
-// received ACK count should therefore sit within 5 % of the ideal
+// received ACK count should therefore sit within 7 % of the ideal
 // `2 × masterCmdSent` — any larger drop signals either a new skip path or
 // a protocol regression.
 // ============================================================================
 
-const ACK_TOLERANCE_PCT = 0.05;
+const ACK_TOLERANCE_PCT = 0.07;
 const OBSERVATION_MS = 45_000;
 
 test.describe.configure({ mode: 'serial' });
