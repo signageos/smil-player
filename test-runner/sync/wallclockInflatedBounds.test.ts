@@ -115,7 +115,7 @@ test.describe('sync · wallclock-bounded resync [0484bc9, c34f811]', () => {
 		// Event-driven: returns as soon as per-device frame counts hold steady
 		// for quietMs, instead of a fixed 500 ms sleep that either wastes time
 		// on fast runs or races on slow-CI ACK arrivals.
-		await waitForWsQuiescence(devices, { quietMs: 300, maxWaitMs: 3_000 });
+		await waitForWsQuiescence(devices, { quietMs: 500, maxWaitMs: 3_000 });
 		assertFrameCountSymmetry(devices);
 		// Wallclock-gated fixture: slaves skip expired/future siblings, so
 		// master-broadcast cmd-* frames targeting those elements go unack'd.
