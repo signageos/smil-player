@@ -435,4 +435,52 @@ describe('Playlist tools component parseSmilSchedule tests', () => {
 		expect(Math.abs(responseTimeObject.timeToStart)).to.be.lessThan(MS_PER_SECOND);
 		expect(responseTimeObject.timeToEnd).to.be.not.eql(SMILScheduleEnum.neverPlay);
 	});
+
+	// ------------------------------------------------------------------
+	// Regression guards for the fix in src/components/playlist/tools/
+	// wallclockTools.ts (commit 49451eb): `computeScheduledDate` must
+	// NOT feed a NaN weekday hint into moment.isoWeekday(). Without the
+	// guard, `startDate.isoWeekday(NaN).format(...)` returns the string
+	// "Invalid date", which flows back as `moment("Invalid dateT12:00")
+	// .valueOf() = NaN`, silently corrupting timeToStart / timeToEnd.
+	//
+	// Inputs embed a non-digit `Z` in the weekday-digit slot (e.g.
+	// "+wZ" instead of "+w3"). extractDayInfo recognises the prefix
+	// (+/- plus 'w'), pulls the 3-char substring "+wZ" / "-wZ", and
+	// strips it from the time record — which stays clean as
+	// "2021-04-22T09:00:00". parseInt on the final char 'Z' then
+	// yields NaN, hitting the guard.
+	//
+	// With the guard applied, both hint-prefix branches skip and
+	// scheduling falls through to the no-weekday path. Expected output:
+	// - timeToStart: tomorrow 09:00 (≈23 h from the mocked now=10:00).
+	// - timeToEnd: today 12:00 absolute ms (the second
+	//   computeScheduledDate call uses `moment(nowDay)` at midnight as
+	//   startDate, so nowTime="10:00" <= scheduledTime="12:00" keeps
+	//   today's date rather than advancing by a day).
+	// ------------------------------------------------------------------
+
+	it('falls back gracefully when +w weekday hint has a non-digit char [4F regression]', async () => {
+		const testStartString = 'wallclock(R/2021-04-22+wZT09:00:00/P1D)';
+		const testEndString = 'wallclock(R/2021-04-22+wZT12:00:00/P1D)';
+
+		const result = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Number.isFinite(result.timeToStart), 'timeToStart must not be NaN').to.be.true;
+		expect(Number.isFinite(result.timeToEnd), 'timeToEnd must not be NaN').to.be.true;
+		expect(Math.abs(result.timeToStart - 23 * MS_PER_HOUR)).to.be.lessThan(MS_PER_SECOND);
+		expect(result.timeToEnd).to.eql(moment('2021-04-22T12:00:00').valueOf());
+	});
+
+	it('falls back gracefully when -w weekday hint has a non-digit char [4F regression]', async () => {
+		const testStartString = 'wallclock(R/2021-04-22-wZT09:00:00/P1D)';
+		const testEndString = 'wallclock(R/2021-04-22-wZT12:00:00/P1D)';
+
+		const result = parseSmilSchedule(testStartString, testEndString);
+
+		expect(Number.isFinite(result.timeToStart), 'timeToStart must not be NaN').to.be.true;
+		expect(Number.isFinite(result.timeToEnd), 'timeToEnd must not be NaN').to.be.true;
+		expect(Math.abs(result.timeToStart - 23 * MS_PER_HOUR)).to.be.lessThan(MS_PER_SECOND);
+		expect(result.timeToEnd).to.eql(moment('2021-04-22T12:00:00').valueOf());
+	});
 });
