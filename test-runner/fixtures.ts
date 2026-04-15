@@ -3,7 +3,23 @@ import { createConsoleCollector } from './helpers';
 import { createTestServer } from '../test-server/localServer';
 import { getSmilUrls, SmilUrlsMap } from './config';
 
-/** Fatal error patterns that should fail tests automatically */
+/**
+ * Fatal error patterns that fail any non-sync test automatically. Matched
+ * against console messages collected during the test (page.on('console') and
+ * page.on('pageerror') via `createConsoleCollector`). Only application-side
+ * uncaught errors should appear in this list — transient resource warnings
+ * or network 404s do not belong here.
+ *
+ * Tests with a known-safe error that happens to match one of these patterns
+ * can suppress it by appending to the per-test `allowedErrors` fixture
+ * option:
+ *
+ *   test.use({ allowedErrors: [/known-benign-substring/i] });
+ *
+ * Default is empty — i.e. every pattern below is fatal unless the test
+ * opts out. Keep that default empty unless you observe a recurring
+ * false-positive across many tests; per-test suppression is preferred.
+ */
 const FATAL_PATTERNS = [
 	/Uncaught TypeError/,
 	/Uncaught SyntaxError/,
