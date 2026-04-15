@@ -4,6 +4,7 @@ import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import {
 	setDefaultAwaitWallclock,
 	setDefaultAwaitConditional,
+	setElementDuration,
 } from '../../../src/components/playlist/tools/scheduleTools';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 
@@ -116,6 +117,47 @@ describe('scheduleTools direct function tests', () => {
 			expect(setDefaultAwaitConditional(element, 'player1', 'device-123')).to.equal(
 				SMILScheduleEnum.playImmediately,
 			);
+		});
+	});
+
+	describe('setElementDuration', () => {
+		it('returns infiniteDuration for literal "indefinite"', () => {
+			expect(setElementDuration('indefinite')).to.equal(SMILScheduleEnum.infiniteDuration);
+		});
+
+		it('returns defaultDuration when dur is undefined', () => {
+			expect(setElementDuration(undefined)).to.equal(SMILScheduleEnum.defaultDuration);
+		});
+
+		it('parses a plain numeric duration in seconds', () => {
+			expect(setElementDuration('5s')).to.equal(5000);
+		});
+
+		it('parses a decimal duration', () => {
+			expect(setElementDuration('5.5s')).to.equal(5500);
+		});
+
+		it('accepts the European comma as a decimal separator', () => {
+			// Some SMIL authoring tools emit "5,5s" instead of "5.5s".
+			expect(setElementDuration('5,5s')).to.equal(5500);
+		});
+
+		it('parses "0s" as a literal zero-millisecond duration', () => {
+			// Zero is a valid parsed value, distinct from defaultDuration.
+			// Callers that treat 0 as "unspecified" must handle that upstream.
+			expect(setElementDuration('0s')).to.equal(0);
+		});
+
+		it('falls back to defaultDuration for non-numeric input', () => {
+			expect(setElementDuration('abc')).to.equal(SMILScheduleEnum.defaultDuration);
+		});
+
+		it('strips a leading minus sign, so "-5s" parses as 5000ms', () => {
+			// Locks in current behaviour: the sanitizer's character class
+			// /[^0-9.]/g strips the `-`, so a negative duration collapses
+			// to its absolute value. SMIL has no concept of negative
+			// duration, so this degrades gracefully rather than throwing.
+			expect(setElementDuration('-5s')).to.equal(5000);
 		});
 	});
 });
