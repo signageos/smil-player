@@ -87,7 +87,39 @@ export async function addSyncDevice(
 	// sync-server WS opened later by the player (after connectSyncSafe) is
 	// caught from its first frame. Filter by host to ignore incidental WS
 	// traffic. Buffer payloads are base64-encoded; text payloads pass through.
+	//
+	// Buffer-pressure visibility: once captured frame count crosses 95 % of
+	// `wsFramesMaxLen` we warn once (room for one more burst before drops
+	// start), and once it actually wraps we warn once more. Both messages
+	// include the deviceId so a long sync test that loses early frames in
+	// silence is now self-diagnosing — bump `wsFramesMaxLen` via
+	// `addSyncDevice` / `createSyncGroup` opts for that test.
 	const wsFrames: WsFrame[] = [];
+	const warnAtLen = Math.floor(wsFramesMaxLen * 0.95);
+	let warnedNearCap = false;
+	let warnedOverflow = false;
+	const onPush = () => {
+		if (!warnedNearCap && wsFrames.length >= warnAtLen) {
+			warnedNearCap = true;
+			// eslint-disable-next-line no-console
+			console.warn(
+				`[syncHelpers] device ${deviceId} wsFrames at ${wsFrames.length}/${wsFramesMaxLen}`
+				+ ` (≥95 % capacity). Raise wsFramesMaxLen if this test needs the early frames preserved.`,
+			);
+		}
+		if (wsFrames.length > wsFramesMaxLen) {
+			if (!warnedOverflow) {
+				warnedOverflow = true;
+				// eslint-disable-next-line no-console
+				console.warn(
+					`[syncHelpers] device ${deviceId} wsFrames OVERFLOW (cap=${wsFramesMaxLen})`
+					+ ` — now dropping oldest frames FIFO. Downstream assertions over the buffer`
+					+ ` will only see the most recent ${wsFramesMaxLen} frames.`,
+				);
+			}
+			wsFrames.shift();
+		}
+	};
 	page.on('websocket', (ws) => {
 		if (!ws.url().includes(SYNC_WS_HOST_FILTER)) return;
 		const url = ws.url();
@@ -100,7 +132,7 @@ export async function addSyncDevice(
 				isBinary: typeof payload !== 'string',
 				url,
 			});
-			if (wsFrames.length > wsFramesMaxLen) wsFrames.shift();
+			onPush();
 		});
 		ws.on('framereceived', (event) => {
 			const payload = event.payload;
@@ -111,7 +143,7 @@ export async function addSyncDevice(
 				isBinary: typeof payload !== 'string',
 				url,
 			});
-			if (wsFrames.length > wsFramesMaxLen) wsFrames.shift();
+			onPush();
 		});
 	});
 	await context.addInitScript(
