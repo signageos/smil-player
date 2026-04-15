@@ -124,9 +124,22 @@ export class FilesManager implements IFilesManager {
 					const arrayOfReports = fileContent
 						.split('\n')
 						.map((jsonString) => {
-							// no empty strings
-							if (jsonString.length > 0) {
+							if (jsonString.length === 0) return undefined;
+							try {
 								return JSON.parse(jsonString);
+							} catch (err) {
+								// One malformed line must not torch the rest of
+								// the offline-report batch. Log call-site
+								// context + a short snippet so future debugging
+								// can tell *what* was malformed, then drop this
+								// line and continue with the others.
+								debug(
+									'[files] failed to parse offline report line: file=%s, snippet=%s, error=%O',
+									file.filePath,
+									jsonString.slice(0, 100),
+									err,
+								);
+								return undefined;
 							}
 						})
 						.filter((item): item is CustomEndpointReport => item !== undefined);
@@ -751,7 +764,14 @@ export class FilesManager implements IFilesManager {
 		try {
 			return JSON.parse(response);
 		} catch (error) {
-			debug('[files] cannot parse media info: %O', error);
+			// Include a short prefix of the read content so a corrupted or
+			// truncated mediaInfo file can be diagnosed without re-reading it
+			// manually. The typed fallback keeps the happy path unchanged.
+			debug(
+				'[files] cannot parse media info: snippet=%s, error=%O',
+				(response ?? '').slice(0, 100),
+				error,
+			);
 			return createJsonStructureMediaInfo(filesList);
 		}
 	};
