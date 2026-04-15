@@ -105,6 +105,11 @@ export function getSmilUrls(port: number = 3000) {
 		threeLevelPriorityTransition: `${base}/dynamic/threeLevelPriorityTransition.smil`,
 		// Group E: served via /dynamic-refresh/ (time-bucket Last-Modified, constant body).
 		smilUpdateStability: `${base}/dynamic-refresh/smilUpdateStability.smil`,
+		// Fixture for the e2e listener-accumulation regression guard (roadmap 2J /
+		// 4A). Served via /dynamic-update/ so the player's ResourceChecker fires
+		// one SMIL reload, exercising watchTriggers a second time — the point
+		// where the pre-fix leak would double the registered DOM listener count.
+		triggersLeakProbe: `${base}/dynamic-update/triggersLeakProbe.smil`,
 	};
 }
 
