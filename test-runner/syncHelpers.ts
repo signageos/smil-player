@@ -1,6 +1,6 @@
 import { Browser, BrowserContext, Page } from '@playwright/test';
 import { createConsoleCollector } from './helpers';
-import { DUID } from './config';
+import { DUID, EMULATOR_BASE } from './config';
 
 export const DEFAULT_SYNC_SERVER_URL = 'https://sync.signage-cdn.com';
 
@@ -72,7 +72,7 @@ export async function addSyncDevice(
 		smilUrl,
 		groupName,
 		syncServerUrl = DEFAULT_SYNC_SERVER_URL,
-		emulatorUrl = 'http://localhost:8090',
+		emulatorUrl = EMULATOR_BASE,
 		viewport = { width: 1080, height: 1920 },
 		wsFramesMaxLen = 20_000,
 		consoleMaxMessages = 10_000,

@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures';
 import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '../syncHelpers';
+import { EMULATOR_BASE } from '../config';
 import { waitForMasterElection } from './syncAssertions';
 
 test.describe.configure({ mode: 'serial' });
@@ -22,7 +23,7 @@ test.describe('sync pathfinder', () => {
 		});
 		const page = await ctx.newPage();
 		const smilUrl = `${testServerBaseUrl}/syncFiles/wallclockSync.smil`;
-		await page.goto(`http://localhost:8090/?smilUrl=${encodeURIComponent(smilUrl)}&duid=cachewarm00000000000000000000000000000000000000`);
+		await page.goto(`${EMULATOR_BASE}/?smilUrl=${encodeURIComponent(smilUrl)}&duid=cachewarm00000000000000000000000000000000000000`);
 		// Wait long enough for the player to fetch + cache the prefetched videos.
 		// The fixture's prefetch list is fixed; once any visible content appears
 		// inside the iframe the bulk of the work is done.
