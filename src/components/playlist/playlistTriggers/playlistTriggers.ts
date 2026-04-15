@@ -10,6 +10,7 @@ import { findDuration, setElementDuration } from '../tools/scheduleTools';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { addEventOnTriggerWidget } from '../tools/htmlTools';
+import { ListenerScope } from '../tools/listenerScope';
 import {
 	DynamicPlaylistObject,
 	ParsedSensor,
@@ -45,6 +46,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	public smilObject: SMILFileObject;
 	private readonly processPlaylist: Function;
 
+	// Owns the lifetime of every DOM listener registered by watchTriggers
+	// and its inner watch* helpers. removeAll() at the top of watchTriggers
+	// guarantees idempotency across playlist-loop iterations — without it,
+	// every SMIL reload stacks a fresh layer of handlers on top of the
+	// old ones (no removeEventListener was called anywhere prior to this
+	// fix).
+	private readonly listenerScope = new ListenerScope();
+
 	private cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;
 
 	constructor(
@@ -64,6 +73,15 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		playlistVersion: () => number,
 		filesLoop: () => boolean,
 	) => {
+		// Detach every listener registered on a previous invocation before
+		// re-running setup. Without this, each playlist-loop iteration
+		// would stack a fresh layer of handlers on document / window /
+		// window.parent.document and on the widget iframes — see audit
+		// note in docs/superpowers/plans/2026-04-15-stability-edge-case-roadmap.md
+		// Task 4A. As a side effect this also closes the keyboard
+		// `state` closure divergence: only the new set of listeners ever
+		// references the freshly-captured `state` object.
+		this.listenerScope.removeAll();
 		this.smilObject = smilObject;
 		this.watchKeyboardInput();
 		this.watchOnTouchOnClick();
@@ -500,7 +518,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchWidgetTriggers = () => {
 		debug('[trigger-widget] watching widget triggers');
-		window.addEventListener(
+		this.listenerScope.add(
+			window,
 			'sosEvent',
 			async (event: CustomEvent) => {
 				if (!event.detail || isObject(event.detail)) {
@@ -624,22 +643,22 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchOnTouchOnClick = () => {
 		try {
-			window.parent.document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+			this.listenerScope.add(window.parent.document, SMILTriggersEnum.mouseEventType, async () => {
 				await this.processOnTouchOnClick();
 			});
 
-			window.parent.document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+			this.listenerScope.add(window.parent.document, SMILTriggersEnum.touchEventType, async () => {
 				await this.processOnTouchOnClick();
 			});
 		} catch (err) {
 			debug('[trigger-mouse] failed to add event listener: error=%O', err);
 		}
 
-		document.addEventListener(SMILTriggersEnum.mouseEventType, async () => {
+		this.listenerScope.add(document, SMILTriggersEnum.mouseEventType, async () => {
 			await this.processOnTouchOnClick();
 		});
 
-		document.addEventListener(SMILTriggersEnum.touchEventType, async () => {
+		this.listenerScope.add(document, SMILTriggersEnum.touchEventType, async () => {
 			await this.processOnTouchOnClick();
 		});
 	};
@@ -689,7 +708,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 
 		if (!isNil(this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`]) && !isNil(triggerMedia)) {
-			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
+			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo, this.listenerScope);
 			const stringDuration = findDuration(triggerMedia);
 			debug('[trigger-mouse] starting: trigger=%s, duration=%s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
@@ -708,14 +727,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		};
 
 		try {
-			window.parent.document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
+			this.listenerScope.add(window.parent.document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
 				state = await this.processKeyDownEvent(event, state);
 			});
 		} catch (err) {
 			debug('[trigger-keyboard] failed to add event listener: error=%O', err);
 		}
 
-		document.addEventListener(SMILTriggersEnum.keyboardEventType, async (event) => {
+		this.listenerScope.add(document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
 			state = await this.processKeyDownEvent(event, state);
 		});
 	};
