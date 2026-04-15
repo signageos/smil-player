@@ -117,7 +117,12 @@ export function startTickerAnimation(wrapperElement: HTMLElement, ticker: SMILTi
 		textChildElement.innerText = text;
 
 		wrapperElement.appendChild(textChildElement);
-		lastChildRightEdgeLeft += textChildElement.clientWidth + indentation;
+		// Use the sanitized spaceBetweenTexts rather than the raw indentation —
+		// if ticker.indentation is malformed (e.g. "auto"), `indentation`
+		// is NaN and `lastChildRightEdgeLeft += NaN` would poison every
+		// subsequent text child's starting position. The per-tick wrap
+		// path below already uses spaceBetweenTexts for the same reason.
+		lastChildRightEdgeLeft += textChildElement.clientWidth + spaceBetweenTexts;
 		return { element: textChildElement, left, width: textChildElement.clientWidth };
 	});
 
