@@ -488,6 +488,85 @@ export function assertFrameCountSymmetry(
 	).toBeLessThanOrEqual(slaveSentAllowed);
 }
 
+/** Pure ratio: master's received ACK count divided by the ideal
+ * `numSlaves × master cmd count`. 1.0 = perfect parity, < 1 = ACKs missing,
+ * > 1 = duplicate / spurious ACKs. Returns 0 when the master has not yet
+ * sent any cmd frames so callers can treat that as "no signal yet" rather
+ * than "failed parity." Mirrors the math inside `assertSyncMessageInventory`
+ * so the polling and final-assertion paths stay in lockstep. */
+export function computeAckParityRatio(devices: SyncDevice[], masterIndex = 0): number {
+	const slaves = devices.filter((_, i) => i !== masterIndex);
+	const masterCats = categorizeWsFrames(devices[masterIndex]);
+	const cmdTypes = ['cmd-prepare', 'cmd-play', 'cmd-finish'] as const;
+	const ackTypes = ['ack-prepared', 'ack-playing', 'ack-finished'] as const;
+
+	let masterCmdSent = 0;
+	for (const t of cmdTypes) masterCmdSent += masterCats.get(t)?.sent ?? 0;
+	if (masterCmdSent === 0 || slaves.length === 0) return 0;
+
+	let masterAckRecv = 0;
+	for (const t of ackTypes) masterAckRecv += masterCats.get(t)?.received ?? 0;
+
+	return masterAckRecv / (masterCmdSent * slaves.length);
+}
+
+export interface RatioStableResult {
+	elapsedMs: number;
+	reason: 'stable' | 'maxReached';
+	finalRatio: number;
+}
+
+/**
+ * Poll `getRatio()` and return as soon as it has held inside
+ * `[targetMin, targetMax]` for `stableSamplesNeeded` consecutive samples.
+ * Always observes for at least `minObserveMs` (so we don't ship on a single
+ * lucky sample), and never longer than `maxObserveMs`.
+ *
+ * Use to short-circuit a fixed observation window in a sync test once the
+ * running parity ratio is clearly inside the assertion's tolerance band.
+ *
+ * Generic over `getRatio` so the helper can be unit-tested with a mock
+ * function without involving real WS capture or Playwright.
+ */
+export async function waitForRatioStable(
+	getRatio: () => number,
+	opts: {
+		minObserveMs?: number;
+		maxObserveMs?: number;
+		pollMs?: number;
+		stableSamplesNeeded?: number;
+		targetMin: number;
+		targetMax: number;
+	},
+): Promise<RatioStableResult> {
+	const {
+		minObserveMs = 0,
+		maxObserveMs = 60_000,
+		pollMs = 1_000,
+		stableSamplesNeeded = 3,
+		targetMin,
+		targetMax,
+	} = opts;
+	const startedAt = Date.now();
+
+	if (minObserveMs > 0) {
+		await new Promise((r) => setTimeout(r, minObserveMs));
+	}
+
+	let consecutiveStable = 0;
+	let lastRatio = 0;
+	while (Date.now() - startedAt < maxObserveMs) {
+		lastRatio = getRatio();
+		const inBand = lastRatio >= targetMin && lastRatio <= targetMax;
+		consecutiveStable = inBand ? consecutiveStable + 1 : 0;
+		if (consecutiveStable >= stableSamplesNeeded) {
+			return { elapsedMs: Date.now() - startedAt, reason: 'stable', finalRatio: lastRatio };
+		}
+		await new Promise((r) => setTimeout(r, pollMs));
+	}
+	return { elapsedMs: Date.now() - startedAt, reason: 'maxReached', finalRatio: lastRatio };
+}
+
 /** Assert the protocol shape using per-type counts: master sends `cmd-*`
  * messages; each slave sends matching ACKs; master's received-ACK count
  * approximates `(devices.length - 1) × master's sent cmd count`. */
