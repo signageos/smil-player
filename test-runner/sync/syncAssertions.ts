@@ -213,6 +213,60 @@ export async function waitForConvergence(
 	);
 }
 
+/**
+ * Minimum contract for `waitForWsQuiescence`. `SyncDevice` from syncHelpers
+ * satisfies it via its `wsFrames: WsFrame[]` buffer, but the helper does not
+ * need the full SyncDevice surface — keeping the parameter type narrow lets
+ * unit tests pass plain objects with a growable array.
+ */
+export interface WsQuiescenceSource {
+	readonly wsFrames: { readonly length: number };
+}
+
+/**
+ * Resolve once every source's WebSocket frame count has held steady for
+ * `quietMs` — meaning the current broadcast round has fully drained into the
+ * client-side capture buffers. Use after a transition, priority change, or
+ * any other point where a fixed `page.waitForTimeout(N)` was previously
+ * "enough" to let the last ACKs land before inspecting WS state.
+ *
+ * Adaptive to CI variance: returns as soon as the quiet window is satisfied
+ * (often < 400 ms on a clean run) and only extends on genuinely slow traffic.
+ * Throws if `maxWaitMs` elapses without ever reaching the quiet window so
+ * stuck-round symptoms fail loudly instead of silently corrupting the
+ * downstream frame-inventory assertions.
+ *
+ * @param sources  devices (or any objects exposing a `wsFrames` array).
+ * @param opts.quietMs    no-new-frames window before returning (default 300).
+ * @param opts.maxWaitMs  hard ceiling (default 3_000).
+ * @param opts.pollMs     poll interval (default 50).
+ */
+export async function waitForWsQuiescence(
+	sources: ReadonlyArray<WsQuiescenceSource>,
+	opts: { quietMs?: number; maxWaitMs?: number; pollMs?: number } = {},
+): Promise<void> {
+	const { quietMs = 300, maxWaitMs = 3_000, pollMs = 50 } = opts;
+	const startedAt = Date.now();
+	let lastCounts = sources.map((s) => s.wsFrames.length);
+	let lastChangeAt = Date.now();
+
+	while (Date.now() - startedAt < maxWaitMs) {
+		await new Promise((r) => setTimeout(r, pollMs));
+		const currentCounts = sources.map((s) => s.wsFrames.length);
+		const changed = currentCounts.some((c, i) => c !== lastCounts[i]);
+		if (changed) {
+			lastCounts = currentCounts;
+			lastChangeAt = Date.now();
+		} else if (Date.now() - lastChangeAt >= quietMs) {
+			return;
+		}
+	}
+	throw new Error(
+		`waitForWsQuiescence: WS traffic did not settle for ${quietMs}ms within `
+		+ `${maxWaitMs}ms. Final frame counts: [${sources.map((s) => s.wsFrames.length).join(', ')}].`,
+	);
+}
+
 export interface TransitionSkew {
 	/** Controller-side wall-clock time each device reported the locator visible. */
 	timestamps: number[];
