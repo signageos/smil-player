@@ -15,13 +15,34 @@ import { recordSkew } from '../../tools/record-sync-skew.mjs';
 
 // Per-transition resync log bound. db8da71's slave infinite-resync-loop
 // regression would produce many more wrap/recovery log lines per transition
-// than the current healthy ~0–1; the 30 s assertSynchronizedTransition
-// timeout below only catches cases that never converge, not ones that
-// converge after many extra resync cycles. 5 is generous enough to absorb
-// one legitimate wrap plus a couple of protocol housekeeping lines per
-// transition; calibrate downward after a reliable green-run baseline.
+// than the current healthy ~0; the 30 s assertSynchronizedTransition timeout
+// below only catches cases that never converge, not ones that converge after
+// many extra resync cycles.
+//
+// Baseline 2026-04-15 (RESYNC_BASELINE_MODE=1, --repeat-each=10): all 40
+// observations (10 runs × 4 transitions) reported `deltas=[0,0,0]` — the
+// healthy steady state truly is zero resync events per transition. The
+// threshold of 2 leaves headroom for one legitimate housekeeping log line
+// without absorbing genuine anomalies; e.g. a one-off `[0,4,0]` observed
+// during unrelated work was caught by this assertion (and recovered by
+// Playwright's `retries: 1`), exactly as designed.
+//
+// To re-measure when the protocol changes, set `RESYNC_BASELINE_MODE=1`
+// and read the `[resync-baseline] cycle=N deltas=[…] max=N` lines emitted
+// on every run.
 const RESYNC_LOG_RE = /Wrapping resync target|Master passed resync target|Timeout recovery: setting/;
 const MAX_RESYNC_DELTA_PER_TRANSITION = 2;
+const RESYNC_BASELINE_MODE = process.env.RESYNC_BASELINE_MODE === '1';
+
+function assertResyncDelta(deltas: number[], cycleLabel: string) {
+	// eslint-disable-next-line no-console
+	console.log(`[resync-baseline] cycle=${cycleLabel} deltas=[${deltas}] max=${Math.max(...deltas)}`);
+	if (RESYNC_BASELINE_MODE) return;
+	expect(
+		Math.max(...deltas),
+		`${cycleLabel} resync-log delta=[${deltas}] exceeds ${MAX_RESYNC_DELTA_PER_TRANSITION} (db8da71 watchdog)`,
+	).toBeLessThanOrEqual(MAX_RESYNC_DELTA_PER_TRANSITION);
+}
 
 // Group A regression test for playMode=one coordination bugs.
 //
@@ -84,10 +105,7 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 			timeoutMs: 30_000,
 		});
 		const deltaResync1 = devices.map((d, i) => countSyncEvents(d, RESYNC_LOG_RE) - resyncBefore1[i]);
-		expect(
-			Math.max(...deltaResync1),
-			`cycle2 resync-log delta=[${deltaResync1}] exceeds ${MAX_RESYNC_DELTA_PER_TRANSITION} (db8da71 watchdog)`,
-		).toBeLessThanOrEqual(MAX_RESYNC_DELTA_PER_TRANSITION);
+		assertResyncDelta(deltaResync1, 'cycle2');
 		// eslint-disable-next-line no-console
 		console.log(
 			`[playMode-sync] video→landscape1 skew=${s1.skewMs}ms offsets=[${s1.timestamps
@@ -111,10 +129,7 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 			timeoutMs: 15_000,
 		});
 		const deltaResync2 = devices.map((d, i) => countSyncEvents(d, RESYNC_LOG_RE) - resyncBefore2[i]);
-		expect(
-			Math.max(...deltaResync2),
-			`cycle3 resync-log delta=[${deltaResync2}] exceeds ${MAX_RESYNC_DELTA_PER_TRANSITION} (db8da71 watchdog)`,
-		).toBeLessThanOrEqual(MAX_RESYNC_DELTA_PER_TRANSITION);
+		assertResyncDelta(deltaResync2, 'cycle3');
 		// eslint-disable-next-line no-console
 		console.log(
 			`[playMode-sync] landscape1→landscape2 skew=${s2.skewMs}ms offsets=[${s2.timestamps
@@ -140,10 +155,7 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 			timeoutMs: 30_000,
 		});
 		const deltaResync3 = devices.map((d, i) => countSyncEvents(d, RESYNC_LOG_RE) - resyncBefore3[i]);
-		expect(
-			Math.max(...deltaResync3),
-			`cycle4 wrap resync-log delta=[${deltaResync3}] exceeds ${MAX_RESYNC_DELTA_PER_TRANSITION} (db8da71 watchdog)`,
-		).toBeLessThanOrEqual(MAX_RESYNC_DELTA_PER_TRANSITION);
+		assertResyncDelta(deltaResync3, 'cycle4-wrap');
 		// eslint-disable-next-line no-console
 		console.log(
 			`[playMode-sync] landscape2→video (wrap) skew=${s3.skewMs}ms offsets=[${s3.timestamps
@@ -169,10 +181,7 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 			timeoutMs: 30_000,
 		});
 		const deltaResync4 = devices.map((d, i) => countSyncEvents(d, RESYNC_LOG_RE) - resyncBefore4[i]);
-		expect(
-			Math.max(...deltaResync4),
-			`cycle5 2nd-wrap resync-log delta=[${deltaResync4}] exceeds ${MAX_RESYNC_DELTA_PER_TRANSITION} (db8da71 watchdog)`,
-		).toBeLessThanOrEqual(MAX_RESYNC_DELTA_PER_TRANSITION);
+		assertResyncDelta(deltaResync4, 'cycle5-2nd-wrap');
 		// eslint-disable-next-line no-console
 		console.log(
 			`[playMode-sync] video→landscape1 (2nd wrap) skew=${s4.skewMs}ms offsets=[${s4.timestamps
@@ -190,7 +199,7 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 		// Event-driven: returns as soon as per-device frame counts hold steady
 		// for quietMs, instead of a fixed 500 ms sleep that either wastes time
 		// on fast runs or races on slow-CI ACK arrivals.
-		await waitForWsQuiescence(devices, { quietMs: 300, maxWaitMs: 3_000 });
+		await waitForWsQuiescence(devices, { quietMs: 500, maxWaitMs: 3_000 });
 		assertFrameCountSymmetry(devices);
 		// This fixture wraps syncIndex every cycle (<seq repeatCount="indefinite">
 		// around the inner playMode seq). Wraps trigger slave resyncs via
