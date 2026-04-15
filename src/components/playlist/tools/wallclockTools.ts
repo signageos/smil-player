@@ -173,8 +173,20 @@ export function computeScheduledDate(
 ) {
 	// day of the week when will playing stop
 	const terminalDay = startDate.isoWeekday();
-	const scheduledDay = parseInt(dayInfo[2]);
-	if (dayInfo.startsWith('+')) {
+	// dayInfo is shaped like "+w3" or "-w3" — index 2 is the weekday digit.
+	// If the SMIL author truncated the string (e.g. "+w"), dayInfo[2] is
+	// undefined and parseInt yields NaN. Feeding NaN into
+	// moment().isoWeekday(NaN) produces an "Invalid date" string that
+	// silently propagates into timeToStart / timeToEnd downstream and
+	// breaks playback timers. The guards below fall through to the
+	// no-weekday path instead.
+	const scheduledDay = Number.parseInt(dayInfo[2] ?? '', 10);
+	const hasValidWeekdayHint = !Number.isNaN(scheduledDay);
+	if ((dayInfo.startsWith('+') || dayInfo.startsWith('-')) && !hasValidWeekdayHint) {
+		debug('[wallclock] malformed dayInfo digit, ignoring weekday hint: dayInfo=%s', dayInfo);
+	}
+
+	if (dayInfo.startsWith('+') && hasValidWeekdayHint) {
 		if (terminalDay < scheduledDay || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
 			return startDate.isoWeekday(scheduledDay).format('YYYY-MM-DD');
 		} else {
@@ -182,7 +194,7 @@ export function computeScheduledDate(
 		}
 	}
 
-	if (dayInfo.startsWith('-')) {
+	if (dayInfo.startsWith('-') && hasValidWeekdayHint) {
 		if (terminalDay < scheduledDay || (terminalDay === scheduledDay && nowTime <= scheduledTime)) {
 			const returnDate = moment().isoWeekday(scheduledDay).format('YYYY-MM-DD');
 			// return default date in the past if scheduledDate from SMIL is already in the past
