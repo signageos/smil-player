@@ -1,11 +1,39 @@
 export const DUID = '218603c29e5e7275a238c43a1422a9b19188752893c12c5128';
 
+/**
+ * Base URL of the running emulator. Centralized so a CI / docker-network
+ * setup with non-default port mapping can override via `SMIL_EMULATOR_BASE`
+ * without touching individual test or helper files. Default matches the
+ * developer-laptop emulator started by `tools/e2e-servers.sh`.
+ *
+ * The per-worker test server's port is allocated dynamically by the
+ * `testServerBaseUrl` worker fixture (test-runner/fixtures.ts), so it is
+ * not configurable here; only the emulator base URL is.
+ */
+export const EMULATOR_BASE = process.env.SMIL_EMULATOR_BASE || 'http://localhost:8090';
+
+/**
+ * Default Playwright timeouts for the non-sync e2e suite. Values here cover
+ * a clean run with comfortable headroom; a flake on the edge of one of
+ * these usually means a root-cause investigation, not a timeout bump.
+ */
 export const Timeouts = {
-	firstElement: 90000, // webpack compile + asset download on first load
-	elementAwait: 13000, // standard element visibility wait
+	/** Cold-load first-element visibility — covers webpack-dev-server
+	 *  compile + every-asset prefetch on the very first navigation. */
+	firstElement: 90000,
+	/** Standard element-visibility wait — one playlist transition end-to-end. */
+	elementAwait: 13000,
+	/** Slightly extended `elementAwait` for transitions involving heavier
+	 *  assets (e.g. a multi-second video preroll). */
 	longerElementAwait: 15000,
-	priorityTransition: 70000, // wallclock-based priority window end + iteration-finish tail
+	/** Wallclock-bounded priority window end + iteration-finish tail.
+	 *  Used by tests that wait for a higher-priority window to elapse
+	 *  before the lower-priority element becomes visible again. */
+	priorityTransition: 70000,
+	/** Brief settle pause between user-visible state changes
+	 *  (`page.waitForTimeout(Timeouts.transition)`). */
 	transition: 1000,
+	/** Video transition window — covers the cross-fade-into-video gap. */
 	videoTransition: 5300,
 };
 
