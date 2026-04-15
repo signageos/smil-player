@@ -3,6 +3,8 @@ import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '
 import {
 	waitForMasterElection,
 	waitForConvergence,
+	waitForRatioStable,
+	computeAckParityRatio,
 	assertFrameCountSymmetry,
 	assertSyncMessageInventory,
 	assertBroadcastReceiptSpread,
@@ -64,15 +66,28 @@ test.describe('sync · linear playlist ACK parity', () => {
 		const startCounts = devices.map((d) => d.wsFrames.length);
 		await devices[0].page.waitForTimeout(SETTLE_BUFFER_MS);
 
-		// Steady-state observation. At 3 s dur per element, 20 s covers ~6-7
-		// elements, and the buffer+observation (26 s) stays comfortably before
-		// the outer wrap at ~30 s.
-		await devices[0].page.waitForTimeout(OBSERVATION_MS);
+		// Adaptive observation. We need enough data for the parity ratio to
+		// be statistically meaningful (minObserveMs ~6 elements at 3 s/ea),
+		// but blocking the full 45 s ceiling on every CI run wastes time when
+		// the ratio is already comfortably inside the tolerance band. Poll
+		// every 2 s and exit as soon as the running ratio holds in
+		// [1 − tol, 1 + tol] for 3 consecutive samples. Cap at OBSERVATION_MS
+		// so a stuck protocol still hits the downstream assertions.
+		const observed = await waitForRatioStable(() => computeAckParityRatio(devices), {
+			minObserveMs: 18_000,
+			maxObserveMs: OBSERVATION_MS,
+			pollMs: 2_000,
+			stableSamplesNeeded: 3,
+			targetMin: 1 - ACK_TOLERANCE_PCT,
+			targetMax: 1 + ACK_TOLERANCE_PCT,
+		});
 
-		// Diagnostic: per-device frame count before/after the settle buffer.
+		// Diagnostic: per-device frame count before settle, after observation,
+		// and the early-exit reason / final ratio so CI can spot drift.
 		// eslint-disable-next-line no-console
 		console.log(`[linear-ack-parity] frames pre-settle=[${startCounts.join(', ')}] ` +
-			`post-settle+observe=[${devices.map((d) => d.wsFrames.length).join(', ')}]`);
+			`post-settle+observe=[${devices.map((d) => d.wsFrames.length).join(', ')}] ` +
+			`observe=${observed.elapsedMs}ms reason=${observed.reason} ratio=${observed.finalRatio.toFixed(3)}`);
 
 		// Cross-device frame-count symmetry — cheap noise insurance.
 		assertFrameCountSymmetry(devices);
