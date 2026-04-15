@@ -46,6 +46,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 	allowedErrors: [[], { option: true }],
 
 	page: async ({ page, request, testServerBaseUrl, allowedErrors }, use) => {
+		// Test-run isolation: Playwright's default per-test `context` fixture
+		// gives a fresh BrowserContext, which isolates indexedDB / localStorage /
+		// cookies at both the emulator (:8090) and applet (:8091) origins. That
+		// is why we do not need a goto+clear+goto storage wipe here — verified
+		// empirically 2026-04-15 (see docs/superpowers/plans/2026-04-15-stability-
+		// edge-case-roadmap.md Task 1A). Don't share contexts across tests.
 		const collector = createConsoleCollector(page);
 		// Reset test server state before each test to prevent interference
 		await request.post(`${testServerBaseUrl}/reset`);
