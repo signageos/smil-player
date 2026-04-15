@@ -90,6 +90,7 @@ export function getSmilUrls(port: number = 3000) {
 		playModeOne: `${base}/playback/playModeOne.smil`,
 		playModeOneFiniteRepeat: `${base}/playback/playModeOneFiniteRepeat.smil`,
 		queryStringMedia: `${base}/playback/queryStringMedia.smil`,
+		tickerBasic: `${base}/playback/tickerBasic.smil`,
 		triggersMouseDuration: `${base}/triggers/triggersMouseDuration.smil`,
 		triggersCrossCancel: `${base}/triggers/triggersCrossCancel.smil`,
 		customEndpointReporting: `${base}/reporting/customEndpointReporting.smil`,
