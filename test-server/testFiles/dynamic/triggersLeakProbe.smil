@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Fixture for test-runner/playback/listenerAccumulation.test.ts — the e2e
+  regression guard for roadmap Task 4A (DOM listener leak).
+
+  Lives under test-server/testFiles/dynamic/ so it is served through the
+  /dynamic-update/:fileName endpoint, which varies Last-Modified on the
+  first HEAD-after-GET so the player's ResourceChecker fires exactly one
+  SMIL reload (Phase 1 → Phase 2) before Last-Modified stabilises. One
+  reload is all we need — without the fix, any reload at all doubles the
+  active listener count (9 → 18); with the fix, the number stays flat
+  because removeAll() runs at the top of every watchTriggers() invocation.
+
+  The keyboard trigger is never fired in the test — its only job is to
+  make `watchTriggers` register the 9 DOM listeners whose presence / flat
+  growth we measure. Body stays as simple as possible (one looping image
+  from the test server's static assets) so the test does not depend on
+  external CDN round-trips.
+-->
+<smil>
+	<head>
+		<meta content="5" http-equiv="Refresh"/>
+		<triggers>
+			<trigger id="probeTrigger" condition="or">
+				<condition origin="keyboard" data="KeyZ" action="keydown"/>
+			</trigger>
+		</triggers>
+		<layout>
+			<root-layout height="1080" width="1920"/>
+			<region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+		</layout>
+	</head>
+	<body>
+		<par>
+			<seq repeatCount="indefinite">
+				<img src="http://localhost:3000/assets/img_2.jpg" dur="3s" region="main" id="probeImg"/>
+			</seq>
+		</par>
+		<par>
+			<seq begin="probeTrigger" repeatCount="1">
+				<img src="http://localhost:3000/assets/img_4.jpg" dur="1s" region="main" id="triggerImg"/>
+			</seq>
+		</par>
+	</body>
+</smil>
