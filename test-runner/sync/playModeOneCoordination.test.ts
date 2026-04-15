@@ -3,6 +3,7 @@ import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '
 import {
 	waitForMasterElection,
 	waitForConvergence,
+	waitForWsQuiescence,
 	assertSynchronizedTransition,
 	assertFrameCountSymmetry,
 	assertSyncMessageInventory,
@@ -186,7 +187,10 @@ test.describe('sync · playMode=one coordination [db8da71, 5a59d20, 9faf699]', (
 		});
 
 		// Let the last broadcast settle across receivers before inspecting WS state.
-		await devices[0].page.waitForTimeout(500);
+		// Event-driven: returns as soon as per-device frame counts hold steady
+		// for quietMs, instead of a fixed 500 ms sleep that either wastes time
+		// on fast runs or races on slow-CI ACK arrivals.
+		await waitForWsQuiescence(devices, { quietMs: 300, maxWaitMs: 3_000 });
 		assertFrameCountSymmetry(devices);
 		// This fixture wraps syncIndex every cycle (<seq repeatCount="indefinite">
 		// around the inner playMode seq). Wraps trigger slave resyncs via
