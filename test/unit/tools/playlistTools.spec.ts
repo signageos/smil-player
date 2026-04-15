@@ -29,6 +29,7 @@ import {
 	orderJsonObject,
 	pickRandomOne,
 	processRandomPlayMode,
+	shuffleObject,
 	removeDigits,
 	removeLastArrayItem,
 	removeNestedProperties,
@@ -964,6 +965,79 @@ describe('Playlist tools component', () => {
 			const keys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(keys).to.deep.equal(['video1']);
 			expect(result.video1).to.deep.equal({ src: 'b.mp4' });
+		});
+	});
+
+	// Edge cases for the random-play helpers — roadmap 3C. Document the
+	// degenerate behaviours so a future "fix" is a deliberate choice
+	// (the test fails loudly) rather than an accidental drift.
+	describe('pickRandomOne degenerate inputs [3C]', () => {
+		let origRandom: () => number;
+		beforeEach(() => { origRandom = Math.random; Math.random = () => 0.5; });
+		afterEach(() => { Math.random = origRandom; });
+
+		it('returns the input unchanged when no playable parts are present', () => {
+			// `playMode` and `begin` do not match
+			// randomPlaylistPlayableTagsRegex (img|video|ref|ticker|par|seq|exl|priorityClass).
+			// playableParts is empty → picked === undefined → omit drops nothing.
+			const playlist = { playMode: 'random_one', begin: 'wallclock(2025-01-01)' };
+			const result = pickRandomOne(playlist) as any;
+			expect(result).to.deep.equal({ playMode: 'random_one', begin: 'wallclock(2025-01-01)' });
+		});
+
+		it('returns a single-undefined-element array for an empty playable array', () => {
+			// Documents the current degenerate behaviour: arr[Math.floor(0.5*0)]
+			// is arr[0] === undefined, so the picked key gets [undefined]. A
+			// future hardening (skip empty arrays, return original input, etc.)
+			// should update this assertion deliberately.
+			const playlist = { playMode: 'random_one', seq: [] as unknown[] };
+			const result = pickRandomOne(playlist) as any;
+			expect(result.playMode).to.equal('random_one');
+			expect(result.seq).to.deep.equal([undefined]);
+		});
+	});
+
+	describe('shuffleObject [3C]', () => {
+		let origRandom: () => number;
+		// Stub Math.random=0.5 → comparator always returns 0 → stable sort
+		// preserves insertion order. Lets us assert deterministic shape
+		// without coupling to engine sort details.
+		beforeEach(() => { origRandom = Math.random; Math.random = () => 0.5; });
+		afterEach(() => { Math.random = origRandom; });
+
+		it('returns an empty object for empty input', () => {
+			expect(shuffleObject({})).to.deep.equal({});
+		});
+
+		it('returns a single-key object unchanged', () => {
+			expect(shuffleObject({ only: 1 })).to.deep.equal({ only: 1 });
+		});
+
+		it('preserves every key/value mapping for multi-key input', () => {
+			const input = { a: 1, b: 'two', c: { nested: true } };
+			const result = shuffleObject(input);
+			expect(Object.keys(result).sort()).to.deep.equal(['a', 'b', 'c']);
+			expect(result.a).to.equal(1);
+			expect(result.b).to.equal('two');
+			expect(result.c).to.deep.equal({ nested: true });
+		});
+
+		it('returns a new object (does not mutate input reference)', () => {
+			const input = { a: 1, b: 2 };
+			const result = shuffleObject(input);
+			expect(result).to.not.equal(input);
+		});
+
+		it('aliases nested-value references rather than deep-cloning them', () => {
+			// shuffleObject is a shallow copy (only the outer dict is new).
+			// Mutating a nested object via the result IS visible in the input.
+			// Documents current behaviour so a future deep-clone change is a
+			// deliberate choice.
+			const nested = { count: 0 };
+			const input = { item: nested };
+			const result = shuffleObject(input) as any;
+			result.item.count = 7;
+			expect(nested.count).to.equal(7);
 		});
 	});
 
