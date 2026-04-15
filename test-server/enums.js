@@ -35,7 +35,7 @@ var SMILUrls;
     SMILUrls["priorityStop"] = "http://localhost:3000/dynamic/priorityStop.smil";
     SMILUrls["priorityPause"] = "http://localhost:3000/dynamic/priorityPause.smil";
     SMILUrls["priorityDefer"] = "http://localhost:3000/dynamic/priorityDefer.smil";
-    SMILUrls["wallclockFuture"] = "http://localhost:3000/dynamic/wallclockFuture.smil";
+    SMILUrls["wallclockFuture"] = "http://localhost:3000/wallclock/wallclockFuture.smil";
     SMILUrls["correctOrder"] = "http://localhost:3000/playback/correctOrder.smil";
     SMILUrls["noAdditionalPar"] = "http://localhost:3000/layout/noAdditionalPar.smil";
     SMILUrls["noAdditionalSeq"] = "http://localhost:3000/layout/noAdditionalSeq.smil";
