@@ -46,7 +46,10 @@ test.describe('sync · killed-master re-join', () => {
 		devices = await createSyncGroup(browser, { smilUrl, groupName, deviceCount: 3 });
 
 		const firstMaster = await waitForMasterElection(devices, 60_000);
-		expect(firstMaster).toBe(devices[0]);
+		// Platform master election is not deterministic w.r.t. launch order;
+		// pin down which device was elected so we can revive the same DUID later.
+		expect(devices).toContain(firstMaster);
+		const killedIndex = devices.indexOf(firstMaster);
 
 		const l1 = (p: SyncDevice['page']) => p.frameLocator('iframe').locator('img[src*="landscape1"]');
 		const l2 = (p: SyncDevice['page']) => p.frameLocator('iframe').locator('img[src*="landscape2"]');
@@ -57,9 +60,10 @@ test.describe('sync · killed-master re-join', () => {
 		await Promise.all(devices.map((d) => l1(d.page).first().waitFor({ state: 'hidden', timeout: 15_000 })));
 		await waitForConvergence(devices, l2, 15_000);
 
-		// Kill the master. Remove from devices BEFORE closing so afterEach
-		// doesn't try to close its context a second time.
-		const [killed, ...survivors] = devices;
+		// Kill the actual master (not a fixed slot). Remove from devices BEFORE
+		// closing so afterEach doesn't try to close its context a second time.
+		const killed = firstMaster;
+		const survivors = devices.filter((d) => d !== killed);
 		devices = survivors;
 		await killed.context.close();
 
@@ -77,9 +81,10 @@ test.describe('sync · killed-master re-join', () => {
 			timeoutMs: 30_000,
 		});
 
-		// Revive the original master: same DUID (derived from index=0), same
-		// group name, same SMIL. The sync server sees the identity returning.
-		const revived = await addSyncDevice(browser, 0, { smilUrl, groupName });
+		// Revive the original master: same DUID (derived from its original
+		// index), same group name, same SMIL. The sync server sees the identity
+		// returning.
+		const revived = await addSyncDevice(browser, killedIndex, { smilUrl, groupName });
 		devices = [...survivors, revived];
 
 		// All 3 must converge. Generous budget — the revived device has to

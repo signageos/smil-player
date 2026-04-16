@@ -33,7 +33,12 @@ test.describe('sync · master failover', () => {
 			deviceCount: 3,
 		});
 		const firstMaster = await waitForMasterElection(devices, 60_000);
-		expect(firstMaster).toBe(devices[0]); // Staggered launch means dev0 wins.
+		// The sync platform does not guarantee a specific device wins initial
+		// election — the 1500ms launch stagger is consumed by variable sos.onReady
+		// / SMIL download / cache warmup before join() fires, so arrivals at the
+		// sync server can reorder. Assert only that a group member was elected;
+		// downstream logic targets whichever device actually became master.
+		expect(devices).toContain(firstMaster);
 
 		const l1 = (p: SyncDevice['page']) => p.frameLocator('iframe').locator('img[src*="landscape1"]');
 		const l2 = (p: SyncDevice['page']) => p.frameLocator('iframe').locator('img[src*="landscape2"]');
@@ -43,9 +48,11 @@ test.describe('sync · master failover', () => {
 		await Promise.all(devices.map((d) => l1(d.page).first().waitFor({ state: 'hidden', timeout: 15_000 })));
 		await waitForConvergence(devices, l2, 15_000);
 
-		// Kill the master. Remove from `devices` BEFORE closing so afterEach
-		// does not try to close the context a second time.
-		const [dead, ...survivors] = devices;
+		// Kill the actual master (not a fixed index). Remove from `devices`
+		// BEFORE closing so afterEach does not try to close the context a
+		// second time.
+		const dead = firstMaster;
+		const survivors = devices.filter((d) => d !== dead);
 		devices = survivors;
 		await dead.context.close();
 
