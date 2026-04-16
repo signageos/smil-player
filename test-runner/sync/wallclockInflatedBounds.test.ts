@@ -3,6 +3,7 @@ import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '
 import {
 	waitForMasterElection,
 	waitForConvergence,
+	waitForSyncIndexAgreement,
 	waitForWsQuiescence,
 	assertSynchronizedTransition,
 	assertFrameCountSymmetry,
@@ -54,6 +55,14 @@ test.describe('sync · wallclock-bounded resync [0484bc9, c34f811]', () => {
 		// Element 1 (expired 2020) is skipped. Element 2 (landscape2) is the first
 		// real thing all devices play. Initial convergence — loose.
 		await waitForConvergence(devices, l2, 120_000);
+
+		// Visibility convergence alone doesn't imply the slaves are in lockstep
+		// with the master's sync index — a slow slave can render landscape2
+		// from its own local play path just before the master broadcasts
+		// cmd-play for the next element, leaving it behind by one resync. Wait
+		// for all devices to agree on the sync index before measuring the
+		// tight 15 s transition budget below.
+		await waitForSyncIndexAgreement(devices, { timeoutMs: 60_000 });
 
 		// landscape2 → video (element 2 → element 3). The element-4 future wallclock
 		// inflates the slave's maxSyncIndexPerRegion, so pre-0484bc9 the slave would
