@@ -47,7 +47,6 @@ import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { findTriggerToCancel } from '../tools/triggerTools';
 import {
-	isPriorityBlockedOrPaused,
 	isWallclockEndTimeExpired,
 	isTriggerCancelled,
 	isDynamicPlaylistCancelled,
@@ -1282,18 +1281,62 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return WaitStatus.CONTINUE;
 		}
 		const currentIndexPriority = this.currentlyPlayingPriority[regionInfo.regionName][currentIndex];
-		// playlist was already stopped/paused during await
-		if (isPriorityBlockedOrPaused(currentIndexPriority)) {
+		// playlist was permanently stopped (higher="stop" rule) — give up on this element
+		if (currentIndexPriority?.player.stop) {
 			timedDebug.log(
-				'[processor] playlist stopped/paused by higher priority: region=%s, src=%s',
+				'[processor] playlist stopped by higher priority: region=%s, src=%s',
 				regionInfo.regionName,
 				media.src,
 			);
-			// Clean up before skipping
 			if (priorityCoord) {
 				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
 			}
 			return WaitStatus.SKIP;
+		}
+		// playlist was paused (higher/peer="pause") — wait for unpause/stop/cancel
+		// instead of skipping. SKIPPING here would let the SEQ traverser advance
+		// to the next element, whose priorityBehaviour would then ping-pong the
+		// pause back onto the opposing peer (priorityPeerPause flake: Peer A
+		// img_1 paused → traverser advances to video → video pauses Peer B's
+		// img_3 → Peer B advances to img_2 → img_2 pauses Peer A's video → …
+		// neither peer ever displays its content).
+		if (
+			currentIndexPriority?.player.contentPause !== 0 ||
+			currentIndexPriority?.behaviour === PriorityBehaviour.pause
+		) {
+			timedDebug.log(
+				'[processor] playlist paused, waiting for unpause: region=%s, src=%s',
+				regionInfo.regionName,
+				media.src,
+			);
+			await Promise.race([
+				this.priority.stateManager.waitUntil(parentRegionName, (e) =>
+					!e[currentIndex] ||
+					e[currentIndex]?.player.contentPause === 0 ||
+					e[currentIndex]?.player.stop === true,
+				),
+				this.waitForCancelFunction(),
+			]);
+			if (this.getCancelFunction()) {
+				if (priorityCoord) {
+					this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				}
+				return WaitStatus.SKIP;
+			}
+			// After release, re-check whether the entry is now permanently stopped
+			const refreshed = this.currentlyPlayingPriority[regionInfo.regionName]?.[currentIndex];
+			if (refreshed?.player.stop) {
+				timedDebug.log(
+					'[processor] playlist stopped after unpause-wait: region=%s, src=%s',
+					regionInfo.regionName,
+					media.src,
+				);
+				if (priorityCoord) {
+					this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				}
+				return WaitStatus.SKIP;
+			}
+			timedDebug.log('[processor] playlist unpaused, continuing: region=%s, src=%s', regionInfo.regionName, media.src);
 		}
 
 		if (isWallclockEndTimeExpired(currentIndexPriority)) {
