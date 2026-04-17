@@ -1781,12 +1781,27 @@ export class FilesManager implements IFilesManager {
 				(file as any).wasUpdated = true;
 			}
 		}
+
+		// Safety net: any file whose mediaInfoObject entry changed in this batch but is NOT
+		// in pendingWasUpdated had a mapping-only update (e.g. same content, different query
+		// params). Flag it so playlistProcessor refreshes useInReportUrl on next play without
+		// triggering a full video re-prepare.
+		for (const file of filesList) {
+			if ('src' in file && 'localFilePath' in file) {
+				const fileName = getFileName(file.src);
+				if (this.batchUpdates.has(fileName) && !this.pendingWasUpdated.has(file)) {
+					(file as any).useInReportUrlStale = true;
+				}
+			}
+		}
+
 		this.pendingWasUpdated.clear();
 
 		// NOTE: useInReportUrl is NOT set here. In-flight elements (currently playing or
 		// already prepared) must keep their OLD useInReportUrl until they finish, so that
 		// sendMediaReport matches the content that actually played. useInReportUrl is
-		// refreshed in playElement when wasUpdated=true triggers a re-read from mediaInfoObject.
+		// refreshed in playElement when wasUpdated=true or useInReportUrlStale=true triggers
+		// a re-read from mediaInfoObject.
 
 		// ── End synchronous block ──
 
@@ -1932,6 +1947,7 @@ export class FilesManager implements IFilesManager {
 					// to the already-cached file and set wasUpdated if the path changed.
 					// Without this, a looping video whose content moved to an already-cached
 					// URL would never re-prepare because wasUpdated stays false.
+					let mappingOnlyUpdate = false;
 					if (!detection.needsDownload && 'localFilePath' in detection.file) {
 						const pathChanged = await this.updateLocalFilePathForMovedContent(
 							detection.file,
@@ -1941,11 +1957,19 @@ export class FilesManager implements IFilesManager {
 						);
 						if (pathChanged) {
 							needsWasUpdated = true;
+						} else {
+							mappingOnlyUpdate = true;
 						}
 					}
 
 					if (needsWasUpdated) {
 						this.pendingWasUpdated.add(detection.file);
+					} else if (mappingOnlyUpdate) {
+						// Bytes on disk didn't change but mediaInfoObject did. Flag the media so
+						// playlistProcessor refreshes useInReportUrl on next play without triggering
+						// a full video re-prepare (which would produce an invalid file://?__smil_version
+						// URI on Tizen).
+						(detection.file as any).useInReportUrlStale = true;
 					}
 
 					// Collect per-file result so callers (e.g. prePlayCheck) can use returned
@@ -2282,6 +2306,18 @@ export class FilesManager implements IFilesManager {
 
 			// Skip if no change or no new value
 			if (currentValue === newValue || !newValue) {
+				continue;
+			}
+
+			// Same base URL (only query params differ) is not a content movement — the bytes
+			// on disk are still the right content for this slot. Suppressing this prevents
+			// spurious temp-copy/overwrite cycles on duplicate-slot pairs when a CDN redirect
+			// changes a tracking query param (e.g. `pl=`) without swapping the underlying file.
+			if (
+				typeof currentValue === 'string' &&
+				typeof newValue === 'string' &&
+				getUrlWithoutQueryParams(currentValue) === getUrlWithoutQueryParams(newValue)
+			) {
 				continue;
 			}
 
@@ -2678,7 +2714,12 @@ export class FilesManager implements IFilesManager {
 			debug('No content copies needed (movements: %d)', contentMovements.size);
 		}
 
-		// Step 4: Process temp downloads if any
+		// Step 4 (Pass 1): Copy temp downloads to standard locations.
+		// Deletion of the tmp source is deferred until AFTER Step 5 has updated
+		// every file.localFilePath to its standard-path URI. Otherwise a concurrent
+		// video.prepare() in the playlist could reference a tmp URI whose file was
+		// just deleted, producing PLAYER_ERROR_INVALID_URI on Tizen AVPlayer.
+		const tmpPathsToDelete: string[] = [];
 		debug('\n=== STEP 4: PROCESSING TEMP DOWNLOADS ===');
 		if (this.tempDownloads.size > 0) {
 			debug('Processing %d temp downloads:', this.tempDownloads.size);
@@ -2686,7 +2727,7 @@ export class FilesManager implements IFilesManager {
 				debug('  Temp file: %s at %s', fileName, tempPath);
 			}
 
-			// Move files from temp to standard locations
+			// Pass 1: copy tmp → standard, collect tmp paths to delete later.
 			for (const [fileName, tempPath] of this.tempDownloads) {
 				// Determine the standard path from the temp path
 				const standardPath = tempPath
@@ -2696,7 +2737,6 @@ export class FilesManager implements IFilesManager {
 					.replace(FileStructure.widgetsTmp, FileStructure.widgets);
 
 				try {
-					// Copy file from temp to standard location
 					debug('Copying file from %s to %s', tempPath, standardPath);
 					const overwrittenSize = await this.getExistingFileSize(standardPath);
 					await this.sos.fileSystem.copyFile(
@@ -2712,22 +2752,17 @@ export class FilesManager implements IFilesManager {
 							overwrite: true,
 						},
 					);
-
-					// Delete temp file only after successful copy
-					await this.sos.fileSystem.deleteFile(
-						{
-							storageUnit: this.internalStorageUnit,
-							filePath: tempPath,
-						},
-						true,
-					);
 					this.reclaimOverwrittenSpace(overwrittenSize, standardPath);
+
+					// Defer tmp delete until after Step 5 updates localFilePath.
+					tmpPathsToDelete.push(tempPath);
 
 					debug('Successfully migrated: %s', fileName);
 				} catch (err) {
 					failedFileNames.add(fileName);
 					debug('Error migrating file %s: %O', fileName, err);
-					// Continue with other files even if one fails
+					// Continue with other files even if one fails. The tmp file is
+					// NOT queued for deletion — the playlist can keep using it.
 				}
 			}
 
@@ -2779,6 +2814,31 @@ export class FilesManager implements IFilesManager {
 		}
 
 		debug('\n=== END OF STEP 5 ===');
+
+		// Step 6 (Pass 2): now that every localFilePath references the standard
+		// path, it is safe to delete the tmp sources we copied in Step 4. Running
+		// this after Step 5 closes the race where video.prepare() could hit a
+		// just-deleted tmp URI.
+		if (tmpPathsToDelete.length > 0) {
+			debug('\n=== STEP 6: DELETING MIGRATED TEMP FILES ===');
+			debug('Deleting %d migrated temp files', tmpPathsToDelete.length);
+			for (const tempPath of tmpPathsToDelete) {
+				try {
+					await this.sos.fileSystem.deleteFile(
+						{
+							storageUnit: this.internalStorageUnit,
+							filePath: tempPath,
+						},
+						true,
+					);
+					debug('  Deleted temp file: %s', tempPath);
+				} catch (err) {
+					// Non-fatal: localFilePath already points at the standard copy.
+					// Orphan tmp files are reaped by clearTempFolders() on next boot.
+					debug('  Failed to delete temp file %s (non-fatal): %O', tempPath, err);
+				}
+			}
+		}
 
 		// Clear temp downloads tracking after migration
 		if (this.tempDownloads.size > 0) {
@@ -2854,6 +2914,7 @@ export class FilesManager implements IFilesManager {
 			const slotFileName = getFileName(file.src);
 			const destPath = `${localFilePath}/${slotFileName}`;
 
+			let copyExecuted = false;
 			if (actualFile.filePath !== destPath) {
 				const overwrittenSize = await this.getExistingFileSize(destPath);
 				await this.sos.fileSystem.copyFile(
@@ -2864,17 +2925,26 @@ export class FilesManager implements IFilesManager {
 				this.reclaimOverwrittenSpace(overwrittenSize, destPath);
 				await this.trackSpaceConsumed(destPath);
 				debug('Copied moved content from %s to %s for %s', actualFile.filePath, destPath, file.src);
+				copyExecuted = true;
 			}
 
 			// Resolve localFilePath from the slot's own file (now has correct content)
 			const slotFileDetails = await this.getFileByPath(destPath);
+			let localFilePathChanged = false;
 			if (slotFileDetails) {
 				const oldPath = file.localFilePath;
-				file.localFilePath = slotFileDetails.localUri;
-				debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, slotFileDetails.localUri);
+				if (oldPath !== slotFileDetails.localUri) {
+					file.localFilePath = slotFileDetails.localUri;
+					debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, slotFileDetails.localUri);
+					localFilePathChanged = true;
+				}
 			}
 
-			return true;
+			// Return true only when something actually changed on disk or in the path.
+			// No-op calls (matching slot found but same path and same localFilePath) must return
+			// false so callers don't mis-interpret mapping-only churn as a content update and
+			// trigger the wasUpdated/re-prepare pipeline.
+			return copyExecuted || localFilePathChanged;
 		}
 
 		return false;
@@ -3053,11 +3123,14 @@ export class FilesManager implements IFilesManager {
 					localFilePath,
 				);
 
-				if (updated) {
-					// Defer wasUpdated to commitBatch for consistency with batch flow
-					this.pendingWasUpdated.add(file as MergedDownloadList);
-					const fileName = getFileName(file.src);
-					const oldValue = mediaInfoObject[fileName];
+				const fileName = getFileName(file.src);
+				const oldValue = mediaInfoObject[fileName];
+				// Persist mapping whenever the tracked value actually differs so custom
+				// endpoint reports reflect the current CDN redirect target. Split the
+				// effect based on whether the local path/bytes changed: real content move
+				// → wasUpdated (forces re-prepare); mapping-only churn (e.g. query-param
+				// change) → useInReportUrlStale (refresh report URL only).
+				if (String(oldValue) !== String(updateCheck.value)) {
 					debug(
 						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
 						fileName,
@@ -3065,9 +3138,15 @@ export class FilesManager implements IFilesManager {
 						updateCheck.value,
 					);
 					this.collectUpdate(fileName, updateCheck.value);
+				}
+
+				if (updated) {
+					// Defer wasUpdated to commitBatch for consistency with batch flow
+					this.pendingWasUpdated.add(file as MergedDownloadList);
 					debug('checkLastModified: Batch update collected for moved content');
-				} else {
-					debug('checkLastModified: WARNING - Could not find actual file for moved content: %s', file.src);
+				} else if (String(oldValue) !== String(updateCheck.value)) {
+					(file as any).useInReportUrlStale = true;
+					debug('checkLastModified: Mapping-only update; flagged useInReportUrlStale for %s', fileName);
 				}
 			} else {
 				debug('checkLastModified: No update needed for file: %s', file.src);

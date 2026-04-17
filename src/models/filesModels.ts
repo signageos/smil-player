@@ -20,6 +20,7 @@ export type CheckETagFunctions = {
 export type SMILFile = {
 	src: string;
 	useInReportUrl?: string;
+	useInReportUrlStale?: boolean;
 	lastModified?: number;
 	expr?: string;
 	/** Optional callback which overrides standard downloadFile process and do it inside the callback instead */

@@ -2593,15 +2593,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		debug(`[${debugId}] Starting to play element: %O`, value);
 
 		// Initialize useInReportUrl from disk on first play, or refresh it after a playlist update
-		// (wasUpdated=true). This ensures the reported URL matches the content about to play,
-		// not stale in-flight values from before the update.
-		if ('src' in value && (!value.useInReportUrl || value.wasUpdated)) {
+		// (wasUpdated=true). useInReportUrlStale covers mapping-only updates (e.g. CDN redirect
+		// with only query-param changes) where bytes on disk didn't change but the reported URL did.
+		if ('src' in value && (!value.useInReportUrl || value.wasUpdated || value.useInReportUrlStale)) {
 			const fileName = getFileName(value.src);
 			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([value as MergedDownloadList]);
 			if (mediaInfoObject[fileName]) {
 				value.useInReportUrl = String(mediaInfoObject[fileName]);
 				debug(`[${debugId}] Set useInReportUrl at first play: %s`, value.useInReportUrl);
 			}
+			value.useInReportUrlStale = false;
 		}
 
 		// html page case
