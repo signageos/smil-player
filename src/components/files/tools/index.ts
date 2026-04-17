@@ -140,6 +140,14 @@ export function createVersionedUrl(
 	if (isWidget && !isLocalFileWidget(sourceUrl)) {
 		return urlWithoutSearch;
 	}
+	// Tizen AVPlayer rejects any query string on file:// URIs with
+	// PLAYER_ERROR_INVALID_URI, so we cannot use __smil_version as an HTTP-style
+	// cache-buster here. Callers (rePrepareUpdatedVideo) already stop the stale
+	// player before prepare, which frees the pool slot and forces a fresh player
+	// instance — URI-level versioning is redundant for local files.
+	if (sourceUrl.startsWith('file://')) {
+		return urlWithoutSearch;
+	}
 	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion, wasUpdated);
 	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
 }
