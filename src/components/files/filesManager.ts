@@ -876,6 +876,13 @@ export class FilesManager implements IFilesManager {
 						}
 
 						try {
+							// Floor guard: skip the dedup copy if it would breach MINIMAL_STORAGE_FREE_SPACE
+							if (!(await this.hasFloorRoomForCopy(existingFilePath))) {
+								debug('DEDUP: Skipping copy for %s - would breach minimum free space floor', task.file.src);
+								skippedDownloads++;
+								continue;
+							}
+
 							// SAFE: Copy to temp folder
 							debug(
 								'DEDUP: Copying existing content to temp: %s -> %s',
@@ -978,6 +985,12 @@ export class FilesManager implements IFilesManager {
 								}
 
 								try {
+									// Floor guard: skip if this copy would breach the minimum free space floor
+									if (!(await this.hasFloorRoomForCopy(restoredTempPath))) {
+										debug('DEDUP: Skipping restored copy for %s - would breach minimum free space floor', task.file.src);
+										continue;
+									}
+
 									// Copy the restored file to this task's temp location
 									debug(
 										'DEDUP: Copying restored content to temp: %s -> %s',
@@ -1196,6 +1209,15 @@ export class FilesManager implements IFilesManager {
 									const duplicateTask = tasks[i];
 
 									try {
+										// Floor guard: skip if duplicating would breach the floor.
+										// Use Content-Length as the size fallback when the on-disk file isn't readable yet
+										// (e.g. download just landed and stats not flushed).
+										const fallback = primaryTask.contentLength || MINIMAL_STORAGE_FREE_SPACE;
+										if (!(await this.hasFloorRoomForCopy(primaryTask.actualDownloadPath, fallback))) {
+											debug('DEDUP: Skipping duplicate copy for %s - would breach minimum free space floor', duplicateTask.file.src);
+											continue;
+										}
+
 										debug(
 											'DEDUP: Copying for duplicate: %s -> %s',
 											primaryTask.actualDownloadPath,
@@ -2204,9 +2226,16 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
-	 * Check if there's enough available storage space for operations
-	 * @param estimatedRequiredSpace - Estimated space needed in bytes
-	 * @returns True if there's enough space, false otherwise
+	 * Check if there's enough available storage space for operations.
+	 *
+	 * Enforces an absolute floor of {@link MINIMAL_STORAGE_FREE_SPACE} bytes —
+	 * the operation is allowed only if `availableSpace - requiredWithMargin`
+	 * remains above the floor. This guarantees the device always retains at
+	 * least MINIMAL_STORAGE_FREE_SPACE free, no matter what.
+	 *
+	 * @param estimatedRequiredSpace - Estimated space needed in bytes (pass 0
+	 *   when only the floor matters, e.g. for size-agnostic guard checks).
+	 * @returns True if both the operation fits AND the floor is preserved.
 	 */
 	private checkAvailableSpace = async (estimatedRequiredSpace: number): Promise<boolean> => {
 		try {
@@ -2215,13 +2244,18 @@ export class FilesManager implements IFilesManager {
 			// Add safety margin - require at least 10% more space than estimated
 			const safetyMargin = 1.1;
 			const requiredWithMargin = estimatedRequiredSpace * safetyMargin;
-			const hasEnoughSpace = availableSpace > requiredWithMargin;
+
+			// Absolute floor: after consuming requiredWithMargin, the device
+			// must still have MINIMAL_STORAGE_FREE_SPACE available.
+			const hasEnoughSpace =
+				availableSpace - requiredWithMargin >= MINIMAL_STORAGE_FREE_SPACE;
 
 			debug(
-				'Storage check: Available: %d MB, Required: %d MB (with margin: %d MB), Sufficient: %s',
+				'Storage check: Available: %d MB, Required: %d MB (with margin: %d MB), Floor: %d MB, Sufficient: %s',
 				Math.round(availableSpace / (1024 * 1024)),
 				Math.round(estimatedRequiredSpace / (1024 * 1024)),
 				Math.round(requiredWithMargin / (1024 * 1024)),
+				Math.round(MINIMAL_STORAGE_FREE_SPACE / (1024 * 1024)),
 				hasEnoughSpace ? 'Yes' : 'No',
 			);
 
@@ -2231,6 +2265,29 @@ export class FilesManager implements IFilesManager {
 			// If we can't check space, proceed anyway and handle errors later
 			return true;
 		}
+	};
+
+	/**
+	 * Floor-aware pre-check for an upcoming file COPY.
+	 *
+	 * Looks up the source file's real `sizeBytes`; falls back to `fallbackBytes`
+	 * (defaults to {@link MINIMAL_STORAGE_FREE_SPACE} — the most pessimistic
+	 * estimate) when the live size is unavailable. Forwards the resolved size
+	 * to {@link checkAvailableSpace}, which enforces the absolute minimum-free
+	 * floor.
+	 *
+	 * Use at every call site that copies new bytes onto disk. Callers handle
+	 * their own debug messaging and exit branch (continue / return /
+	 * fall-back) so the helper stays small and focused.
+	 *
+	 * @returns true if the copy would not breach the floor.
+	 */
+	private hasFloorRoomForCopy = async (
+		sourceFilePath: string,
+		fallbackBytes: number = MINIMAL_STORAGE_FREE_SPACE,
+	): Promise<boolean> => {
+		const stats = await this.getFileByPath(sourceFilePath);
+		return this.checkAvailableSpace(stats?.sizeBytes || fallbackBytes);
 	};
 
 	private trackSpaceConsumed = async (filePath: string) => {
@@ -2452,6 +2509,14 @@ export class FilesManager implements IFilesManager {
 			const tempPath = `${tempFolder}/${tempFileName}`;
 
 			try {
+				// Floor guard: skip the temp copy if it would breach the minimum free space floor
+				if (!(await this.hasFloorRoomForCopy(movement.sourceFilePath))) {
+					debug('  Skipping temp copy for %s - would breach minimum free space floor', movement.sourceFileName);
+					// Fall back to using the original file directly (consistent with the catch path below)
+					tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
+					continue;
+				}
+
 				// Copy to temp location
 				debug('  Creating temp copy: %s -> %s', movement.sourceFilePath, tempPath);
 				await this.sos.fileSystem.copyFile(
@@ -2917,6 +2982,14 @@ export class FilesManager implements IFilesManager {
 			let copyExecuted = false;
 			if (actualFile.filePath !== destPath) {
 				const overwrittenSize = await this.getExistingFileSize(destPath);
+				const sourceSize = (actualFile as { sizeBytes?: number }).sizeBytes || MINIMAL_STORAGE_FREE_SPACE;
+				// Net new bytes consumed = sourceSize − overwrittenSize. Use sourceSize as
+				// a conservative upper bound for the floor guard.
+				const netSize = Math.max(sourceSize - overwrittenSize, 0);
+				if (!(await this.checkAvailableSpace(netSize))) {
+					debug('Skipping MOVED_CONTENT slot copy for %s - would breach minimum free space floor', file.src);
+					return false;
+				}
 				await this.sos.fileSystem.copyFile(
 					{ storageUnit: this.internalStorageUnit, filePath: actualFile.filePath },
 					{ storageUnit: this.internalStorageUnit, filePath: destPath },
@@ -3378,7 +3451,11 @@ export class FilesManager implements IFilesManager {
 	}
 
 	private saveCustomEndpointInfo = async (customEndpointInfo: CustomEndpointReport) => {
-		if (!(await this.checkAvailableSpace(MINIMAL_STORAGE_FREE_SPACE))) {
+		// Floor check only — refuse to write a report if doing so would push the
+		// device below MINIMAL_STORAGE_FREE_SPACE. Reports themselves are tiny
+		// (KB-range), so we don't need to budget per-report bytes; the floor is
+		// what matters.
+		if (!(await this.checkAvailableSpace(0))) {
 			debug('Not enough space on device to save custom endpoint report');
 			return;
 		}
@@ -3917,11 +3994,13 @@ export class FilesManager implements IFilesManager {
 				return null;
 			}
 
-			// Note: We don't check for available space here - let the copy operation
-			// fail naturally if there's insufficient space. This is consistent with
-			// how content movements handle space issues. If there's no space for
-			// restoration, download would also fail, so the player will continue
-			// without the update (graceful degradation).
+			// Floor guard: skip restoration if it would breach the minimum free space floor.
+			// (Updated 2026-04-19: was previously a deliberate non-check; now we enforce the
+			// MINIMAL_STORAGE_FREE_SPACE floor uniformly across every consume path.)
+			if (!(await this.hasFloorRoomForCopy(storagePath))) {
+				debug('Skipping restore-from-storage for %s - would breach minimum free space floor', storagePath);
+				return null;
+			}
 
 			// CRITICAL: Generate the correct filename based on the requesting URL
 			// This ensures the player finds the file with the expected name
