@@ -461,6 +461,42 @@ export class SMILElementController {
 	}
 
 	/**
+	 * Check whether the latest stored broadcast for this command/region is structurally
+	 * compatible with the local playlist. Used to short-circuit sync coordination when a
+	 * peer is on a different SMIL version, so the device plays its own content instead of
+	 * stalling on cross-version messages that can never align.
+	 *
+	 * Returns true when:
+	 *  - no broadcast is stored yet (no evidence to reject — proceed to normal wait path), OR
+	 *  - the broadcast's priority level and bounds match the slave's local priority bounds, OR
+	 *  - (non-priority playlists) the broadcast's syncIndex is within the slave's local range.
+	 *
+	 * Returns false when there is positive evidence that the broadcast references a priority
+	 * or syncIndex range the slave's playlist does not contain.
+	 */
+	private isBroadcastAligned(commandType: SyncCommandType, regionName: string, syncGroup: SyncGroup): boolean {
+		const stored = syncGroup.getSyncCoordinationMessage(commandType, regionName) as SyncMessage | undefined;
+		if (!stored) {
+			return true;
+		}
+		if (stored.priorityLevel !== undefined) {
+			const local = this.synchronization.syncIndexBoundsPerPriority?.[regionName]?.[stored.priorityLevel];
+			if (!local) {
+				return false;
+			}
+			if (stored.priorityMinSyncIndex !== local.min) {
+				return false;
+			}
+			if (stored.priorityMaxSyncIndex !== local.max) {
+				return false;
+			}
+			return true;
+		}
+		const localMax = this.synchronization.maxSyncIndexPerRegion?.[regionName];
+		return localMax === undefined || stored.syncIndex <= localMax;
+	}
+
+	/**
 	 * Check for priority level changes from incoming sync messages.
 	 * If priority changed, clear stale resync state from different priority context.
 	 * Handles three transition cases:
@@ -1230,6 +1266,21 @@ export class SMILElementController {
 		// Update slave position tracking
 		this.updateSlavePosition(regionName, syncIndex, expectedState);
 
+		// Cross-version peek: if the peer is broadcasting a structurally incompatible
+		// message (priority / bounds / syncIndex range don't map to our local playlist),
+		// don't enter any wait or resync loop — play this element solo. Sync auto-resumes
+		// the moment a structurally compatible broadcast arrives.
+		if (!this.isBroadcastAligned(commandType, regionName, syncGroup)) {
+			logDebug(
+				timedDebug,
+				'Peer broadcast cross-version for region=%s (%s) — playing solo, skipping sync wait',
+				regionName,
+				commandType,
+			);
+			this.clearResyncState();
+			return ProcessAction.CONTINUE;
+		}
+
 		// Check stored message for priority changes (may clear stale resync state)
 		this.handleStoredMessagePriority(syncGroup, commandType, regionName, expectedPriorityLevel, timedDebug);
 
@@ -1409,6 +1460,20 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 		priorityLevel?: number,
 	): Promise<void> {
+		// Cross-version peek: if peer's broadcast is structurally incompatible, skip ACK
+		// and signal-ready wait entirely. Sending an ACK against a misaligned master message
+		// would muddy master's waitForAcks counting; waiting for signal-ready would time
+		// out on a signal that never arrives in matching form.
+		if (!this.isBroadcastAligned(config.commandType, regionName, syncGroup)) {
+			logDebug(
+				timedDebug,
+				'Peer broadcast cross-version for region=%s (%s complete) — skipping ACK and signal-ready wait',
+				regionName,
+				phase,
+			);
+			return;
+		}
+
 		const resyncTarget = this.synchronization.resyncTargets?.[config.resyncField];
 
 		// Handle resync mode - send ACK for master's position
