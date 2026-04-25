@@ -1,0 +1,47 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="300"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="http://localhost:3000/assets/img_1.jpg"/>
+                <prefetch src="http://localhost:3000/assets/img_2.jpg"/>
+                <prefetch src="http://localhost:3000/assets/img_3.jpg"/>
+                <prefetch src="http://localhost:3000/assets/img_4.jpg"/>
+                <prefetch src="http://localhost:3000/assets/img_5.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Cross-version SHORT fixture: one priorityClass, always-active wallclock.
+                     Player parses it into syncIndexBoundsPerPriority[main][1] only.
+                     priorityLevel=2 is unknown to this device — when a LONG peer broadcasts
+                     priority=2 cmd-prepare, the alignment peek's "priority not in local
+                     map" branch must fire, otherwise the slave waits indefinitely for a
+                     priority=1 cmd-prepare that master never sends. -->
+                <excl repeatCount="indefinite">
+                    <priorityClass higher="stop" lower="defer" peer="stop" pauseDisplay="hide">
+                        <par begin="wallclock(R/2020-01-01T00:00:00/P10Y)" end="wallclock(R/2030-01-01T00:00:00/P10Y)">
+                            <seq repeatCount="indefinite">
+                                <img dur="5s" src="http://localhost:3000/assets/img_1.jpg" region="main" fit="fill"/>
+                                <img dur="5s" src="http://localhost:3000/assets/img_2.jpg" region="main" fit="fill"/>
+                                <img dur="5s" src="http://localhost:3000/assets/img_3.jpg" region="main" fit="fill"/>
+                                <img dur="5s" src="http://localhost:3000/assets/img_4.jpg" region="main" fit="fill"/>
+                                <img dur="5s" src="http://localhost:3000/assets/img_5.jpg" region="main" fit="fill"/>
+                            </seq>
+                        </par>
+                    </priorityClass>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

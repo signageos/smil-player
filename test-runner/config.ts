@@ -100,6 +100,8 @@ export function getSmilUrls(port: number = 3000) {
 		linearPlaylistAckParity: `${base}/syncFiles/linearPlaylistAckParity.smil`,
 		wallclockInflatedBounds: `${base}/syncFiles/wallclockInflatedBounds.smil`,
 		cycleWrapBoundary: `${base}/syncFiles/cycleWrapBoundary.smil`,
+		crossVersionShort: `${base}/syncFiles/crossVersionShort.smil`,
+		crossVersionLong: `${base}/syncFiles/crossVersionLong.smil`,
 		// Group D: served via /dynamic/ (fillWallclock substitutes priority windows).
 		wallclockPriorityTransition: `${base}/dynamic/wallclockPriorityTransition.smil`,
 		// Group J: 3-level priority cascade (P1→P2→P3). Also served via /dynamic/.

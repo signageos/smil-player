@@ -204,4 +204,63 @@ describe('SMILElementController.isBroadcastAligned', () => {
 
 		expect(callIsBroadcastAligned(controller, 'cmd-play', 'main', group)).to.equal(true);
 	});
+
+	// ----- partial / older-protocol SyncMessage shapes -----
+	// These guard against partial-shape payloads that older peers may broadcast.
+	// The cross-version peek is precisely the mechanism that has to handle
+	// these without crashing or false-aligning.
+
+	it('returns false when synchronization has no syncIndexBoundsPerPriority at all (priority message)', () => {
+		// Distinct from `syncIndexBoundsPerPriority: {}`: here the whole map is undefined,
+		// so the predicate must not crash on optional-chaining and must still reject the
+		// peer broadcast (no local bounds to compare against → positive evidence of mismatch).
+		const sync = makeSynchronization({}); // no syncIndexBoundsPerPriority
+		const controller = new SMILElementController(sync);
+		const group = makeSyncGroupMock({
+			'cmd-prepare|main': makeStoredMessage({
+				priorityLevel: 1,
+				priorityMinSyncIndex: 1,
+				priorityMaxSyncIndex: 5,
+			}),
+		});
+
+		expect(callIsBroadcastAligned(controller, 'cmd-prepare', 'main', group)).to.equal(false);
+	});
+
+	it('returns false when peer message has priorityMinSyncIndex undefined but local bounds set', () => {
+		const sync = makeSynchronization({
+			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
+		});
+		const controller = new SMILElementController(sync);
+		const group = makeSyncGroupMock({
+			'cmd-prepare|main': makeStoredMessage({
+				priorityLevel: 1,
+				// priorityMinSyncIndex intentionally undefined (older-protocol peer)
+				priorityMaxSyncIndex: 5,
+				syncIndex: 3,
+			}),
+		});
+
+		// undefined !== local.min(1) → predicate must report misalignment so the slave
+		// plays solo rather than trusting a malformed peer's bounds.
+		expect(callIsBroadcastAligned(controller, 'cmd-prepare', 'main', group)).to.equal(false);
+	});
+
+	it('returns false when peer message has priorityMaxSyncIndex undefined but local bounds set', () => {
+		const sync = makeSynchronization({
+			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
+		});
+		const controller = new SMILElementController(sync);
+		const group = makeSyncGroupMock({
+			'cmd-prepare|main': makeStoredMessage({
+				priorityLevel: 1,
+				priorityMinSyncIndex: 1,
+				// priorityMaxSyncIndex intentionally undefined
+				syncIndex: 3,
+			}),
+		});
+
+		// undefined !== local.max(5) → predicate must report misalignment.
+		expect(callIsBroadcastAligned(controller, 'cmd-prepare', 'main', group)).to.equal(false);
+	});
 });
