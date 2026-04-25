@@ -13,7 +13,7 @@ import { SyncDevice, WsFrame } from '../syncHelpers';
  *  4. Generic "becoming master" phrase (defensive, may appear from native code).
  */
 const MASTER_ELECTED_RE =
-	/Master received all|isMaster[\s\S]*?\btrue\b|master status changed[\s\S]*?\bfalse\b[\s\S]*?\btrue\b|becoming\s+master/i;
+	/Master received all|isMaster[\s\S]*?\btrue\b|master status changed[\s\S]*?\b(false|null)\b[\s\S]*?\btrue\b|becoming\s+master/i;
 
 export async function waitForMasterElection(
 	devices: SyncDevice[],
