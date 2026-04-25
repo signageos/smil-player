@@ -99,7 +99,7 @@ export async function waitForConsolePattern(
  */
 export async function captureDomState(page: Page) {
 	const videos = await page.evaluate(() =>
-		[...document.querySelectorAll('video')].map((v) => ({
+		Array.from(document.querySelectorAll('video')).map((v) => ({
 			src: v.src || null,
 			visible: v.offsetWidth > 0 && v.offsetHeight > 0,
 			width: v.offsetWidth,
@@ -117,7 +117,7 @@ export async function captureDomState(page: Page) {
 	if (appletFrame) {
 		try {
 			images = await appletFrame.evaluate(() =>
-				[...document.querySelectorAll('img')].map((img) => ({
+				Array.from(document.querySelectorAll('img')).map((img) => ({
 					src: img.src || null,
 					visible: img.offsetWidth > 0 && img.offsetHeight > 0,
 					width: img.offsetWidth,
@@ -125,7 +125,7 @@ export async function captureDomState(page: Page) {
 				})),
 			);
 			iframes = await appletFrame.evaluate(() =>
-				[...document.querySelectorAll('iframe')].map((f) => ({
+				Array.from(document.querySelectorAll('iframe')).map((f) => ({
 					src: f.src || null,
 					visible: f.offsetWidth > 0 && f.offsetHeight > 0,
 					width: f.offsetWidth,
