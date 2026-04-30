@@ -2,11 +2,17 @@ import { Browser, BrowserContext, Page } from '@playwright/test';
 import { createConsoleCollector } from './helpers';
 import { DUID, EMULATOR_BASE } from './config';
 
-export const DEFAULT_SYNC_SERVER_URL = 'https://sync.signage-cdn.com';
+export const DEFAULT_SYNC_SERVER_URL = process.env.SYNC_SERVER_URL || 'https://sync.signage-cdn.com';
 
 /** Hostname substring used to filter sync-server WebSocket frames from any
  * incidental WS traffic the page might open. Matches DEFAULT_SYNC_SERVER_URL. */
-const SYNC_WS_HOST_FILTER = 'sync.signage-cdn.com';
+const SYNC_WS_HOST_FILTER = (() => {
+	try {
+		return new URL(DEFAULT_SYNC_SERVER_URL).host;
+	} catch {
+		return 'sync.signage-cdn.com';
+	}
+})();
 
 /**
  * One captured WebSocket frame on a SyncDevice. Buffer payloads are base64-
@@ -163,6 +169,21 @@ export async function addSyncDevice(
 			// logs after its Debug.disable() call — the sync assertions grep
 			// console for [sync]/[syncGroup] lines that only appear then.
 			(window as any).__SYNC_CONFIG__ = cfg.sync;
+			// Enable FD/FA debug BEFORE any page script runs, so that FD's
+			// `debug()` instances created during FD's initial load (parent page,
+			// localhost:8090) pick up these namespaces. Setting it from the
+			// smil-player iframe later is too late — FD's debug instances are
+			// already constructed disabled. addInitScript fires on every
+			// navigation including the iframe; both parent and iframe share the
+			// same origin (localhost:8090) and therefore the same localStorage.
+			try {
+				localStorage.setItem(
+					'debug',
+					'@signageos/front-display:*,@signageos/front-applet:*',
+				);
+			} catch {
+				// ignore: some origins disallow localStorage
+			}
 		},
 		{
 			smilUrl,
