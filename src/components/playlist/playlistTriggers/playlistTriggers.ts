@@ -1,6 +1,6 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
 import { SMILMedia } from '../../../models/mediaModels';
-import { sleep } from '../tools/generalTools';
+import { getConfigString, sleep } from '../tools/generalTools';
 import { FunctionKeys, SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { isNil, isObject } from 'lodash';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
@@ -19,6 +19,7 @@ import {
 import { getRandomInt } from '../../files/tools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
+import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
 import set = require('lodash/set');
 import Debug from 'debug';
@@ -29,9 +30,10 @@ import { IPlaylistTriggers } from './IPlaylistTriggers';
 import { PriorityObject } from '../../../models/priorityModels';
 import { DynamicPlaylist, DynamicPlaylistElement, DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
+import { resolvePlayingDeferred } from '../tools/deferredTools';
+import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { joinSyncGroup } from '../tools/dynamicTools';
-import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
 
@@ -41,7 +43,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	public smilObject: SMILFileObject;
 	private readonly processPlaylist: Function;
 
-	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions, processPlaylist: Function) {
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, processPlaylist: Function) {
 		super(sos, files, options);
 		this.processPlaylist = processPlaylist;
 	}
@@ -167,7 +169,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		debug('Dynamic playlist finished: %s', dynamicPlaylistId);
 	};
 
-	private cancelDynamicPlaylistSlave = async (dynamicPlaylistId: string, dynamicPlaylistConfig: DynamicPlaylist) => {
+	private cancelDynamicPlaylistSlave = async (dynamicPlaylistId: string, dynamicPlaylistConfig?: DynamicPlaylist) => {
 		const currentDynamicPlaylist = this.dynamicPlaylist[dynamicPlaylistId];
 		// masters sends end to all at the start even when it was not played yet
 		if (!currentDynamicPlaylist || !currentDynamicPlaylist.play) {
@@ -177,29 +179,33 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentDynamicPlaylist.play = false;
 
 		// cancel wait for dynamic playlist sync to avoid deadlocks
-		try {
-			await this.sos.sync.cancelWait(
-				`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-			);
-		} catch (err) {
-			debug('Error while cancelling wait for dynamic playlist: %O, with err: %O', currentDynamicPlaylist, err);
+		if (dynamicPlaylistConfig?.syncId) {
+			try {
+				await (this.sos as FrontApplet).sync.cancelWait(
+					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				);
+			} catch (err) {
+				debug('Error while cancelling wait for dynamic playlist: %O, with err: %O', currentDynamicPlaylist, err);
+			}
 		}
 
 		// TODO: unify region cancellation with master
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
+				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig?.data) {
+					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig?.data);
 					elem.player.playing = false;
+					resolvePlayingDeferred(elem.player);
 				}
 			}
 		}
 
 		if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
 			for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig.data) {
-					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig.data);
+				if (elem && elem.media.dynamicValue === dynamicPlaylistConfig?.data) {
+					debug('Cancelling dynamic playlist slave with dynamic value %s', dynamicPlaylistConfig?.data);
 					elem.player.playing = false;
+					resolvePlayingDeferred(elem.player);
 				}
 			}
 		}
@@ -210,7 +216,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	private watchIfDynamicStillActive = async () => {
 		while (true) {
 			for (const dynamic of Object.values(this.dynamicPlaylist)) {
-				if (dynamic.play && dynamic.latestEventFired + 2500 < Date.now() && !dynamic.isMaster) {
+				if (dynamic.play && dynamic.latestEventFired + 2500 < Date.now() && !dynamic.isMaster && dynamic.dynamicConfig) {
 					debug('Dynamic playlist %s is not active anymore', dynamic.dynamicPlaylistId);
 					await this.cancelDynamicPlaylistSlave(dynamic.dynamicPlaylistId, dynamic.dynamicConfig);
 				}
@@ -220,26 +226,31 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchSyncServerError = async () => {
-		this.sos.sync.onClosed(async (error?: Error) => {
+		(this.sos as FrontApplet).sync.onClosed(async (error?: Error) => {
 			if (error) {
 				try {
 					await this.files.sendGeneralErrorReport(`Sync closed with error ${error}`);
 					await sleep(5e3);
-					await this.sos.management.power.appRestart();
+					await (this.sos as FrontApplet).management.power.appRestart();
 				} catch (e) {
-					console.log('error while restarting', e);
+					debug('error while restarting: %O', e);
 				}
 			}
 		});
 	};
 
 	private watchUdpRequest = async (playlistVersion: () => number, filesLoop: () => boolean) => {
-		this.sos.sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
+		(this.sos as FrontApplet).sync.onValue(async (_key, dynamicPlaylistConfig: DynamicPlaylist) => {
 			debug(
 				`received udp request ${JSON.stringify(
 					dynamicPlaylistConfig,
-				)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid}`,
+				)}, with timestamp ${Date.now()} and request id ${dynamicPlaylistConfig.requestUid ?? 'unknown'}`,
 			);
+
+			if (!dynamicPlaylistConfig?.data) {
+				debug('Dynamic playlist config data is undefined, skipping');
+				return;
+			}
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
@@ -296,10 +307,10 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				}
 			}
 
-			if (dynamicPlaylistConfig.action === 'start') {
+			if (dynamicPlaylistConfig.action === 'start' && dynamicPlaylistConfig.syncId) {
 				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
 				await joinSyncGroup(
-					this.sos,
+					this.sos as FrontApplet,
 					this.synchronization,
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
@@ -325,7 +336,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private watchSyncTriggers = async () => {
-		this.sos.sync.onStatus(async (onStatus) => {
+		(this.sos as FrontApplet).sync.onStatus(async (onStatus) => {
 			try {
 				debug('received onStatus: %O', onStatus);
 				if (!onStatus.connectedPeers) {
@@ -396,24 +407,26 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
 					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.regionInfo?.regionName]) {
-						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
+						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig?.data) {
 							debug(
 								'Cancelling dynamic playlist with dynamic value %s',
-								currentDynamicPlaylist.dynamicConfig.data,
+								currentDynamicPlaylist.dynamicConfig?.data,
 							);
 							elem.player.playing = false;
+							resolvePlayingDeferred(elem.player);
 						}
 					}
 				}
 
 				if (this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
 					for (const elem of this.currentlyPlayingPriority[currentDynamicPlaylist?.parentRegion]) {
-						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig.data) {
+						if (elem && elem.media.dynamicValue === currentDynamicPlaylist.dynamicConfig?.data) {
 							debug(
 								'Cancelling dynamic playlist with dynamic value %s',
-								currentDynamicPlaylist.dynamicConfig.data,
+								currentDynamicPlaylist.dynamicConfig?.data,
 							);
 							elem.player.playing = false;
+							resolvePlayingDeferred(elem.player);
 						}
 					}
 				}
@@ -510,17 +523,29 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				const triggerId =
 					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
-				const triggerMedia = this.smilObject.triggers[triggerId];
+				debug('Widget trigger Id: %s', triggerId);
+
+				// Widgets triggers do not have info specified in smil xml header, only in playlist
 				const triggerInfo = {
 					trigger: triggerId,
 				};
+
+				debug('Widget trigger info: %s', triggerInfo);
+
+				const triggerMedia = this.smilObject.triggers[triggerId];
+				debug('Widget trigger media: %O', triggerMedia);
+
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
 				const stringDuration = findDuration(triggerMedia);
+				debug('Duration: %s for trigger Id: %s', stringDuration, triggerId);
 				if (!isNil(stringDuration)) {
-					await this.processTriggerDuration(triggerInfo as any, triggerMedia, stringDuration);
+					debug('Starting duration widget trigger: %s', triggerId);
+					await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
 					return;
 				}
+				debug('Starting repeatCount widget trigger: %s', triggerId);
+				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			},
 			false,
 		);
@@ -535,8 +560,8 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				);
 			}
 
-			serialPort = await this.sos.hardware.openSerialPort({
-				device: this.sos.config.serialPortDevice ?? SMILTriggersEnum.nexmoDevice,
+			serialPort = await (this.sos as FrontApplet).hardware.openSerialPort({
+				device: getConfigString(this.sos.config, 'serialPortDevice') ?? SMILTriggersEnum.nexmoDevice,
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
 			});
 		} catch (err) {
@@ -627,6 +652,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			debug('Starting trigger: %O', triggerInfo.trigger);
 			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo);
 			const stringDuration = findDuration(triggerMedia);
+			debug('Trigger: %O with duration: %s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
 				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
 				return;
@@ -714,7 +740,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private processTriggerDuration = async (
-		triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+		triggerInfo: { trigger: string },
 		triggerMedia: TriggerObject,
 		stringDuration: string,
 		priorityObject: PriorityObject = {} as PriorityObject,
@@ -765,7 +791,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	};
 
 	private processTriggerRepeatCount = async (
-		triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
+		triggerInfo: { trigger: string },
 		triggerMedia: TriggerObject,
 		priorityObject: PriorityObject = {} as PriorityObject,
 	) => {

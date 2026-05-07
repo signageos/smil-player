@@ -20,6 +20,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
+    "downlevelIteration": true,
     "lib": [
       "es2017",
       "scripthost",
@@ -37,7 +38,6 @@
     "libs/chrome/chrome-plugin.d.ts"
   ],
   "exclude": [
-    "src/webWorker.ts",
-    "cypress/**/*.ts"
+    "src/webWorker.ts"
   ]
 }

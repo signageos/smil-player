@@ -10,11 +10,18 @@ export enum SMILEnums {
 	videoDurationOffset = 1000,
 	defaultVideoDuration = 0,
 	metaContent = 'content',
+	metaContentRefresh = 'contentRefresh',
+	metaSmilRefresh = 'smilFileRefresh',
 	metaLog = 'log',
 	onlySmilUpdate = 'onlySmilUpdate',
 	syncServer = 'syncServerUrl',
 	defaultRepeatCount = 'defaultRepeatCount',
 	defaultTransition = 'defaultTransition',
+	skipContentOnHttpStatus = 'skipContentOnHttpStatus',
+	updateContentOnHttpStatus = 'updateContentOnHttpStatus',
+	updateMechanism = 'updateMechanism',
+	location = 'location',
+	lastModified = 'last-modified',
 }
 
 export const parentGenerationRemove = [
@@ -29,6 +36,14 @@ export const parentGenerationRemove = [
 	'parent',
 	'syncGroupName',
 	'transitionInfo',
+	'localFilePath',
+	'regionInfo',
+	'fullVideoDuration',
+	'id',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
+
+export const smilUpdate = {
+	invalid: 'invalid',
+} as const;

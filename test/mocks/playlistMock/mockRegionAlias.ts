@@ -13,7 +13,10 @@ export const mockSMILFileParsedRegionAlias = {
 	},
 	refresh: {
 		expr: undefined,
-		refreshInterval: 60,
+		refreshInterval: 60000,
+		smilFileRefresh: 60000,
+		timeOut: 2000,
+		fallbackToPreviousPlaylist: false,
 	},
 	rootLayout: {
 		width: '1080',
@@ -25,7 +28,8 @@ export const mockSMILFileParsedRegionAlias = {
 	},
 	logger: {
 		enabled: false,
-		type: 'standard',
+		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: true,
 	playlist: {
@@ -299,4 +303,7 @@ export const mockSMILFileParsedRegionAlias = {
 	transition: {},
 	triggerSensorInfo: {},
 	triggers: {},
+	skipContentOnHttpStatus: [],
+	updateContentOnHttpStatus: [],
+	updateMechanism: 'last-modified',
 };

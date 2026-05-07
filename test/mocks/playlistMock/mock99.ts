@@ -49,7 +49,10 @@ export const mockSMILFileParsed99 = {
 	},
 	refresh: {
 		expr: undefined,
-		refreshInterval: 90,
+		refreshInterval: 90000,
+		smilFileRefresh: 90000,
+		timeOut: 2000,
+		fallbackToPreviousPlaylist: false,
 	},
 	rootLayout: {
 		width: '1920',
@@ -61,7 +64,8 @@ export const mockSMILFileParsed99 = {
 	},
 	logger: {
 		enabled: false,
-		type: 'standard',
+		type: ['standard'],
+		reportFileLimit: 100,
 	},
 	onlySmilFileUpdate: false,
 	playlist: {
@@ -258,4 +262,7 @@ export const mockSMILFileParsed99 = {
 	transition: {},
 	triggerSensorInfo: {},
 	triggers: {},
+	skipContentOnHttpStatus: [],
+	updateContentOnHttpStatus: [],
+	updateMechanism: 'last-modified',
 };

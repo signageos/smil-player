@@ -1,5 +1,6 @@
 import { CurrentlyPlaying, CurrentlyPlayingPriority } from '../../../models/playlistModels';
 import { debug } from './generalTools';
+import { resolvePlayingDeferred } from './deferredTools';
 import set = require('lodash/set');
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { Synchronization } from '../../../models/syncModels';
@@ -15,12 +16,12 @@ export async function joinSyncGroup(sos: FrontApplet, synchronization: Synchroni
 
 export async function broadcastSyncValue(
 	sos: FrontApplet,
-	dynamicPlaylistConfig: DynamicPlaylist,
+	dynamicPlaylistConfig: Partial<DynamicPlaylist>,
 	groupName: string,
 	action: string,
 ) {
 	const requestUid = Math.random().toString(36).substr(2, 10);
-	debug(`sending udp request ${action} ${dynamicPlaylistConfig.data} ${Date.now()} with requestUid ${requestUid}`);
+	debug(`sending udp request ${action} ${dynamicPlaylistConfig.data ?? 'unknown'} ${Date.now()} with requestUid ${requestUid}`);
 	await sos.sync.broadcastValue({
 		groupName,
 		key: 'myKey',
@@ -40,24 +41,34 @@ export async function cancelDynamicPlaylistMaster(
 	currentlyPlayingPriority: CurrentlyPlayingPriority,
 	dynamicValue: string,
 ) {
-	const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue]!;
+	const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue];
+	if (!currentDynamicPlaylist) {
+		return;
+	}
 	clearInterval(currentDynamicPlaylist.intervalId);
-	set(currentlyPlaying, `${currentDynamicPlaylist.regionInfo.regionName}.playing`, false);
-	await broadcastSyncValue(
-		sos,
-		currentDynamicPlaylist.dynamicConfig,
-		`${synchronization.syncGroupName}-fullScreenTrigger`,
-		'end',
-	);
+	const regionName = currentDynamicPlaylist.regionInfo?.regionName;
+	if (regionName) {
+		set(currentlyPlaying, `${regionName}.playing`, false);
+	}
+	if (currentDynamicPlaylist.dynamicConfig) {
+		await broadcastSyncValue(
+			sos,
+			currentDynamicPlaylist.dynamicConfig,
+			`${synchronization.syncGroupName}-fullScreenTrigger`,
+			'end',
+		);
+	}
 
-	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.regionInfo.regionName]) {
+	for (const elem of currentlyPlayingPriority[regionName] ?? []) {
 		elem.player.playing = false;
+		resolvePlayingDeferred(elem.player);
 	}
 
 	currentDynamicPlaylist.play = false;
-	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.parentRegion]) {
+	for (const elem of currentlyPlayingPriority[currentDynamicPlaylist.parentRegion] ?? []) {
 		if (elem.media.dynamicValue) {
 			elem.player.playing = false;
+			resolvePlayingDeferred(elem.player);
 		}
 	}
 }

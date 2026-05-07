@@ -5,6 +5,7 @@ import { getIndexOfPlayingMedia, removeDigits, sleep } from '../tools/generalToo
 import { cloneDeep, isEqual, isNil } from 'lodash';
 import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
+import { ISos } from '../../../models/sosModels';
 import FrontApplet from '@signageos/front-applet/es6/FrontApplet/FrontApplet';
 import { FilesManager } from '../../files/filesManager';
 import { CurrentlyPlayingRegion, PlaylistOptions } from '../../../models/playlistModels';
@@ -12,11 +13,13 @@ import { PriorityRule } from '../../../enums/priorityEnums';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { cancelDynamicPlaylistMaster } from '../tools/dynamicTools';
+import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete } from '../tools/deferredTools';
+import { Deferred } from '../tools/Deferred';
 
 const debug = Debug('@signageos/smil-player:playlistPriority');
 
 export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriority {
-	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
 	}
 
@@ -79,6 +82,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		}
 
 		this.currentlyPlayingPriority[priorityRegionName][currentIndex].player.playing = true;
+		ensurePlayingDeferred(this.currentlyPlayingPriority[priorityRegionName][currentIndex].player);
 
 		return {
 			currentIndex,
@@ -132,7 +136,22 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		const smilFileUpdated: boolean = this.getCancelFunction();
 		const expiredVersion: boolean = version < currentVersion;
 
+		debug(
+			'[PRIORITY-DONE] Checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
+			priorityRegionName,
+			endTimeExpired,
+			repeatCountExpired,
+			isLastElement,
+			smilFileUpdated,
+			expiredVersion,
+		);
+
 		if (((endTimeExpired || repeatCountExpired) && isLastElement) || smilFileUpdated || expiredVersion) {
+			debug(
+				'[PRIORITY-DONE] Unlocking playlist for region: %s, setting playing=false for src: %s',
+				priorityRegionName,
+				currentIndexPriority.media.src,
+			);
 			debug(
 				'Finished playing playlist: %O for region: %s and element: %s',
 				currentIndexPriority,
@@ -144,6 +163,14 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 			// reset counter for finished playlist
 			currentIndexPriority.player.timesPlayed = 0;
 			currentIndexPriority.player.playing = false;
+			resolvePlayingDeferred(currentIndexPriority.player);
+
+			// Clean up priority tracking when this priority sequence completes
+			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
+			if (priorityLevel !== undefined) {
+				this.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
+				debug('Cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
+			}
 
 			if (!isNil(pausedIndex)) {
 				const pausedIndexPriority = this.currentlyPlayingPriority[priorityRegionName][pausedIndex];
@@ -160,13 +187,21 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				debug('Dynamic playlist finished: %O for region: %s', currentIndexPriority.media, priorityRegionName);
 				await cancelDynamicPlaylistMaster(
 					triggers,
-					this.sos,
+					this.sos as FrontApplet,
 					this.currentlyPlaying,
 					this.synchronization,
 					this.currentlyPlayingPriority,
 					value.dynamicValue!,
 				);
 			}
+		} else {
+			debug(
+				'[PRIORITY-DONE] NOT unlocking playlist for region: %s - conditions not met (isLast=%s, endTimeExpired=%s, repeatCountExpired=%s)',
+				priorityRegionName,
+				isLastElement,
+				endTimeExpired,
+				repeatCountExpired,
+			);
 		}
 	};
 
@@ -248,6 +283,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		if ((this.synchronization.syncingInAction || this.synchronization.movingForward) && isPeerPriorityConflict) {
 			// turn off previous priority playlist marked as playing
 			this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].player.playing = false;
+			resolvePlayingDeferred(this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].player);
 			debug('Syncing in action, skipping priority behaviour');
 			return;
 		}
@@ -419,6 +455,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		debug('Pausing playlist: %O', previousIndexPriority);
 		previousIndexPriority.player.contentPause = 9999999;
 		previousIndexPriority.player.playing = false;
+		resolvePlayingDeferred(previousIndexPriority.player);
 		previousIndexPriority.behaviour = 'pause';
 		currentIndexPriority.controlledPlaylist = previousPlayingIndex;
 	};
@@ -440,6 +477,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		debug('Stopping playlist: %O', previousIndexPriority);
 		previousIndexPriority.player.stop = true;
 		previousIndexPriority.player.playing = false;
+		resolvePlayingDeferred(previousIndexPriority.player);
 		previousIndexPriority.behaviour = 'stop';
 	};
 
@@ -476,6 +514,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		this.currentlyPlayingPriority[priorityRegionName][previousPlayingIndex].behaviour = 'defer';
 		// set current deferred content to not playing
 		currentIndexPriority.player.playing = false;
+		resolvePlayingDeferred(currentIndexPriority.player);
 
 		// prepare video beforehand for peer priority dynamic values
 		// ( usecase when defer lock is released video is not prepared and hisense has issues with it )
@@ -574,19 +613,25 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		priorityRegionName: string,
 		priorityObject: PriorityObject,
 	): Promise<boolean> => {
-		while (currentPriorityRegion[previousPlayingIndex].player.playing) {
-			await sleep(25);
-			if (this.promiseAwaiting[priorityRegionName]) {
-				debug(
-					'waiting for previous promise in current region during priority defer/stop %s, %O, currentlyPlaying: %O',
-					priorityRegionName,
-					currentIndexPriority,
-					currentPriorityRegion[previousPlayingIndex],
-				);
+		const previousPlayer = currentPriorityRegion[previousPlayingIndex].player;
+
+		// Wait for blocking playlist to finish using promise instead of polling
+		if (previousPlayer.playing) {
+			debug(
+				'waiting for playlist to complete via deferred %s, %O, currentlyPlaying: %O',
+				priorityRegionName,
+				currentIndexPriority,
+				currentPriorityRegion[previousPlayingIndex],
+			);
+			await waitForPlayingToComplete(previousPlayer);
+
+			// Also wait for any pending promises in the region
+			if (this.promiseAwaiting[priorityRegionName]?.promiseFunction) {
 				debug(this.promiseAwaiting[priorityRegionName]);
 				await Promise.all(this.promiseAwaiting[priorityRegionName].promiseFunction!);
 			}
 		}
+
 
 		// if playlist is paused and new smil file version is detected, cancel pause behaviour and cancel playlist
 		if (this.getCancelFunction()) {
@@ -595,14 +640,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 
 		// wait for new potential playlist to appear
 		if (!currentIndexPriority.media.dynamicValue) {
-			// debug(
-			// 	'sleeping defer priority interval: %s',
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-			// await sleep(
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-
 			debug(
 				'sleeping defer/stop priority interval: %s',
 				(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
@@ -623,19 +660,6 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 		) {
 			// TODO: experimental, reset timesPlayed
 			currentIndexPriority.player.timesPlayed = 0;
-			// debug(
-			// 	'sleeping defer priority interval for exceeded priority: %s',
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-			// await sleep(
-			// 	(this.currentlyPlayingPriority[priorityRegionName]?.length - priorityObject.priorityLevel) * 20,
-			// );
-
-			// debug(
-			// 	'sleeping defer/stop priority interval for exceeded priority: %s',
-			// 	(priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100,
-			// );
-			// await sleep((priorityObject.maxPriorityLevel - priorityObject.priorityLevel) * 100);
 
 			debug('Playtime for playlist: %O was exceeded priority, exiting', currentIndexPriority);
 			return false;
@@ -674,6 +698,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 				endTime: endTime,
 				playing: false,
 				timesPlayed: 0,
+				playingCompletionDeferred: undefined as Deferred<void> | undefined,
 			},
 			parent: parent,
 			priority: priorityObject,
@@ -711,6 +736,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any>elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
+					infoObject.player.playingCompletionDeferred = elem.player.playingCompletionDeferred;
 					// remember first in playlist
 					infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;
@@ -725,6 +751,7 @@ export class PlaylistPriority extends PlaylistCommon implements IPlaylistPriorit
 					infoObject.player.playing = elem.player.playing;
 					infoObject.controlledPlaylist = <any>elem.controlledPlaylist;
 					infoObject.player.timesPlayed = elem.player.timesPlayed;
+					infoObject.player.playingCompletionDeferred = elem.player.playingCompletionDeferred;
 					// remember first in playlist
 					infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
 					this.currentlyPlayingPriority[priorityRegionName][arrayIndex] = infoObject;

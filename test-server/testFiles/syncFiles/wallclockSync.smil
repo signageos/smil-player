@@ -1,0 +1,109 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
+        <meta log="true" type="manual"
+              endpoint="https://my.signagelab.com/api/webhooks/device-proof-of-play/cl1ysrmtp4191b47556tzbhce/proof-of-play-event"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#000000"/>
+            <region regionName="cl1ysr9ct0017b475syryse4k" left="0" top="0" width="1080" height="1920" z-index="1"
+                    backgroundColor="#000000" sync="true"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <img src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2023/05/cli5oqlo9000012qhfm8vdu9z.jpeg"
+                         dur="5s" fit="fill"/>
+                </seq>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Campaign playlist -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <!-- [GalleryModule] Smart karta OUT - 11.12 (clztsfyo601ohk1u0xi7s2c06) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2024/12/cm4jypx36004q12rn6252hr52.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,clztsfyo601ohk1u0xi7s2c06,cm4jypxfw00tmkmoz33vjws17"/>
+                            </seq>
+                            <!-- [GalleryModule] Business Karta OUT od 16.6., 18. 9., 11.12 (clztshner01osk1u0ct5n8js4) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2024/12/cm4jz90j3000112offmwr8z2t.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,clztshner01osk1u0ct5n8js4,cm4jz90xm00043d6glqy2urls"/>
+                            </seq>
+                            <!-- [GalleryModule] Short_Outro - od 14. 8. (clztsj2v901o53pd74tg2t3m7) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2024/11/cm3mt09gl001f12po6dvybgle.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,clztsj2v901o53pd74tg2t3m7,cm3mt0dip00f0awwanj8ngyyn"/>
+                            </seq>
+                            <!-- [GalleryModule] OUT - Nejlepší půjčka srovnání - 2.1 (clztsmmu601pek1u0ne1ymib5) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5ghldv8001i12qo4aucc1sc.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,clztsmmu601pek1u0ne1ymib5,cm5ghlf5v009t137tpg3o3wgf"/>
+                            </seq>
+                            <!-- [GalleryModule] Short LCD OUT sporici ucet 3,0% od 11.11.2024 (cm3d1awzl00wx3wsdiyhpd0os) -->
+                            <seq repeatCount="1" begin="wallclock(2000-01-01T00:00)" end="wallclock(2025-01-30T23:00)">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2024/11/cm3d1c8dw003l12o39d9c5z77.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm3d1awzl00wx3wsdiyhpd0os,cm3d1c93o00vvz1pyou81xlh4"/>
+                            </seq>
+                            <!-- [GalleryModule] Expres Business povanocni vyprodej LCD OUT od 30.12.2024 (cm48mwr4z0002xvx5w9ctmywg) -->
+                            <seq repeatCount="1" begin="wallclock(2024-12-30T01:00)" end="wallclock(2025-01-31T23:00)">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5f4tc0e000y12lnckq6dqyz.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm48mwr4z0002xvx5w9ctmywg,cm5f4tciw00lp9f68txr04fra"/>
+                            </seq>
+                            <!-- [GalleryModule] Konto pro podnikani OUT od 12.12.2024 (cm4la4kaw00uriyyy4ra5cv6s) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2024/12/cm4r1waoy004n12qr0kf68btr.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm4la4kaw00uriyyy4ra5cv6s,cm4r1wb2y004lap3axi03hbow"/>
+                            </seq>
+                            <!-- [GalleryModule] Expres srovavaci kampan OUT od 2.1 (cm4s76ovb00lca2kwfogtnyxa) -->
+                            <seq repeatCount="1" begin="wallclock(2025-01-02T01:00)">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5fbzr6z000812o06ctofpjr.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm4s76ovb00lca2kwfogtnyxa,cm5fbzrte00286ju9r5ie07o1"/>
+                            </seq>
+                            <!-- [GalleryModule] Terminovany vklad 3,3 OUT od 16.1 (cm5pgj8le013u2i9mnefd0ume) -->
+                            <seq repeatCount="1" begin="wallclock(2025-01-16T01:00)">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5pgjumv008612qggoo717ji.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm5pgj8le013u2i9mnefd0ume,cm5pgjv1j013x2i9msn7ok3q3"/>
+                            </seq>
+                            <!-- [GalleryModule] Hypoteka 4,29 % OUT (cm5y2jmgi01y8ltfvbujg4g1p) -->
+                            <seq repeatCount="1" begin="wallclock(2025-01-16T01:00)">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5y2jz5n007t12qrhynwcdw1.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm5y2jmgi01y8ltfvbujg4g1p,cm5y2jzsz0025octa4ftenh3v"/>
+                            </seq>
+                            <!-- [GalleryModule] Bezny ucet OUT a IN (cm5zdzyfs009fhxit5il7g2oj) -->
+                            <seq repeatCount="1">
+                                <video src="https://files.signage-cdn.com/environment/production/accounts-data/ckzwq5ad21444841xliixidzx1k/2025/01/cm5ze0dft003612qb6te51hyr.mp4"
+                                       soundLevel="0%" region="cl1ysr9ct0017b475syryse4k" popName="signagelab_event"
+                                       popType="video"
+                                       popTags="ckzwq5ad21444841xliixidzx1k,cl1ysrmtp4191b47556tzbhce,cm5zdzyfs009fhxit5il7g2oj,cm5ze0f5l00a8nn21yhvppdqh"/>
+                            </seq>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

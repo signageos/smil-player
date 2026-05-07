@@ -16,13 +16,13 @@ import { getFileName } from '../../files/tools';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
+import { TimedDebugger } from '../playlistProcessor/TimedDebugger';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
 import omit from 'lodash/omit';
-import { checkConditionalExprSafe } from './conditionalTools';
 
 const hasher = require('node-object-hash');
 
@@ -330,22 +330,8 @@ export function getNextElementToPlay(
 		};
 	}
 	const localPlaylist = cloneDeep(playlist);
-	
-	// First filter for playable parts
 	const playableParts = Object.keys(localPlaylist).filter((v) => randomPlaylistPlayableTagsRegex.test(v));
-	
-	// Then filter out any parts with invalid expressions
-	const validParts = playableParts.filter(key => {
-		const element = localPlaylist[key] as PlaylistElement;
-		return !element?.expr || checkConditionalExprSafe(element.expr);
-	});
-	
-	// If no valid parts, return empty object
-	if (validParts.length === 0) {
-		return {};
-	}
-	
-	const picked = validParts[randomPlaylistInfo[parent].previousIndex++ % validParts.length];
+	const picked = playableParts[randomPlaylistInfo[parent].previousIndex++ % playableParts.length];
 	const diff = difference(playableParts, [picked]);
 	return omit(localPlaylist, diff);
 }
@@ -365,5 +351,58 @@ export function processRandomPlayMode(
 		default:
 			debug('No valid playMode specified, returning original object, playMode: %s', playlist.playmode);
 			return playlist;
+	}
+}
+
+/**
+ * Extracts a string value from config, returning undefined if not a string
+ */
+export function getConfigString(
+	config: Record<string, number | string | boolean> | undefined,
+	key: string,
+): string | undefined {
+	if (!config) {
+		return undefined;
+	}
+	const value = config[key];
+	return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * Extracts a boolean value from config, handling string 'true'/'false'
+ */
+export function getConfigBoolean(
+	config: Record<string, number | string | boolean> | undefined,
+	key: string,
+	defaultValue: boolean = false,
+): boolean {
+	if (!config) {
+		return defaultValue;
+	}
+	const value = config[key];
+	if (typeof value === 'boolean') {
+		return value;
+	}
+	if (typeof value === 'string') {
+		return value.toLowerCase() === 'true';
+	}
+	return defaultValue;
+}
+
+/**
+ * Get ISO timestamp for debug logs
+ */
+function getTimestamp(): string {
+	return new Date().toISOString();
+}
+
+/**
+ * Helper to log debug messages, using TimedDebugger if available
+ */
+export function logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
+	if (timedDebug) {
+		timedDebug.log(message, ...args);
+	} else {
+		debug('[%s] ' + message, getTimestamp(), ...args);
 	}
 }

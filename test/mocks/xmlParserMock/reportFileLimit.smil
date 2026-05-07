@@ -1,0 +1,17 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90" log="true" type="manual" endpoint="https://example.com/report" reportFileLimit="50"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1920" height="1080" z-index="1"
+                    backgroundColor="#FFFFFF"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <video src="http://example.com/video.mp4" region="video"/>
+            </seq>
+        </par>
+    </body>
+</smil>

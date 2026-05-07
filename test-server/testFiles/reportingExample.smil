@@ -1,0 +1,27 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" contentRefresh="10" smilFileRefresh="15" onlySmilUpdate="true"/>
+        <meta log="false" type="standard"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <meta skipOnHttpStatus="404,405"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"
+            />
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <seq>
+                    <img dur="3s"
+                         src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         updateCheckUrl="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                         updateCheckInterval="10"
+                         allowLocalFallback="true"
+                         region="main" fit="fill"/>
+                </seq>
+            </seq>
+        </par>
+    </body>
+</smil>

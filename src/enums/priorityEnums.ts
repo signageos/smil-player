@@ -11,3 +11,9 @@ export enum PriorityRule {
 	stop = 'stop',
 	pause = 'pause',
 }
+
+export enum WaitStatus {
+	CONTINUE = 'continue',         // Process element normally
+	RETRY = 'retry',               // Retry later (waiting for higher priority)
+	SKIP = 'skip',                 // Skip permanently (cancelled/expired)
+}

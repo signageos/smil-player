@@ -40,15 +40,33 @@ you can do this:
     1. Parameters within URL are defined after the ? symbol and always in a Key - Value pair, these parameters are
        defined in a standard Query string
 
-Example:
+### Caching Behavior with Query Parameters
+
+Each unique combination of widget URL and query parameters is cached separately. This means:
+- The same widget with different parameters will be downloaded and cached as separate instances
+- Useful for creating dynamic widget configurations without modifying the widget itself
+- Parameters can be used for API endpoints, configuration values, or tracking
+
+Examples:
 
 ```xml
+<!-- Basic widget with configuration parameters -->
+<ref src="https://website.com/production/modules/a1b2c3.wgt?appUrl=https%3A%2F%2Fanotherwebsite.com%2Fapi%2Fgraphql&amp;uniqueId=xyz123abcjhkl"
+     type="application/widget" dur="10s" region="left"/>
 
-<seq>
-    <ref src="https://website.com/production/modules/a1b2c3.wgt?appUrl=https%3A%2F%2Fanotherwebsite.com%2Fapi%2Fgraphql&amp;uniqueId=xyz123abcjhkl&amp;"
-         type="application/widget" dur="10s" region="left"/>
-</seq>
+<!-- Same widget with different parameters - cached separately -->
+<ref src="https://website.com/production/modules/a1b2c3.wgt?appUrl=https%3A%2F%2Fdifferentapi.com%2Fapi&amp;uniqueId=abc456xyz"
+     type="application/widget" dur="10s" region="right"/>
+
+<!-- Widget with multiple query parameters for dynamic configuration -->
+<ref src="https://example.com/widgets/weather.wgt?city=NYC&amp;units=metric&amp;lang=en&amp;refresh=300"
+     type="application/widget" dur="20s" region="main"/>
 ```
+
+**Note:** Remember to:
+- URL-encode parameter values that contain special characters
+- Use `&amp;` instead of `&` to separate parameters in SMIL files
+- Each unique parameter combination creates a separate cache entry
 
 ### How to read parameters in the widget
 

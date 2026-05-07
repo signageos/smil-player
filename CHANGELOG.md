@@ -5,6 +5,89 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- rewritten sync protocol from timing-based to ACK-based synchronization for more reliable multi-device sync
+- priority-aware sync coordination — sync respects priority level transitions without desynchronizing devices
+- playMode=one sync support for sequential content advancement across synchronized devices
+- phase-specific sync coordination (prepare, play, finish) for smoother sync transitions
+- automatic resync detection and recovery when devices fall out of sync
+- improved debug logging across the entire player for better diagnostics
+
+### Fixed
+
+- fixed 60-second slave delay on wallclock-triggered priority transitions
+- fixed false priority-change detection during SMIL playlist updates
+- fixed slave infinite resync loop with playMode=one playlists
+- fixed sync index wraparound causing unreachable resync targets
+- fixed stale sync messages from previous cycles causing false resyncs
+- fixed race conditions in master/slave sync coordination
+- fixed last-modified rollback detection to avoid false re-downloads when content is rolled back
+- fixed file type lookup not matching correctly due to leading slash
+
+## [3.2.10] - 2026-02-18
+
+### Added
+
+- add per-element `reportMode` attribute for batch reporting — elements with `reportMode="batch"` save reports to
+  offline CSV storage instead of HTTP POST
+
+### Fixed
+
+- fixed batch report files being uploaded before reaching the configured report file limit
+- fixed hardcoded report file limit constant instead of using parsed configuration value
+
+## [3.2.9] - 2026-01-21
+
+### Added
+
+- fallbackToPreviousPlaylist flag to allow playing new playlist only if it is valid, otherwise, continue playing the
+  previous playlist
+
+### Fixed
+
+- fixed playlist update, cancel lower version playlist instead of waiting for lower playlist element to finish
+- fixed playing cached playlist when device starts offline
+
+## [3.2.8] - 2025-12-03
+
+### Fixed
+
+- fixed offline report files exceeding 100 report limit after device restart
+- fixed priority coordination issues causing content overlap during playlist updates
+
+## [3.2.7] - 2025-09-26
+
+### Added
+
+- add option to check for media updates using location header or url instead of last-modified header in the response
+- add option to skip or update content based on the status code from response
+- add allowLocalFallback option to fall back to cached content when server returns errors
+- add useInReportUrl attribute for reporting correct URL of element in case of redirects
+- add debugEnabled configuration option to enable debug logging based on timing config
+- add option to specify multiple logging types
+
+### Fixed
+
+- fixed widget triggers not working correctly
+- fixed smilFileRefresh interval timing
+
+## [3.2.6] - 2025-03-26
+
+### Added
+
+- add configurable timeout for last-modified requests
+- choose sync-engine dynamically based on syncServerUrl param
+- add option to skip content based on server response
+- download files in parallel instead of sequential download
+
+### Fixed
+
+- fixed handling of trigger sync groups when the playlist contains no sync
+- improved file check performance
+
 ## [3.2.4] - 2025-04-01
 
 ### Fixed

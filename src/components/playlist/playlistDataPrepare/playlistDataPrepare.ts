@@ -23,10 +23,12 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
+	protected sos: FrontApplet;
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
 	constructor(sos: FrontApplet, files: FilesManager, options: PlaylistOptions) {
 		super(sos, files, options);
+		this.sos = sos;
 	}
 
 	/**
@@ -50,6 +52,14 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		let fileStructure: string = '';
 		let htmlElement: string = '';
 		let localRegionSyncIndex: { [key: string]: number } = {};
+
+		// Track playMode=one syncIndex ranges for resync target computation
+		const isPlayModeParent = !isNil((playlist as any)?.playMode)
+			&& String((playlist as any).playMode).toLowerCase() === 'one';
+		let playModeRangeStart: number | undefined;
+		let playModeRangeEnd: number | undefined;
+		let playModeRegionName: string | undefined;
+
 		for (let [key, loopValue] of Object.entries(playlist)) {
 			specialName =
 				key === 'begin' &&
@@ -117,12 +127,21 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 							elem.regionInfo.regionName,
 						);
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
+
+						// Track playMode=one syncIndex range
+						if (isPlayModeParent) {
+							if (playModeRangeStart === undefined) {
+								playModeRangeStart = elem.syncIndex;
+								playModeRegionName = elem.regionInfo.regionName;
+							}
+							playModeRangeEnd = elem.syncIndex;
+						}
 					}
 
-					const mediaFile = <IVideoFile>await this.sos.fileSystem.getFile({
+					const mediaFile = (await this.sos.fileSystem.getFile({
 						storageUnit: internalStorageUnit,
 						filePath: `${fileStructure}/${getFileName(elem.src)}${widgetRootFile}`,
-					});
+					})) as IVideoFile;
 					// in case of web page as widget, leave localFilePath blank
 					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
@@ -173,6 +192,23 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				await this.getAllInfo(value, smilObject, internalStorageUnit, smilUrl, isSpecial, specialName);
 			}
 		}
+
+		// Store completed playMode range
+		if (isPlayModeParent && playModeRangeStart !== undefined
+			&& playModeRangeEnd !== undefined && playModeRegionName
+			&& this.synchronization) {
+			if (!this.synchronization.playModeSyncRanges) {
+				this.synchronization.playModeSyncRanges = {};
+			}
+			if (!this.synchronization.playModeSyncRanges[playModeRegionName]) {
+				this.synchronization.playModeSyncRanges[playModeRegionName] = [];
+			}
+			this.synchronization.playModeSyncRanges[playModeRegionName].push({
+				start: playModeRangeStart,
+				end: playModeRangeEnd,
+			});
+			debug('Stored playMode range for region=%s: [%d, %d]', playModeRegionName, playModeRangeStart, playModeRangeEnd);
+		}
 	};
 
 	/**
@@ -186,6 +222,12 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		internalStorageUnit: IStorageUnit,
 		smilUrl: string,
 	) => {
+		// Reset sync index for fresh playlist processing
+		this.globalRegionSyncIndex = {};
+		if (this.synchronization) {
+			this.synchronization.playModeSyncRanges = {};
+		}
+
 		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
@@ -198,5 +240,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, internalStorageUnit, smilUrl);
 		debug('All elements info extracted');
+
+		// Set max sync indices for each region in synchronization object
+		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
+			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
+			debug('Set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+		}
 	};
 }

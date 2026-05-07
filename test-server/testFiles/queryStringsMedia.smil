@@ -1,0 +1,57 @@
+<smil>
+    <head>
+        <layout>
+            <root-layout width="1080" height="1920" backgroundColor="#FFFFFF"/>
+            <region regionName="fullscreen" left="0" top="0" width="1080" height="1920" z-index="1"
+                    backgroundColor="#000000"/>
+        </layout>
+        <meta http-equiv="Refresh" content="100" fallbackToPreviousPlaylist="true" onlySmilUpdate="false"
+              timeOut="5000" skipContentOnHttpStatus="404" updateContentOnHttpStatus="200" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="https://run.hygh.io/webhook/signageos-log2?adunit=OM46N"/>
+        <meta defaultRepeatCount="indefinite"/>
+    </head>
+    <body>
+        <seq>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=1" popName="signagelab_event"
+                   popType="video" popTags="video1" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=2" popName="signagelab_event"
+                   popType="video" popTags="video2" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=3" popName="signagelab_event"
+                   popType="video" popTags="video3" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=4" popName="signagelab_event"
+                   popType="video" popTags="video4" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=5" popName="signagelab_event"
+                   popType="video" popTags="video5" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=6" popName="signagelab_event"
+                   popType="video" popTags="video6" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=7" popName="signagelab_event"
+                   popType="video" popTags="video7" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=8" popName="signagelab_event"
+                   popType="video" popTags="video8" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=9" popName="signagelab_event"
+                   popType="video" popTags="video9" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=10"
+                   popName="signagelab_event" popType="video" popTags="video10" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=11"
+                   popName="signagelab_event" popType="video" popTags="video11" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=12"
+                   popName="signagelab_event" popType="video" popTags="video12" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=13"
+                   popName="signagelab_event" popType="video" popTags="video13" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=14"
+                   popName="signagelab_event" popType="video" popTags="video14" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=15"
+                   popName="signagelab_event" popType="video" popTags="video15" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=16"
+                   popName="signagelab_event" popType="video" popTags="video16" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=17"
+                   popName="signagelab_event" popType="video" popTags="video17" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=18"
+                   popName="signagelab_event" popType="video" popTags="video18" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=19"
+                   popName="signagelab_event" popType="video" popTags="video19" region="fullscreen"></video>
+            <video src="https://run.hygh.io/webhook/signageos-content2?adunit=OM46N&amp;id=20"
+                   popName="signagelab_event" popType="video" popTags="video20" region="fullscreen"></video>
+        </seq>
+    </body>
+</smil>
