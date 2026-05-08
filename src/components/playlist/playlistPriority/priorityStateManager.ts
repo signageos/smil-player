@@ -203,13 +203,26 @@ export class PriorityStateManager {
 			const entries = this.state[regionName];
 			const { matchIndex, matchType } = findMatchingEntryIndex(entries, value, parent, version);
 
-			if (matchType !== 'none') {
+			if (matchType === 'exact') {
+				// Same element re-registering (cycling): preserve play/pause state
+				// and the in-flight completion deferred so the wait loop keeps its
+				// interrupt signal.
 				const elem = entries[matchIndex];
 				infoObject.behaviour = elem.behaviour;
 				infoObject.player.playing = elem.player.playing;
 				infoObject.controlledPlaylist = <any>elem.controlledPlaylist;
 				infoObject.player.timesPlayed = elem.player.timesPlayed;
 				infoObject.player.playingCompletionDeferred = elem.player.playingCompletionDeferred;
+				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
+				entries[matchIndex] = infoObject;
+				currentIndex = matchIndex;
+			} else if (matchType === 'parent') {
+				// Different media sharing the slot of a sibling under the same parent
+				// (a seq advancing). Replace the slot but start with FRESH play state —
+				// inheriting the prior element's playingCompletionDeferred would mean
+				// a later resolvePlayingDeferred on the prior element wakes this
+				// element's wait loop spuriously, causing an elapsed=0 busy-loop.
+				const elem = entries[matchIndex];
 				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
 				entries[matchIndex] = infoObject;
 				currentIndex = matchIndex;
