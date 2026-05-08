@@ -1,5 +1,3 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import { test } from '../fixtures';
 import { createSyncGroup, cleanupSyncGroup, uniqueGroupName, SyncDevice } from '../syncHelpers';
 import {
@@ -38,25 +36,7 @@ test.describe.configure({ mode: 'serial' });
 test.describe('sync · linear playlist ACK parity', () => {
 	let devices: SyncDevice[] = [];
 
-	test.afterEach(async ({}, testInfo) => {
-		if (devices.length > 0) {
-			await fs.mkdir(testInfo.outputDir, { recursive: true });
-			for (const d of devices) {
-				await fs.writeFile(
-					path.join(testInfo.outputDir, `${d.deviceId}-console.log`),
-					d.console.messages.map((m) => `${m.time}\t${m.level}\t${m.text}`).join('\n'),
-				);
-				await fs.writeFile(
-					path.join(testInfo.outputDir, `${d.deviceId}-frames.jsonl`),
-					d.wsFrames
-						.filter((f) => !f.isBinary && f.payload.startsWith('42['))
-						.map((f) => JSON.stringify({ ts: f.timestamp, dir: f.direction, payload: f.payload }))
-						.join('\n'),
-				);
-			}
-			// eslint-disable-next-line no-console
-			console.log(`[diagnostics] dumps written to ${testInfo.outputDir}`);
-		}
+	test.afterEach(async () => {
 		await cleanupSyncGroup(devices);
 		devices = [];
 	});

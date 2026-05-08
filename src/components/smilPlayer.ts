@@ -56,7 +56,6 @@ export class SmilPlayer implements ISmilPlayer {
 
 		// debug disabled by default, enabled only if debugEnabled is set to true in config
 		Debug.disable();
-		Debug.enable('@signageos/front-display:Applet:Sync:appletSyncSagas');
 
 		if (this.sos.config.debugEnabled === true || this.sos.config.debugEnabled === 'true') {
 			debug('[smil] debug enabled in config');
