@@ -2182,8 +2182,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!!video.syncIndex && this.synchronization.shouldSync,
 				500,
 			);
-			await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
-			await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			try {
+				await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			} catch (stopErr) {
+				debug(`[${debugId}] Retry path: stop failed: %O`, stopErr);
+			}
+			try {
+				await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			} catch (playErr) {
+				debug(`[${debugId}] Retry path: play failed: %O`, playErr);
+			}
 		}
 
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version);
