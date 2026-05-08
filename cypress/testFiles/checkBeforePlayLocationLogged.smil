@@ -1,0 +1,47 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90" checkBeforePlay="true" checkAheadCount="3" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/cbp-loc/log/test-screen"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080"
+                    z-index="1" backgroundColor="#18182c"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="http://localhost:3000/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="http://localhost:3000/cbp-loc/image1.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image2.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image3.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image4.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image5.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image6.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image7.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image8.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image9.png"/>
+                <prefetch src="http://localhost:3000/cbp-loc/image10.png"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image1.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image2.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image3.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image4.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image5.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image6.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image7.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image8.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image9.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp-loc/image10.png" region="main" fit="fill"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>

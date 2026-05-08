@@ -8,6 +8,10 @@ import { fillWallclock } from './localServerTools';
 const app = express();
 const port = TestServer.port;
 
+// Capture raw body for the /cbp-loc/log POST endpoint so we can inspect what the player reports.
+// Mounted before the global JSON parser so the endpoint sees the original bytes.
+app.use('/cbp-loc/log', express.raw({ type: '*/*', limit: '5mb' }));
+
 // Global CORS — allow cross-origin requests from the emulator/applet iframe
 app.use((_req: Request, res: Response, next: () => void) => {
 	res.set({
@@ -292,8 +296,22 @@ app.get('/cbp-loc/:name', (req: Request, res: Response) => {
 
 // --- Content routes for location strategy (the URLs pointed to by Location header) ---
 
-app.get('/cbp-loc/content/:fileName', (req: Request, res: Response) => {
+// Per-content-filename download delay (ms). When set, the next GET for that filename is delayed
+// by this many ms before responding. Used by the report-alignment test to force Phase-4 commit
+// to land during a slot's playback so we can verify report-URL ↔ on-screen-content alignment
+// under the worst-case timing.
+const cbpLocContentDelay: Record<string, number> = {};
+const cbpLocContentLog: { file: string; time: number; durationMs: number }[] = [];
+
+app.get('/cbp-loc/content/:fileName', async (req: Request, res: Response) => {
 	const fileName = req.params.fileName;
+	const start = Date.now();
+	const delayMs = cbpLocContentDelay[fileName] || 0;
+	if (delayMs > 0) {
+		// Consume the delay (one-shot) so subsequent fetches are normal-speed.
+		delete cbpLocContentDelay[fileName];
+		await new Promise((r) => setTimeout(r, delayMs));
+	}
 	// Parse version from filename like "image3_v2.png"
 	const versionMatch = fileName.match(/_v(\d+)\.png$/);
 	const version = versionMatch ? parseInt(versionMatch[1]) : 1;
@@ -303,6 +321,64 @@ app.get('/cbp-loc/content/:fileName', (req: Request, res: Response) => {
 		'Content-Type': 'image/png',
 	});
 	res.send(png);
+	cbpLocContentLog.push({ file: fileName, time: Date.now(), durationMs: Date.now() - start });
+});
+
+// --- Test instrumentation endpoints (report-alignment test) ---
+// These let the test force adversarial timing and capture what the player actually reports.
+
+let cbpLocReportLog: { time: number; body: any; bodyText: string }[] = [];
+
+app.post('/cbp-loc/log/:screenId', (req: Request, res: Response) => {
+	let body: any = null;
+	let bodyText = '';
+	try {
+		// express.raw mounted on /cbp-loc/log gives us a Buffer
+		bodyText = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
+		body = JSON.parse(bodyText);
+	} catch (e) {
+		body = { __parseError: String(e), __raw: bodyText };
+	}
+	cbpLocReportLog.push({ time: Date.now(), body, bodyText });
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json({ ok: true });
+});
+
+// Routes under /cbp-loc/admin/* are multi-segment so they don't collide with the
+// single-segment parameterized route GET /cbp-loc/:name (which would otherwise
+// 404 these because they aren't names of test images).
+app.get('/cbp-loc/admin/log-fetch', (_req: Request, res: Response) => {
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json(cbpLocReportLog);
+});
+
+app.post('/cbp-loc/admin/log-reset', (_req: Request, res: Response) => {
+	cbpLocReportLog = [];
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json({ cleared: true });
+});
+
+app.get('/cbp-loc/admin/content-log', (_req: Request, res: Response) => {
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json(cbpLocContentLog);
+});
+
+app.post('/cbp-loc/admin/content-log-reset', (_req: Request, res: Response) => {
+	cbpLocContentLog.length = 0;
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json({ cleared: true });
+});
+
+app.post('/cbp-loc/admin/set-content-delay/:fileName', express.json(), (req: Request, res: Response) => {
+	const fileName = req.params.fileName;
+	const delayMs = Number((req.body && req.body.delayMs) || 0);
+	if (delayMs > 0) {
+		cbpLocContentDelay[fileName] = delayMs;
+	} else {
+		delete cbpLocContentDelay[fileName];
+	}
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json({ fileName, delayMs });
 });
 
 // --- checkBeforePlay video test state ---
