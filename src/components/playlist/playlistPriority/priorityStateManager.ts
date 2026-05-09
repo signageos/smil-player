@@ -349,7 +349,20 @@ export class PriorityStateManager {
 	}
 
 	cloneRegion(fromRegion: string, toRegion: string): void {
-		this.state[toRegion] = cloneDeep(this.state[fromRegion]);
+		const cloned = cloneDeep(this.state[fromRegion]);
+		// lodash cloneDeep does NOT deep-copy Promise instances or function refs:
+		// a cloned Deferred shares its `promise` and `_resolve` with the original.
+		// Resolving the clone would fulfill the original's Promise while leaving
+		// the original's `_resolved` flag false — `isSettled` lies, and any
+		// later `await deferred.promise` in waitElementDuration resolves
+		// instantly, busy-looping with elapsed=0. Reset to undefined so each
+		// region gets its own fresh deferred lifecycle on the next setPlaying.
+		if (cloned) {
+			for (const entry of cloned) {
+				entry.player.playingCompletionDeferred = undefined;
+			}
+		}
+		this.state[toRegion] = cloned;
 	}
 
 	// --- PromiseAwaiting mutations ---
