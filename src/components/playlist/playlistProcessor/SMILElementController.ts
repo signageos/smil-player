@@ -647,7 +647,7 @@ export class SMILElementController {
 		};
 
 		// Use provided sync group or get it
-		const group = syncGroup || getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		const group = syncGroup || getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 		if (!group) {
 			logDebug(undefined, 'No sync group to broadcast to for region: %s', regionName);
 			return;
@@ -1141,7 +1141,7 @@ export class SMILElementController {
 			this.syncState.slaveMinSyncIndex.set(regionName, syncIndex);
 
 			// Clear stale stored commands from previous cycle to prevent false resync
-			const group = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+			const group = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 			if (group) {
 				// Selectively clear cmd-prepare: only if stale (syncIndex doesn't match new cycle start)
 				// This preserves a fresh cmd-prepare that arrived before the slave wrapped
@@ -1342,7 +1342,7 @@ export class SMILElementController {
 		}
 
 		const config = SYNC_PHASE_CONFIG[phase];
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 
 		if (!syncGroup) {
 			logDebug(timedDebug, 'No sync group for %s start: region=%s', phase, regionName);
@@ -1395,7 +1395,7 @@ export class SMILElementController {
 		}
 
 		const config = SYNC_PHASE_CONFIG[phase];
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 
 		if (!syncGroup) {
 			logDebug(timedDebug, 'No sync group for %s complete: region=%s', phase, regionName);
@@ -1531,7 +1531,7 @@ export class SMILElementController {
 			return currentPreviousIndex;
 		}
 
-		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}-before`);
+		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 		if (!syncGroup) {
 			logDebug(undefined, 'No sync group available for playMode sync, region: %s', regionName);
 			return currentPreviousIndex;

@@ -119,7 +119,7 @@ async function createRegionSyncGroups(sos: ISos, synchronization: Synchronizatio
 						`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 						synchronization.syncDeviceId,
 					);
-					await createSyncGroup(sos, `${synchronization.syncGroupName}-${nestedValue.regionName}-before`);
+					await createSyncGroup(sos, `${synchronization.syncGroupName}-${nestedValue.regionName}`);
 					result = true;
 				}
 			}
@@ -130,7 +130,7 @@ async function createRegionSyncGroups(sos: ISos, synchronization: Synchronizatio
 				`${synchronization.syncGroupName}-${key}`,
 				synchronization.syncDeviceId,
 			);
-			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}-before`);
+			await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}`);
 			result = true;
 
 			debug('[sync] sync groups created for region: %s', `${synchronization.syncGroupName}-${key}`);
