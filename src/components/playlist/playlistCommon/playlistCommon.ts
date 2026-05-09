@@ -63,7 +63,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 		return this.cancelDeferred.promise;
 	}
 
-	protected notifyRegionChange(): void {
+	public notifyRegionChange(): void {
 		this.regionChangeDeferred.resolve();
 		this.regionChangeDeferred = new Deferred<void>();
 	}

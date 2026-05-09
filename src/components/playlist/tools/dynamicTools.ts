@@ -72,6 +72,7 @@ export async function cancelDynamicPlaylistMaster(
 	_currentlyPlayingPriority: CurrentlyPlayingPriority,
 	dynamicValue: string,
 	cancelAllInRegion: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
+	notifyRegionChange?: () => void,
 ) {
 	const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue];
 	if (!currentDynamicPlaylist) {
@@ -101,4 +102,9 @@ export async function cancelDynamicPlaylistMaster(
 	clearDynamicSyncCoordination(synchronization.syncGroupName);
 
 	currentDynamicPlaylist.play = false;
+
+	// Wake any element parked in handleTriggers → waitForRegionChange so the parent
+	// region's autonomous content can resume. Without this, sibling content that
+	// was waiting out the dynamic punch-in stays blocked indefinitely.
+	notifyRegionChange?.();
 }

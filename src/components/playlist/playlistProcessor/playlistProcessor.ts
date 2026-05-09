@@ -1238,6 +1238,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlayingPriority,
 				media.dynamicValue!,
 				(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter),
+				() => this.notifyRegionChange(),
 			);
 			// Clean up before skipping
 			if (priorityCoord) {

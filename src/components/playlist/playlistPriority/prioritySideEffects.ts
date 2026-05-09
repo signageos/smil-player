@@ -67,6 +67,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 			this.currentlyPlayingPriority,
 			dynamicValue,
 			this.cancelAllInRegionFn,
+			() => triggers.notifyRegionChange(),
 		);
 	}
 }
