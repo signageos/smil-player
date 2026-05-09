@@ -1856,7 +1856,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
 
 		// Coordinate preparation start - master sends cmd-prepare, slaves wait for it
-		if (this.shouldCoordinateSync(value.syncIndex)) {
+		if (this.shouldCoordinatePrepareSync(value.syncIndex, value)) {
 			const priorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.log('[processor-sync] coordinating preparation start');
 			try {
@@ -1920,7 +1920,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
-		if (this.shouldCoordinateSync(value.syncIndex)) {
+		if (this.shouldCoordinatePrepareSync(value.syncIndex, value)) {
 			const preparePriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.log('[processor-sync] coordinating preparation completion');
 			try {
@@ -2270,6 +2270,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 */
 	private shouldCoordinateSync(syncIndex: number | undefined): boolean {
 		return this.synchronization.shouldSync && syncIndex !== undefined;
+	}
+
+	/**
+	 * Like {@link shouldCoordinateSync} but also returns false for the *prepare*
+	 * phase when the media is dynamic content. Master fires `cmd-prepare`
+	 * immediately when emitDynamic activates the synced seq, while slaves only
+	 * enter handleDynamicPlaylist after they receive the START broadcast — so
+	 * slaves reliably miss the prepare phase and deadlock waiting for it.
+	 *
+	 * The play and finish phases are kept (master broadcasts `cmd-play` only
+	 * after the wait-for-preceding-content step, which is when slaves can
+	 * realistically be listening), so the punch-in itself stays synchronized.
+	 */
+	private shouldCoordinatePrepareSync(
+		syncIndex: number | undefined,
+		media: { dynamicValue?: string },
+	): boolean {
+		if (!this.shouldCoordinateSync(syncIndex)) return false;
+		if (media.dynamicValue) return false;
+		return true;
 	}
 
 	/**
