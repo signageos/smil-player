@@ -5,12 +5,14 @@ import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
+import { createSyncGroup } from './syncTools';
 
-export async function joinSyncGroup(sos: ISos, synchronization: Synchronization, groupName: string) {
-	await sos.sync.joinGroup({
-		groupName,
-		...(synchronization.syncDeviceId ? { deviceIdentification: synchronization.syncDeviceId } : {}),
-	});
+export async function joinSyncGroup(sos: ISos, _synchronization: Synchronization, groupName: string) {
+	// Route through the syncGroups registry in syncTools so a repeat call for
+	// a group we've already joined is a no-op. SocketSynchronizer's joinGroup
+	// has no JS-level idempotency, so a duplicate 'join_group' to the sync
+	// server is rejected as InternalSynchronizerError 51103.
+	await createSyncGroup(sos, groupName);
 }
 
 export async function broadcastSyncValue(

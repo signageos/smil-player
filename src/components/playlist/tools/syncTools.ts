@@ -72,7 +72,7 @@ export function getSyncGroup(groupName: string): SyncGroup | undefined {
 	return syncGroups.get(groupName);
 }
 
-async function createSyncGroup(sos: ISos, groupName: string): Promise<SyncGroup> {
+export async function createSyncGroup(sos: ISos, groupName: string): Promise<SyncGroup> {
 	if (syncGroups.has(groupName)) {
 		return syncGroups.get(groupName)!;
 	}
