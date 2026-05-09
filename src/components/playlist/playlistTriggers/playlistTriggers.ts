@@ -35,7 +35,7 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-import { joinSyncGroup } from '../tools/dynamicTools';
+import { clearDynamicSyncCoordination, joinSyncGroup } from '../tools/dynamicTools';
 import { findTriggerToCancelByEndId } from '../tools/triggerTools';
 
 const debug = Debug('@signageos/smil-player:playlistTriggers');
@@ -223,6 +223,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				this.cancelAllInRegion(currentDynamicPlaylist.parentRegion, dynamicFilter);
 			}
 		}
+		// Clear stored cmd-*/signal-* for fullScreenTrigger so the slave's next
+		// emit cycle waits for the live broadcast instead of consuming cycle N-1's
+		// stored commands (syncIndex=1 every cycle in the dynamic seq, so
+		// updateSlavePosition's wrap-based clear never fires for this region).
+		clearDynamicSyncCoordination(this.synchronization.syncGroupName);
 		set(this.currentlyPlaying, `${currentDynamicPlaylist?.regionInfo?.regionName}.playing`, false);
 		this.notifyRegionChange();
 		return;

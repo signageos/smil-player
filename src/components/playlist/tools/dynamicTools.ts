@@ -5,7 +5,37 @@ import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
-import { createSyncGroup } from './syncTools';
+import { createSyncGroup, getSyncGroup } from './syncTools';
+
+const DYNAMIC_REGION_NAME = 'fullScreenTrigger';
+const DYNAMIC_STALE_COORD_TYPES = [
+	'cmd-prepare',
+	'cmd-play',
+	'cmd-finish',
+	'signal-ready-prepared',
+	'signal-ready-playing',
+	'signal-ready-finished',
+] as const;
+
+/**
+ * Clear stored sync-coordination messages for the dynamic-trigger region so
+ * that the next cycle of the same emit doesn't consume cycle-N-1's commands.
+ *
+ * Why this is needed: the regular cycle-wrap clearing in updateSlavePosition
+ * triggers when slave's syncIndex regresses (`syncIndex < prevSync`). The
+ * dynamic playlist always uses syncIndex=1 within its `<seq>`, so wrap is
+ * never detected and the cmd-play / cmd-finish / signal-ready-* messages
+ * from cycle 1 sit in `lastValues` waiting to be matched by cycle 2's wait —
+ * which they do (state+syncIndex match) and the slave proceeds early using
+ * 12-second-old commands instead of the live ones the master is about to send.
+ */
+export function clearDynamicSyncCoordination(syncGroupName: string): void {
+	const group = getSyncGroup(`${syncGroupName}-${DYNAMIC_REGION_NAME}`);
+	if (!group) return;
+	for (const type of DYNAMIC_STALE_COORD_TYPES) {
+		group.clearSyncCoordinationMessage(type, DYNAMIC_REGION_NAME);
+	}
+}
 
 export async function joinSyncGroup(sos: ISos, _synchronization: Synchronization, groupName: string) {
 	// Route through the syncGroups registry in syncTools so a repeat call for
@@ -63,6 +93,12 @@ export async function cancelDynamicPlaylistMaster(
 
 	cancelAllInRegion(regionName);
 	cancelAllInRegion(currentDynamicPlaylist.parentRegion, (e) => !!e.media.dynamicValue);
+
+	// Clear stored cmd-*/signal-* for fullScreenTrigger so the next emit cycle
+	// doesn't satisfy its sync waits with the just-finished cycle's broadcasts
+	// (syncIndex=1 every cycle in the dynamic seq, so cycle-wrap detection
+	// won't catch this).
+	clearDynamicSyncCoordination(synchronization.syncGroupName);
 
 	currentDynamicPlaylist.play = false;
 }
