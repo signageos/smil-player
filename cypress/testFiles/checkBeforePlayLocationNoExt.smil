@@ -1,0 +1,16 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="600" checkBeforePlay="true" updateMechanism="location"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080"
+                    z-index="1" backgroundColor="#000000"/>
+        </layout>
+    </head>
+    <body>
+        <seq repeatCount="indefinite">
+            <video src="http://localhost:3000/cbp-loc-noext/content?id=1" region="main" dur="5s"/>
+            <video src="http://localhost:3000/cbp-loc-noext/content?id=2" region="main" dur="5s"/>
+        </seq>
+    </body>
+</smil>

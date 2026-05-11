@@ -435,6 +435,51 @@ app.get('/cbp-video/video.mp4', async (_req: Request, res: Response) => {
 	res.send(buf);
 });
 
+// --- location-header strategy with extensionless SMIL src ---
+// Reproduces the Hygh production setup where <video src="…/content?id=N"> points
+// at an API endpoint whose pathname has no extension. The HEAD returns a Location
+// header pointing at a CDN URL whose pathname DOES carry the ".mp4" extension.
+// Used to verify the on-disk filename inherits the extension from the Location URL.
+const CBP_LOC_NOEXT_CORS = {
+	...CBP_CORS_HEADERS,
+	'Access-Control-Expose-Headers': 'Last-Modified, Location, Content-Length',
+};
+
+app.options('/cbp-loc-noext/*', (_req: Request, res: Response) => {
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.sendStatus(204);
+});
+
+app.head('/cbp-loc-noext/content', (req: Request, res: Response) => {
+	const id = req.query.id || '1';
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Location': `http://localhost:3000/cbp-loc-noext/file/video_v${id}.mp4`,
+	});
+	// Mirrors the Hygh API which returns 204 with the Location header.
+	res.status(204).end();
+});
+
+app.get('/cbp-loc-noext/file/:fileName', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Content-Type': 'video/mp4',
+		'Content-Length': String(buf.length),
+	});
+	res.send(buf);
+});
+
+app.head('/cbp-loc-noext/file/:fileName', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Content-Type': 'video/mp4',
+		'Content-Length': String(buf.length),
+	});
+	res.status(200).end();
+});
+
 // --- existing routes ---
 
 app.get('/assets/:fileName', (req: Request, res: Response) => {

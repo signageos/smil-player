@@ -44,6 +44,47 @@ describe('Files tools component', () => {
 			}
 		});
 
+		it('Should append extension from fallback URL when primary URL pathname lacks one', () => {
+			// Location-header strategy case: SMIL src points to an API endpoint whose
+			// pathname is "/content" (no extension). HEAD returns a Location header
+			// pointing at a CDN URL whose pathname ends in ".mp4". The on-disk filename
+			// must inherit ".mp4" or LG's video element cannot determine the codec.
+			const result = getFileName(
+				'https://hygh.signage-cdn.com/tymetable/api/v1/dooh/signageos/content?screen=X&id=1',
+				'https://hygh.signage-cdn.com/content/1c67c064_fullhd.mp4?id=abc&media=foo',
+			);
+			expect(result).to.match(/^content_[a-f0-9]{8}\.mp4$/);
+		});
+
+		it('Should leave result unchanged when primary URL already has an extension (fallback ignored)', () => {
+			const withoutFallback = getFileName('https://cdn.example.com/videos/myvideo.mp4');
+			const withFallback = getFileName(
+				'https://cdn.example.com/videos/myvideo.mp4',
+				'https://other.cdn/different.png',
+			);
+			expect(withFallback).to.be.equal(withoutFallback);
+		});
+
+		it('Should ignore fallback that is not a parseable URL (e.g., Last-Modified date string)', () => {
+			// The last-modified strategy returns a date string as its updateValue.
+			// If a caller mistakenly passes it as the fallback, the URL host check
+			// must reject it so we never derive an extension from a non-URL.
+			const withoutFallback = getFileName('https://hygh.example.com/api/v1/content');
+			const withDateFallback = getFileName(
+				'https://hygh.example.com/api/v1/content',
+				'Wed, 21 Oct 2025 07:28:00 GMT',
+			);
+			expect(withDateFallback).to.be.equal(withoutFallback);
+		});
+
+		it('Should return extensionless name when neither primary nor fallback has an extension', () => {
+			const result = getFileName(
+				'https://hygh.example.com/api/v1/content',
+				'https://other.cdn/also-no-ext',
+			);
+			expect(result).to.not.match(/\.[a-zA-Z0-9]+$/);
+		});
+
 		it('Should return correct path for vairous strings', () => {
 			const filesPaths = [
 				`https://butikstv.centrumkanalen.com/play/smil/234.smil`,
