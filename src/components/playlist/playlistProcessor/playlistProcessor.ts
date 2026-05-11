@@ -64,7 +64,14 @@ import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
 import { defaults as config } from '../../../../config/parameters';
 import { StreamEnums } from '../../../enums/mediaEnums';
 import { smilEventEmitter, waitForSuccessOrFailEvents } from '../eventEmitter/eventEmitter';
-import { createLocalFilePath, createSourceReportObject, createVersionedUrl, getFileName, getSmilVersionUrl, isWidgetUrl } from '../../files/tools';
+import {
+	createLocalFilePath,
+	createSourceReportObject,
+	createVersionedUrl,
+	getCanonicalFileName,
+	getSmilVersionUrl,
+	isWidgetUrl,
+} from '../../files/tools';
 import { isEqual } from 'lodash';
 import StreamProtocol from '@signageos/front-applet/es6/FrontApplet/Stream/StreamProtocol';
 import { IPlaylistProcessor } from './IPlaylistProcessor';
@@ -2604,8 +2611,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// (wasUpdated=true). useInReportUrlStale covers mapping-only updates (e.g. CDN redirect
 		// with only query-param changes) where bytes on disk didn't change but the reported URL did.
 		if ('src' in value && (!value.useInReportUrl || value.wasUpdated || value.useInReportUrlStale)) {
-			const fileName = getFileName(value.src);
 			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([value as MergedDownloadList]);
+			// Canonical lookup: handles entries committed under "<base>.<ext>" when the
+			// SMIL src URL itself lacks an extension (location-header strategy).
+			const fileName = getCanonicalFileName(value.src, mediaInfoObject);
 			if (mediaInfoObject[fileName]) {
 				value.useInReportUrl = String(mediaInfoObject[fileName]);
 				debug(`[${debugId}] Set useInReportUrl at first play: %s`, value.useInReportUrl);
@@ -2873,7 +2882,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			if (
-				!(await this.files.fileExists(createLocalFilePath(FileStructure.videos, value.src))) &&
+				// Pass useInReportUrl as the extension hint so an extensionless SMIL src
+				// (location-header strategy) still resolves to the on-disk filename that
+				// inherited the extension from the Location URL.
+				!(await this.files.fileExists(
+					createLocalFilePath(FileStructure.videos, value.src, value.useInReportUrl),
+				)) &&
 				!value.isStream
 			) {
 				debug(`[${debugId}] Video does not exist in local storage: %O with params: %O`, value, params);

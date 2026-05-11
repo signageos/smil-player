@@ -46,7 +46,7 @@ export function getProtocol(url: string): string {
 	return protocol;
 }
 
-export function getFileName(url: string) {
+export function getFileName(url: string, fallbackUrlForExt?: string) {
 	if (!url) {
 		return url;
 	}
@@ -55,11 +55,30 @@ export function getFileName(url: string) {
 		? `_${checksumString(parsedUrl.host + parsedUrl.pathname + JSON.stringify(parsedUrl.query), 8)}`
 		: '';
 	const fileName = path.basename(parsedUrl.pathname ?? url);
-	const sanitizedExtname = path
-		.extname(parsedUrl.pathname ?? url)
-		.replace(/[^\w\.\-]+/gi, '')
-		.substr(0, 10);
-	const sanitizedFileName = decodeURIComponent(fileName.substr(0, fileName.length - sanitizedExtname.length))
+	const originalExtname = path.extname(parsedUrl.pathname ?? url);
+	let sanitizedExtname = originalExtname.replace(/[^\w\.\-]+/gi, '').substr(0, 10);
+
+	// When the primary URL pathname has no extension (e.g. an API endpoint that
+	// returns the file via a Location header), borrow the extension from the
+	// resolved fallback URL so the on-disk filename can carry it. The `host`
+	// guard makes sure non-URL strings (e.g. a Last-Modified date) cannot poison
+	// the extension.
+	if (!sanitizedExtname && typeof fallbackUrlForExt === 'string') {
+		const fallbackParsed = URLVar.parse(fallbackUrlForExt);
+		if (fallbackParsed.host) {
+			const fallbackExt = path
+				.extname(fallbackParsed.pathname ?? '')
+				.replace(/[^\w\.\-]+/gi, '')
+				.substr(0, 10);
+			if (fallbackExt) {
+				sanitizedExtname = fallbackExt;
+			}
+		}
+	}
+
+	// Chop the basename by the ORIGINAL extension length, never the fallback's —
+	// the basename never contained the fallback extension.
+	const sanitizedFileName = decodeURIComponent(fileName.substr(0, fileName.length - originalExtname.length))
 		.replace(/[^\w\.\-]+/gi, '-')
 		.substr(0, 10);
 	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
@@ -192,8 +211,38 @@ export function copyQueryParameters(fromUrl: string, toUrl: string) {
 	return toUrlWithoutSearch + '?' + querystring.encode(parsedToUrl.query);
 }
 
-export function createLocalFilePath(localFilePath: string, src: string): string {
-	return `${localFilePath}/${getFileName(src)}`;
+export function createLocalFilePath(localFilePath: string, src: string, fallbackUrlForExt?: string): string {
+	return `${localFilePath}/${getFileName(src, fallbackUrlForExt)}`;
+}
+
+/**
+ * Resolve the canonical filename key for `srcUrl` against `mediaInfoObject`.
+ *
+ * The location-header strategy may produce URLs whose pathname has no extension
+ * (e.g. ".../content"). We still want the on-disk filename (and the in-memory
+ * key) to include the resolved extension from the Location header. Callers that
+ * already hold the resolved Location URL should call `getFileName(srcUrl, locationUrl)`
+ * directly. Callers that only have `srcUrl` plus the persisted `mediaInfoObject`
+ * use this helper: it returns the canonical key already present in the map
+ * (which carries the extension) when one exists, falling back to the bare
+ * `getFileName(srcUrl)` for brand-new entries that haven't been committed yet.
+ */
+export function getCanonicalFileName(srcUrl: string, mediaInfoObject: MediaInfoObject): string {
+	const baseKey = getFileName(srcUrl);
+	// Fast path: the URL already had its own extension, baseKey IS canonical.
+	if (mediaInfoObject[baseKey] !== undefined) {
+		return baseKey;
+	}
+	// Slow path: scan for a previously-committed entry whose key starts with
+	// `baseKey.` — that's the extensionful canonical name we wrote last time.
+	const prefix = baseKey + '.';
+	for (const key of Object.keys(mediaInfoObject)) {
+		if (key.startsWith(prefix)) {
+			return key;
+		}
+	}
+	// No prior entry — caller should pass a fallback once it has one (from HEAD).
+	return baseKey;
 }
 
 export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): MediaInfoObject {

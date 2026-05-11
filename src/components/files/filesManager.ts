@@ -16,6 +16,7 @@ import {
 	createPoPMessagePayload,
 	createSourceReportObject,
 	debug,
+	getCanonicalFileName,
 	getFileName,
 	getStorageFileName,
 	getReportUrlFromUpdateValue,
@@ -375,9 +376,14 @@ export class FilesManager implements IFilesManager {
 		suffix: string = '',
 	) => {
 		debug(`Getting file details for file: %O`, media);
+		// Resolve the canonical name against the persisted mediaInfoObject so we find
+		// the file even when the SMIL src URL has no extension (the on-disk filename
+		// will have inherited it from the Location header).
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile([media as MergedDownloadList]);
+		const fileName = getCanonicalFileName(media.src, mediaInfoObject);
 		return this.sos.fileSystem.getFile({
 			storageUnit: this.internalStorageUnit,
-			filePath: `${fileStructure}/${getFileName(media.src)}${suffix}`,
+			filePath: `${fileStructure}/${fileName}${suffix}`,
 		});
 	};
 
@@ -421,7 +427,9 @@ export class FilesManager implements IFilesManager {
 			return { shouldUpdate: false, statusCode };
 		}
 
-		const storedValue = mediaInfoObject[getFileName(media.src)];
+		// Use the canonical key (which carries the resolved extension when applicable)
+		// so a previously-committed entry for an extensionless SMIL src still hits.
+		const storedValue = mediaInfoObject[getCanonicalFileName(media.src, mediaInfoObject)];
 		debug(`Stored value for file %s: %O`, media.src, storedValue);
 
 		if (isNil(storedValue)) {
@@ -486,7 +494,7 @@ export class FilesManager implements IFilesManager {
 			};
 		}
 
-		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
+		if (!(await this.fileExists(`${localFilePath}/${getCanonicalFileName(media.src, mediaInfoObject)}`))) {
 			debug(`File does not exist in local storage: %s  downloading`, media.src);
 			return {
 				shouldUpdate: true,
@@ -646,7 +654,9 @@ export class FilesManager implements IFilesManager {
 					return {
 						file,
 						updateCheck,
-						fileName: getFileName(file.src),
+						// Canonical name carries the extension borrowed from the resolved
+						// Location URL when the SMIL src lacks one (e.g. ".../content").
+						fileName: getFileName(file.src, updateCheck.value as string | undefined),
 					};
 				}),
 			);
@@ -719,8 +729,11 @@ export class FilesManager implements IFilesManager {
 				const isNewContent = forceDownload && updateValue;
 				const downloadPath = isNewContent ? this.getTempFolder(localFilePath) : localFilePath;
 
-				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
-				const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
+				// updateValue is the resolved URL (Location header) for the location strategy.
+				// When the SMIL src has no extension (e.g. ".../content"), borrow it from the
+				// resolved URL so the on-disk filename carries the extension.
+				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src, String(updateValue));
+				const actualDownloadPath = createLocalFilePath(downloadPath, file.src, String(updateValue));
 
 				// Determine download URL
 				let downloadUrl: string;
@@ -952,11 +965,14 @@ export class FilesManager implements IFilesManager {
 					}
 
 					try {
-						// Restore from storage to temp for the first task
+						// Restore from storage to temp for the first task. Pass updateValue
+						// as the extension hint so the restored filename matches
+						// firstTask.actualDownloadPath (which already used the same fallback).
 						restoredTempPath = await this.restoreFromStorage(
 							storageFilePath,
 							firstTask.actualDownloadPath.substring(0, firstTask.actualDownloadPath.lastIndexOf('/')),
 							firstTask.file.src,
+							typeof firstTask.updateValue === 'string' ? firstTask.updateValue : undefined,
 						);
 
 						if (restoredTempPath) {
@@ -1373,9 +1389,13 @@ export class FilesManager implements IFilesManager {
 					if (updateCheck.shouldUpdate) {
 						const updateValue = 'value' in updateCheck ? updateCheck.value : undefined;
 						const statusCode = updateCheck.statusCode || 200;
+						// Canonical name carries the extension borrowed from the resolved URL
+						// when the SMIL src lacks one. For lastModified strategy, updateValue is
+						// a date string with no host — getFileName's host guard ignores it gracefully.
+						const canonicalName = getFileName(file.src, updateValue as string | undefined);
 						if (updateValue) {
 							// Store the value for later update after successful download
-							filesToUpdate.set(getFileName(file.src), updateValue);
+							filesToUpdate.set(canonicalName, updateValue);
 						}
 
 						// Determine if this is new content that should go to temp folder
@@ -1388,11 +1408,11 @@ export class FilesManager implements IFilesManager {
 							debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
 						}
 
-						const fullLocalFilePath = createLocalFilePath(localFilePath, file.src);
-						const actualDownloadPath = createLocalFilePath(downloadPath, file.src);
+						const fullLocalFilePath = `${localFilePath}/${canonicalName}`;
+						const actualDownloadPath = `${downloadPath}/${canonicalName}`;
 
 						// Before downloading, check if we should preserve the existing file to storage
-						const existingFileName = getFileName(file.src);
+						const existingFileName = canonicalName;
 						const existingValue = mediaInfoObject[existingFileName];
 
 						if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
@@ -1417,7 +1437,7 @@ export class FilesManager implements IFilesManager {
 								// Check storage before downloading to prevent wasted bandwidth
 								if (!(await this.checkAvailableSpace(updateCheck.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
 									debug('Skipping download for %s - insufficient storage space', file.src);
-									filesToUpdate.delete(getFileName(file.src));
+									filesToUpdate.delete(canonicalName);
 									return;
 								}
 
@@ -1448,9 +1468,8 @@ export class FilesManager implements IFilesManager {
 
 									// Track file in temp if using temp folder
 									if (isNewContent) {
-										const fileName = getFileName(file.src);
-										this.tempDownloads.set(fileName, actualDownloadPath);
-										debug(`Tracked temp download: %s -> %s`, fileName, actualDownloadPath);
+										this.tempDownloads.set(canonicalName, actualDownloadPath);
+										debug(`Tracked temp download: %s -> %s`, canonicalName, actualDownloadPath);
 									}
 
 									this.sendDownloadReport(
@@ -1465,7 +1484,7 @@ export class FilesManager implements IFilesManager {
 									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, 502);
 									// Remove from filesToUpdate if download failed
-									filesToUpdate.delete(getFileName(file.src));
+									filesToUpdate.delete(canonicalName);
 								}
 							})(),
 						);
@@ -1473,7 +1492,10 @@ export class FilesManager implements IFilesManager {
 						// File doesn't need download but we need to update the mediaInfoObject
 						// This happens when content is already downloaded but moved to a new URL
 						debug(`Updating mediaInfoObject for %s without download`, file.src);
-						filesToUpdate.set(getFileName(file.src), updateCheck.value);
+						filesToUpdate.set(
+							getFileName(file.src, updateCheck.value as string | undefined),
+							updateCheck.value,
+						);
 					}
 				}),
 			);
@@ -1788,7 +1810,7 @@ export class FilesManager implements IFilesManager {
 		// Swap localFilePath to temp URIs so playlist reads NEW content immediately
 		for (const file of filesList) {
 			if ('src' in file && 'localFilePath' in file) {
-				const fileName = getFileName(file.src);
+				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
 				const tempUri = tempUriMap.get(fileName);
 				if (tempUri) {
 					file.localFilePath = tempUri;
@@ -1810,7 +1832,7 @@ export class FilesManager implements IFilesManager {
 		// triggering a full video re-prepare.
 		for (const file of filesList) {
 			if ('src' in file && 'localFilePath' in file) {
-				const fileName = getFileName(file.src);
+				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
 				if (this.batchUpdates.has(fileName) && !this.pendingWasUpdated.has(file)) {
 					(file as any).useInReportUrlStale = true;
 				}
@@ -1877,7 +1899,9 @@ export class FilesManager implements IFilesManager {
 		// This is critical for preservation checks to see the future state of ALL files across all phases
 		const allPendingUpdates = new Map<string, string | number>();
 		for (const detection of detections) {
-			const fileName = getFileName(detection.file.src);
+			// Canonical key (with extension when applicable) so this map stays consistent
+			// with the post-commit mediaInfoObject keys.
+			const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 			allPendingUpdates.set(fileName, detection.updateValue);
 		}
 		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
@@ -1939,7 +1963,7 @@ export class FilesManager implements IFilesManager {
 
 				// Post-process: collectUpdate and set wasUpdated for each file
 				for (const detection of groupDetections) {
-					const fileName = getFileName(detection.file.src);
+					const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 					const downloadSucceeded = result.filesToUpdate.has(fileName);
 
 					// Always use detection's own updateValue — it has the correct per-file
@@ -2033,7 +2057,7 @@ export class FilesManager implements IFilesManager {
 		);
 
 		// Update mapping in mediaInfoObject
-		const fileName = getFileName(detection.file.src);
+		const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 		debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
 		this.collectUpdate(fileName, String(detection.updateValue));
 	};
@@ -2062,8 +2086,10 @@ export class FilesManager implements IFilesManager {
 				return;
 			}
 
-			// Check if a background download is already in progress for this file
-			const fileName = getFileName(media.src);
+			// Check if a background download is already in progress for this file.
+			// Use the canonical name so the key matches what processNewContentUpdates
+			// and the maps (tempDownloads, batchUpdates) use.
+			const fileName = getFileName(media.src, detection.updateValue as string | undefined);
 			if (this.activePrePlayDownloads.has(fileName)) {
 				debug('prePlayCheck: Download already in progress for %s, skipping', fileName);
 				return;
@@ -2357,7 +2383,9 @@ export class FilesManager implements IFilesManager {
 
 		// Check each file to see if its content has changed
 		for (const file of filesList) {
-			const destFileName = getFileName(file.src); // Get this URL's filename
+			// Use the canonical key (with extension when applicable) so we find an
+			// existing entry committed under e.g. "content_<hash>.mp4".
+			const destFileName = getCanonicalFileName(file.src, mergedMediaInfo); // Get this URL's filename
 			const currentValue = currentMediaInfo[destFileName]; // What content this URL currently has
 			const newValue = mergedMediaInfo[destFileName]; // What content this URL will have
 
@@ -2843,7 +2871,7 @@ export class FilesManager implements IFilesManager {
 		for (const file of filesList) {
 			debug('\n--- Processing file: %s ---', file.src);
 			if ('localFilePath' in file) {
-				const fileName = getFileName(file.src);
+				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
 				debug('  Generated fileName from URL: %s', fileName);
 				debug('  Current localFilePath: %s', file.localFilePath);
 
@@ -2975,8 +3003,10 @@ export class FilesManager implements IFilesManager {
 		);
 
 		if (actualFile) {
-			// Copy the shared file to the slot's own path so it's self-contained
-			const slotFileName = getFileName(file.src);
+			// Copy the shared file to the slot's own path so it's self-contained.
+			// Use the resolved updateValue as fallback so we honor the extension
+			// (the slot copy must live under the same canonical name as the source).
+			const slotFileName = getFileName(file.src, updateValue as string | undefined);
 			const destPath = `${localFilePath}/${slotFileName}`;
 
 			let copyExecuted = false;
@@ -3169,7 +3199,7 @@ export class FilesManager implements IFilesManager {
 
 					// Content exists but may have moved - update mapping without downloading
 					if (updateCheck.value) {
-						const fileName = getFileName(file.src);
+						const fileName = getFileName(file.src, updateCheck.value as string | undefined);
 						this.collectUpdate(fileName, String(updateCheck.value));
 						await this.updateLocalFilePathForMovedContent(
 							file,
@@ -3196,7 +3226,7 @@ export class FilesManager implements IFilesManager {
 					localFilePath,
 				);
 
-				const fileName = getFileName(file.src);
+				const fileName = getFileName(file.src, updateCheck.value as string | undefined);
 				const oldValue = mediaInfoObject[fileName];
 				// Persist mapping whenever the tracked value actually differs so custom
 				// endpoint reports reflect the current CDN redirect target. Split the
@@ -3258,10 +3288,10 @@ export class FilesManager implements IFilesManager {
 			// preserve the file to storage before it becomes orphaned.
 			if (detection && file.expr === ConditionalExprFormat.skipContent
 				&& 'localFilePath' in file && file.localFilePath !== '') {
-				const fileName = getFileName(file.src);
+				const fileName = getCanonicalFileName(file.src, detection.mediaInfoObject);
 				const contentValue = detection.mediaInfoObject[fileName];
 				if (contentValue) {
-					const fullPath = createLocalFilePath(localFilePath, file.src);
+					const fullPath = `${localFilePath}/${fileName}`;
 					const mediaType = mapFileType(localFilePath);
 					debug('detectUpdateOnly: Preserving skipped content to storage: %s', file.src);
 					await this.preserveFileToStorage(fullPath, contentValue, mediaType);
@@ -3274,7 +3304,7 @@ export class FilesManager implements IFilesManager {
 		// Check if this is MOVED_CONTENT scenario
 		// shouldUpdate: false but value provided means content exists locally
 		if (!detection.updateCheck.shouldUpdate && detection.updateCheck.value) {
-			const fileName = getFileName(file.src);
+			const fileName = getFileName(file.src, detection.updateCheck.value as string | undefined);
 			const currentLocalValue = detection.mediaInfoObject[fileName];
 
 			// If file needs to point to different content (compare without query params)
@@ -3595,7 +3625,11 @@ export class FilesManager implements IFilesManager {
 				const storedFileName = path.basename(storedFile.filePath);
 				let found = false;
 				for (let smilFile of smilMediaArray) {
-					if (storedFileName === getFileName(smilFile.src)) {
+					const candidateBase = getFileName(smilFile.src);
+					// Match both the extensionless canonical (legacy) and the extensionful
+					// canonical produced when getFileName borrowed an extension from a
+					// resolved Location URL. Mirrors getCanonicalFileName's prefix scan.
+					if (storedFileName === candidateBase || storedFileName.startsWith(candidateBase + '.')) {
 						debug(`File found in new SMIL file: %s`, storedFile.filePath);
 						found = true;
 						break;
@@ -3983,6 +4017,7 @@ export class FilesManager implements IFilesManager {
 		storagePath: string,
 		targetFolder: string,
 		requestingUrl: string,
+		extensionHintUrl?: string,
 	): Promise<string | null> => {
 		try {
 			// Verify the storage file exists before attempting restoration
@@ -4002,9 +4037,11 @@ export class FilesManager implements IFilesManager {
 				return null;
 			}
 
-			// CRITICAL: Generate the correct filename based on the requesting URL
-			// This ensures the player finds the file with the expected name
-			const targetFileName = getFileName(requestingUrl);
+			// CRITICAL: Generate the correct filename based on the requesting URL.
+			// When the requesting URL has no extension (e.g. ".../content"), borrow
+			// it from the extensionHintUrl so the restored file's name matches what
+			// `parallelDownloadAllFiles` will look for at `task.actualDownloadPath`.
+			const targetFileName = getFileName(requestingUrl, extensionHintUrl);
 			// Always restore to temp folder first to preserve original content for movement detection
 			const tempFolder = this.getTempFolder(targetFolder);
 			const fullTargetPath = `${tempFolder}/${targetFileName}`;
