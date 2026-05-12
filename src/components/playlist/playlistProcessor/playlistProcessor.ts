@@ -478,17 +478,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						  }
 						: undefined;
 
-				// Fire lookahead prefetches only for elements that will actually play.
-				// Skipped elements (empty localFilePath or expired conditional) process instantly,
-				// causing rapid-fire cascades that burst many concurrent HEAD requests.
+				// Fire a single lookahead prefetch for the element exactly checkAheadCount
+				// positions ahead. Skipped elements (empty localFilePath or expired conditional)
+				// process instantly; firing from them would cause rapid-fire cascades.
 				const media = value as SMILMedia;
 				const willBeSkipped =
 					('localFilePath' in media && media.localFilePath === '') ||
 					isConditionalExpExpired(media, this.playerName, this.playerId);
 
 				if (!willBeSkipped) {
-					this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls)
-						.catch((err) => debug('Prefetch ahead cascade error: %O', err));
+					this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
 				}
 
 				while (shouldRetry && retryCount < MAX_RETRIES) {
@@ -2383,12 +2382,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		return [...this.smilObject.video, ...this.smilObject.img, ...this.smilObject.ref, ...this.smilObject.audio];
 	}
 
-	private async prefetchAheadElements(
+	private prefetchAheadElements(
 		entries: [string, unknown][],
 		currentIndex: number,
 		version: number,
 		prefetchedUrls: Set<string>,
-	): Promise<void> {
+	): void {
 		const count = this.smilObject.checkAheadCount || 0;
 		if (!this.smilObject.checkBeforePlay || count < 1) {
 			return;
@@ -2420,15 +2419,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		const allMedia = this.getAllMediaList();
-		let foundCount = 0;
 
-		// Sequential cascade: start from next element, await each HEAD check.
-		// Continue through 404/skipContent elements until `count` playable elements found.
-		for (let offset = 1; offset <= mediaEntries.length; offset++) {
+		// Single-target lookahead: while element K plays, HEAD the element at K+count.
+		// If that target is known skipContent (404'd previously), cascade forward without
+		// firing HEAD on the 404'd ones — pick the first non-skip element instead.
+		for (let offset = count; offset < count + mediaEntries.length; offset++) {
 			const scanIdx = (currentMediaIdx + offset) % mediaEntries.length;
 
 			// Wrapped back to current element — stop
-			if (scanIdx === currentMediaIdx) {
+			if (offset > count && scanIdx === currentMediaIdx) {
 				break;
 			}
 
@@ -2439,9 +2438,15 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			const candidate = mediaEntries[scanIdx];
 
-			// Skip if already checked this cycle (dedup across cascades)
-			if (prefetchedUrls.has(candidate.media.src)) {
+			// Cascade past known-404 elements without firing HEAD on them
+			if (candidate.media.expr === ConditionalExprFormat.skipContent) {
 				continue;
+			}
+
+			// Dedup within this processPlaylist pass (avoids duplicate HEAD when
+			// playback wraps back over a slot already checked this cycle)
+			if (prefetchedUrls.has(candidate.media.src)) {
+				break;
 			}
 
 			prefetchedUrls.add(candidate.media.src);
@@ -2452,28 +2457,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				continue;
 			}
 
-			// Await HEAD check sequentially — this is the key fix.
-			// Each check blocks only on Phase 1 (HEAD ~100-200ms), download runs in background.
 			debug('Prefetch ahead: checking %s (%d ahead)', candidate.media.src, offset);
-			try {
-				await this.files.prePlayCheck(
+			this.files
+				.prePlayCheck(
 					candidate.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-					filePath, this.smilObject, allMedia,
-				);
-			} catch (err) {
-				debug('Prefetch ahead check failed for %s: %O', candidate.media.src, err);
-			}
+					filePath,
+					this.smilObject,
+					allMedia,
+				)
+				.catch((err) => debug('Prefetch ahead check failed for %s: %O', candidate.media.src, err));
 
-			// Count elements that will actually be played (have content and not skipped)
-			const willPlay = candidate.media.localFilePath !== ''
-				&& candidate.media.expr !== ConditionalExprFormat.skipContent;
-			if (willPlay) {
-				foundCount++;
-				if (foundCount >= count) {
-					break;
-				}
-			}
-			// else: 404/skipContent — cascade continues to find more playable elements
+			// One HEAD per cascade — done.
+			break;
 		}
 	}
 

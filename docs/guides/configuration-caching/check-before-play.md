@@ -41,15 +41,15 @@ You can combine it with other `<meta>` attributes such as `expr`:
 
 ### Lookahead via `checkAheadCount`
 
-Without a lookahead, the HEAD check for element _N_ happens right before element _N_ plays — which can visibly delay the transition while the HEAD (and any triggered download) completes. Set `checkAheadCount` to have the player check _ahead_ by that many upcoming elements in parallel with the currently-playing one:
+Without a lookahead, the HEAD check for element _N_ happens right before element _N_ plays — which can visibly delay the transition while the HEAD (and any triggered download) completes. Set `checkAheadCount` to have the player check the element _N_ positions ahead while the current element is still playing:
 
 ```xml
 <meta http-equiv="Refresh" content="60" checkBeforePlay="true" checkAheadCount="2"/>
 ```
 
-With `checkAheadCount="2"`, while element _N_ is playing the player issues HEADs for _N+1_ and _N+2_. The cascade **wraps around** modulo the playlist length, so an indefinite `<seq>` checks every slot, including the last few items (they are checked when the start of the playlist plays).
+With `checkAheadCount="2"`, while element _K_ is playing the player issues a single HEAD for element _K+2_. The lookahead **wraps around** modulo the playlist length, so an indefinite `<seq>` checks every slot, including the last few items (they are checked when the start of the playlist plays). If the target element is already known to be missing (a previous HEAD returned 404 and `skipContentOnHttpStatus` skipped it), the lookahead cascades forward to the next non-skipped element instead — still firing only one HEAD per playback transition.
 
-Updates are discovered via the cascade; the subsequent background download and commit may land later — up to the next full iteration of the playlist. Worst-case detection latency is roughly `checkAheadCount × average_element_duration`. Trade higher `checkAheadCount` for lower detection latency and slightly more network chatter.
+Updates are discovered via this lookahead; the subsequent background download and commit may land later — up to the next full iteration of the playlist. Worst-case detection latency is roughly `checkAheadCount × average_element_duration`. Lower `checkAheadCount` keeps the HEAD closer to the moment the change becomes visible; higher values give slow networks more lead time to finish the download before the element plays.
 
 ## When to use
 
