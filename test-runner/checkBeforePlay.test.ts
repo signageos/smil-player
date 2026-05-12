@@ -316,6 +316,83 @@ test('checkBeforePlay detects content changes across multiple elements with chec
 	expect(uniqueImages.size).toBeGreaterThan(1);
 });
 
+test('checkAheadCount fires one HEAD per playback transition (no cascade racing-ahead)', async ({
+	context,
+	page,
+}) => {
+	// Regression guard for the cascade-racing-ahead bug. When prefetchAheadElements was
+	// async + fire-and-forget with a shared prefetchedUrls set, stacked cascades would
+	// scan progressively further ahead and emit clusters of HEADs within ~150 ms gaps
+	// (the prePlayCheck round-trip). The fix issues ONE HEAD per playback transition
+	// for the element exactly checkAheadCount positions ahead, so the steady-state gap
+	// between consecutive HEADs matches the element duration (3s here).
+	await context.addInitScript(`window.__SMIL_URL__ = '${SMIL_URL_AHEAD}';`);
+
+	await page.request.post(`${TEST_SERVER}/cbp/reset`);
+
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await page.evaluate(async () => {
+		const dbs = await indexedDB.databases();
+		for (const db of dbs) {
+			if (db.name) indexedDB.deleteDatabase(db.name);
+		}
+	});
+
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await getStableAppletFrame(page);
+
+	// Wait for first image to appear, then allow ~5 s of cycle stabilization so the
+	// initial bulk download HEADs are flushed from the assertion window.
+	await expect(async () => {
+		const frames = page.frames();
+		for (const frame of frames) {
+			if (frame === page.mainFrame()) continue;
+			try {
+				const img = frame.locator('img[src*="image"]').first();
+				if (await img.isVisible({ timeout: 1000 })) return;
+			} catch {
+				// frame may be detached
+			}
+		}
+		throw new Error('Image not visible in any frame');
+	}).toPass({ intervals: [2000], timeout: 60000 });
+
+	await new Promise((r) => setTimeout(r, 5000));
+
+	// Clear the HEAD log so the assertion window only contains steady-state prefetches.
+	await page.request.post(`${TEST_SERVER}/cbp/clear-head-log`);
+
+	// Observe for 30 s — at 3 s per image that's ~10 playback transitions, and with
+	// a single-target lookahead we expect ~10 HEADs total.
+	const windowMs = 30000;
+	await new Promise((r) => setTimeout(r, windowMs));
+
+	const logResp = await page.request.get(`${TEST_SERVER}/cbp/head-log`);
+	const headLog: { file: string; time: number }[] = await logResp.json();
+	console.log(`Steady-state HEAD log entries over ${windowMs}ms: ${headLog.length}`);
+
+	// Inter-arrival gaps between consecutive HEADs.
+	const gaps: number[] = [];
+	for (let i = 1; i < headLog.length; i++) {
+		gaps.push(headLog[i].time - headLog[i - 1].time);
+	}
+	const minGap = gaps.length ? Math.min(...gaps) : Infinity;
+	const maxGap = gaps.length ? Math.max(...gaps) : 0;
+	console.log(`Inter-arrival gaps: min=${minGap}ms max=${maxGap}ms count=${gaps.length}`);
+
+	// With racing-ahead, clusters fire within ~150 ms (one prePlayCheck round-trip).
+	// In steady state the gap should be close to the element duration (3 s = 3000 ms);
+	// require at least 1500 ms as a comfortable margin that still rejects clusters.
+	if (gaps.length > 0) {
+		expect(minGap).toBeGreaterThanOrEqual(1500);
+	}
+
+	// HEAD count should track playback transitions: ~windowMs / 3000ms ≈ 10. Allow a
+	// wide tolerance for jitter at the boundaries. Racing-ahead would yield 2–5× more.
+	expect(headLog.length).toBeGreaterThan(3);
+	expect(headLog.length).toBeLessThanOrEqual(20);
+});
+
 // --- Location header strategy tests ---
 
 test('checkBeforePlay (location strategy) detects Location header change and updates image src', async ({
