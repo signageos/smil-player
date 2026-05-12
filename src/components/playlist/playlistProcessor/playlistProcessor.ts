@@ -479,16 +479,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						: undefined;
 
 				// Fire a single lookahead prefetch for the element exactly checkAheadCount
-				// positions ahead. Skipped elements (empty localFilePath or expired conditional)
-				// process instantly; firing from them would cause rapid-fire cascades.
-				const media = value as SMILMedia;
-				const willBeSkipped =
-					('localFilePath' in media && media.localFilePath === '') ||
-					isConditionalExpExpired(media, this.playerName, this.playerId);
-
-				if (!willBeSkipped) {
-					this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
-				}
+				// positions ahead. Always run — gating on willBeSkipped (used to be the
+				// case) caused elements at +count from a skipContent slot to drop out of
+				// coverage entirely. With single-target prefetch the cost is at most one
+				// HEAD per cycle, and the in-function guards still prevent duplicates.
+				this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
 
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Declare indices before try block so they're accessible in catch
