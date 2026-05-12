@@ -3,6 +3,7 @@ import { test, expect, Frame } from '@playwright/test';
 const EMULATOR_URL = 'http://localhost:8090';
 const SMIL_URL = 'http://localhost:3000/checkBeforePlay.smil';
 const SMIL_URL_AHEAD = 'http://localhost:3000/checkBeforePlayAhead.smil';
+const SMIL_URL_SKIP = 'http://localhost:3000/checkBeforePlaySkipContent.smil';
 const SMIL_URL_LOC = 'http://localhost:3000/checkBeforePlayLocation.smil';
 const SMIL_URL_AHEAD_LOC = 'http://localhost:3000/checkBeforePlayAheadLocation.smil';
 const TEST_SERVER = 'http://localhost:3000';
@@ -391,6 +392,114 @@ test('checkAheadCount fires one HEAD per playback transition (no cascade racing-
 	// wide tolerance for jitter at the boundaries. Racing-ahead would yield 2–5× more.
 	expect(headLog.length).toBeGreaterThan(3);
 	expect(headLog.length).toBeLessThanOrEqual(20);
+});
+
+test('checkAheadCount cascades past skipContent (empty URL) without stalling or racing', async ({
+	context,
+	page,
+}) => {
+	// With one slot in the playlist returning 404 (skipContentOnHttpStatus="404"),
+	// the lookahead must:
+	//   1. mark that slot's media.expr = skipContent;
+	//   2. cascade forward to the next non-skipped element (no extra HEAD on the 404'd URL
+	//      from the same cascade — only the natural prePlayCheck-at-play HEAD lands);
+	//   3. keep firing exactly one HEAD per playback transition for the visible elements;
+	//   4. still detect a content change on a non-skipped sibling slot.
+	await context.addInitScript(`window.__SMIL_URL__ = '${SMIL_URL_SKIP}';`);
+
+	await page.request.post(`${TEST_SERVER}/cbp/reset`);
+	// Force image10 to return 404 for HEAD/GET before the player starts.
+	await page.request.post(`${TEST_SERVER}/cbp/skip-mode/image10.png`);
+
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await page.evaluate(async () => {
+		const dbs = await indexedDB.databases();
+		for (const db of dbs) {
+			if (db.name) indexedDB.deleteDatabase(db.name);
+		}
+	});
+
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await getStableAppletFrame(page);
+
+	// Wait until image playback starts (initial bulk + first transition).
+	await expect(async () => {
+		const frames = page.frames();
+		for (const frame of frames) {
+			if (frame === page.mainFrame()) continue;
+			try {
+				const img = frame.locator('img[src*="image"]').first();
+				if (await img.isVisible({ timeout: 1000 })) return;
+			} catch {
+				// frame may be detached
+			}
+		}
+		throw new Error('Image not visible in any frame');
+	}).toPass({ intervals: [2000], timeout: 60000 });
+
+	// Allow another ~5 s for the initial bulk-download HEAD burst to flush, then sample.
+	await new Promise((r) => setTimeout(r, 5000));
+	await page.request.post(`${TEST_SERVER}/cbp/clear-head-log`);
+
+	const windowMs = 35000; // ~3 full cycles at 9 visible slots × 3 s = 27 s + jitter
+	await new Promise((r) => setTimeout(r, windowMs));
+
+	const logResp = await page.request.get(`${TEST_SERVER}/cbp/head-log`);
+	const headLog: { file: string; time: number }[] = await logResp.json();
+	console.log(`Steady-state HEAD log entries (skipContent): ${headLog.length}`);
+
+	const byFile: Record<string, number> = {};
+	for (const e of headLog) byFile[e.file] = (byFile[e.file] || 0) + 1;
+	console.log('HEADs per file:', byFile);
+
+	// No HEAD should hit image10 in steady state — the cascade marks it skipContent
+	// and skips past it on every subsequent transition. (One HEAD may have landed
+	// before the player observed the 404; that's pre-window.)
+	expect(byFile['image10.png'] || 0).toBe(0);
+
+	// All other slots get hit roughly once per cycle (~3 cycles in this window).
+	// Allow 1..6 per slot to cover boundary jitter.
+	for (let i = 1; i <= 9; i++) {
+		const n = byFile[`image${i}.png`] || 0;
+		expect(n).toBeGreaterThanOrEqual(1);
+		expect(n).toBeLessThanOrEqual(6);
+	}
+
+	// Inter-arrival times mostly match the playback rhythm. With one skipContent
+	// element the playlist loop processes it instantly between the previous and
+	// next real playback transition — that fires its lookahead HEAD ~100 ms after
+	// the previous one. We tolerate up to a couple such boundary clusters per
+	// window but still reject racing-ahead, which would produce a sub-300 ms gap
+	// behind every playback transition.
+	const gaps: number[] = [];
+	for (let i = 1; i < headLog.length; i++) {
+		gaps.push(headLog[i].time - headLog[i - 1].time);
+	}
+	const smallGaps = gaps.filter((g) => g < 1000).length;
+	console.log(`Gaps: ${gaps.length} total, ${smallGaps} below 1000 ms`);
+	expect(smallGaps).toBeLessThanOrEqual(3);
+
+	// Switch image5 content. The cascade still has to detect this on a non-skipped
+	// slot and present the new version when image5 plays. Wait up to 30 s.
+	await page.request.post(`${TEST_SERVER}/cbp/switch/image5.png`);
+
+	let image5UpdateSeen = false;
+	const deadline = Date.now() + 30000;
+	while (Date.now() < deadline && !image5UpdateSeen) {
+		const newLogResp = await page.request.get(`${TEST_SERVER}/cbp/head-log`);
+		const newLog: { file: string; time: number }[] = await newLogResp.json();
+		const image5Heads = newLog.filter((e) => e.file === 'image5.png');
+		// At least one HEAD on image5 after the switch (we cleared earlier, so any
+		// new image5 HEAD means the lookahead reached it again).
+		if (image5Heads.length >= 1) {
+			image5UpdateSeen = true;
+			break;
+		}
+		await new Promise((r) => setTimeout(r, 1000));
+	}
+	expect(image5UpdateSeen).toBe(true);
+
+	await page.request.post(`${TEST_SERVER}/cbp/reset`);
 });
 
 // --- Location header strategy tests ---

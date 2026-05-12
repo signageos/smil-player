@@ -41,6 +41,10 @@ function resetCbpImages(): void {
 }
 resetCbpImages();
 
+// Names currently in "skip mode" — HEAD/GET return 404 so the player marks them
+// skipContent (paired with `skipContentOnHttpStatus="404"` in the SMIL meta).
+const cbpSkipMode = new Set<string>();
+
 // HEAD request log for verifying checkAheadCount
 let headLog: { file: string; time: number }[] = [];
 
@@ -72,9 +76,24 @@ app.post('/cbp/reset', (_req: Request, res: Response) => {
 	cbpLastModified = '2025-01-01T00:00:00.000Z';
 	cbpVersion = 1;
 	resetCbpImages();
+	cbpSkipMode.clear();
 	headLog = [];
 	res.set(CBP_CORS_HEADERS);
 	res.json({ version: cbpVersion, lastModified: cbpLastModified });
+});
+
+// Toggle "missing" mode for one image — HEAD/GET return 404 thereafter so the
+// player marks the slot as skipContent when used with skipContentOnHttpStatus="404".
+app.post('/cbp/skip-mode/:name', (req: Request, res: Response) => {
+	const name = req.params.name;
+	const on = req.query.on !== '0' && req.query.on !== 'false';
+	if (on) {
+		cbpSkipMode.add(name);
+	} else {
+		cbpSkipMode.delete(name);
+	}
+	res.set(CBP_CORS_HEADERS);
+	res.json({ name, skipMode: cbpSkipMode.has(name) });
 });
 
 app.post('/cbp/clear-head-log', (_req: Request, res: Response) => {
@@ -142,6 +161,11 @@ app.head('/cbp/:name', (req: Request, res: Response) => {
 		return;
 	}
 	headLog.push({ file: name, time: Date.now() });
+	if (cbpSkipMode.has(name)) {
+		res.set(CBP_CORS_HEADERS);
+		res.status(404).end();
+		return;
+	}
 	const png = img.version === 1 ? RED_PNG : BLUE_PNG;
 	res.set({
 		...CBP_CORS_HEADERS,
@@ -156,6 +180,11 @@ app.get('/cbp/:name', (req: Request, res: Response) => {
 	const name = req.params.name;
 	const img = cbpImages[name];
 	if (!img) {
+		res.status(404).end();
+		return;
+	}
+	if (cbpSkipMode.has(name)) {
+		res.set(CBP_CORS_HEADERS);
 		res.status(404).end();
 		return;
 	}
