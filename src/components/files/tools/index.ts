@@ -229,8 +229,12 @@ export function createLocalFilePath(localFilePath: string, src: string, fallback
  */
 export function getCanonicalFileName(srcUrl: string, mediaInfoObject: MediaInfoObject): string {
 	const baseKey = getFileName(srcUrl);
-	// Fast path: the URL already had its own extension, baseKey IS canonical.
-	if (mediaInfoObject[baseKey] !== undefined) {
+	// Fast path: the URL pathname already carried its own extension, so baseKey
+	// IS the canonical key. Gate on the extension itself — NOT on the key being
+	// present in the map. A present-but-extensionless baseKey may be a stale
+	// pre-extension-borrowing entry that is now shadowed by an extensionful
+	// sibling; resolving to it would pin reports to a frozen Location URL.
+	if (path.extname(baseKey)) {
 		return baseKey;
 	}
 	// Slow path: scan for a previously-committed entry whose key starts with
@@ -243,6 +247,37 @@ export function getCanonicalFileName(srcUrl: string, mediaInfoObject: MediaInfoO
 	}
 	// No prior entry — caller should pass a fallback once it has one (from HEAD).
 	return baseKey;
+}
+
+/**
+ * Remove legacy extensionless keys (`name_<hash>`) that are shadowed by an
+ * extensionful sibling (`name_<hash>.<ext>`).
+ *
+ * Builds before extension-borrowing wrote location-header entries under the
+ * bare `getFileName(src)` key. Current builds write the extensionful form. On a
+ * device upgraded across that change both keys coexist, and the stale bare key
+ * is never refreshed again — `getCanonicalFileName` must resolve to the
+ * extensionful sibling, and this prune drops the dead bare key for good.
+ *
+ * Bare keys with no extensionful sibling are left alone: they are the only
+ * record for that entry and the next update cycle rewrites them correctly.
+ *
+ * Mutates `mediaInfoObject` in place and returns the removed keys.
+ */
+export function pruneShadowedMediaInfoKeys(mediaInfoObject: MediaInfoObject): string[] {
+	const removed: string[] = [];
+	const keys = Object.keys(mediaInfoObject);
+	for (const key of keys) {
+		if (path.extname(key)) {
+			continue;
+		}
+		const prefix = key + '.';
+		if (keys.some((other) => other.startsWith(prefix))) {
+			delete mediaInfoObject[key];
+			removed.push(key);
+		}
+	}
+	return removed;
 }
 
 export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): MediaInfoObject {

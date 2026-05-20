@@ -2,10 +2,12 @@ import * as chai from 'chai';
 import {
 	createDownloadPath,
 	generateSmilUrlVersion,
+	getCanonicalFileName,
 	getFileName,
 	getPath,
 	getProtocol,
 	isRelativePath,
+	pruneShadowedMediaInfoKeys,
 } from '../../../src/components/files/tools';
 
 const expect = chai.expect;
@@ -174,6 +176,82 @@ describe('Files tools component', () => {
 			it(`should return ${expected} only on ${filePath} paths`, () => {
 				expect(isRelativePath(filePath)).equal(expected);
 			});
+		});
+	});
+
+	describe('getCanonicalFileName', () => {
+		// Extensionless location-header URL — the Hygh-style API endpoint that
+		// resolves to an .mp4 via the HTTP Location header.
+		const extensionlessSrc = 'https://hygh.signage-cdn.com/api/v1/dooh/content?screen=X&id=1';
+
+		it('Should prefer the extensionful sibling over a stale bare key', () => {
+			// This is the production bug: a device that ran a pre-`b9420bf` build
+			// has a bare key holding a stale Location URL. The current build writes
+			// the fresh URL under the extensionful key. The lookup must resolve to
+			// the extensionful key, never the shadowing bare key.
+			const baseKey = getFileName(extensionlessSrc);
+			const mediaInfoObject = {
+				[baseKey]: 'https://cdn/content/x.mp4?id=STALE',
+				[`${baseKey}.mp4`]: 'https://cdn/content/x.mp4?id=FRESH',
+			};
+			expect(getCanonicalFileName(extensionlessSrc, mediaInfoObject)).to.equal(`${baseKey}.mp4`);
+		});
+
+		it('Should resolve the extensionful key when only that key exists', () => {
+			const baseKey = getFileName(extensionlessSrc);
+			const mediaInfoObject = { [`${baseKey}.mp4`]: 'https://cdn/content/x.mp4?id=FRESH' };
+			expect(getCanonicalFileName(extensionlessSrc, mediaInfoObject)).to.equal(`${baseKey}.mp4`);
+		});
+
+		it('Should fall back to the bare key when no extensionful sibling exists yet', () => {
+			const baseKey = getFileName(extensionlessSrc);
+			expect(getCanonicalFileName(extensionlessSrc, { [baseKey]: 'x' })).to.equal(baseKey);
+			expect(getCanonicalFileName(extensionlessSrc, {})).to.equal(baseKey);
+		});
+
+		it('Should fast-path a URL that already carries its own extension', () => {
+			const src = 'https://cdn.example.com/videos/myvideo.mp4';
+			const baseKey = getFileName(src);
+			expect(getCanonicalFileName(src, { [baseKey]: 'x' })).to.equal(baseKey);
+		});
+	});
+
+	describe('pruneShadowedMediaInfoKeys', () => {
+		it('Should delete a bare key shadowed by an extensionful sibling', () => {
+			const mediaInfoObject = {
+				content_aaaaaaaa: 'stale',
+				'content_aaaaaaaa.mp4': 'fresh',
+			};
+			const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
+			expect(removed).to.deep.equal(['content_aaaaaaaa']);
+			expect(mediaInfoObject).to.deep.equal({ 'content_aaaaaaaa.mp4': 'fresh' });
+		});
+
+		it('Should keep bare keys that have no extensionful sibling', () => {
+			const mediaInfoObject = { content_bbbbbbbb: 'value' };
+			expect(pruneShadowedMediaInfoKeys(mediaInfoObject)).to.deep.equal([]);
+			expect(mediaInfoObject).to.deep.equal({ content_bbbbbbbb: 'value' });
+		});
+
+		it('Should keep extensionful keys untouched', () => {
+			const mediaInfoObject = { 'video_cccccccc.mp4': 'value', 'img_dddddddd.png': 'value' };
+			expect(pruneShadowedMediaInfoKeys(mediaInfoObject)).to.deep.equal([]);
+			expect(mediaInfoObject).to.deep.equal({ 'video_cccccccc.mp4': 'value', 'img_dddddddd.png': 'value' });
+		});
+
+		it('Should clean the full customer scenario: every bare key shadowed by a sibling', () => {
+			// Pre-rollout corrupted state: 5 slots, each bare key holds the SAME
+			// stale Location URL (the pre-`085c9ab` shared-latestRemoteValue bug),
+			// and the current build has since written fresh extensionful siblings.
+			const stale = 'https://cdn/content/shared.mp4?id=019e2b22-632e-7c51-bc37-2886a1a5c577';
+			const mediaInfoObject: Record<string, string> = {};
+			for (let i = 0; i < 5; i += 1) {
+				mediaInfoObject[`content_0000000${i}`] = stale;
+				mediaInfoObject[`content_0000000${i}.mp4`] = `https://cdn/content/shared.mp4?id=fresh-${i}`;
+			}
+			const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
+			expect(removed).to.have.lengthOf(5);
+			expect(Object.keys(mediaInfoObject).every((key) => key.endsWith('.mp4'))).to.equal(true);
 		});
 	});
 

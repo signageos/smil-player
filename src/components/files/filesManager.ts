@@ -23,6 +23,7 @@ import {
 	getUrlWithoutQueryParams,
 	isWidgetUrl,
 	mapFileType,
+	pruneShadowedMediaInfoKeys,
 	shouldNotDownload,
 	updateJsonObject,
 } from './tools';
@@ -1752,6 +1753,22 @@ export class FilesManager implements IFilesManager {
 		} catch (error) {
 			debug('Cannot parse smil meta media info', error);
 			return createJsonStructureMediaInfo(filesList);
+		}
+	};
+
+	/**
+	 * One-time startup migration: drop stale extensionless mediaInfo keys left by
+	 * pre-extension-borrowing builds that are now shadowed by an extensionful
+	 * sibling. Without this the dead bare keys linger on disk forever (they are
+	 * never written again). Safe to call on every boot — a no-op once the file
+	 * is clean, and it never touches a bare key that lacks a sibling.
+	 */
+	public pruneStaleMediaInfoKeys = async (): Promise<void> => {
+		const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
+		const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
+		if (removed.length > 0) {
+			debug('Pruned %d stale extensionless mediaInfo keys: %O', removed.length, removed);
+			await this.writeMediaInfoFile(mediaInfoObject);
 		}
 	};
 

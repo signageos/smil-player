@@ -1,0 +1,20 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="600" timeOut="5000" checkBeforePlay="true" checkAheadCount="2" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/hygh-sim/log"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+        </layout>
+    </head>
+    <body>
+        <seq>
+            <video src="http://localhost:3000/hygh-sim/content?id=1&amp;screen=test" region="main" dur="3s"/>
+            <video src="http://localhost:3000/hygh-sim/content?id=2&amp;screen=test" region="main" dur="3s"/>
+            <video src="http://localhost:3000/hygh-sim/content?id=3&amp;screen=test" region="main" dur="3s"/>
+            <video src="http://localhost:3000/hygh-sim/content?id=4&amp;screen=test" region="main" dur="3s"/>
+            <video src="http://localhost:3000/hygh-sim/content?id=5&amp;screen=test" region="main" dur="3s"/>
+        </seq>
+    </body>
+</smil>

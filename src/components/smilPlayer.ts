@@ -75,6 +75,10 @@ export class SmilPlayer implements ISmilPlayer {
 
 		debug('File structure created');
 
+		// Drop stale extensionless mediaInfo keys left by pre-extension-borrowing
+		// builds before any update detection reads them.
+		await this.files.pruneStaleMediaInfoKeys();
+
 		await this.checkAndManageSmilMediaInfo(smilUrl);
 
 		while (true) {

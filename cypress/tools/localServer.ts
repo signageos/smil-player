@@ -509,6 +509,98 @@ app.head('/cbp-loc-noext/file/:fileName', async (_req: Request, res: Response) =
 	res.status(200).end();
 });
 
+// --- HYGH-simulating endpoint ---
+// Each HEAD returns a Location header whose ?id and ?pl query params are FRESH UUIDs.
+// This mimics the Hygh CDN where every HEAD rotates the event-id parameter so each
+// playback report should carry a unique URL.
+let hyghSimReports: { time: number; body: any }[] = [];
+const hyghSimHeadLog: { time: number; slotId: string; locationUrl: string }[] = [];
+
+function randomUuid() {
+	// Lightweight UUIDv4-ish for the test fixture.
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+		const r = (Math.random() * 16) | 0;
+		const v = c === 'x' ? r : (r & 0x3) | 0x8;
+		return v.toString(16);
+	});
+}
+
+app.options('/hygh-sim/*', (_req: Request, res: Response) => {
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.sendStatus(204);
+});
+
+// Mode flag — when `same-file` mode is on, every slot resolves to the SAME filename
+// (simulating an admin who assigned ALL slots to the same media file on Hygh).
+let hyghSimMode: 'unique' | 'same-file' = 'unique';
+
+app.post('/hygh-sim/admin/mode/:mode', (req: Request, res: Response) => {
+	hyghSimMode = req.params.mode === 'same-file' ? 'same-file' : 'unique';
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.json({ mode: hyghSimMode });
+});
+
+app.head('/hygh-sim/content', (req: Request, res: Response) => {
+	const slotId = String(req.query.id || '1');
+	const screen = String(req.query.screen || 'test-screen');
+	const fileName = hyghSimMode === 'same-file' ? 'shared_v1.mp4' : `slot${slotId}_v1.mp4`;
+	const freshEventId = randomUuid();
+	const freshPl = randomUuid();
+	const locationUrl = `http://localhost:3000/hygh-sim/content/${fileName}?id=${freshEventId}&media=${fileName}&screen=${screen}&pl=${freshPl}`;
+	hyghSimHeadLog.push({ time: Date.now(), slotId, locationUrl });
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Location': locationUrl,
+	});
+	res.status(204).end();
+});
+
+app.get('/hygh-sim/content/:fileName', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Content-Type': 'video/mp4',
+		'Content-Length': String(buf.length),
+	});
+	res.send(buf);
+});
+
+app.head('/hygh-sim/content/:fileName', async (_req: Request, res: Response) => {
+	const buf = await getCbpVideoBuffer();
+	res.set({
+		...CBP_LOC_NOEXT_CORS,
+		'Content-Type': 'video/mp4',
+		'Content-Length': String(buf.length),
+	});
+	res.status(200).end();
+});
+
+// Log endpoint for media-playback reports (mimics Hygh's /log)
+app.use('/hygh-sim/log', express.raw({ type: '*/*', limit: '5mb' }));
+app.post('/hygh-sim/log', (req: Request, res: Response) => {
+	let body: any = null;
+	try {
+		body = JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body));
+	} catch {
+		body = { __raw: String(req.body) };
+	}
+	hyghSimReports.push({ time: Date.now(), body });
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.json({ ok: true });
+});
+
+app.get('/hygh-sim/admin/log-fetch', (_req: Request, res: Response) => {
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.json({ reports: hyghSimReports, headLog: hyghSimHeadLog });
+});
+
+app.post('/hygh-sim/admin/reset', (_req: Request, res: Response) => {
+	hyghSimReports = [];
+	hyghSimHeadLog.length = 0;
+	res.set(CBP_LOC_NOEXT_CORS);
+	res.json({ cleared: true });
+});
+
 // --- existing routes ---
 
 app.get('/assets/:fileName', (req: Request, res: Response) => {
