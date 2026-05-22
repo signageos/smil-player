@@ -213,6 +213,12 @@ resetCbpLocImages();
 // HEAD request log for location strategy
 let locHeadLog: { file: string; time: number }[] = [];
 
+// Fail mode for location strategy — simulates an unreachable / erroring update server.
+//   'off'     — normal behaviour
+//   '503'     — HEAD/content return 503
+//   'timeout' — HEAD never responds (client aborts after its timeOut)
+let cbpLocFailMode: 'off' | '503' | 'timeout' = 'off';
+
 const CBP_LOC_CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
@@ -230,6 +236,7 @@ app.post('/cbp-loc/reset', (_req: Request, res: Response) => {
 	cbpLocVersion = 1;
 	resetCbpLocImages();
 	locHeadLog = [];
+	cbpLocFailMode = 'off';
 	res.set(CBP_LOC_CORS_HEADERS);
 	res.json({ version: cbpLocVersion });
 });
@@ -243,6 +250,14 @@ app.post('/cbp-loc/clear-head-log', (_req: Request, res: Response) => {
 app.get('/cbp-loc/head-log', (_req: Request, res: Response) => {
 	res.set(CBP_LOC_CORS_HEADERS);
 	res.json(locHeadLog);
+});
+
+// Toggle fail mode: off | 503 | timeout
+app.post('/cbp-loc/admin/fail-mode/:mode', (req: Request, res: Response) => {
+	const mode = req.params.mode;
+	cbpLocFailMode = mode === '503' || mode === 'timeout' ? mode : 'off';
+	res.set(CBP_LOC_CORS_HEADERS);
+	res.json({ failMode: cbpLocFailMode });
 });
 
 // Single-image switch
@@ -297,6 +312,15 @@ app.head('/cbp-loc/:name', (req: Request, res: Response) => {
 		return;
 	}
 	locHeadLog.push({ file: name, time: Date.now() });
+	if (cbpLocFailMode === 'timeout') {
+		// Never respond — the client XHR aborts after its timeOut.
+		return;
+	}
+	if (cbpLocFailMode === '503') {
+		res.set(CBP_LOC_CORS_HEADERS);
+		res.status(503).end();
+		return;
+	}
 	const baseName = name.replace('.png', '');
 	const png = img.version === 1 ? RED_PNG : BLUE_PNG;
 	res.set({
@@ -313,6 +337,14 @@ app.get('/cbp-loc/:name', (req: Request, res: Response) => {
 	const img = cbpLocImages[name];
 	if (!img) {
 		res.status(404).end();
+		return;
+	}
+	if (cbpLocFailMode === 'timeout') {
+		return;
+	}
+	if (cbpLocFailMode === '503') {
+		res.set(CBP_LOC_CORS_HEADERS);
+		res.status(503).end();
 		return;
 	}
 	const png = img.version === 1 ? RED_PNG : BLUE_PNG;
@@ -334,6 +366,14 @@ const cbpLocContentLog: { file: string; time: number; durationMs: number }[] = [
 
 app.get('/cbp-loc/content/:fileName', async (req: Request, res: Response) => {
 	const fileName = req.params.fileName;
+	if (cbpLocFailMode === 'timeout') {
+		return;
+	}
+	if (cbpLocFailMode === '503') {
+		res.set(CBP_LOC_CORS_HEADERS);
+		res.status(503).end();
+		return;
+	}
 	const start = Date.now();
 	const delayMs = cbpLocContentDelay[fileName] || 0;
 	if (delayMs > 0) {
