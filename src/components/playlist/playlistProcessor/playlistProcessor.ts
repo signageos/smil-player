@@ -2498,12 +2498,27 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// After prePlayCheck, if localFilePath is still empty the content is not available yet
 		if (value.localFilePath === '' && isNil((value as SMILVideo).isStream) && mediaType !== HtmlEnum.ticker) {
-			debug(`[${debugId}] Element still has empty localFilepath after pre-play check: %O`, value);
-			await sleep(100);
-			return true;
+			return this.skipUnavailableElement(debugId, 'empty localFilePath after pre-play check');
 		}
 
 		return false;
+	}
+
+	/**
+	 * Skips an element that has no playable local content, pausing first.
+	 * When the update server is unreachable every element funnels through here, so
+	 * the delay bounds the request rate and stops the playlist busy-looping over
+	 * HEAD/GET requests until the device is starved. Only reached on a skip — when
+	 * content actually plays this is never called, so normal playback is unaffected.
+	 */
+	private async skipUnavailableElement(debugId: string, reason: string): Promise<true> {
+		debug(
+			`[${debugId}] Skipping element (%s); retry after %dms`,
+			reason,
+			SMILScheduleEnum.contentUnavailableRetryDelay,
+		);
+		await sleep(SMILScheduleEnum.contentUnavailableRetryDelay);
+		return true;
 	}
 
 	/**
@@ -2511,6 +2526,17 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @returns true if element should be skipped
 	 */
 	private async resolveContentAvailability(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
+		// Expired conditional — includes skipContentOnHttpStatus matches (e.g. a 404 sets
+		// expr='skipContent'). This is an intentional skip, so it must stay fast (sleep 100)
+		// regardless of localFilePath state. Checked before the empty-localFilePath branch
+		// below so a run of skip-marked slots with no cached file does not get the long
+		// contentUnavailableRetryDelay and stall playback before the next playable element.
+		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
+			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
+			await sleep(100);
+			return true;
+		}
+
 		if (
 			'localFilePath' in value &&
 			value.localFilePath === '' &&
@@ -2520,18 +2546,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// When checkBeforePlay is enabled without checkAheadCount, allow through
 			// to runPrePlayCheck so it can detect content that became available after initial 404
 			if (!(this.smilObject.checkBeforePlay && !this.smilObject.checkAheadCount && 'src' in value)) {
-				debug(`[${debugId}] Element has empty localFilepath: %O`, value);
-				await sleep(100);
-				return true;
+				return this.skipUnavailableElement(debugId, 'empty localFilePath');
 			} else {
 				debug(`[${debugId}] Empty localFilepath allowed through for pre-play check: %s`, (value as SMILMedia).src);
 			}
-		}
-
-		if (isConditionalExpExpired(value, this.playerName, this.playerId)) {
-			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
-			await sleep(100);
-			return true;
 		}
 
 		// Pre-play content check when checkAheadCount is not set (no lookahead).

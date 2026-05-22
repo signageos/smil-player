@@ -8,6 +8,10 @@ export enum SMILScheduleEnum {
 	defaultAwait = 200,
 	defaultDuration = 5000,
 	fileCheckTimeout = 2000,
+	// Delay before re-walking an element that has no playable local file. Paces the
+	// playlist loop when the update server is unreachable so it cannot busy-loop
+	// firing HEAD/GET requests and starve the device.
+	contentUnavailableRetryDelay = 2000,
 	triggerPlaylistVersion = 9999,
 	backupImagePlaylistVersion = 0,
 	// Number.MAX_SAFE_INTEGER
