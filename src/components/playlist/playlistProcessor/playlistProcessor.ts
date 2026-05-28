@@ -478,13 +478,6 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						  }
 						: undefined;
 
-				// Fire a single lookahead prefetch for the element exactly checkAheadCount
-				// positions ahead. Always run — gating on willBeSkipped (used to be the
-				// case) caused elements at +count from a skipContent slot to drop out of
-				// coverage entirely. With single-target prefetch the cost is at most one
-				// HEAD per cycle, and the in-function guards still prevent duplicates.
-				this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
-
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Declare indices before try block so they're accessible in catch
 					let currentIndex = -1;
@@ -524,6 +517,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							await sleep(100);
 						} else {
 							shouldRetry = false;
+							// Fire a single lookahead prefetch for the element exactly checkAheadCount
+							// positions ahead. Fired AFTER playElement returns — at that point the
+							// previous slot's IIFE has resolved and this slot's IIFE has been pushed
+							// (visibility flipped), so the HEAD lands while the current slot is on
+							// screen. Firing it before the await would emit the HEAD ~one slot
+							// duration ahead of when the current slot actually appears, inflating
+							// the perceived offset by the depth of the play queue.
+							this.prefetchAheadElements(allEntries, currentEntryIdx, version, prefetchedUrls);
 						}
 					} catch (err) {
 						const media = value as SMILMedia;

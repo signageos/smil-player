@@ -394,6 +394,121 @@ test('checkAheadCount fires one HEAD per playback transition (no cascade racing-
 	expect(headLog.length).toBeLessThanOrEqual(20);
 });
 
+test('checkAheadCount HEAD target aligns with currently-playing slot (no pipeline lag inflation)', async ({
+	context,
+	page,
+}) => {
+	// Regression guard for the play-queue lag bug. processPlaylist iterates ahead of the
+	// visible playback (the play IIFE pushed by playElement runs concurrently while the
+	// loop moves on), so firing prefetchAheadElements *before* awaiting playElement made
+	// the HEAD land while a slot from 1–2 positions earlier was on screen, inflating the
+	// perceived offset by the play-queue depth. Fix fires the HEAD *after* playElement
+	// returns — at that point the previous slot's IIFE has resolved and the current slot
+	// has just been pushed to screen.
+	//
+	// Uses the location-strategy SMIL (count=3, 10 images, 3s each). For each HEAD we
+	// align it against z-index-based visibility to confirm offset === 3 in steady state.
+	await context.addInitScript(`window.__SMIL_URL__ = '${SMIL_URL_AHEAD_LOC}';`);
+
+	await page.request.post(`${TEST_SERVER}/cbp-loc/reset`);
+
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await page.evaluate(async () => {
+		const dbs = await indexedDB.databases();
+		for (const db of dbs) {
+			if (db.name) indexedDB.deleteDatabase(db.name);
+		}
+	});
+	await page.goto(EMULATOR_URL, { waitUntil: 'load', timeout: 30000 });
+	await getStableAppletFrame(page);
+
+	// Wait for first image to appear + cycle stabilization
+	await expect(async () => {
+		for (const frame of page.frames()) {
+			if (frame === page.mainFrame()) continue;
+			try {
+				const img = frame.locator('img[src*="image"]').first();
+				if (await img.isVisible({ timeout: 1000 })) return;
+			} catch {}
+		}
+		throw new Error('Image not visible in any frame');
+	}).toPass({ intervals: [2000], timeout: 60000 });
+	await new Promise((r) => setTimeout(r, 5000));
+
+	// Start z-index based visibility polling in the iframe — z-index is what decides
+	// which image is on top, so this matches user-perceived "currently playing".
+	await page.evaluate(() => {
+		const frame = (window as any).frames[0];
+		const doc = frame.document;
+		(window as any).__visLog = [];
+		const getTop = () => {
+			const imgs = ([...doc.querySelectorAll('img')] as HTMLImageElement[]).filter((i) => i.src);
+			const cands = imgs
+				.filter((i) => {
+					const cs = frame.getComputedStyle(i);
+					return cs.visibility !== 'hidden' && cs.display !== 'none';
+				})
+				.map((i) => ({ i, z: parseInt(frame.getComputedStyle(i).zIndex) || 0 }));
+			cands.sort((a, b) => b.z - a.z);
+			return cands[0]?.i;
+		};
+		const poll = () => {
+			const t = getTop();
+			if (!t) return;
+			const m = t.src.match(/image(\d+)/);
+			if (!m) return;
+			const slot = parseInt(m[1]);
+			const now = Date.now();
+			const last = (window as any).__visLog[(window as any).__visLog.length - 1];
+			if (!last || last.v !== slot) (window as any).__visLog.push({ t: now, v: slot });
+		};
+		(window as any).__pollI = setInterval(poll, 50);
+		poll();
+	});
+
+	await page.request.post(`${TEST_SERVER}/cbp-loc/clear-head-log`);
+	await new Promise((r) => setTimeout(r, 30000));
+
+	const visLog: { t: number; v: number }[] = await page.evaluate(() => {
+		clearInterval((window as any).__pollI);
+		return (window as any).__visLog;
+	});
+	const headLog: { file: string; time: number }[] = await (
+		await page.request.get(`${TEST_SERVER}/cbp-loc/head-log`)
+	).json();
+
+	const playingAt = (t: number) => {
+		let cur: { t: number; v: number } | undefined;
+		for (const e of visLog) {
+			if (e.t > t) break;
+			cur = e;
+		}
+		return cur?.v;
+	};
+
+	const offsets: number[] = [];
+	const checkAheadCount = 3;
+	const N = 10;
+	for (const entry of headLog) {
+		const target = parseInt(entry.file.replace('image', '').replace('.png', ''));
+		const playing = playingAt(entry.time);
+		if (!playing) continue;
+		// shortest signed distance forward from currently visible slot to HEAD target
+		offsets.push((target - playing + N) % N);
+	}
+	console.log(`Offsets distribution: ${JSON.stringify(offsets)}`);
+
+	// Bug signature: when the prefetch fires BEFORE awaiting playElement, the HEAD
+	// lands while a slot 1–2 positions earlier is on screen, so the perceived offset
+	// is checkAheadCount + pipelineDepth (typically +5 here with count=3 and depth=2).
+	// The fix moves the call AFTER playElement returns so the HEAD lands within ±1
+	// of checkAheadCount in steady state. Allow ±1 jitter — HEADs landing within
+	// ~50 ms of a visibility transition may attribute to the previous slot.
+	expect(offsets.length).toBeGreaterThan(3);
+	const tooFar = offsets.filter((o) => o >= checkAheadCount + 2).length;
+	expect(tooFar).toBe(0);
+});
+
 test('checkAheadCount cascades past skipContent (empty URL) without stalling or racing', async ({
 	context,
 	page,
