@@ -286,6 +286,24 @@ describe('Files tools component', () => {
 			expect(shouldGateSkipForStatus(404, [])).to.be.equal(false);
 			expect(shouldGateSkipForStatus(403, [])).to.be.equal(false);
 		});
+
+		it('should skip unlisted 5xx when skipOnError is set (500-599 boundary)', () => {
+			expect(shouldGateSkipForStatus(500, [403, 404], true)).to.be.equal(true);
+			expect(shouldGateSkipForStatus(503, [403, 404], true)).to.be.equal(true);
+			expect(shouldGateSkipForStatus(599, [403, 404], true)).to.be.equal(true);
+			expect(shouldGateSkipForStatus(499, [403, 404], true)).to.be.equal(false);
+			expect(shouldGateSkipForStatus(600, [403, 404], true)).to.be.equal(false);
+		});
+
+		it('should not let skipOnError affect non-5xx unlisted statuses', () => {
+			expect(shouldGateSkipForStatus(200, [403, 404], true)).to.be.equal(false);
+			expect(shouldGateSkipForStatus(404, [403], true)).to.be.equal(false);
+		});
+
+		it('should still skip listed statuses regardless of skipOnError', () => {
+			expect(shouldGateSkipForStatus(404, [404], true)).to.be.equal(true);
+			expect(shouldGateSkipForStatus(404, [404], false)).to.be.equal(true);
+		});
 	});
 
 	describe('isWidgetUrl', () => {

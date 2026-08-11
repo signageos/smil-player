@@ -1,3 +1,7 @@
+---
+sidebar_position: 1
+---
+
 # Smil Synchronization Playback
 
 Smil player supports synchronized playback of multiple devices within the same sync group.
@@ -20,17 +24,11 @@ independently — a playlist can have several synced regions, each electing its 
 
 ## Applet settings setup
 
-| Configuration key | Required | Description |
-|-------------------|----------|-------------|
-| `smilUrl`         | yes      | URL to your actual smil file |
-| `syncGroupName`   | **yes** | Identifies which devices should be synced together. Without it, the player skips sync setup entirely — there is no default group. Use a unique name per group so groups don't interfere. |
-| `syncServerUrl`   | no — but changes the transport | URL to the synchronization server (e.g. a self-hosted applet-synchronizer). When set, devices coordinate through that server and can sync **across networks**. When omitted, the player uses **local-network peer-to-peer** (UDP/TCP) — devices must be on the same LAN and no cloud server is contacted. |
-| `syncGroupIds`    | no (required for [failover triggers](../dynamic-playback/triggers-failover.md)) | Comma-separated list of all device identifiers in the group. **Side effect:** when set, sync coordination automatically suspends (each device free-runs its own content) whenever any listed device is offline, and resumes once all devices are present again. Leave it empty if you don't want that behaviour. |
-| `syncDeviceId`    | no (required for failover triggers) | This device's identifier; must be one of `syncGroupIds`. When omitted, a random identifier is generated on each boot. |
+Sync is configured entirely through applet configuration — `syncGroupName`, `syncServerUrl`, `syncGroupIds`, and
+`syncDeviceId` — see the [Applet Configuration Reference](../../reference/applet-config.md) for the full option
+details. None of them can be set from the SMIL file.
 
-![Applet timing configuration](../extras/applet-timing-configuration.png)
-
-All four options are applet configuration values — they cannot be set from the SMIL file.
+![Applet timing configuration](../../assets/applet-timing-configuration.png)
 
 ## How synchronization works
 
@@ -56,7 +54,7 @@ Useful consequences you can rely on:
   is coordinated across the group, and devices transition between priority levels together.
 - **`playMode="one"` stays identical across devices.** For random playlists, the master broadcasts its pick and
   slaves play the same element instead of making their own random choice. See
-  [Random order playback](../playback/random-order-playback.md).
+  [Random order playback](../layout-playlist/random-order-playback.md).
 
 ## Operational notes
 
@@ -64,5 +62,5 @@ Useful consequences you can rely on:
   count and duration); the protocol aligns element boundaries, it does not resample differing timelines.
 - On persistent sync-server connection errors the player reports the error and may restart the applet to recover.
 - For the failover mechanism (another device taking over the content of a failed one), see
-  [Trigger failover](../dynamic-playback/triggers-failover.md).
+  [Trigger failover](failover.md).
 - For synchronized dynamic (master-driven) content, see [Dynamic Synchronization](dynamic-synchronization.md).

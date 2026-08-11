@@ -55,20 +55,15 @@ In the example above the `<head>` section defines a typical 3-zone digital signa
 
 ## Region attributes
 
-| Attribute | Description |
-|-----------|-------------|
-| `regionName` | Name the media elements reference in their `region` attribute. `xml:id` works as an alias. |
-| `left`, `top` | Position of the region. Absolute pixels or percentages. |
-| `width`, `height` | Size of the region. Absolute pixels or percentages. |
-| `bottom`, `right` | Alternative anchoring — e.g. `bottom="0"` pins the region to the bottom edge. Resolved against the **display viewport**, not the `root-layout` values. |
-| `z-index` | Stacking order between overlapping regions. |
-| `fit` | Default content fit for media in this region: `fill` (default), `meet`/`meetBest` (contain), `cover`. Unknown values fall back to `fill`. Can be overridden per media element. |
-| `sync` | `sync="true"` marks the region for [multi-device synchronization](../synchronization/playback-synchronization.md). |
+A `<region>` is named with `regionName` (or `xml:id`), positioned and sized with `left`/`top`/`width`/`height` (or
+anchored with `bottom`/`right`), stacked with `z-index`, given a default content `fit`, and can be marked `sync` for
+[multi-device synchronization](../synchronization/playback-synchronization.md) — see the [region attribute
+reference](../../reference/element-attributes.md#region-attributes) for the full list, types, and defaults.
 
 Percentage positions and sizes are resolved against the display resolution (for nested trigger sub-regions, against
 the parent region). Note that `backgroundColor` and `mediaAlign` attributes are accepted in the XML but have no
 visual effect on regions — the player renders regions with a transparent background.
 
 Regions may also contain **nested sub-regions**, which are used for [triggered
-content](../dynamic-playback/triggers-interactivity.md) — triggered playlists are dynamically assigned to a free
+content](../triggers/overview.md) — triggered playlists are dynamically assigned to a free
 sub-region of their parent region.

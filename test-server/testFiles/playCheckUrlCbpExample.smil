@@ -1,0 +1,45 @@
+<smil>
+    <head>
+        <!-- Localhost twin of docs/superpowers/examples/playcheckurl-with-checkbeforeplay.smil.
+             Combines BOTH features in one playlist:
+               - checkBeforePlay + checkAheadCount=2: the lookahead update-checks each /cbp
+                 content URL right before its slot approaches; a status listed in
+                 skipContentOnHttpStatus (404) marks the slot skipContent until it recovers.
+               - playCheckUrl playability gate: image2 is additionally gated by a per-pass
+                 GET to /gate/check/image2; a status listed in skipPlaybackOnHttpStatus
+                 (403,404,410) skips that pass only.
+             An element plays on a given pass only if BOTH channels say yes. The gate runs
+             last and unconditionally, so a gated-off element still gets its content
+             update-checked and freshly downloaded for when the gate reopens. -->
+        <meta http-equiv="Refresh" content="90" checkBeforePlay="true" checkAheadCount="2"
+              skipContentOnHttpStatus="404" skipPlaybackOnHttpStatus="403,404,410"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#18182c"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080"
+                    z-index="1" backgroundColor="#18182c"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="http://localhost:3000/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="http://localhost:3000/cbp/image1.png"/>
+                <prefetch src="http://localhost:3000/cbp/image2.png"/>
+                <prefetch src="http://localhost:3000/cbp/image3.png"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <seq repeatCount="indefinite">
+                    <img dur="3s" src="http://localhost:3000/cbp/image1.png" region="main" fit="fill"/>
+                    <img dur="3s" src="http://localhost:3000/cbp/image2.png" region="main" fit="fill"
+                         playCheckUrl="http://localhost:3000/gate/check/image2"/>
+                    <img dur="3s" src="http://localhost:3000/cbp/image3.png" region="main" fit="fill"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>

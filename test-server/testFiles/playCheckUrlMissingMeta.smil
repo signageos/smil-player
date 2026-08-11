@@ -2,7 +2,7 @@
     <head>
         <!-- Required-meta contract: playCheckUrl present but skipPlaybackOnHttpStatus
              absent. The gate must stay inert (element always plays), fire ZERO /gate
-             HEADs, and emit a one-time debug warning. -->
+             requests, and emit a one-time debug warning. -->
         <meta http-equiv="Refresh" content="90"/>
         <layout>
             <root-layout width="1920" height="1080" backgroundColor="#18182c"/>

@@ -23,5 +23,4 @@ export enum ObjectFitEnum {
 	meet = 'contain',
 	meetBest = 'contain',
 	cover = 'cover',
-	objectFit = 'object-fit',
 }

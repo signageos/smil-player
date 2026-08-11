@@ -384,16 +384,19 @@ export function createTestServer(serverPort: number = TestServer.port) {
 	});
 
 	// =====================================================================
-	// playCheckUrl (gate) test harness. Serves the playability-gate HEAD endpoint
+	// playCheckUrl (gate) test harness. Serves the playability-gate GET endpoint
 	// for the playCheckUrl Playwright spec. Deliberately separate from /cbp:
 	// gate URLs never serve content, proving the gate has zero download coupling.
 	// =====================================================================
 
-	// Names currently gated off — HEAD returns 404 (paired with skipPlaybackOnHttpStatus="404").
+	// Names currently gated off — gate GET returns 404 (paired with skipPlaybackOnHttpStatus="404").
 	const gateSkipMode = new Set<string>();
 	// Forced status per name (e.g. 500 for the fail-open flow). 0/absent = no override.
 	const gateStatusOverride: Record<string, number> = {};
-	// HEAD request log for verifying per-pass re-checks.
+	// Forced response delay per name in ms (exceeding the SMIL timeOut simulates a
+	// hanging gate endpoint -> XHR timeout on the player). 0/absent = answer immediately.
+	const gateDelayMs: Record<string, number> = {};
+	// Gate request log for verifying per-pass re-checks (identifiers keep the legacy "head" name).
 	let gateHeadLog: { file: string; time: number }[] = [];
 
 	app.options('/gate/*', (_req, res) => {
@@ -405,6 +408,9 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		gateSkipMode.clear();
 		for (const key of Object.keys(gateStatusOverride)) {
 			delete gateStatusOverride[key];
+		}
+		for (const key of Object.keys(gateDelayMs)) {
+			delete gateDelayMs[key];
 		}
 		gateHeadLog = [];
 		res.set(CBP_CORS_HEADERS);
@@ -435,6 +441,18 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		res.json({ name, statusOverride: gateStatusOverride[name] ?? null });
 	});
 
+	app.post('/gate/delay/:name', (req, res) => {
+		const name = req.params.name;
+		const ms = parseInt(String(req.query.ms), 10) || 0;
+		if (ms > 0) {
+			gateDelayMs[name] = ms;
+		} else {
+			delete gateDelayMs[name];
+		}
+		res.set(CBP_CORS_HEADERS);
+		res.json({ name, delayMs: gateDelayMs[name] ?? null });
+	});
+
 	app.post('/gate/clear-head-log', (_req, res) => {
 		gateHeadLog = [];
 		res.set(CBP_CORS_HEADERS);
@@ -446,15 +464,22 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		res.json(gateHeadLog);
 	});
 
-	app.head('/gate/check/:name', (req, res) => {
+	app.get('/gate/check/:name', (req, res) => {
 		const name = req.params.name;
 		gateHeadLog.push({ file: name, time: Date.now() });
 		res.set(CBP_CORS_HEADERS);
-		if (gateStatusOverride[name]) {
-			res.status(gateStatusOverride[name]).end();
+		const answer = () => {
+			if (gateStatusOverride[name]) {
+				res.status(gateStatusOverride[name]).end();
+				return;
+			}
+			res.status(gateSkipMode.has(name) ? 404 : 200).end();
+		};
+		if (gateDelayMs[name]) {
+			setTimeout(answer, gateDelayMs[name]);
 			return;
 		}
-		res.status(gateSkipMode.has(name) ? 404 : 200).end();
+		answer();
 	});
 
 	// --- checkBeforePlay location strategy state ---

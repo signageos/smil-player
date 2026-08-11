@@ -1,9 +1,9 @@
 <smil>
     <head>
-        <!-- "Both checks": checkBeforePlay lookahead update-HEADs the content URLs (/cbp,
-             classified against skipContentOnHttpStatus) while the gate inline-HEADs
+        <!-- "Both checks": checkBeforePlay lookahead update-checks the content URLs (/cbp,
+             classified against skipContentOnHttpStatus) while the gate inline-GETs
              playCheckUrl (/gate, classified against skipPlaybackOnHttpStatus). Two
-             independent HEAD channels; the spec asserts both head-logs accumulate. -->
+             independent request channels; the spec asserts both head-logs accumulate. -->
         <meta http-equiv="Refresh" content="90" checkBeforePlay="true" checkAheadCount="2"
               skipContentOnHttpStatus="404" skipPlaybackOnHttpStatus="404"/>
         <layout>

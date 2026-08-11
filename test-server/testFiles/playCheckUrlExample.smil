@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Localhost twin of docs/superpowers/examples/playcheckurl-gate.smil.
+     Structure is kept 1:1 with the published example (two zones, plain body without
+     prefetch/loader scaffolding, gated campaign video + strict-gated exclusive image
+     (playCheckSkipOnError="true") + gated campaign banner rotating alongside ungated
+     evergreen/fallback content, explicit timeOut) — only the URLs point at the local
+     test server and image durations are shortened to keep e2e windows practical.
+     Verified by test-runner/playCheckUrlExample.test.ts. -->
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="60" timeOut="2000" skipPlaybackOnHttpStatus="403,404,410"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="810" z-index="1"/>
+            <region regionName="bottom" left="0" top="810" width="1920" height="270" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <video src="http://localhost:3000/assets/video-test-1.mp4"
+                       region="main" fit="fill"/>
+
+                <video src="http://localhost:3000/assets/video-test-2.mp4"
+                       playCheckUrl="http://localhost:3000/gate/check/campaign"
+                       region="main" fit="fill"/>
+
+                <img src="http://localhost:3000/assets/img_2.jpg"
+                     playCheckUrl="http://localhost:3000/gate/check/exclusive"
+                     playCheckSkipOnError="true"
+                     dur="5s" region="main" fit="fill"/>
+
+                <img src="http://localhost:3000/assets/landscape1.jpg"
+                     dur="5s" region="main" fit="fill"/>
+            </seq>
+
+            <seq repeatCount="indefinite">
+                <img src="http://localhost:3000/assets/landscape2.jpg"
+                     playCheckUrl="http://localhost:3000/gate/check/campaign-banner"
+                     dur="5s" region="bottom" fit="fill"/>
+
+                <img src="http://localhost:3000/assets/img_1.jpg"
+                     dur="5s" region="bottom" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

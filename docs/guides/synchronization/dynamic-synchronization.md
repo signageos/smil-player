@@ -1,9 +1,13 @@
-## Dynamic Synchronization
+---
+sidebar_position: 2
+---
+
+# Dynamic Synchronization
 
 This functionality is a multi-device synchronized playback system where one device (
 the master) orchestrates playback on other devices (slaves). Each slave device plays default content until the master
 device sends a
-command specifying which content to play and when to start and when to stop.\
+command specifying which content to play and when to start and when to stop.
 The content on the master device and each
 of the slave devices can be different, but it's important that corresponding parts of playlists have the **same**
 duration.
@@ -76,11 +80,11 @@ Notes on the attributes:
 Smil xml definition has to contain corresponding playlist, which has to be marked with the same Id, as its specified in
 `emitDynamic` tags `data` attribute.
 
-This playlist will play 4 videos in the `fullScreenTrigger` region on the master device.\
-Master device will send command to start playing playlist with id `dynamic_cm3mna5wb004tawwagb4nk7ya`.\
+This playlist will play 4 videos in the `fullScreenTrigger` region on the master device.
+Master device will send command to start playing playlist with id `dynamic_cm3mna5wb004tawwagb4nk7ya`.
 
 Playlist on the slave device has to be marked with the same Id, which is stored in `begin` attribute, so
-`dynamic_cm3mna5wb004tawwagb4nk7ya` in this case.\
+`dynamic_cm3mna5wb004tawwagb4nk7ya` in this case.
 Playlist on the slave device can have different content, but its
 duration has to be same as on master device.
 Otherwise playback will be out of sync and will not work as expected and also master will cancel playback on the slave
@@ -107,7 +111,6 @@ Two details of this example worth spelling out:
 
 ### Applet setup
 
-It's important to have unique syncGroupName for each group of devices which should be synchronized so devices are not
-mixed with another group of devices that should be synchronized in a different group.
+![Applet timing configuration](../../assets/applet-timing-configuration-dynamic-trigger.png)
 
-![Applet timing configuration](../extras/applet-timing-configuration-dynamic-trigger.png)
+For device failover instead of content-level switching, see [Trigger failover](failover.md).

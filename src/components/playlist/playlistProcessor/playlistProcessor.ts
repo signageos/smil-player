@@ -2547,7 +2547,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return true;
 		}
 
-		// Playability gate: per-pass HEAD to playCheckUrl deciding play/skip for this pass only.
+		// Playability gate: per-pass GET to playCheckUrl deciding play/skip for this pass only.
 		// Deliberately last and unconditional on checkBeforePlay/checkAheadCount — the update
 		// machinery above must run either way ("both checks"), and a gated-off element still
 		// gets fresh content downloaded for when the gate reopens. A skip here leaves no

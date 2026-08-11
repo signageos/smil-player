@@ -12,7 +12,6 @@ export const mockSMILFileParsedRegionAlias = {
 		},
 	},
 	refresh: {
-		expr: undefined,
 		refreshInterval: 60000,
 		smilFileRefresh: 60000,
 		timeOut: 2000,

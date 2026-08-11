@@ -1,37 +1,21 @@
-# SMIL Proof of Play
+---
+sidebar_position: 2
+---
 
-SMIL player has the option to turn on logging of major events which are happening during the playlist lifecycle.
+# Proof of Play
 
-The advantage of this feature is that you can track what is happening with your content, how it is being used, and
-gather proof-of-play data for reporting and billing purposes.
+Proof-of-play (PoP) reporting lets you track what's happening with your content — what played, when, and how — for
+usage tracking and billing purposes. It's the `type="manual"` half of the reporting switchboard; see
+[Setting Up Reporting](setup.md) for enabling it (alone or alongside `standard` events) and for routing reports to a
+custom endpoint instead of the native signageOS pipeline.
 
-## Setup
+## Tagging content
 
-To turn logs on, you have to specify `<meta>` tag with log value in smil header.
-
-```xml
-
-<head>
-    <meta log="true" type="manual"/>
-</head>
-```
-
-### PoP attributes
-
-All PoP attributes are optional — when proof-of-play logging is enabled, a report is generated for every media
-element. Attributes you set are included in the payload; attributes you omit are left out entirely.
-
-- `popType` — type label included in the report (`"video"`, `"image"`, `"html"`, or `"custom"`).
-- `popCustomId` — custom identifier passed through to the report as `customId`.
-- `popFileName` — file name included in the report.
-- `popTags` — comma-separated list of tags. Sent as an array in the report payload.
-
-The report's `name` field is set by the player to the event type (`media-playback`, `media-download`,
-`playlist-download`) — the `popName` attribute value itself is not carried in the payload, so use `popCustomId` or
-`popFileName` to identify individual media items.
+Tag any media element with `pop*` attributes to have its identifying info included in every report generated for
+it — see [Proof of play](../../reference/element-attributes.md#proof-of-play) in the Element Attribute Reference
+for what each attribute does and its default:
 
 ```xml
-
 <img src="srcToElement"
      dur="15s"
      region="region"
@@ -41,59 +25,22 @@ The report's `name` field is set by the player to the event type (`media-playbac
      popTags="tag1,tag2,tag3"/>
 ```
 
-## Logged events
+Use [`popCustomId`](../../reference/element-attributes.md#popcustomid) or
+[`popFileName`](../../reference/element-attributes.md#popfilename) to identify individual media items in reports —
+[`popName`](../../reference/element-attributes.md#popname) is not one of the fields carried in the payload.
 
-- each file download successful/unsuccessful
-- each media playback successful/unsuccessful
-
-## Payload of messages
-
-PoP reports contain the fields derived from the `pop*` attributes on each media element. The `tags` array includes
-the `popTags` values followed by the content's final URL and an ISO timestamp.
-
-> **Note:** when a `<meta endpoint>` or the `reportUrl` applet config is set, `type="manual"` reports are POSTed to
-> that custom endpoint instead, with an extended payload that includes HTTP `status`, epoch `time`, and `url` fields —
-> see [Custom Endpoint Reporting](custom-endpoint.md). The examples below show the native signageOS PoP payload used
-> when no custom endpoint is configured.
-
-### Download
-
-```json
-{
-  "name": "media-download",
-  "playbackSuccess": true,
-  "customId": "customId",
-  "type": "video",
-  "tags": [
-    "tag1",
-    "tag2",
-    "https://cdn.example.com/video.mp4",
-    "2024-11-19T21:59:28.977Z"
-  ],
-  "fileName": "video.mp4"
-}
-```
-
-### Playback
-
-```json
-{
-  "name": "media-playback",
-  "playbackSuccess": true,
-  "customId": "customId",
-  "type": "image",
-  "tags": [
-    "tag1",
-    "tag2",
-    "https://cdn.example.com/image.jpg",
-    "2024-11-19T21:48:08.633Z"
-  ],
-  "fileName": "banner.jpg"
-}
-```
-
-## How to retrieve the reports
+## Retrieving reports
 
 Native PoP reports are delivered through the signageOS proof-of-play pipeline and retrieved via the signageOS
 reporting APIs / Box. (The `/v1/device/{{deviceUid}}/applet/{{appletUid}}/command` endpoint retrieves
-[standard event reports](event-reporting.md), not PoP reports.)
+[standard event reports](../../reference/reporting-payloads.md#standard-events), not PoP reports.)
+
+If a custom endpoint is configured (see [Setting Up Reporting](setup.md)), PoP reports are POSTed there instead —
+see [Custom endpoint payloads](../../reference/reporting-payloads.md#custom-endpoint-payloads) for that shape.
+Otherwise they use the native signageOS PoP payload — see
+[Native proof-of-play payloads](../../reference/reporting-payloads.md#native-proof-of-play-payloads).
+
+## See also
+
+- [Setting Up Reporting](setup.md) — enabling reporting and choosing a transport
+- [Reporting Events & Payloads](../../reference/reporting-payloads.md) — full payload shapes

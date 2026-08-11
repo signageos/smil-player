@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Exclusive/priority playlist
@@ -11,7 +11,14 @@ The priorityClass tag further defines interrupt priorities and behavior (pause, 
 interrupts occur.
 
 The starting of a media object may be triggered by an event such as a key press or
-a [Wallclock](https://docs.signageos.io/hc/en-us/articles/4405244572178) time, as the following sample code illustrates.
+a [Wallclock](../scheduling/wallclock-scheduling.md) time, as the following sample code illustrates.
+
+> To make the priority playlist work, wrap the whole `<excl>` section in a `<par>` tag. The `begin` and
+> `repeatCount` attributes on the `<excl>` element itself are **ignored** — looping comes from the surrounding
+> `<par repeatCount="indefinite">` and from the `<seq repeatCount="indefinite">` inside each `priorityClass`.
+> Priority behaviour (which class wins, pause/defer/stop rules) is likewise driven entirely by the
+> `<priorityClass>` elements — media placed directly under `<excl>` without a `priorityClass` gets no priority
+> handling.
 
 ## Exclusive playlists syntax
 
@@ -100,7 +107,7 @@ the `priorityClass:`
 
 ### Play priority playlist every Monday
 
-You can use [conditional expression](https://docs.signageos.io/hc/en-us/articles/4405241217810) to define active
+You can use [conditional expression](../scheduling/conditional-playback.md) to define active
 priority playlist. In this example we are using `expr="adapi-weekday()=1"` which is `true` on Monday.
 
 ```xml
@@ -130,14 +137,15 @@ priority playlist. In this example we are using `expr="adapi-weekday()=1"` which
 
 ### Conditional Playback Expressions
 
-Trigger playback based on day of the week, time and other expressions
+See [Conditional Playback](../scheduling/conditional-playback.md) to trigger playback by day of week, time, and
+other expressions.
 
 ### Happy Hour Video once a day at specific time
 
 This exclusive playlist contains two priority classes.
 
 The first (higher) priority class contains a single video "happy-hour.mp4" that plays once a day, starting on 23:00 of
-January 1, 2021, for one hour (see [Wallclock](https://docs.signageos.io/knowledge-base/signageos-smil-docs-wallclock)
+January 1, 2021, for one hour (see [Wallclock](../scheduling/wallclock-scheduling.md)
 for detailed ISO-8601 specification)
 
 The second (lower) priority class contains a sequential playlist, that begins at "zero" seconds (immediately as the
@@ -145,16 +153,14 @@ playlist is entered). While the sequence plays, when a higher priority class is 
 paused" as the interrupting media object plays. After it finishes, the paused media object resumes.
 
 This achieves the effect of looping three videos, and interrupting with another playlist once a day during "happy hour".
+Wallclock syntax is covered in the [Wallclock scheduling guide](../scheduling/wallclock-scheduling.md).
 
 ```xml
 
 <excl>
 
     <priorityClass higher="stop" lower="defer" peer="stop">
-        <!-- 
-          P1D is equal to "once a day" or "in period of 1 day"
-          Learn more on Wallclock page https://docs.signageos.io/knowledge-base/signageos-smil-docs-wallclock
-        -->
+        <!-- P1D is equal to "once a day" or "in period of 1 day" — see the Wallclock scheduling guide -->
         <par begin="wallclock(R/2021-01-01T23:00:00/P1D)" end='wallclock(R/2021-01-01T23:59:59/P1D)'>
             <seq repeatCount="indefinite">
                 <video src="happy-hour.mp4"/>
@@ -204,19 +210,15 @@ In the `rightZone` plays `<excl>` playlist consists of 3 priority playlists.
     </head>
 
     <body>
-        <!-- Paralel playback sequence, all below is happening at the same time -->
+        <!-- Parallel playback sequence, all below is happening at the same time -->
         <par repeatCount="indefinite">
 
             <!-- Standard sequential playlist of two images placed in the leftZone -->
             <seq repeatCount="indefinite">
                 <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" dur="5s"
-                     region="leftZone">
-                    <param name="cacheControl" value="auto"/>
-                </img>
+                     region="leftZone"/>
                 <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" dur="5s"
-                     region="leftZone">
-                    <param name="cacheControl" value="auto"/>
-                </img>
+                     region="leftZone"/>
             </seq>
 
             <!-- the rightZone is playing a standard sequence playlist [S] all the time,
@@ -260,11 +262,3 @@ In the `rightZone` plays `<excl>` playlist consists of 3 priority playlists.
     </body>
 </smil>
 ```
-
-## FAQ
-
-Important notice: to make the priority playlist work, you need to wrap the whole `<excl>` section with `<par>` tag.
-This is because the `begin` and `repeatCount` attributes on the `<excl>` element itself are **ignored** — looping
-comes from the surrounding `<par repeatCount="indefinite">` and from the `<seq repeatCount="indefinite">` inside each
-`priorityClass`. Priority behaviour (which class wins, pause/defer/stop rules) is likewise driven entirely by the
-`<priorityClass>` elements — media placed directly under `<excl>` without a `priorityClass` gets no priority handling.

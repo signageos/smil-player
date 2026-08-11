@@ -12,7 +12,6 @@ export const mockSMILFileParsed234 = {
 		},
 	},
 	refresh: {
-		expr: 'adapi-weekday()>=9',
 		refreshInterval: 90000,
 		smilFileRefresh: 90000,
 		timeOut: 2000,

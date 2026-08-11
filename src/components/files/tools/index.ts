@@ -257,12 +257,20 @@ export function shouldNotDownload(localFilePath: string, file: MergedDownloadLis
 }
 
 /**
- * playCheckUrl gate classifier: skip playback only when the gate HEAD status is explicitly listed
- * in skipPlaybackOnHttpStatus. Anything else — including unlisted 5xx — plays (fail-open).
- * An empty list means the gate is inert (the meta is required, no default).
+ * playCheckUrl gate classifier: skip playback when the gate response status is explicitly listed
+ * in skipPlaybackOnHttpStatus, or — with the element's playCheckSkipOnError flag — on any unlisted
+ * 5xx ("server broken"). Everything else plays (fail-open). An empty list means the gate is inert
+ * (the meta is required, no default).
  */
-export function shouldGateSkipForStatus(status: number, skipPlaybackHttpStatusCodes: number[]): boolean {
-	return skipPlaybackHttpStatusCodes.includes(status);
+export function shouldGateSkipForStatus(
+	status: number,
+	skipPlaybackHttpStatusCodes: number[],
+	skipOnError: boolean = false,
+): boolean {
+	if (skipPlaybackHttpStatusCodes.includes(status)) {
+		return true;
+	}
+	return skipOnError && status >= 500 && status < 600;
 }
 
 export function isWidgetUrl(widgetUrl: string): boolean {

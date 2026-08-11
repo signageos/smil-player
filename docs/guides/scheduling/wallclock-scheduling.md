@@ -1,3 +1,7 @@
+---
+sidebar_position: 1
+---
+
 # Playback scheduling via WallClock
 
 The `wallclock` module of SMIL supports using ISO-8601 date/time specification as part of its event triggers.
@@ -82,9 +86,3 @@ Play once on January 1, 2010, between 9 AM and 12 noon.
 ```
 
 Note that the `R` repeat designator is removed.
-
-### A note on ISO 8601 periods
-
-The `P…` suffix in a wallclock string is an ISO-8601 period designator (`P1D` = period of one day). While the ISO
-standard defines many more period shapes (`P1W`, `PT1H`, `P3Y6M4DT12H30M5S`, …), the SMIL Player supports **only
-`P1D`** — see the table at the top of this page for the full set of supported wallclock forms.

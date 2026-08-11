@@ -50,7 +50,6 @@ export const mockSMILFileTriggers = {
 		},
 	},
 	refresh: {
-		expr: undefined,
 		refreshInterval: 90000,
 		smilFileRefresh: 90000,
 		timeOut: 2000,
