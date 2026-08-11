@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `playCheckSkipOnError` per-element attribute — with `"true"`, a `playCheckUrl` gate transport error (server
+  unreachable/timeout) or unlisted 5xx status skips the pass instead of the default fail-open; listed statuses and
+  other unlisted statuses behave as before. Only meaningful next to `playCheckUrl`; default `false` keeps today's
+  behavior
+
+### Changed
+
+- `playCheckUrl` playability gate sends GET instead of HEAD (some gate backends do not answer HEAD); still only the response status code is evaluated
+
 ## [4.0.0] - 2026-07-29
 
 ### Added

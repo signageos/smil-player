@@ -48,7 +48,7 @@ await smilPlayer.start();
 > preview of a planned interface. In the current player, all configuration is provided flat via the applet
 > configuration (`sos.config`): `smilUrl`, `backupImageUrl`, `serialPortDevice`, `videoBackground`, `reportUrl`,
 > `syncServerUrl`, `syncGroupName`, `syncGroupIds`, `syncDeviceId`, `debugEnabled`. See
-> [SMIL Player Configuration](docs/guides/tutorials/smil-player-configuration.md).
+> [Applet Configuration Reference](docs/reference/applet-config.md).
 
 Smil player accepts various options which allows you to customize player behaviour.
 This is an example how you can inject your custom functionality and modify smil player.

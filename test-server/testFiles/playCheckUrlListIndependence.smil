@@ -1,6 +1,6 @@
 <smil>
     <head>
-        <!-- List independence: a gate HEAD status (404) listed ONLY in
+        <!-- List independence: a gate request status (404) listed ONLY in
              skipContentOnHttpStatus must neither skip playback (the gate reads only
              skipPlaybackOnHttpStatus="410") nor mark the content skipContent. -->
         <meta http-equiv="Refresh" content="90"

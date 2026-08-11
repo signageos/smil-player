@@ -231,6 +231,27 @@ export const GENERATED = {
 		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
 		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
 	],
+	"playCheckUrlCbpExample": [
+		{ key: "loader_bb880aab.mp4", srcContains: "loader_bb880aab.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
+	],
+	"playCheckUrlCbpSkipOnError": [
+		{ key: "loader_bb880aab.mp4", srcContains: "loader_bb880aab.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_a88f05b6.mp4", srcContains: "video-test_a88f05b6.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"playCheckUrlExample": [
+		{ key: "video-test_4021568b.mp4", srcContains: "video-test_4021568b.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "video-test_a88f05b6.mp4", srcContains: "video-test_a88f05b6.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_2_a1ae8434.jpg", srcContains: "img_2_a1ae8434.jpg", layer: 'frame', expectedSec: 5 },
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5 },
+		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 5 },
+		{ key: "img_1_b0b0c3d4.jpg", srcContains: "img_1_b0b0c3d4.jpg", layer: 'frame', expectedSec: 5 },
+	],
 	"playCheckUrlListIndependence": [
 		{ key: "loader_bb880aab.mp4", srcContains: "loader_bb880aab.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
 		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
@@ -247,6 +268,20 @@ export const GENERATED = {
 		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
 		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
 		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
+	],
+	"playCheckUrlSkipOnError": [
+		{ key: "loader_bb880aab.mp4", srcContains: "loader_bb880aab.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_a88f05b6.mp4", srcContains: "video-test_a88f05b6.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"playCheckUrlSkipOnErrorTransport": [
+		{ key: "loader_bb880aab.mp4", srcContains: "loader_bb880aab.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "image1_0d561068.png", srcContains: "image1_0d561068.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image2_d3228acd.png", srcContains: "image2_d3228acd.png", layer: 'frame', expectedSec: 3 },
+		{ key: "image3_61dc2a3c.png", srcContains: "image3_61dc2a3c.png", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_a88f05b6.mp4", srcContains: "video-test_a88f05b6.mp4", layer: 'page', expectedSec: 0 },
 	],
 	"playModeOne": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },

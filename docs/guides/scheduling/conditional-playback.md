@@ -1,3 +1,7 @@
+---
+sidebar_position: 2
+---
+
 # Conditional Playback
 
 SMIL features the `expr` tag for defining conditions during which a media item is played. This can be applied to
@@ -112,7 +116,7 @@ The `<par>` playlist will be active from 25th of Jan onwards.
 
 ### Play from Sunday to Wednesday between 1st of Jan to 1st of Feb
 
-You can mix and match [wallclock begin and end attributes](https://docs.signageos.io/hc/en-us/articles/4405244572178)
+You can mix and match [wallclock begin and end attributes](wallclock-scheduling.md)
 and expressions to get the desired behavior
 
 ```xml
@@ -127,10 +131,6 @@ and expressions to get the desired behavior
     </seq>
 </par>
 ```
-
-### More About Wallclock
-
-Robust time mechanism handling dates, times, recurring events and more.
 
 ### Multiple compound conditions
 
@@ -180,23 +180,6 @@ or
 ```
 
 ### More Examples
-
-#### Play on Sunday or Saturday
-
-The following expression will activate playlist on Saturday and Sunday: `weekday()=0 or weekday()=6`
-
-```xml
-
-<par expr="weekday()=0 or weekday()=6">
-    <!-- indefinite loop of media files in the selected order -->
-    <seq repeatCount="indefinite">
-        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
-               region="top-left"/>
-        <img dur="3" src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
-             region="top-left"/>
-    </seq>
-</par>
-```
 
 #### Play Between 25th of Jan and 29th of Jan (Including)
 

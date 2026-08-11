@@ -50,7 +50,7 @@ describe('components/files/filesManager - playCheckGate', () => {
 		const result = await fm.playCheckGate(makeGatedImage(), makeSmilObject([404]));
 		expect(result).to.be.equal(true);
 		expect(calls.length).to.be.equal(1);
-		expect(calls[0][0]).to.be.equal('HEAD');
+		expect(calls[0][0]).to.be.equal('GET');
 		// gate URL gets the cache-buster appended, base URL must be preserved
 		expect(calls[0][1]).to.contain('https://api.example.com/gate/image');
 	});
@@ -80,6 +80,43 @@ describe('components/files/filesManager - playCheckGate', () => {
 		expect(result).to.be.equal(false);
 		expect(calls.length).to.be.equal(0);
 		expect((fm as any).playCheckGateMissingMetaWarned).to.be.equal(true);
+	});
+
+	it('skips on transport error when playCheckSkipOnError is true', async () => {
+		const { fm } = makeFilesManager({ reject: true });
+		const result = await fm.playCheckGate(makeGatedImage({ playCheckSkipOnError: true }), makeSmilObject([404]));
+		expect(result).to.be.equal(true);
+	});
+
+	it('skips on unlisted 5xx when playCheckSkipOnError is true', async () => {
+		const { fm } = makeFilesManager({ status: 503 });
+		const result = await fm.playCheckGate(makeGatedImage({ playCheckSkipOnError: true }), makeSmilObject([404]));
+		expect(result).to.be.equal(true);
+	});
+
+	it('still fails open on transport error when playCheckSkipOnError is absent or false', async () => {
+		const { fm } = makeFilesManager({ reject: true });
+		expect(await fm.playCheckGate(makeGatedImage(), makeSmilObject([404]))).to.be.equal(false);
+		expect(
+			await fm.playCheckGate(makeGatedImage({ playCheckSkipOnError: false }), makeSmilObject([404])),
+		).to.be.equal(false);
+	});
+
+	it('playCheckSkipOnError has no effect without playCheckUrl - no request, plays', async () => {
+		const { fm, calls } = makeFilesManager({ reject: true });
+		const result = await fm.playCheckGate(
+			makeGatedImage({ playCheckUrl: undefined, playCheckSkipOnError: true }),
+			makeSmilObject([404]),
+		);
+		expect(result).to.be.equal(false);
+		expect(calls.length).to.be.equal(0);
+	});
+
+	it('playCheckSkipOnError has no effect when the meta is missing - gate stays inert', async () => {
+		const { fm, calls } = makeFilesManager({ reject: true });
+		const result = await fm.playCheckGate(makeGatedImage({ playCheckSkipOnError: true }), makeSmilObject([]));
+		expect(result).to.be.equal(false);
+		expect(calls.length).to.be.equal(0);
 	});
 
 	it('is inert when skipPlaybackOnHttpStatus meta is absent (undefined) - no request', async () => {

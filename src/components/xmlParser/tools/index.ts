@@ -356,7 +356,6 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			regions.refresh.refreshInterval = refreshValue
 				? (parseInt(refreshValue) || SMILEnums.defaultRefresh) * 1000
 				: SMILEnums.defaultRefresh * 1000;
-			regions.refresh.expr = 'expr' in metaRecord ? metaRecord.expr : undefined;
 			// timeout for last-modified header check
 			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
 			regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;

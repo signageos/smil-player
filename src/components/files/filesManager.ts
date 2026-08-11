@@ -2095,7 +2095,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	/**
-	 * Playability gate: HEAD media.playCheckUrl and decide play/skip for THIS pass only.
+	 * Playability gate: GET media.playCheckUrl (status only, body ignored) and decide play/skip for THIS pass only.
 	 * Returns true = skip playback this pass, false = play.
 	 * Pure gate — never touches media.expr, mediaInfoObject, or downloads; fail-open on any
 	 * transport error (network/timeout/CORS) so cached content keeps playing through outages.
@@ -2123,8 +2123,12 @@ export class FilesManager implements IFilesManager {
 		try {
 			const gateUrl = createDownloadPath(media.playCheckUrl);
 			const authHeaders = window.getAuthHeaders?.(gateUrl);
-			const response = await this.makeXhrRequest('HEAD', gateUrl, smilObject.refresh.timeOut, authHeaders);
-			const shouldSkip = shouldGateSkipForStatus(response.status, smilObject.skipPlaybackOnHttpStatus);
+			const response = await this.makeXhrRequest('GET', gateUrl, smilObject.refresh.timeOut, authHeaders);
+			const shouldSkip = shouldGateSkipForStatus(
+				response.status,
+				smilObject.skipPlaybackOnHttpStatus,
+				media.playCheckSkipOnError === true,
+			);
 			debug(
 				'playCheckGate: url=%s, status=%d, skipPlayback=%s',
 				media.playCheckUrl,
@@ -2133,9 +2137,16 @@ export class FilesManager implements IFilesManager {
 			);
 			return shouldSkip;
 		} catch (err) {
-			// fail-open: network error / timeout / CORS failure => play from cache
-			debug('playCheckGate: request failed, playing from cache (fail-open): url=%s, error=%O', media.playCheckUrl, err);
-			return false;
+			// transport error (network/timeout/CORS): fail-open by default, skip when the
+			// element opted in via playCheckSkipOnError ("no green light -> no play")
+			const skipOnError = media.playCheckSkipOnError === true;
+			debug(
+				'playCheckGate: request failed, %s: url=%s, error=%O',
+				skipOnError ? 'skipping playback (playCheckSkipOnError)' : 'playing from cache (fail-open)',
+				media.playCheckUrl,
+				err,
+			);
+			return skipOnError;
 		}
 	};
 

@@ -16,6 +16,9 @@ export type UpdateChecks = {
 	allowLocalFallback?: boolean;
 	// playability gate URL — read only by playCheckGate, never used for downloads/update detection
 	playCheckUrl?: string;
+	// gate fail mode: true = skip playback on gate transport error or unlisted 5xx (default fail-open);
+	// only meaningful together with playCheckUrl (xml2js parseBooleans delivers a real boolean)
+	playCheckSkipOnError?: boolean;
 };
 
 export type SMILVideo = {

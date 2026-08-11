@@ -48,7 +48,6 @@ export const mockSMILFileParsed99 = {
 		},
 	},
 	refresh: {
-		expr: undefined,
 		refreshInterval: 90000,
 		smilFileRefresh: 90000,
 		timeOut: 2000,

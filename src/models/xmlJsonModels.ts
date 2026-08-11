@@ -10,7 +10,6 @@ export type RegionsObject = {
 	refresh: {
 		refreshInterval: number;
 		smilFileRefresh: number;
-		expr?: string;
 		timeOut: number;
 		fallbackToPreviousPlaylist: boolean;
 	};
@@ -83,7 +82,6 @@ export type SMILMetaObject = {
 	endpoint?: string;
 	reportFileLimit?: string;
 	onlySmilUpdate: boolean | string;
-	expr?: string;
 	timeOut?: string;
 	syncServerUrl?: string;
 	defaultRepeatCount?: '1' | 'indefinite';

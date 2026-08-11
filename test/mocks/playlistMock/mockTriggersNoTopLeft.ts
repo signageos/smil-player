@@ -44,7 +44,6 @@ export const mockSMILFileTriggersNoTopLeft = {
 		},
 	},
 	refresh: {
-		expr: undefined,
 		refreshInterval: 90,
 	},
 	rootLayout: {
