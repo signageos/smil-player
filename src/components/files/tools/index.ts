@@ -300,7 +300,7 @@ export function createPoPMessagePayload(
 		...(value.popCustomId ? { customId: value.popCustomId } : {}),
 		...(value.popType ? { type: value.popType } : {}),
 		...(value.popTags
-			? { tags: [...value.popTags.split(','), value.useInReportUrl!, new Date().toISOString()] }
+			? { tags: [...value.popTags.split(','), value.useInReportUrl || value.src, new Date().toISOString()] }
 			: {}),
 		...(value.popFileName ? { fileName: value.popFileName } : {}),
 	};

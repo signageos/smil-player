@@ -564,6 +564,18 @@ describe('Files tools component', () => {
 			expect(result.tags![3]).to.be.a('string');
 		});
 
+		it('should fall back to src in tags when useInReportUrl is not set (pre-play download reports)', () => {
+			const value = {
+				src: 'https://cms.example.com/content/1234',
+				popName: 'testMedia',
+				popTags: 'tag1,tag2',
+			} as MergedDownloadList;
+			const result = createPoPMessagePayload(value, null);
+			expect(result.tags).to.have.lengthOf(4);
+			expect(result.tags![2]).to.be.equal('https://cms.example.com/content/1234');
+			expect(result.tags![3]).to.be.a('string');
+		});
+
 		it('should include fileName when popFileName is set', () => {
 			const value = { src: 'test', popName: 'testMedia', popFileName: 'myfile.mp4' } as MergedDownloadList;
 			const result = createPoPMessagePayload(value, null);
@@ -589,6 +601,22 @@ describe('Files tools component', () => {
 			const message = { name: 'testMedia' };
 			const result = createCustomEndpointMessagePayload(message);
 			expect(result).to.not.have.property('tags');
+		});
+
+		// Regression: failed-download report for never-played content (useInReportUrl unset).
+		// Composed exactly as sendDownloadReport does. The timestamp-strip must leave the
+		// URL slot filled with src — previously it left undefined → null on the wire.
+		it('should keep src as last tag for download reports of never-played content', () => {
+			const value = {
+				src: 'https://cms.example.com/content/1234',
+				popName: 'media-download',
+				popTags: 'campaign,cz',
+			} as MergedDownloadList;
+			const result = createCustomEndpointMessagePayload(createPoPMessagePayload(value), value.src, 502);
+			expect(result.tags).to.eql(['campaign', 'cz', 'https://cms.example.com/content/1234']);
+			expect(JSON.stringify(result)).to.not.include('null');
+			expect(result.status).to.be.equal(502);
+			expect(result.url).to.be.equal('https://cms.example.com/content/1234');
 		});
 	});
 
