@@ -96,6 +96,13 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_BEGIN/g, `wallclock(${formatDate(moment())})`);
             parsedFileString = parsedFileString.replace(/SEQ_CAMP_HIGH_END/g, `wallclock(${formatDate(moment().add(60, 'seconds'))})`);
             break;
+        case 'customerReproDelayed.smil':
+        case enums_1.SMILUrls.prioritySingleCampaign.split('/').pop():
+            // Customer repro: SINGLE video in higher priorityClass, wallclock window
+            // active for the whole observation (10 minutes). Expected: video loops.
+            parsedFileString = parsedFileString.replace(/SINGLE_CAMP_BEGIN/g, `wallclock(${formatDate(moment().add(parseInt(process.env.CAMP_DELAY_S || '45', 10), 'seconds'))})`);
+            parsedFileString = parsedFileString.replace(/SINGLE_CAMP_END/g, `wallclock(${formatDate(moment().add(10, 'minute'))})`);
+            break;
         case enums_1.SMILUrls.priorityPeerDefer.split('/').pop():
             // Peer A active for 30s, Peer B active for 60s. Both start at +0s.
             // A is first in XML → plays first. B defers (peer="defer") until A's wallclock ends.

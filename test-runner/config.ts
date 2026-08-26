@@ -66,6 +66,7 @@ export function getSmilUrls(port: number = 3000) {
 		priorityDeferExpiry: `${base}/dynamic/priorityDeferExpiry.smil`,
 		priorityNever: `${base}/dynamic/priorityNever.smil`,
 		prioritySeqCampaign: `${base}/dynamic/prioritySeqCampaign.smil`,
+		prioritySingleCampaign: `${base}/dynamic/prioritySingleCampaign.smil`,
 		priorityStuckGallery: `${base}/dynamic/priorityStuckGallery.smil`,
 		priorityConditionalPhantom: `${base}/dynamic/priorityConditionalPhantom.smil`,
 		priorityPeerDefer: `${base}/dynamic/priorityPeerDefer.smil`,

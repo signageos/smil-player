@@ -1,0 +1,65 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="444"/>
+        <meta defaultRepeatCount="indefinite"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#FFFFFF"/>
+            <region regionName="video" left="0" top="0" width="1280" height="720" z-index="1" backgroundColor="#FFFFFF"
+                    mediaAlign="topLeft"/>
+        </layout>
+    </head>
+
+    <body systemComponent="http://www.w3.org/1999/xhtml" style="background-color:#FFFFFF">
+
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <!-- Customer repro: higher priorityClass with a SINGLE video inside an
+                     ACTIVE wallclock window (campaign takeover). Lower priorityClass
+                     (higher="pause" pauseDisplay="hide") with multiple elements.
+                     Expected: the single campaign video loops seamlessly for the whole
+                     window. Reported bug: playback freezes on that one video; with two
+                     or more elements in the higher class the rotation is fine. -->
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <priorityClass>
+                                <seq repeatCount="indefinite">
+                                    <seq repeatCount="1" begin="SINGLE_CAMP_BEGIN" end="SINGLE_CAMP_END">
+                                        <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4"
+                                               fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </video>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+                                    <seq repeatCount="1">
+                                        <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg"
+                                             dur="10s" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </img>
+                                        <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4"
+                                               fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </video>
+                                        <img src="https://demo.signageos.io/smil/zones/files/img_3.jpg"
+                                             dur="10s" fit="hidden" region="video">
+                                            <param name="cacheControl" value="auto"/>
+                                        </img>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>
