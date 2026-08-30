@@ -14,6 +14,7 @@ import {
 	getPath,
 	getProtocol,
 	getSmilVersionUrl,
+	isCustomEndpointEventAllowed,
 	isLocalFileWidget,
 	isRelativePath,
 	isWidgetUrl,
@@ -657,6 +658,66 @@ describe('Files tools component', () => {
 			const version = result.split('__smil_version=')[1];
 			expect(version).to.match(/_8$/);
 			expect(version).to.not.equal('54321_7');
+		});
+	});
+
+	describe('isCustomEndpointEventAllowed', () => {
+		const base = { reportFileLimit: 100 };
+
+		it('Should block every event when logging is disabled', () => {
+			const logger = { ...base, enabled: false, events: ['media-playback'] };
+			expect(isCustomEndpointEventAllowed(logger, 'media-playback')).to.be.eql(false);
+			expect(isCustomEndpointEventAllowed(logger, 'media-download')).to.be.eql(false);
+		});
+
+		it('Should allow the default four events and block new events when no allowlist is set', () => {
+			const logger = { ...base, enabled: true };
+			expect(isCustomEndpointEventAllowed(logger, 'media-download')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'media-playback')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'playlist-download')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'playlist-playback')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'media-copied')).to.be.eql(false);
+			expect(isCustomEndpointEventAllowed(logger, 'media-moved')).to.be.eql(false);
+			expect(isCustomEndpointEventAllowed(logger, 'media-restored')).to.be.eql(false);
+		});
+
+		it('Should allow only listed events when an allowlist is set', () => {
+			const logger = { ...base, enabled: true, events: ['media-playback', 'media-copied'] };
+			expect(isCustomEndpointEventAllowed(logger, 'media-playback')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'media-copied')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'media-download')).to.be.eql(false);
+			expect(isCustomEndpointEventAllowed(logger, 'playlist-playback')).to.be.eql(false);
+		});
+
+		it('Should fall back to the default set when the allowlist is empty', () => {
+			const logger = { ...base, enabled: true, events: [] };
+			expect(isCustomEndpointEventAllowed(logger, 'media-download')).to.be.eql(true);
+			expect(isCustomEndpointEventAllowed(logger, 'media-copied')).to.be.eql(false);
+		});
+	});
+
+	describe('opt-in event payloads', () => {
+		it('opt-in event payloads match the media-download shape except for name', () => {
+			const value = {
+				src: 'https://cdn.example.com/video.mp4',
+				popCustomId: 'customId',
+				popType: 'video',
+				popTags: 'tag1,tag2',
+				popFileName: 'video.mp4',
+			};
+			const build = (popName: string) =>
+				createCustomEndpointMessagePayload(
+					createPoPMessagePayload({ ...value, popName } as MergedDownloadList),
+					value.src,
+					200,
+				);
+			const reference = build('media-download');
+			for (const name of ['media-copied', 'media-moved', 'media-restored', 'media-deleted', 'media-skipped']) {
+				const payload = build(name);
+				expect(Object.keys(payload).sort()).to.be.eql(Object.keys(reference).sort());
+				expect(payload.name).to.be.eql(name);
+				expect({ ...payload, name: 'media-download', time: reference.time }).to.be.eql(reference);
+			}
 		});
 	});
 });

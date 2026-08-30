@@ -284,13 +284,10 @@ export class SmilPlayer implements ISmilPlayer {
 
 				this.processor.setSmilObject(smilObject);
 
-				await this.files.sendSmiFileReport(
-					`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
-					smilFile.src,
-				);
-
 				// sos.config.reportUrl overrides the report endpoint but keeps the logging types
-				// requested by the smil meta (e.g. type="manual,standard")
+				// requested by the smil meta (e.g. type="manual,standard").
+				// Must run BEFORE sendSmiFileReport so the first playlist-playback report
+				// respects the parsed <meta log> config (meta-only configs used to drop it).
 				if (smilObject.logger) {
 					debug('Setting up smil file configured logger');
 					this.files.setSmiLogging(
@@ -299,6 +296,11 @@ export class SmilPlayer implements ISmilPlayer {
 							: smilObject.logger,
 					);
 				}
+
+				await this.files.sendSmiFileReport(
+					`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
+					smilFile.src,
+				);
 
 				setTransitionsDefinition(smilObject);
 

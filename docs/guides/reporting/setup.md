@@ -39,6 +39,9 @@ To send reports to your own server instead, add an `endpoint` to the `<meta>` ta
 <meta log="true" type="manual" endpoint="customUrlEndpoint"/>
 ```
 
+To receive only specific event types (or to opt into the additional content-arrival events), add the
+[`events`](../../reference/meta-attributes.md#events) allowlist to the same tag.
+
 The SMIL player POSTs each batch of reports as a JSON array to that URL:
 
 ```javascript

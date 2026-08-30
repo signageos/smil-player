@@ -1,0 +1,22 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90"/>
+        <!-- Phase 2 of the media-deleted spec: landscape2 is gone from the playlist,
+             so boot cleanup (deleteUnusedFiles) must remove its stored file and
+             report the opt-in media-deleted event. -->
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-deleted"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape1.jpg"
+                     region="main" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

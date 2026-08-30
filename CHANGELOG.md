@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Added
 
+- `events` attribute on `<meta log>` — comma-separated allowlist of custom-endpoint report events; when set, only
+  the listed events are POSTed to the endpoint or saved to the offline log. Absent/empty keeps the default set
+  (`media-download`, `media-playback`, `playlist-download`, `playlist-playback`); unknown names are ignored.
+  Custom-endpoint transport only
+- New opt-in content-lifecycle report events (sent only when listed in `events`): `media-copied` (dedup copy
+  satisfied another URL without a second download), `media-moved` (URL/redirect mapping changed, bytes already on
+  device), `media-restored` (content restored from the `smil/storage` preservation folder), `media-deleted`
+  (stored file removed by playlist cleanup or storage eviction), `media-skipped` (element skipped for a pass by
+  its `playCheckUrl` playability gate). Payload shape matches `media-download`
 - `playCheckSkipOnError` per-element attribute — with `"true"`, a `playCheckUrl` gate transport error (server
   unreachable/timeout) or unlisted 5xx status skips the pass instead of the default fail-open; listed statuses and
   other unlisted statuses behave as before. Only meaningful next to `playCheckUrl`; default `false` keeps today's
@@ -17,6 +26,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 ### Changed
 
 - `playCheckUrl` playability gate sends GET instead of HEAD (some gate backends do not answer HEAD); still only the response status code is evaluated
+
+### Fixed
+
+- `log="false"` now really disables custom-endpoint reporting — previously POSTs were still sent whenever
+  `type="manual"` and an `endpoint` were configured
+- First `playlist-playback` report is no longer dropped when logging is configured only via `<meta log>` (the
+  parsed logger config is now applied before the report is sent). The SMIL file's own `playlist-download` at boot
+  still fires only when the `reportUrl` applet config is set, before `<meta log>` is parsed
 
 ## [4.0.0] - 2026-07-29
 

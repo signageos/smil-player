@@ -36,7 +36,7 @@ import { SMILEnums } from '../../../enums/generalEnums';
 import { removeDigits } from '../../playlist/tools/generalTools';
 import { isRelativePath } from '../../files/tools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-import { smilLogging, CUSTOM_ENDPOINT_REPORT_FILE_LIMIT } from '../../../enums/fileEnums';
+import { smilLogging, CUSTOM_ENDPOINT_EVENTS, CUSTOM_ENDPOINT_REPORT_FILE_LIMIT } from '../../../enums/fileEnums';
 import cloneDeep = require('lodash/cloneDeep');
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 
@@ -393,6 +393,7 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 			const filteredLoggingType = metaRecord.type?.split(',').filter(isAllowedSmilLogging) || [];
 			const result: (smilLogging.standard | smilLogging.proofOfPlay)[] =
 				filteredLoggingType.length > 0 ? filteredLoggingType : [smilLogging.standard];
+			const parsedEvents = parseReportEventsList(metaRecord.events);
 
 			regions.logger = {
 				enabled: metaRecord.log === true,
@@ -401,6 +402,7 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 				reportFileLimit: metaRecord.reportFileLimit
 					? parseInt(metaRecord.reportFileLimit, 10)
 					: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+				...(parsedEvents ? { events: parsedEvents } : {}),
 			};
 		}
 		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
@@ -429,6 +431,26 @@ function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
 
 function isAllowedSmilLogging(item: string): item is smilLogging.standard | smilLogging.proofOfPlay {
 	return item === smilLogging.standard || item === smilLogging.proofOfPlay;
+}
+
+/**
+ * Parses the <meta events="..."> allowlist for custom-endpoint reporting.
+ * Unknown names are ignored (forward-compatible); an absent/empty attribute
+ * returns undefined, which means "use the default event set".
+ */
+export function parseReportEventsList(rawEvents: string | undefined): string[] | undefined {
+	if (typeof rawEvents !== 'string' || rawEvents.trim() === '') {
+		return undefined;
+	}
+	const names = rawEvents
+		.split(',')
+		.map((name) => name.trim())
+		.filter((name) => name.length > 0);
+	const known = names.filter((name) => CUSTOM_ENDPOINT_EVENTS.includes(name));
+	for (const unknown of names.filter((name) => !CUSTOM_ENDPOINT_EVENTS.includes(name))) {
+		debug('Ignoring unknown report event name in meta events attribute: %s', unknown);
+	}
+	return known.length > 0 ? known : undefined;
 }
 
 /**

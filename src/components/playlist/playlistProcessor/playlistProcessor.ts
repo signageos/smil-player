@@ -2555,6 +2555,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (value.playCheckUrl) {
 			if (await this.files.playCheckGate(value, this.smilObject)) {
 				debug(`[${debugId}] Element gated by playCheckUrl, skipping this pass: %s`, value.src);
+				// no await to not to block playback when server takes too long to respond
+				this.files.sendOptInEventReport('media-skipped', value);
 				await sleep(100);
 				return true;
 			}

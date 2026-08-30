@@ -54,6 +54,11 @@ export interface IFilesManager {
 		statusCode?: number,
 	) => Promise<void>;
 	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
+	sendOptInEventReport: (
+		eventName: 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped',
+		value: MergedDownloadList,
+		reportUrl?: string,
+	) => Promise<void>;
 	currentFilesSetup: (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => Promise<void>;
 	getFileDetails: (
 		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,

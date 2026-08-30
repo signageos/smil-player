@@ -7,12 +7,14 @@ import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { getFileName, getStorageFileName } from './fileName';
 import {
+	DEFAULT_CUSTOM_ENDPOINT_EVENTS,
 	DEFAULT_LAST_MODIFIED,
 	FileStructure,
 	mapObject,
 	WidgetExtensions,
 	WidgetFullPath,
 } from '../../../enums/fileEnums';
+import { SmilLogger } from '../../../models/xmlJsonModels';
 import { isNil } from 'lodash';
 import get = require('lodash/get');
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
@@ -333,6 +335,21 @@ export function shouldSkipActiveReportFile(
 	reportFileLimit: number,
 ): boolean {
 	return !!trackedInfo && !trackedInfo.hasFailureReports && reportCount < reportFileLimit;
+}
+
+/**
+ * Emission gate for custom-endpoint reports. Applied before every POST and
+ * before every offline/batch save (never on the offline upload path — saved
+ * reports are always uploaded). `enabled` is a real off switch here:
+ * log="false" blocks all custom-endpoint traffic. Without an `events`
+ * allowlist the default event set matches historical behavior.
+ */
+export function isCustomEndpointEventAllowed(logger: SmilLogger, eventName: string): boolean {
+	if (!logger.enabled) {
+		return false;
+	}
+	const allowed = logger.events && logger.events.length > 0 ? logger.events : DEFAULT_CUSTOM_ENDPOINT_EVENTS;
+	return allowed.includes(eventName);
 }
 
 export function createCustomEndpointMessagePayload(
