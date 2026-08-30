@@ -2,6 +2,7 @@ import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import {
+	setDefaultAwait,
 	setDefaultAwaitWallclock,
 	setDefaultAwaitConditional,
 	setElementDuration,
@@ -159,5 +160,19 @@ describe('scheduleTools direct function tests', () => {
 			// duration, so this degrades gracefully rather than throwing.
 			expect(setElementDuration('-5s')).to.equal(5000);
 		});
+	});
+});
+
+describe('setDefaultAwait with skipContentMark runtime flag', () => {
+	// A skip-marked element must never count as a playable candidate — without
+	// this, a marked element with no begin/expr would return playImmediately
+	// from the no-begin-no-expr early exit and regress seq scheduling.
+
+	it('marked element without begin/expr is not a playable candidate', () => {
+		expect(setDefaultAwait([{ skipContentMark: true } as any])).to.equal(SMILScheduleEnum.defaultAwait);
+	});
+
+	it('unmarked sibling after a marked element keeps the array playable', () => {
+		expect(setDefaultAwait([{ skipContentMark: true } as any, {}])).to.equal(SMILScheduleEnum.playImmediately);
 	});
 });

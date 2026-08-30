@@ -15,7 +15,7 @@ import { isNil } from 'lodash';
 import { SMILVideo } from '../../../models/mediaModels';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
-import { isConditionalExpExpired } from '../tools/conditionalTools';
+import { shouldSkipElement } from '../tools/conditionalTools';
 import { stopTickerAnimation } from '../tools/tickerTools';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -92,7 +92,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	) => {
 		while (
 			!this.cancelFunction[version] &&
-			(conditionalExpr === '' || !isConditionalExpExpired({ [ExprTag]: conditionalExpr })) &&
+			(conditionalExpr === '' || !shouldSkipElement({ [ExprTag]: conditionalExpr })) &&
 			(!dynamicPlaylistId ||
 				!dynamicPlaylist[dynamicPlaylistId] ||
 				dynamicPlaylist[dynamicPlaylistId]?.play === true)

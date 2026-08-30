@@ -631,7 +631,7 @@ test('checkAheadCount re-checks a skipContent slot (so it can recover) without s
 	const SMIL_URL_SKIP = `${testServerBaseUrl}/checkBeforePlaySkipContent.smil`;
 	// With one slot in the playlist returning 404 (skipContentOnHttpStatus="404"),
 	// the lookahead must:
-	//   1. mark that slot's media.expr = skipContent;
+	//   1. mark that slot with the skipContentMark flag;
 	//   2. keep re-checking the 404'd slot on later cycles (one HEAD per cycle) so it can
 	//      recover when the URL serves content again — it must NOT be permanently excluded;
 	//   3. keep firing at most one HEAD per playback transition (no racing-ahead bursts);
@@ -815,10 +815,10 @@ test('checkAheadCount: skipContent element RECOVERS once the URL serves content 
 	const TEST_SERVER = testServerBaseUrl;
 	const SMIL_URL_SKIP = `${testServerBaseUrl}/checkBeforePlaySkipContent.smil`;
 	// Regression repro for the 1.1.27 break (commit 63ee3ff added the
-	// `if (media.expr === skipContent) continue;` cascade in prefetchAheadElements).
+	// `if (media.skipContentMark) continue;` cascade in prefetchAheadElements).
 	// Scenario matching the production report:
 	//   1. image10 serves 200 and is requested normally (baseline).
-	//   2. image10 starts returning 404 -> player marks media.expr = skipContent.
+	//   2. image10 starts returning 404 -> player sets its skipContentMark flag.
 	//   3. image10 starts serving 200 again (recovery).
 	// EXPECTED: the player issues a HEAD on image10 again and it can play.
 	// BUGGY (current): the lookahead cascades past skipContent forever, so image10

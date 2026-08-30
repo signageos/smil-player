@@ -19,6 +19,12 @@ export type UpdateChecks = {
 	// gate fail mode: true = skip playback on gate transport error or unlisted 5xx (default fail-open);
 	// only meaningful together with playCheckUrl (xml2js parseBooleans delivers a real boolean)
 	playCheckSkipOnError?: boolean;
+	// RUNTIME flag, never from XML: set by the fetch strategies when the content is
+	// unavailable (skipContentOnHttpStatus match, 5xx / transport failure with
+	// allowLocalFallback=false), cleared on the next successful check. Lives outside
+	// media.expr so the declarative conditional survives the skip→recover cycle and
+	// element identity (parent hash) stays stable — keep it in parentGenerationRemove.
+	skipContentMark?: boolean;
 };
 
 export type SMILVideo = {

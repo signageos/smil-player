@@ -210,6 +210,18 @@ describe('Playlist tools component', () => {
 				seq.img4.id = 'img-x';
 				expect(generateParentId('seq', seq)).to.be.equal(pristine);
 			});
+
+			it('skipContentMark mutation from the fetch strategies does not change the hash', () => {
+				// executeHeadRequest marks a 404'd/unreachable element with the
+				// skipContentMark runtime flag and clears it on recovery; neither
+				// transition may change element identity mid-playback.
+				const seq: any = makeGallerySeq();
+				const pristine = generateParentId('seq', seq);
+				seq.img4.skipContentMark = true;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+				delete seq.img4.skipContentMark;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
 		});
 	});
 

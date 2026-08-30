@@ -56,6 +56,10 @@ export const parentGenerationRemove = [
 	// the event name into value.popName on the live element; media-skipped can flip
 	// it every pass on a flapping playCheckUrl gate — same drift class as wasUpdated
 	'popName',
+	// runtime unavailable-content flag set/cleared by the fetch strategies on every
+	// skip→recover transition (replaces the old expr='skipContent' sentinel, which
+	// drifted the hash AND destroyed declarative exprs) — same drift class as wasUpdated
+	'skipContentMark',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
