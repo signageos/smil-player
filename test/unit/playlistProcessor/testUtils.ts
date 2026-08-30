@@ -104,6 +104,7 @@ export function createDefaultOptions(): PlaylistOptions {
 export function createMockFiles(): any {
 	return {
 		sendMediaReport: stub().resolves(undefined),
+		sendOptInEventReport: stub().resolves(undefined),
 		currentFilesSetup: stub().resolves(undefined),
 	};
 }

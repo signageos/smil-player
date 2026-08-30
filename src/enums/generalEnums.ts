@@ -52,6 +52,10 @@ export const parentGenerationRemove = [
 	// first playback; without stripping it the parent hash drifts between traversal
 	// passes and the element registers as a phantom peer of its own seq-mates
 	'wasUpdated',
+	// report senders (sendMediaReport/sendDownloadReport/sendOptInEventReport) write
+	// the event name into value.popName on the live element; media-skipped can flip
+	// it every pass on a flapping playCheckUrl gate — same drift class as wasUpdated
+	'popName',
 ];
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;

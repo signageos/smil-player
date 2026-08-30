@@ -44,16 +44,17 @@ export const DEFAULT_CUSTOM_ENDPOINT_EVENTS = [
 	'playlist-download',
 	'playlist-playback',
 ];
-// All valid names for the `events` allowlist. Names beyond the default four are
-// opt-in only: they are never sent unless explicitly listed.
-export const CUSTOM_ENDPOINT_EVENTS = [
-	...DEFAULT_CUSTOM_ENDPOINT_EVENTS,
+// Opt-in event names: never sent unless explicitly listed in the `events` allowlist.
+export type OptInReportEvent = 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped';
+const OPT_IN_CUSTOM_ENDPOINT_EVENTS: OptInReportEvent[] = [
 	'media-copied',
 	'media-moved',
 	'media-restored',
 	'media-deleted',
 	'media-skipped',
 ];
+// All valid names for the `events` allowlist.
+export const CUSTOM_ENDPOINT_EVENTS = [...DEFAULT_CUSTOM_ENDPOINT_EVENTS, ...OPT_IN_CUSTOM_ENDPOINT_EVENTS];
 
 export const WidgetExtensions = ['.ipk', '.apk', '.wgt', '.zip'];
 export const WidgetFullPath = 'internal/smil/widgets/';

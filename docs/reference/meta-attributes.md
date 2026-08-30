@@ -310,11 +310,15 @@ Valid names are the default four plus the opt-in content-lifecycle events `media
 [Custom endpoint payloads](./reporting-payloads.md#custom-endpoint-payloads)). Unknown names are ignored, and a
 list containing only unknown names falls back to the default set.
 
+The allowlist applies to the custom-endpoint transport only — standard and native proof-of-play reporting are
+unaffected. It survives the `reportUrl` config merge, and reports already saved offline are always uploaded
+regardless of the current allowlist.
+
 > Note: `media-moved` fires once per actual URL-mapping change. On CDNs that rotate signed query parameters,
 > the resolved URL genuinely changes on every update check, so `media-moved` will fire once per check interval
-> per file — consider this before enabling it against such a CDN. The allowlist applies to the custom-endpoint
-transport only — standard and native proof-of-play reporting are unaffected. It survives the `reportUrl` config
-merge, and reports already saved offline are always uploaded regardless of the current allowlist.
+> per file — consider this before enabling it against such a CDN. Similarly, `media-skipped` fires on **every**
+> skipped playback pass: a gate that stays closed produces a steady stream of reports (one per gate check),
+> so make sure your report endpoint is sized for that before enabling it.
 
 Used in: [Setting Up Reporting](../guides/reporting/setup.md)
 

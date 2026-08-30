@@ -11,6 +11,7 @@ import {
 } from '../../models/mediaModels';
 import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
+import { OptInReportEvent } from '../../enums/fileEnums';
 import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './fetchingStrategies/fetchingStrategies';
 
@@ -55,7 +56,7 @@ export interface IFilesManager {
 	) => Promise<void>;
 	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
 	sendOptInEventReport: (
-		eventName: 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped',
+		eventName: OptInReportEvent,
 		value: MergedDownloadList,
 		reportUrl?: string,
 	) => Promise<void>;
