@@ -39,6 +39,7 @@ import {
 	DEFAULT_LAST_MODIFIED,
 	FileStructure,
 	MINIMAL_STORAGE_FREE_SPACE,
+	OptInReportEvent,
 	smilLogging,
 	STORAGE_MAX_FILES,
 } from '../../enums/fileEnums';
@@ -372,7 +373,7 @@ export class FilesManager implements IFilesManager {
 	 * Custom endpoint transport only.
 	 */
 	public sendOptInEventReport = async (
-		eventName: 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped',
+		eventName: OptInReportEvent,
 		value: MergedDownloadList,
 		reportUrl?: string,
 	) => {
@@ -383,9 +384,15 @@ export class FilesManager implements IFilesManager {
 			return;
 		}
 		value.popName = eventName;
-		await this.sendCustomEndpointReport(
-			createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl || value.src, 200),
-		);
+		try {
+			await this.sendCustomEndpointReport(
+				createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl || value.src, 200),
+			);
+		} catch (err) {
+			// Every call site is fire-and-forget; never let a failed report (or a
+			// failed offline save inside it) surface as an unhandled rejection.
+			debug('[files] error sending opt-in event report %s: %O', eventName, err);
+		}
 	};
 
 	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {

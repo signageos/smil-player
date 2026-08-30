@@ -190,6 +190,18 @@ describe('Playlist tools component', () => {
 				expect(generateParentId('seq', seq)).to.be.equal(pristine);
 			});
 
+			it('popName mutation from the report senders does not change the hash', () => {
+				// sendMediaReport/sendDownloadReport/sendOptInEventReport write the event
+				// name into value.popName on the live parsed element (and media-skipped can
+				// flip it back and forth on a flapping playCheckUrl gate).
+				const seq: any = makeGallerySeq();
+				const pristine = generateParentId('seq', seq);
+				seq.video3.popName = 'media-skipped';
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+				seq.video3.popName = 'media-playback';
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
+
 			it('video playing/localFilePath/id mutations do not change the hash', () => {
 				const seq: any = makeGallerySeq();
 				const pristine = generateParentId('seq', seq);

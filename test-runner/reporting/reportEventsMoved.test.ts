@@ -4,8 +4,10 @@ import { DUID, Timeouts } from '../config';
 // Opt-in media-moved event on the mapping-only update path. The slot's redirect
 // Location gains a new version query param after POST /moved/bump; the content
 // bytes are unchanged and already on device, so the player updates only the URL
-// mapping — with events="media-moved" that mapping change must be reported once,
-// carrying the NEW resolved URL. media-download must never appear (filtered).
+// mapping — with events="media-moved" that mapping change must be reported (the
+// spec asserts at least one report, not exactly one — check-interval timing makes
+// an exact count flaky), carrying the NEW resolved URL. media-download must never
+// appear (filtered).
 test.describe('media-moved reporting on mapping-only update path', () => {
 	test('reports media-moved once when the redirect target URL changes without a re-download', async ({
 		page,
