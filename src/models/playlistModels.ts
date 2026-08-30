@@ -44,6 +44,8 @@ export type BackupPlaylist = {
 export type PlaylistElement = {
 	playMode?: string;
 	expr?: string;
+	// runtime unavailable-content flag set by the fetch strategies — see UpdateChecks.skipContentMark
+	skipContentMark?: boolean;
 	begin?: string;
 	end?: string;
 	repeatCount?: number | string;

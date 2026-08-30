@@ -12,7 +12,7 @@ import {
 	processRandomPlayMode,
 	removeDigits,
 } from '../tools/generalTools';
-import { isConditionalExpExpired } from '../tools/conditionalTools';
+import { shouldSkipElement } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { areAllWallclocksPermanentlyExpired, setDefaultAwait } from '../tools/scheduleTools';
@@ -212,7 +212,7 @@ export class PlaylistTraverser {
 				// would permanently disable the element. The still-404 case is released by
 				// releaseSlot in playElement, so this does not reintroduce the phantom blocker.
 				if (
-					isConditionalExpExpired(value as SMILMedia, this.config.playerName, this.config.playerId) &&
+					shouldSkipElement(value as SMILMedia, this.config.playerName, this.config.playerId) &&
 					!this.actions.isSkipContentRecheckable(value as SMILMedia)
 				) {
 					debug('[traverser] media conditional false, skipping: key=%s, expr=%s', key, (value as SMILMedia).expr!);
@@ -369,7 +369,7 @@ export class PlaylistTraverser {
 					if (parent.startsWith('seq') && !hasPriority) {
 						let anySeqSiblingActive = false;
 						for (const elem of value) {
-							if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+							if (shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 								continue;
 							}
 
@@ -406,7 +406,7 @@ export class PlaylistTraverser {
 
 					let anyActive = false;
 					for (const elem of value) {
-						if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+						if (shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 							continue;
 						}
 
@@ -875,7 +875,7 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+			if (shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 				debug('[traverser-priority] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
@@ -918,7 +918,7 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+			if (shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 				debug('[traverser-excl] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
@@ -1072,7 +1072,7 @@ export class PlaylistTraverser {
 		arrayIndex: number = -1,
 		length: number = -1,
 	): Promise<boolean> => {
-		if (!isConditionalExpExpired(value, this.config.playerName, this.config.playerId)) {
+		if (!shouldSkipElement(value, this.config.playerName, this.config.playerId)) {
 			return false;
 		}
 		debug('[traverser-conditional] conditional false, skipping: expr=%s', value[ExprTag]!);

@@ -117,7 +117,7 @@ const server = http.createServer((req, res) => {
 
 	// --- Content HEAD: location strategy ---
 	// IDs 1-10: return 200 + Location header pointing to campaign-specific URL with UUID
-	// IDs 11-20: return 404 → player sets media.expr = skipContent
+	// IDs 11-20: return 404 → player sets the media.skipContentMark flag
 	if (url.pathname === '/content' && req.method === 'HEAD') {
 		const id = parseInt(url.searchParams.get('id'), 10);
 		if (!id || id < 1 || id > NUM_TOTAL) {
@@ -264,7 +264,6 @@ async function main() {
 	);
 	const spaceOK = storageLog.filter((m) => m.text.includes('Storage space OK'));
 	const newVersions = storageLog.filter((m) => m.text.includes('New file version'));
-	const skipped404 = storageLog.filter((m) => m.text.includes('skipContent'));
 
 	console.log('\n=== STORAGE MONITOR RESULTS ===');
 	console.log(`Duration:             ${totalWait}s`);

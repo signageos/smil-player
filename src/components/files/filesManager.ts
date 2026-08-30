@@ -63,7 +63,6 @@ import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
 import { getStrategy } from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
-import { ConditionalExprFormat } from '../../enums/conditionalEnums';
 
 declare global {
 	interface Window {
@@ -448,7 +447,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		// Check if content should be skipped (set by fetch strategy)
-		if (media.expr === ConditionalExprFormat.skipContent) {
+		if (media.skipContentMark) {
 			debug('[files] content marked as skip, not downloading: %s', media.src);
 			return { shouldUpdate: false, statusCode };
 		}
@@ -3464,7 +3463,7 @@ export class FilesManager implements IFilesManager {
 		if (!detection || !detection.updateCheck.value) {
 			// When content transitions to skipContent (e.g., 404) but has existing content,
 			// preserve the file to storage before it becomes orphaned.
-			if (detection && file.expr === ConditionalExprFormat.skipContent
+			if (detection && file.skipContentMark
 				&& 'localFilePath' in file && file.localFilePath !== '') {
 				const fileName = getCanonicalFileName(file.src, detection.mediaInfoObject);
 				const contentValue = detection.mediaInfoObject[fileName];

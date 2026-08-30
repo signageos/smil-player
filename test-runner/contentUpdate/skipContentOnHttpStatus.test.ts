@@ -8,7 +8,7 @@ import { createConsoleCollector, waitForConsolePattern } from '../helpers';
 // Flow:
 // 1. Both images play normally (status-check returns 200)
 // 2. Configure server to return 404 for landscape1.jpg HEAD checks
-// 3. ResourceChecker fires (contentRefresh=5s), sets media.expr='skipContent'
+// 3. ResourceChecker fires (contentRefresh=5s), sets the media.skipContentMark flag
 // 4. Playlist skips landscape1 — only landscape2 plays
 test.describe('skipContentOnHttpStatus.smil test', () => {
 	test('skips media when HEAD returns status matching skipContentOnHttpStatus', async ({ page, context, request, smilUrls, testServerBaseUrl }) => {

@@ -40,9 +40,8 @@ import {
 	needsUnknownDurationBackstop,
 } from '../tools/generalTools';
 import { SMILEnums } from '../../../enums/generalEnums';
-import { isConditionalExpExpired } from '../tools/conditionalTools';
+import { shouldSkipElement } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import { ConditionalExprFormat } from '../../../enums/conditionalEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { setElementDuration } from '../tools/scheduleTools';
 import { PriorityObject } from '../../../models/priorityModels';
@@ -2379,7 +2378,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 
 			const candidate = mediaEntries[scanIdx];
-			const isSkipContent = candidate.media.expr === ConditionalExprFormat.skipContent;
+			const isSkipContent = candidate.media.skipContentMark === true;
 
 			// While cascading past the K+count target to find the next playable element, skip
 			// further skipContent slots without firing a HEAD — they recover on their own
@@ -2479,7 +2478,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 * @returns true if element should be skipped
 	 */
 	/**
-	 * A skipContent media element (e.g. a 404 that set expr='skipContent' via
+	 * A skipContent media element (e.g. a 404 that set the skipContentMark flag via
 	 * skipContentOnHttpStatus) is normally an intentional fast-skip. But in checkBeforePlay +
 	 * no-checkAheadCount mode the inline runPrePlayCheck is the SOLE recovery path, so such an
 	 * element must NOT be skipped before reaching it — neither by the traverser's media-level
@@ -2490,7 +2489,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 */
 	private isSkipContentRecheckable(value: SMILMedia): boolean {
 		return (
-			value.expr === ConditionalExprFormat.skipContent &&
+			value.skipContentMark === true &&
 			!!this.smilObject.checkBeforePlay &&
 			!this.smilObject.checkAheadCount &&
 			'src' in value
@@ -2499,7 +2498,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private async resolveContentAvailability(value: SMILMedia, key: string, debugId: string): Promise<boolean> {
 		// Expired conditional — includes skipContentOnHttpStatus matches (e.g. a 404 sets
-		// expr='skipContent'). This is an intentional skip, so it must stay fast (sleep 100)
+		// the skipContentMark flag). This is an intentional skip, so it must stay fast (sleep 100)
 		// regardless of localFilePath state. Checked before the empty-localFilePath branch
 		// below so a run of skip-marked slots with no cached file does not get the long
 		// contentUnavailableRetryDelay and stall playback before the next playable element.
@@ -2510,7 +2509,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Genuine (non-skipContent) conditionals, and the checkAheadCount case (recovered by
 		// prefetchAheadElements), keep the fast intentional skip.
 		const skipContentRecheck = this.isSkipContentRecheckable(value);
-		if (isConditionalExpExpired(value, this.playerName, this.playerId) && !skipContentRecheck) {
+		if (shouldSkipElement(value, this.playerName, this.playerId) && !skipContentRecheck) {
 			debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;
@@ -2539,9 +2538,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// Re-check conditional expression after prePlayCheck.
-		// The fetch strategy inside detectUpdateOnly may have set media.expr = 'skipContent'
+		// The fetch strategy inside detectUpdateOnly may have set the skipContentMark flag
 		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
-		if (!this.smilObject.checkAheadCount && isConditionalExpExpired(value, this.playerName, this.playerId)) {
+		if (!this.smilObject.checkAheadCount && shouldSkipElement(value, this.playerName, this.playerId)) {
 			debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;

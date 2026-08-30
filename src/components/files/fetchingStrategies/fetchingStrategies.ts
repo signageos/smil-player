@@ -1,5 +1,4 @@
 import { MergedDownloadList } from '../../../models/filesModels';
-import { ConditionalExprFormat } from '../../../enums/conditionalEnums';
 import { createDownloadPath, debug } from '../tools';
 import { DEFAULT_LAST_MODIFIED } from '../../../enums/fileEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -49,9 +48,10 @@ async function executeHeadRequest(
 	const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
 
 	try {
-		if (media.expr === ConditionalExprFormat.skipContent) {
-			delete media.expr;
-		}
+		// Clear the skip mark before re-checking; a failing response below re-sets it.
+		// The mark is a dedicated runtime flag — media.expr stays untouched so a
+		// declarative conditional survives the skip→recover cycle.
+		delete media.skipContentMark;
 
 		const authHeaders = window.getAuthHeaders?.(downloadUrl);
 		response = await makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
@@ -65,7 +65,7 @@ async function executeHeadRequest(
 
 		if (media.allowLocalFallback === false) {
 			debug('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
-			media.expr = ConditionalExprFormat.skipContent;
+			media.skipContentMark = true;
 		} else {
 			debug('[files] %s using local fallback: src=%s', prefix, media.src);
 		}
@@ -99,7 +99,7 @@ async function executeHeadRequest(
 
 		if (media.allowLocalFallback === false) {
 			debug('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
-			media.expr = ConditionalExprFormat.skipContent;
+			media.skipContentMark = true;
 		} else {
 			debug('[files] %s using local fallback: src=%s', prefix, media.src);
 		}
@@ -108,7 +108,7 @@ async function executeHeadRequest(
 
 	if (response && skipContentHttpStatusCodes.includes(response.status)) {
 		debug('[files] %s skipping content (status=%d matched skip codes): src=%s', prefix, response.status, media.src);
-		media.expr = ConditionalExprFormat.skipContent;
+		media.skipContentMark = true;
 		return { shouldUpdate: false, value: callbacks.fallbackValue(media), statusCode: response.status };
 	}
 

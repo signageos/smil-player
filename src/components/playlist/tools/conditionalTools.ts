@@ -18,7 +18,7 @@ import { debug, generateCurrentDate } from './generalTools';
 import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';
 
-export function isConditionalExpExpired(
+export function shouldSkipElement(
 	element: SMILMediaSingle | PlaylistElement | PlaylistElement[],
 	playerName: string = '',
 	playerId: string = '',
@@ -29,6 +29,12 @@ export function isConditionalExpExpired(
 			debug('[conditional] array conditional expired: no playable item found');
 		}
 		return result;
+	}
+	// Runtime unavailable-content flag (fetch strategies) — overrides any declarative
+	// expr outcome; the element is unplayable until the next successful content check.
+	if (element.skipContentMark) {
+		debug('[conditional] content marked as skip, treating as expired: src=%s', (element as { src?: string }).src);
+		return true;
 	}
 	if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId)) {
 		debug('[conditional] expression false, skipping: expr=%s', element.expr);

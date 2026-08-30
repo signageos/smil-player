@@ -334,12 +334,12 @@ describe('PlaylistProcessor', () => {
 			expect(files.playCheckGate.callCount()).to.equal(1);
 		});
 
-		it('should skip on expr before burning a gate request (gate not called for skipContent slots)', async () => {
+		it('should skip on skipContentMark before burning a gate request (gate not called for skipContent slots)', async () => {
 			const files = createMockFiles();
 			files.playCheckGate = stub().resolves(false);
 			const processor = makeGateProcessor(files);
 			const value = makeGatedImage();
-			value.expr = 'skipContent';
+			value.skipContentMark = true;
 
 			const result = await (processor as any).resolveContentAvailability(value, 'img0', 'test');
 

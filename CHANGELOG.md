@@ -29,6 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- `skipContentOnHttpStatus` no longer destroys an element's conditional `expr`: previously the internal skip mark
+  overwrote the expression and the recovery path then deleted it, so an element with a daypart/conditional that hit
+  one transient skip status played unconditionally from then on. The mark now lives on a dedicated internal flag and
+  the declarative expression survives the whole skip→recover cycle
+- A content skip/recover transition no longer changes the element's internal identity in the priority system —
+  previously each transition could register the element as a phantom peer of its own playlist and freeze the region
 - `log="false"` now really disables custom-endpoint reporting — previously POSTs were still sent whenever
   `type="manual"` and an `endpoint` were configured
 - First `playlist-playback` report is no longer dropped when logging is configured only via `<meta log>` (the

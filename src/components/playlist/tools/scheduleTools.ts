@@ -4,7 +4,7 @@ import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 
 import { PlaylistElement } from '../../../models/playlistModels';
-import { isConditionalExpExpired } from './conditionalTools';
+import { shouldSkipElement } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { parseSmilSchedule } from './wallclockTools';
 import { debug, removeDigits } from './generalTools';
@@ -35,7 +35,7 @@ export function setDefaultAwaitConditional(
 	playerId: string,
 ): number {
 	// found element which can be player right now
-	if (!isConditionalExpExpired(playlistElement, playerName, playerId)) {
+	if (!shouldSkipElement(playlistElement, playerName, playerId)) {
 		return SMILScheduleEnum.playImmediately;
 	}
 	return SMILScheduleEnum.defaultAwait;
@@ -53,6 +53,13 @@ export function setDefaultAwait(
 	playerId: string = '',
 ): number {
 	for (const loopElem of elementsArray) {
+		// Runtime unavailable-content flag — never a playable candidate. Must be checked
+		// before the no-begin-no-expr early exit below, which would otherwise report a
+		// marked element as playImmediately.
+		if (loopElem.skipContentMark) {
+			continue;
+		}
+
 		// no wallclock or expr specified
 		if (!loopElem.hasOwnProperty('begin') && !loopElem.hasOwnProperty('expr')) {
 			return SMILScheduleEnum.playImmediately;
