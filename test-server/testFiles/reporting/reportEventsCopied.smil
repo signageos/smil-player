@@ -1,0 +1,26 @@
+<smil>
+    <head>
+        <!-- Location-header update strategy: both <img> src paths 204+redirect to the
+             SAME shared content URL, so the player downloads once and copies for the
+             duplicate slot. With events="media-copied" ONLY the opt-in media-copied
+             event may reach the custom endpoint (media-download must be dropped). -->
+        <meta http-equiv="refresh" content="60" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-copied"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/dedup/redirect/slot-one"
+                     region="main" fit="fill"/>
+                <img dur="3s"
+                     src="http://localhost:3000/dedup/redirect/slot-two"
+                     region="main" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

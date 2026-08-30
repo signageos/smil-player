@@ -22,6 +22,7 @@ import {
 	getStorageFileName,
 	getReportUrlFromUpdateValue,
 	getUrlWithoutQueryParams,
+	isCustomEndpointEventAllowed,
 	isWidgetUrl,
 	mapFileType,
 	OfflineReportFileInfo,
@@ -259,9 +260,11 @@ export class FilesManager implements IFilesManager {
 			value.popName = fileType === 'smil' ? 'playlist-download' : 'media-download';
 			if (this.smilLogging.endpoint) {
 				debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
-				await this.sendCustomEndpointReport(
-					createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
-				);
+				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
+					await this.sendCustomEndpointReport(
+						createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
+					);
+				}
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value));
 			}
@@ -303,16 +306,18 @@ export class FilesManager implements IFilesManager {
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
 				debug('[files] custom endpoint report enabled: %s', this.smilLogging.enabled);
-				const payload = createCustomEndpointMessagePayload(
-					createPoPMessagePayload(value),
-					value.useInReportUrl,
-					statusCode,
-				);
-				if (value.reportMode === 'batch') {
-					debug('[files] report mode is batch, saving to offline storage');
-					await this.saveCustomEndpointInfo(payload, 'batch');
-				} else {
-					await this.sendCustomEndpointReport(payload);
+				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
+					const payload = createCustomEndpointMessagePayload(
+						createPoPMessagePayload(value),
+						value.useInReportUrl,
+						statusCode,
+					);
+					if (value.reportMode === 'batch') {
+						debug('[files] report mode is batch, saving to offline storage');
+						await this.saveCustomEndpointInfo(payload, 'batch');
+					} else {
+						await this.sendCustomEndpointReport(payload);
+					}
 				}
 			} else {
 				await this.sendPoPReport(createPoPMessagePayload(value));
@@ -333,7 +338,11 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
-		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
+		if (
+			this.smilLogging.type?.includes(smilLogging.proofOfPlay) &&
+			this.smilLogging.endpoint &&
+			isCustomEndpointEventAllowed(this.smilLogging, 'playlist-playback')
+		) {
 			await this.sendCustomEndpointReport({
 				name: 'playlist-playback',
 				status: isNil(errMessage) ? 200 : 902,
@@ -351,6 +360,32 @@ export class FilesManager implements IFilesManager {
 				errorMessage: errMessage,
 			});
 		}
+	};
+
+	/**
+	 * Reports opt-in content-lifecycle events: a dedup copy (media-copied), a
+	 * mapping-only URL update (media-moved), a restore from the smil/storage
+	 * preservation folder (media-restored), a file removed from storage
+	 * (media-deleted), or an element skipped by the playCheckUrl gate
+	 * (media-skipped). These events are only sent when listed in the
+	 * <meta events="..."> allowlist. Payload shape is identical to media-download.
+	 * Custom endpoint transport only.
+	 */
+	public sendOptInEventReport = async (
+		eventName: 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped',
+		value: MergedDownloadList,
+		reportUrl?: string,
+	) => {
+		if (!this.smilLogging.type?.includes(smilLogging.proofOfPlay) || !this.smilLogging.endpoint) {
+			return;
+		}
+		if (!isCustomEndpointEventAllowed(this.smilLogging, eventName)) {
+			return;
+		}
+		value.popName = eventName;
+		await this.sendCustomEndpointReport(
+			createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl || value.src, 200),
+		);
 	};
 
 	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
@@ -918,6 +953,11 @@ export class FilesManager implements IFilesManager {
 								task.fileName,
 							);
 							await this.trackSpaceConsumed(task.actualDownloadPath);
+							this.sendOptInEventReport(
+								'media-copied',
+								task.file,
+								getReportUrlFromUpdateValue(task.updateValue),
+							);
 
 							// CRITICAL: Track in tempDownloads for migration
 							if (task.isNewContent) {
@@ -973,6 +1013,11 @@ export class FilesManager implements IFilesManager {
 
 						if (restoredTempPath) {
 							debug('DEDUP: Successfully restored from storage to: %s', restoredTempPath);
+							this.sendOptInEventReport(
+								'media-restored',
+								firstTask.file,
+								getReportUrlFromUpdateValue(firstTask.updateValue),
+							);
 
 							// For the first task, we already have the file in place
 							// Track it in tempDownloads
@@ -1025,6 +1070,11 @@ export class FilesManager implements IFilesManager {
 
 									debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
 									await this.trackSpaceConsumed(task.actualDownloadPath);
+									this.sendOptInEventReport(
+										'media-copied',
+										task.file,
+										getReportUrlFromUpdateValue(task.updateValue),
+									);
 
 									// Track in tempDownloads
 									if (task.isNewContent) {
@@ -1257,6 +1307,11 @@ export class FilesManager implements IFilesManager {
 											duplicateTask.fileName,
 										);
 										await this.trackSpaceConsumed(duplicateTask.actualDownloadPath);
+										this.sendOptInEventReport(
+											'media-copied',
+											duplicateTask.file,
+											getReportUrlFromUpdateValue(duplicateTask.updateValue),
+										);
 
 										// Track the copied file in temp if using temp folder
 										if (duplicateTask.isNewContent) {
@@ -1344,6 +1399,11 @@ export class FilesManager implements IFilesManager {
 			for (const result of noDownloadResults) {
 				debug(`Updating mediaInfoObject for %s without download`, result.file.src);
 				filesToUpdate.set(result.fileName, result.updateCheck.value);
+				this.sendOptInEventReport(
+					'media-moved',
+					result.file,
+					getReportUrlFromUpdateValue(result.updateCheck.value),
+				);
 			}
 		} else {
 			// Original logic for non-location strategies
@@ -1504,6 +1564,11 @@ export class FilesManager implements IFilesManager {
 						filesToUpdate.set(
 							getFileName(file.src, updateCheck.value as string | undefined),
 							updateCheck.value,
+						);
+						this.sendOptInEventReport(
+							'media-moved',
+							file,
+							getReportUrlFromUpdateValue(updateCheck.value),
 						);
 					}
 				}),
@@ -2092,6 +2157,7 @@ export class FilesManager implements IFilesManager {
 		const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 		debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
 		this.collectUpdate(fileName, String(detection.updateValue));
+		this.sendOptInEventReport('media-moved', detection.file, getReportUrlFromUpdateValue(detection.updateValue));
 	};
 
 	/**
@@ -3302,6 +3368,11 @@ export class FilesManager implements IFilesManager {
 							mediaInfoObject,
 							localFilePath,
 						);
+						this.sendOptInEventReport(
+							'media-moved',
+							file,
+							getReportUrlFromUpdateValue(updateCheck.value),
+						);
 					}
 
 					return [];
@@ -3336,6 +3407,11 @@ export class FilesManager implements IFilesManager {
 						updateCheck.value,
 					);
 					this.collectUpdate(fileName, updateCheck.value);
+					this.sendOptInEventReport(
+						'media-moved',
+						file,
+						getReportUrlFromUpdateValue(updateCheck.value),
+					);
 				}
 
 				if (updated) {
@@ -3814,6 +3890,9 @@ export class FilesManager implements IFilesManager {
 					) {
 						debug('[files] file not in SMIL, deleting: %O', storedFile);
 						await this.deleteFile(storedFile.filePath);
+						// The original source URL is unknown for orphaned files — report the local path.
+						// no await to not to block cleanup when server takes too long to respond
+						this.sendOptInEventReport('media-deleted', { src: storedFile.filePath });
 					}
 				}
 			}
@@ -3971,6 +4050,9 @@ export class FilesManager implements IFilesManager {
 						await this.deleteFile(entryToDelete.storagePath);
 						delete storageInfo[keyToDelete];
 						await this.saveStorageInfo(storageFolder, storageInfo);
+						// Storage-info keys are the content's base source URLs.
+						// no await to not to block eviction when server takes too long to respond
+						this.sendOptInEventReport('media-deleted', { src: keyToDelete });
 						debug(
 							'Deleted oldest storage file to make room (was at %d files): %s',
 							entries.length,

@@ -1,0 +1,26 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90" skipPlaybackOnHttpStatus="404"/>
+        <!-- Opt-in media-skipped: the gated slot must report media-skipped when the
+             playCheckUrl gate closes it. Everything else (downloads, playback) is
+             filtered out by the allowlist. -->
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-skipped"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape1.jpg"
+                     region="main" fit="fill"/>
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape2.jpg"
+                     region="main" fit="fill"
+                     playCheckUrl="http://localhost:3000/gate/check/skipped-one"/>
+            </seq>
+        </par>
+    </body>
+</smil>

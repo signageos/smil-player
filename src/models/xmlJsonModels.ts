@@ -32,6 +32,8 @@ export type SmilLogger = {
 	type?: (smilLogging.standard | smilLogging.proofOfPlay)[];
 	endpoint?: string;
 	reportFileLimit: number;
+	// Custom-endpoint event allowlist from <meta events="...">; absent = default set
+	events?: string[];
 };
 
 export type TransitionsObject = {
@@ -81,6 +83,7 @@ export type SMILMetaObject = {
 	type?: smilLogging.standard | smilLogging.proofOfPlay;
 	endpoint?: string;
 	reportFileLimit?: string;
+	events?: string;
 	onlySmilUpdate: boolean | string;
 	timeOut?: string;
 	syncServerUrl?: string;

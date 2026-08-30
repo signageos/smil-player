@@ -356,9 +356,11 @@ payload entirely.
 
 **Type:** string · **Default:** none · **Applies to:** any media element with proof-of-play reporting enabled
 
-The report's `name` field is set by the player itself (`media-playback`, `media-download`, `playlist-download`,
-`playlist-playback`) and identifies the event type — the `popName` attribute value is not carried in custom-endpoint
-payloads. Use `popCustomId` or `popFileName` to identify individual media items.
+The report's `name` field is set by the player itself and identifies the event type — the default
+`media-playback`, `media-download`, `playlist-download`, `playlist-playback`, plus the opt-in content-lifecycle
+events `media-copied`, `media-moved`, `media-restored`, `media-deleted`, `media-skipped` (see
+[Custom endpoint payloads](./reporting-payloads.md#custom-endpoint-payloads)). The `popName` attribute value is not
+carried in custom-endpoint payloads. Use `popCustomId` or `popFileName` to identify individual media items.
 
 Used in: [Proof of Play](../guides/reporting/proof-of-play.md)
 

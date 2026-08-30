@@ -1,0 +1,27 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90"/>
+        <!-- log="false" must be a real off switch: even with type + endpoint
+             configured, NO custom-endpoint reports may be sent (filed bug #7). -->
+        <meta log="false" type="manual" endpoint="http://localhost:3000/report"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <video src="http://localhost:3000/assets/landscape1.mp4"
+                       region="main" soundLevel="0%"
+                       popName="videoEvent" popType="video"
+                       popTags="tag1,tag2"/>
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape1.jpg"
+                     region="main" fit="fill"
+                     popName="imageEvent" popType="image"
+                     popTags="tag3,tag4"/>
+            </seq>
+        </par>
+    </body>
+</smil>

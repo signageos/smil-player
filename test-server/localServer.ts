@@ -43,6 +43,10 @@ export function createTestServer(serverPort: number = TestServer.port) {
 	// for error-recovery tests. Missing/true => broken (404); false => serve valid.
 	const recoverConfig: Record<string, boolean> = {};
 
+	// Version query param appended by the /moved/redirect Location header; bumped
+	// via POST /moved/bump to simulate content moving to a new URL (media-moved).
+	let movedVersion = 1;
+
 	// Allow cross-origin requests from the emulator (localhost:8090)
 	app.use((_req, res, next) => {
 		res.header('Access-Control-Allow-Origin', '*');
@@ -59,6 +63,7 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		Object.keys(fallbackConfig).forEach(key => delete fallbackConfig[key]);
 		Object.keys(recoverConfig).forEach(key => delete recoverConfig[key]);
 		reportFailMode = false;
+		movedVersion = 1;
 		res.json({ ok: true });
 	});
 
@@ -198,6 +203,22 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		const buf = await fs.readFile(`./${TestServer.assetsPath}/landscape1.jpg`);
 		res.set('Content-Type', 'image/jpeg');
 		res.send(buf);
+	});
+
+	// Moved-content harness (media-moved reporting). The slot 204+redirects to the
+	// shared content URL with a version query param. Bumping the version via POST
+	// changes the Location URL while the content bytes stay identical — the player
+	// detects a mapping-only change (no re-download) and, when allowlisted, emits
+	// a media-moved report.
+	app.all('/moved/redirect/:slot', (req, res) => {
+		res.set('Access-Control-Expose-Headers', 'Location');
+		res.set('Location', `http://localhost:${port}/dedup/content/shared.jpg?v=${movedVersion}`);
+		res.status(204).end();
+	});
+
+	app.post('/moved/bump', (_req, res) => {
+		movedVersion++;
+		res.json({ ok: true, movedVersion });
 	});
 
 	// =====================================================================

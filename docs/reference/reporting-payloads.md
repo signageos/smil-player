@@ -164,10 +164,30 @@ see [`reportMode`](./element-attributes.md#reportmode) in the Element Attribute 
 
 ### Logged events
 
-- Each real file download (`media-download`) — internal copy/restore operations are not reported
+Default event set (sent when no `events` allowlist is configured):
+
+- Each real file download (`media-download`)
 - Each media playback (`media-playback`)
 - Each download of the SMIL file itself (`playlist-download`)
 - Each (re)start of SMIL playlist processing (`playlist-playback`)
+
+Opt-in events (sent **only** when explicitly listed in the
+[`events`](./meta-attributes.md#events) allowlist on `<meta log>`):
+
+- `media-copied` — content arrived on device by an internal dedup copy: it was downloaded once and copied to
+  satisfy another URL resolving to the same content
+- `media-moved` — mapping-only update: the content URL / redirect target changed but the bytes were already on
+  the device, so nothing was downloaded
+- `media-restored` — content was restored from the local `smil/storage` preservation folder instead of being
+  re-downloaded
+- `media-deleted` — a stored file was removed: either it is no longer referenced by the current playlist
+  (cleanup after a SMIL update) or it was evicted from the `smil/storage` preservation folder to make room
+- `media-skipped` — an element was skipped for one pass because its
+  [`playCheckUrl`](./element-attributes.md#playcheckurl) playability gate closed it
+
+The `events` attribute also filters the default set: when present, **only** the listed events are sent (or saved
+to the offline log) — everything else is dropped at emission. Reports already saved offline are always uploaded
+regardless of the current allowlist.
 
 ### Payload of messages
 
@@ -201,6 +221,19 @@ failures carry the HTTP error status of the failed request (or `502` when the do
 ```
 
 A failed download has the same shape with the error status in `status` (e.g. `502`).
+
+#### Opt-in content lifecycle (`media-copied` / `media-moved` / `media-restored` / `media-deleted` / `media-skipped`)
+
+Opt-in events (see [Logged events](#logged-events)) with the exact same payload shape as `media-download` — only
+the `name` differs. `status` is always `200` (these paths involve no network transfer of the content). `url`
+carries the resolved content URL (after redirects), with two exceptions: for `media-skipped` it is the gated
+element's source URL, and for a `media-deleted` fired by playlist cleanup it is the deleted file's **local path**
+(the original source URL of an orphaned file is no longer known); `media-deleted` fired by storage eviction
+carries the content's source URL.
+
+```json
+{ "name": "media-copied", "playbackSuccess": true, "status": 200, "time": 1732060768, "url": "https://cdn.example.com/video.mp4" }
+```
 
 #### Playback (`media-playback`)
 
