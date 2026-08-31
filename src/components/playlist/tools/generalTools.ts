@@ -1,10 +1,8 @@
 /* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
-import unset = require('lodash/unset');
 import isObject = require('lodash/isObject');
 import cloneDeep = require('lodash/cloneDeep');
-import { inspect } from 'util';
 import moment from 'moment';
 import {
 	BackupPlaylist,
@@ -19,7 +17,12 @@ import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { TimedDebugger } from '../playlistProcessor/TimedDebugger';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
+import {
+	parentGenerationAllow,
+	parentGenerationRecurseTagsRegex,
+	randomPlaylistPlayableTagsRegex,
+	SMILEnums,
+} from '../../../enums/generalEnums';
 import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
@@ -207,28 +210,60 @@ export function computeSyncIndex(
 	return regionSyncIndex;
 }
 
-// seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
-export function generateParentId(tagName: string, value: PlaylistElement): string {
-	try {
-		let clone = cloneDeep(value);
-		clone = orderJsonObject(clone);
-		removeNestedProperties(clone, parentGenerationRemove);
-		const parent = `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
-		return parent;
-	} catch (err) {
-		debug('[general] error during parent generation: %O', err);
-		return `${tagName}-undefined`;
+// Deep verbatim copy of an allow-listed attribute's value; arrays become
+// index-keyed objects so sibling order stays encoded in the hashed keys
+// (node-object-hash sorts arrays, which would erase order).
+function projectValueDeep(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		const out: { [index: string]: unknown } = {};
+		value.forEach((item, index) => (out[index] = projectValueDeep(item)));
+		return out;
 	}
+	if (isObject(value)) {
+		const out: { [key: string]: unknown } = {};
+		for (let [key, item] of Object.entries(value)) {
+			out[key] = projectValueDeep(item);
+		}
+		return out;
+	}
+	return value;
 }
 
-export function removeNestedProperties(object: PlaylistElement, propertiesArray: string[]): void {
-	for (let [objKey, objValue] of Object.entries(object)) {
-		if (propertiesArray.includes(objKey)) {
-			unset(object, objKey);
+// Projects a parsed playlist subtree down to its declarative identity: structure/media
+// tags are recursed, allow-listed attributes are copied, everything else — including
+// every runtime write playback makes onto the live tree — is invisible by construction.
+export function projectForParentGeneration(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		const out: { [index: string]: unknown } = {};
+		value.forEach((item, index) => (out[index] = projectForParentGeneration(item)));
+		return out;
+	}
+	if (isObject(value)) {
+		const out: { [key: string]: unknown } = {};
+		for (let [key, item] of Object.entries(value)) {
+			if (parentGenerationRecurseTagsRegex.test(key)) {
+				out[key] = projectForParentGeneration(item);
+			} else if (parentGenerationAllow.includes(key)) {
+				out[key] = projectValueDeep(item);
+			}
 		}
-		if (isObject(objValue)) {
-			removeNestedProperties(objValue, propertiesArray);
-		}
+		return out;
+	}
+	return value;
+}
+
+// seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
+// Element identity — MUST be identical for the same SMIL element on every traversal
+// pass (priority peer detection). Device-local: sync coordination keys are built from
+// regionName + syncIndex, never from this hash.
+export function generateParentId(tagName: string, value: PlaylistElement): string {
+	try {
+		return `${tagName}-${hashSortCoerce.hash(projectForParentGeneration(value))}`;
+	} catch (err) {
+		debug('[general] error during parent generation: %O', err);
+		// per-shape fallback — the old shared `${tagName}-undefined` collapsed ALL
+		// failures into one identity
+		return `${tagName}-fallback-${Object.keys(value || {}).join('.')}`;
 	}
 }
 
@@ -329,15 +364,6 @@ export async function promiseWithTimeout<T>(
 	} finally {
 		clearTimeout(timeoutId!);
 	}
-}
-
-export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
-	return Object.keys(jsonObject)
-		.sort()
-		.reduce((obj: { [objKey in string]: unknown }, key) => {
-			obj[key] = jsonObject[key];
-			return obj;
-		},      {});
 }
 
 export function shuffleObject(playlist: { [key in string]: unknown }): { [key in string]: unknown } {

@@ -23,7 +23,8 @@ export type UpdateChecks = {
 	// unavailable (skipContentOnHttpStatus match, 5xx / transport failure with
 	// allowLocalFallback=false), cleared on the next successful check. Lives outside
 	// media.expr so the declarative conditional survives the skip→recover cycle and
-	// element identity (parent hash) stays stable — keep it in parentGenerationRemove.
+	// element identity (parent hash) stays stable — runtime flags like this one must
+	// never join parentGenerationAllow.
 	skipContentMark?: boolean;
 };
 

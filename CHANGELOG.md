@@ -29,6 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- Element identity in the priority system is now computed from the declarative SMIL attributes only (allow-list),
+  so no runtime bookkeeping the player writes onto the playlist can change an element's identity between passes
+  anymore — the class of bug where a mid-playback state change registered an element as a phantom peer of its own
+  playlist and froze the region (previously hit via `wasUpdated`, `popName`, and report-URL refresh) is closed by
+  construction. Identity now also compares full playlist depth: distinct deeply-nested playlists that previously
+  collided into one priority entry are tracked separately, with peer/lower/higher rules applied correctly
 - `skipContentOnHttpStatus` no longer destroys an element's conditional `expr`: previously the internal skip mark
   overwrote the expression and the recovery path then deleted it, so an element with a daypart/conditional that hit
   one transient skip status played unconditionally from then on. The mark now lives on a dedicated internal flag and
