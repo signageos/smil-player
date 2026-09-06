@@ -53,6 +53,8 @@ export enum SMILUrls {
 	priorityThreeLevelDeferExpiry = 'http://localhost:3000/dynamic/priorityThreeLevelDeferExpiry.smil',
 	priorityPeerPause = 'http://localhost:3000/dynamic/priorityPeerPause.smil',
 	prioritySmilUpdate = 'http://localhost:3000/dynamic-update/prioritySmilUpdate.smil',
+	priorityFutureViaRefresh = 'http://localhost:3000/dynamic-update/priorityFutureViaRefresh.smil',
+	priorityNowViaRefresh = 'http://localhost:3000/dynamic-update/priorityNowViaRefresh.smil',
 	priorityLowerStop = 'http://localhost:3000/dynamic/priorityLowerStop.smil',
 	priorityLowerPause = 'http://localhost:3000/dynamic/priorityLowerPause.smil',
 	priorityDeferInterrupt = 'http://localhost:3000/dynamic/priorityDeferInterrupt.smil',

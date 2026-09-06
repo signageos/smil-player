@@ -133,6 +133,8 @@ export class TestablePlaylistProcessor extends PlaylistProcessor {
 		timedDebug?: TimedDebugger,
 	) => void = this.setCurrentlyPlaying;
 	public exposedGetCancelFunction: () => boolean = this.getCancelFunction;
+	public exposedWaitTimeoutOrFileUpdate: (timeout: number, version: number) => Promise<boolean> =
+		this.waitTimeoutOrFileUpdate;
 
 	public getCurrentlyPlaying() {
 		return this.currentlyPlaying;

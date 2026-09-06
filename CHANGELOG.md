@@ -29,6 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- Priority campaign with a future wallclock `begin` delivered through a SMIL refresh never played: the new playlist
+  version's wallclock wait shared one cancel signal with the version being retired, so the cancel of the old version
+  aborted the wait and the campaign branch dropped out for the lifetime of that version. The wait is now
+  version-aware and only ends early when its own version is cancelled. Affected shapes: `<par begin end>` directly under
+  a `priorityClass` (typically with `defaultRepeatCount="indefinite"`), a single `priorityClass` in an `excl`, or a lone
+  wallclock child; the multi-class seq template picked such content up on the next pass and was not affected
 - Element identity in the priority system is now computed from the declarative SMIL attributes only (allow-list),
   so no runtime bookkeeping the player writes onto the playlist can change an element's identity between passes
   anymore — the class of bug where a mid-playback state change registered an element as a phantom peer of its own

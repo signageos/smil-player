@@ -56,6 +56,8 @@ var SMILUrls;
     SMILUrls["priorityThreeLevelDeferExpiry"] = "http://localhost:3000/dynamic/priorityThreeLevelDeferExpiry.smil";
     SMILUrls["priorityPeerPause"] = "http://localhost:3000/dynamic/priorityPeerPause.smil";
     SMILUrls["prioritySmilUpdate"] = "http://localhost:3000/dynamic-update/prioritySmilUpdate.smil";
+    SMILUrls["priorityFutureViaRefresh"] = "http://localhost:3000/dynamic-update/priorityFutureViaRefresh.smil";
+    SMILUrls["priorityNowViaRefresh"] = "http://localhost:3000/dynamic-update/priorityNowViaRefresh.smil";
     SMILUrls["priorityLowerStop"] = "http://localhost:3000/dynamic/priorityLowerStop.smil";
     SMILUrls["priorityLowerPause"] = "http://localhost:3000/dynamic/priorityLowerPause.smil";
     SMILUrls["priorityDeferInterrupt"] = "http://localhost:3000/dynamic/priorityDeferInterrupt.smil";
