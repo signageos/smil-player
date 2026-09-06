@@ -709,14 +709,21 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	/**
 	 * function used to await for content to appear based on wallclock definitions, can be interrupted earlier by updates in smil file
 	 * @param timeout - how long should function wait
+	 * @param version - playlist version the caller belongs to. cancelDeferred is shared by every version, so a cancel
+	 * that retires an OLDER version (processVersionUpdate right after a refresh) wakes this wait too; only a cancel of
+	 * this very version may end it early, otherwise keep sleeping the remainder.
+	 * @returns true when this version was cancelled (caller must drop out), false when the timeout elapsed
 	 */
-	protected waitTimeoutOrFileUpdate = async (timeout: number): Promise<boolean> => {
-		let fileUpdated = false;
-		await Promise.race([
-			sleep(timeout),
-			this.waitForCancelFunction().then(() => { fileUpdated = true; }),
-		]);
-		return fileUpdated;
+	protected waitTimeoutOrFileUpdate = async (timeout: number, version: number): Promise<boolean> => {
+		const deadline = Date.now() + timeout;
+		while (!this.cancelFunction[version]) {
+			const remaining = deadline - Date.now();
+			if (remaining <= 0) {
+				return false;
+			}
+			await Promise.race([sleep(remaining), this.cancelDeferred.promise]);
+		}
+		return true;
 	};
 
 	// audio currently not supported

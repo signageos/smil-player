@@ -1,0 +1,35 @@
+<smil>
+<head>
+  <!-- 5s refresh so the second GET (Phase 2, campaign window re-rendered) arrives quickly -->
+  <meta http-equiv="Refresh" content="5"/>
+  <meta defaultRepeatCount="indefinite"/>
+  <layout>
+    <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+    <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+  </layout>
+</head>
+<body>
+  <par>
+    <excl>
+      <!-- campaign: Phase 1 window permanently expired (never plays), Phase 2 window filled by fillWallclock -->
+      <priorityClass higher="stop" lower="never" peer="stop">
+        <par begin="VIA_REFRESH_BEGIN" end="VIA_REFRESH_END">
+          <seq repeatCount="indefinite">
+            <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main"/>
+          </seq>
+        </par>
+      </priorityClass>
+      <!-- base loop: no wallclock -->
+      <priorityClass higher="stop" lower="never" peer="stop">
+        <par>
+          <seq repeatCount="indefinite">
+            <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" dur="3s" region="main"/>
+            <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main"/>
+            <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" dur="3s" region="main"/>
+          </seq>
+        </par>
+      </priorityClass>
+    </excl>
+  </par>
+</body>
+</smil>

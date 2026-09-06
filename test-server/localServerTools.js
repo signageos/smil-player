@@ -141,6 +141,18 @@ function fillWallclock(fileString, fileName, requestCount = 1) {
             parsedFileString = parsedFileString.replace('TIME_BEGIN', `${formatTime(moment().subtract(60, 'seconds'))}`);
             parsedFileString = parsedFileString.replace('TIME_END', `${formatTime(moment().add(30, 'seconds'))}`);
             break;
+        case enums_1.SMILUrls.priorityFutureViaRefresh.split('/').pop():
+        case enums_1.SMILUrls.priorityNowViaRefresh.split('/').pop(): {
+            // Campaign delivered THROUGH a refresh (render shape of a scheduling backend).
+            // Phase 1 (requestCount=1): non-repeating window fully in the past → neverPlay → base loop only.
+            // Phase 2 (requestCount>1): window re-rendered from "now" — begin = now (control) or now+40s (future).
+            const future = fileName === enums_1.SMILUrls.priorityFutureViaRefresh.split('/').pop();
+            const begin = requestCount <= 1 ? moment().subtract(2, 'hours') : moment().add(future ? 40 : -1, 'seconds');
+            const end = requestCount <= 1 ? moment().subtract(1, 'hours') : moment().add(150, 'seconds');
+            parsedFileString = parsedFileString.replace('VIA_REFRESH_BEGIN', `wallclock(${formatDate(begin)})`);
+            parsedFileString = parsedFileString.replace('VIA_REFRESH_END', `wallclock(${formatDate(end)})`);
+            break;
+        }
         case enums_1.SMILUrls.prioritySmilUpdate.split('/').pop():
             // Phase 1 (requestCount=1): P_high active for 60s, P_low deferred.
             // Phase 2+ (requestCount>1): P_high active for 15s then expires → P_low plays.

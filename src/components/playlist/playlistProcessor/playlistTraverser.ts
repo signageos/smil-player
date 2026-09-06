@@ -111,7 +111,7 @@ export interface ITraverserControl {
 	readonly dynamicPlaylist: DynamicPlaylistEndless;
 
 	sleep(ms: number): Promise<void>;
-	waitTimeoutOrFileUpdate(timeout: number): Promise<boolean>;
+	waitTimeoutOrFileUpdate(timeout: number, version: number): Promise<boolean>;
 	runEndlessLoop(
 		fn: Function,
 		version: number,
@@ -953,7 +953,7 @@ export class PlaylistTraverser {
 	): Promise<void> => {
 		return (async () => {
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			await this.processPlaylist(value, version, parent, timeToEnd, priorityObject, conditionalExpr);
@@ -978,7 +978,7 @@ export class PlaylistTraverser {
 		return (async () => {
 			let newParent = generateParentId(parent, value);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			// Wallclock-windowed content is starting: record the window end on the
@@ -1018,7 +1018,7 @@ export class PlaylistTraverser {
 		return (async () => {
 			debug('[traverser] processing indefinite repeat: endTime=%s', endTime);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			// when endTime is not set, play indefinitely

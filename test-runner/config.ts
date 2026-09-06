@@ -73,6 +73,8 @@ export function getSmilUrls(port: number = 3000) {
 		priorityThreeLevelDeferExpiry: `${base}/dynamic/priorityThreeLevelDeferExpiry.smil`,
 		priorityPeerPause: `${base}/dynamic/priorityPeerPause.smil`,
 		prioritySmilUpdate: `${base}/dynamic-update/prioritySmilUpdate.smil`,
+		priorityFutureViaRefresh: `${base}/dynamic-update/priorityFutureViaRefresh.smil`,
+		priorityNowViaRefresh: `${base}/dynamic-update/priorityNowViaRefresh.smil`,
 		priorityLowerStop: `${base}/dynamic/priorityLowerStop.smil`,
 		priorityLowerPause: `${base}/dynamic/priorityLowerPause.smil`,
 		priorityDeferInterrupt: `${base}/dynamic/priorityDeferInterrupt.smil`,
