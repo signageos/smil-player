@@ -439,4 +439,41 @@ describe('PlaylistProcessor', () => {
 			expect(triggersWaiterWoken).to.equal(true);
 		});
 	});
+
+	describe('shouldWaitAndContinue - ready to play claims the slot', () => {
+		it('clears the successor flag BEFORE marking the slot playing', async () => {
+			const sos = createMockSos();
+			const files = createMockFiles();
+			const options = createDefaultOptions();
+			options.currentlyPlayingPriority = {
+				main: [{
+					behaviour: 'none',
+					player: { contentPause: 0, stop: false, endTime: 1, playing: true, timesPlayed: 0 },
+				}],
+			} as any;
+
+			const order: string[] = [];
+			const priority = createMockPriority();
+			priority.stateManager = {
+				ensurePromiseAwaiting: stub(),
+				getPromiseAwaiting: () => undefined,
+				cancelAllInRegion: stub(),
+				clearSuccessor: (region: string, index: number) => order.push(`clear:${region}:${index}`),
+				setPlaying: (region: string, index: number) => order.push(`play:${region}:${index}`),
+			};
+			const processor = new TestablePlaylistProcessor(sos, files, options, {
+				triggers: createMockTriggers(),
+				priority,
+			});
+
+			const media = { src: 'img.jpg', regionInfo: { regionName: 'main' } } as any;
+			const timedDebug = { log: () => undefined } as any;
+			const result = await (processor as any).shouldWaitAndContinue(
+				media, media.regionInfo, 'main', 0, 0, 1, true, 0, timedDebug, undefined,
+			);
+
+			expect(result).to.equal(WaitStatus.CONTINUE);
+			expect(order).to.deep.equal(['clear:main:0', 'play:main:0']);
+		});
+	});
 });
