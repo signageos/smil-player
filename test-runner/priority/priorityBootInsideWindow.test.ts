@@ -17,7 +17,11 @@ const CAMPAIGN_IMG = 'img:visible[src*="images/img_1_aba14e1e.jpg"]';
 const ANY_LOWER_VIDEO = 'video[src*="videos/video-test_"]';
 
 test.describe('priorityBootInsideWindow.smil test', () => {
-	test('lower class stays off screen for the whole campaign window, then resumes', async ({ page, context, smilUrls }) => {
+	test('lower class stays off screen for the whole campaign window, then resumes', async ({
+		page,
+		context,
+		smilUrls,
+	}) => {
 		await context.addInitScript((url: string) => {
 			(window as any).__SMIL_URL__ = url;
 		}, smilUrls.priorityBootInsideWindow);
@@ -35,7 +39,10 @@ test.describe('priorityBootInsideWindow.smil test', () => {
 		// 45s of polling covers two campaign passes with margin; the window is 80s from the SMIL fetch.
 		const deadline = Date.now() + 45_000;
 		while (Date.now() < deadline) {
-			await expect(page.locator(ANY_LOWER_VIDEO), 'lower video must not start inside the campaign window').toHaveCount(0);
+			await expect(
+				page.locator(ANY_LOWER_VIDEO),
+				'lower video must not start inside the campaign window',
+			).toHaveCount(0);
 			await page.waitForTimeout(1_000);
 		}
 
