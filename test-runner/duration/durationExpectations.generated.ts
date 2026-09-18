@@ -349,6 +349,13 @@ export const GENERATED = {
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 6 },
 		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 6 },
 	],
+	"priorityBootInsideWindow": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5, minOccurrences: 0 },
+		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 10 },
+		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 5 },
+	],
 	"priorityConditionalPhantom": [
 		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
