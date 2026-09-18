@@ -736,6 +736,13 @@ describe('PriorityStateManager', () => {
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
 		});
+
+		it('releaseSlot drops a pending successor claim so the predecessor does not hold forever', () => {
+			state.main = [makeRegion({ player: { ...playing, successorRegistered: true } })];
+			mgr.releaseSlot('main', 0);
+			expect(mgr.hasSuccessor('main', 0)).to.equal(false);
+			expect(state.main[0].player.playing).to.equal(false);
+		});
 	});
 
 });
