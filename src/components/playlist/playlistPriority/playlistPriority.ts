@@ -145,10 +145,13 @@ export class PlaylistPriority implements IPlaylistPriority {
 			// lower-priority waiter through in the ~70 ms before the successor re-claims it —
 			// the waiter is woken synchronously by the release and always wins that race.
 			// Hold instead: keep playing=true, keep the level's tracking claim, keep pause
-			// victims. External unlocks (SMIL update, version change) always release, and a
-			// pass with no successor (the last one) releases as before.
+			// victims. External unlocks (SMIL update, version change, window end) always
+			// release, and a pass with no successor (the last one) releases as before.
 			const holdForSuccessor =
-				!smilFileUpdated && !expiredVersion && this.stateManager.hasSuccessor(priorityRegionName, currentIndex);
+				!smilFileUpdated &&
+				!expiredVersion &&
+				!endTimeExpired &&
+				this.stateManager.hasSuccessor(priorityRegionName, currentIndex);
 
 			const { pausedIndexes } = this.stateManager.markFinished(
 				priorityRegionName,

@@ -211,7 +211,7 @@ describe('PlaylistPriority', () => {
 			playingCompletionDeferred: undefined,
 		});
 
-		function seedCampaign(successorRegistered: boolean, controlledPlaylists: number[] = []) {
+		function seedCampaign(successorRegistered: boolean, controlledPlaylists: number[] = [], endTime: number = 1) {
 			const media = makeMedia('campaign.jpg');
 			state.main = [
 				makeRegion({
@@ -219,7 +219,7 @@ describe('PlaylistPriority', () => {
 					isFirstInPlaylist: media,
 					priority: makePriorityObject({ priorityLevel: 1 }),
 					controlledPlaylists,
-					player: { ...finishedPlayer(), successorRegistered },
+					player: { ...finishedPlayer(), successorRegistered, endTime },
 				}),
 			];
 			stateManager.setPlaying('main', 0);
@@ -272,6 +272,30 @@ describe('PlaylistPriority', () => {
 			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
 			expect(state.main[1].player.contentPause).to.equal(PAUSE_CONTENT_VALUE);
 			expect(state.main[0].controlledPlaylists).to.deep.equal([1]);
+		});
+
+		it('releases despite a successor when the wallclock window has closed (endTimeExpired)', async () => {
+			state.main = [];
+			const media = seedCampaign(true, [1], Date.now() - 1_000);
+			state.main.push(
+				makeRegion({
+					media: makeMedia('lower.mp4'),
+					parent: 'seq-lower',
+					player: {
+						contentPause: PAUSE_CONTENT_VALUE,
+						stop: false,
+						endTime: 1,
+						playing: false,
+						timesPlayed: 0,
+						playingCompletionDeferred: undefined,
+					},
+				}),
+			);
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
+			expect(state.main[1].player.contentPause).to.equal(0);
+			expect(state.main[0].controlledPlaylists).to.deep.equal([]);
 		});
 	});
 

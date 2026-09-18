@@ -218,5 +218,35 @@ describe('PlaylistPriority integration', () => {
 			expect(currentlyPlayingPriority.main[resultA.currentIndex].player.playing).to.equal(false);
 			expect(currentlyPlayingPriority.main[resultB.currentIndex].player.playing).to.equal(true);
 		});
+
+		it('multi-element seq: successor flag survives a parent-match advance, releases after last pass', async () => {
+			const level1 = makePriorityObject({ priorityLevel: 1 });
+			const mediaA = makeMedia('a.mp4');
+			const mediaB = makeMedia('b.mp4');
+
+			// A registers and plays
+			const resultA = await priority.priorityBehaviour(mediaA, 'img1', 1, 'seq-M', 1, level1);
+			priority.stateManager.clearSuccessor('main', resultA.currentIndex); // "ready to play"
+
+			// B advances the seq (same parent 'seq-M', different media) while A is on screen
+			// → parent match, same slot, successor flag set from A's playing state
+			const resultB = await priority.priorityBehaviour(mediaB, 'img2', 1, 'seq-M', 1, level1);
+			expect(resultB.currentIndex).to.equal(resultA.currentIndex);
+
+			// A's completion signal arrives, but A isn't the last element of the seq → no-op
+			await priority.handlePriorityWhenDone(
+				mediaA, 'main', resultA.currentIndex, 1, false, 1, 1, {} as PlaylistTriggers,
+			);
+			expect(currentlyPlayingPriority.main[resultA.currentIndex].player.playing).to.equal(true);
+
+			// B becomes ready to play, consuming its own successor claim
+			priority.stateManager.clearSuccessor('main', resultA.currentIndex);
+
+			// B finishes the last pass with no successor registered → releases
+			await priority.handlePriorityWhenDone(
+				mediaB, 'main', resultA.currentIndex, 1, true, 1, 1, {} as PlaylistTriggers,
+			);
+			expect(currentlyPlayingPriority.main[resultA.currentIndex].player.playing).to.equal(false);
+		});
 	});
 });
