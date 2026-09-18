@@ -26,6 +26,7 @@ test.describe('priorityBootInsideWindow.smil test', () => {
 			(window as any).__SMIL_URL__ = url;
 		}, smilUrls.priorityBootInsideWindow);
 
+		const gotoAt = Date.now();
 		await page.goto(`/?duid=${DUID}`);
 		const frame = page.frameLocator('iframe');
 
@@ -36,13 +37,15 @@ test.describe('priorityBootInsideWindow.smil test', () => {
 		});
 
 		// Pre-fix the first lower video starts ~20s after boot and one more every ~20s.
-		// 45s of polling covers two campaign passes with margin; the window is 80s from the SMIL fetch.
-		const deadline = Date.now() + 45_000;
+		// Anchored to the SMIL fetch (goto), not to when the campaign image became visible (up to 90s
+		// after goto on a slow boot): the window closes 80s after the SMIL fetch, so the deadline leaves
+		// 10s of slack before that close instead of risking an overlap.
+		const deadline = gotoAt + 70_000;
 		while (Date.now() < deadline) {
 			await expect(
 				page.locator(ANY_LOWER_VIDEO),
 				'lower video must not start inside the campaign window',
-			).toHaveCount(0);
+			).toHaveCount(0, { timeout: 500 });
 			await page.waitForTimeout(1_000);
 		}
 

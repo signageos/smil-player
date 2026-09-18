@@ -36,7 +36,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
   `play()` was in flight when the campaign began hid the campaign element after `play()` returned and played its
   full length. The region now stays claimed between passes when the next pass has already registered (released
   normally after the last pass, at window end, on SMIL update or when the next pass cannot play), and a video whose
-  slot was paused or stopped during `play()` yields the region immediately instead of after it ends
+  slot was paused or stopped during `play()` yields the region immediately instead of after it ends. As a
+  consequence, a peer `defer`/`never` sibling in the same class now waits for the whole wallclock window of the
+  playing sibling instead of slipping in at a pass boundary
 - Priority campaign with a future wallclock `begin` delivered through a SMIL refresh never played: the new playlist
   version's wallclock wait shared one cancel signal with the version being retired, so the cancel of the old version
   aborted the wait and the campaign branch dropped out for the lifetime of that version. The wait is now
