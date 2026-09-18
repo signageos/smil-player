@@ -140,12 +140,30 @@ export class PlaylistPriority implements IPlaylistPriority {
 		if (isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
 			debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
-			const { pausedIndexes } = this.stateManager.markFinished(priorityRegionName, currentIndex);
+			// The next repeatCount pass of THIS playlist has already re-registered the slot
+			// (traverser lookahead). Releasing now would let a deferred / coordination-gated
+			// lower-priority waiter through in the ~70 ms before the successor re-claims it —
+			// the waiter is woken synchronously by the release and always wins that race.
+			// Hold instead: keep playing=true, keep the level's tracking claim, keep pause
+			// victims. External unlocks (SMIL update, version change) always release, and a
+			// pass with no successor (the last one) releases as before.
+			const holdForSuccessor =
+				!smilFileUpdated && !expiredVersion && this.stateManager.hasSuccessor(priorityRegionName, currentIndex);
+
+			const { pausedIndexes } = this.stateManager.markFinished(
+				priorityRegionName,
+				currentIndex,
+				holdForSuccessor,
+			);
 
 			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
-			if (priorityLevel !== undefined) {
+			if (priorityLevel !== undefined && !holdForSuccessor) {
 				this.stateManager.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
-				debug('[priority-done] cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
+				debug(
+					'[priority-done] cleaned up priority tracking for completed priority %s in region %s',
+					priorityLevel,
+					priorityRegionName,
+				);
 			}
 
 			// A repeatCount pass of a wallclock-windowed campaign finished, but the
@@ -160,11 +178,12 @@ export class PlaylistPriority implements IPlaylistPriority {
 				(currentIndexPriority.priority?.activeWindowEnd ?? 0) > Date.now();
 
 			if (pausedIndexes.length > 0) {
-				if (windowStillOpen) {
+				if (windowStillOpen || holdForSuccessor) {
 					debug(
-						'[priority-done] holding paused playlist: region=%s, active window open until %d',
+						'[priority-done] holding paused playlist: region=%s, windowStillOpen=%s, holdForSuccessor=%s',
 						priorityRegionName,
-						currentIndexPriority.priority!.activeWindowEnd,
+						windowStillOpen,
+						holdForSuccessor,
 					);
 				} else {
 					debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);

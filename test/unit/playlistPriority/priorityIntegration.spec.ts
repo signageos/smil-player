@@ -168,4 +168,55 @@ describe('PlaylistPriority integration', () => {
 			expect(currentlyPlayingPriority.main[resultA.currentIndex].player.playing).to.equal(false);
 		});
 	});
+
+	describe('successor hold lifecycle', () => {
+		it('single-seq campaign: slot stays claimed across passes and releases after the last pass', async () => {
+			const media = makeMedia('campaign.jpg');
+			const level1 = makePriorityObject({ priorityLevel: 1 });
+			// pass 1 registers and plays
+			const pass1 = await priority.priorityBehaviour(media, 'img1', 1, 'seq-C', 1, level1);
+			priority.stateManager.clearSuccessor('main', pass1.currentIndex); // "ready to play"
+			// pass 2 re-registers while pass 1 is on screen (traverser lookahead)
+			await priority.priorityBehaviour(media, 'img1', 1, 'seq-C', 1, level1);
+			// pass 1 finishes (repeatCount 1, last element)
+			await priority.handlePriorityWhenDone(
+				media, 'main', pass1.currentIndex, 1, true, 1, 1, {} as PlaylistTriggers,
+			);
+			expect(currentlyPlayingPriority.main[pass1.currentIndex].player.playing).to.equal(true);
+
+			// pass 2 becomes ready, plays, nobody re-registers → its finish releases
+			priority.stateManager.clearSuccessor('main', pass1.currentIndex);
+			await priority.handlePriorityWhenDone(
+				media, 'main', pass1.currentIndex, 1, true, 1, 1, {} as PlaylistTriggers,
+			);
+			expect(currentlyPlayingPriority.main[pass1.currentIndex].player.playing).to.equal(false);
+		});
+
+		it('sibling campaigns in one class: A finishing still wakes the never-blocked B', async () => {
+			const level1 = makePriorityObject({ priorityLevel: 1, peer: PriorityRule.never });
+			const mediaA = makeMedia('a.jpg');
+			const resultA = await priority.priorityBehaviour(mediaA, 'img1', 1, 'seq-A', 1, level1);
+			priority.stateManager.clearSuccessor('main', resultA.currentIndex);
+
+			// B (different parent, same level) registers and parks in the never-wait
+			const mediaB = makeMedia('b.jpg');
+			let bReleased = false;
+			const pendingB = priority
+				.priorityBehaviour(mediaB, 'img2', 1, 'seq-B', 1, level1)
+				.then((r) => {
+					bReleased = true;
+					return r;
+				});
+			await new Promise((r) => setImmediate(r));
+			expect(bReleased).to.equal(false);
+
+			// A finishes: A's own registration was consumed, no successor → release → B wakes
+			await priority.handlePriorityWhenDone(
+				mediaA, 'main', resultA.currentIndex, 1, true, 1, 1, {} as PlaylistTriggers,
+			);
+			const resultB = await pendingB;
+			expect(currentlyPlayingPriority.main[resultA.currentIndex].player.playing).to.equal(false);
+			expect(currentlyPlayingPriority.main[resultB.currentIndex].player.playing).to.equal(true);
+		});
+	});
 });
