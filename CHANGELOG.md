@@ -29,6 +29,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- Lower `priorityClass` content could interrupt an active higher-priority wallclock campaign in two ways: (1) between
+  two `repeatCount` passes of the campaign the region was released for ~70 ms and a deferred lower element slipped
+  in, alternating with the campaign for the rest of the window whenever playlist processing had started inside an
+  already-open window (SMIL republish picked up mid-window, applet restart, reboot); (2) a lower video whose
+  `play()` was in flight when the campaign began hid the campaign element after `play()` returned and played its
+  full length. The region now stays claimed between passes when the next pass has already registered (released
+  normally after the last pass, at window end, on SMIL update or when the next pass cannot play), and a video whose
+  slot was paused or stopped during `play()` yields the region immediately instead of after it ends
 - Priority campaign with a future wallclock `begin` delivered through a SMIL refresh never played: the new playlist
   version's wallclock wait shared one cancel signal with the version being retired, so the cancel of the old version
   aborted the wait and the campaign branch dropped out for the lifetime of that version. The wait is now
