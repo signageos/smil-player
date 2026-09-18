@@ -1306,6 +1306,26 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
+		// The priority decision for this element was taken before play(); on real devices
+		// play() takes 80-500 ms and a higher-priority element can register — and pause or
+		// stop this slot — meanwhile. Honour that NOW. Without this check the
+		// checkRegionsForCancellation below would hide the higher-priority element that
+		// painted while play() was in flight, and the pause would only bite after this
+		// video ends (the contentPause wait in playVideo), i.e. one full spot too late.
+		const ownSlot = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[arrayIndex]?.player;
+		if (ownSlot && (ownSlot.contentPause !== 0 || ownSlot.stop)) {
+			timedDebug.log(
+				'[processor] slot paused/stopped during play(), yielding region: src=%s',
+				video.localFilePath,
+			);
+			try {
+				await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
+			} catch (stopErr) {
+				timedDebug.log('[processor] yield path: stop failed: %O', stopErr);
+			}
+			return;
+		}
+
 		await this.checkRegionsForCancellation(video, currentRegionInfo, parentRegionInfo, version, timedDebug);
 
 		this.setCurrentlyPlaying(video, 'video', currentRegionInfo.regionName, timedDebug);
