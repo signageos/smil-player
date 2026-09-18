@@ -1028,6 +1028,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		timedDebug.log('[processor] playlist is ready to play: region=%s, src=%s', regionInfo.regionName, media.src);
+		// This element now owns the slot. Its own registration (priorityBehaviour, possibly seconds
+		// ago) must not be mistaken for a successor claim when it finishes — only a registration
+		// that happens from now on counts (see PriorityStateManager.hasSuccessor).
+		this.priority.stateManager.clearSuccessor(regionInfo.regionName, currentIndex);
 		this.priority.stateManager.setPlaying(regionInfo.regionName, currentIndex);
 		return WaitStatus.CONTINUE;
 	};
