@@ -268,6 +268,8 @@ export class PriorityStateManager {
 		}
 		debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = false;
+		// A bailing successor is no successor: let the predecessor's finish release normally.
+		entry.player.successorRegistered = false;
 		resolvePlayingDeferred(entry.player);
 		// A bailing element must also drop the level's coordination claim, otherwise a
 		// lower-priority element parked on `tracked <= myPriority` waits until the next

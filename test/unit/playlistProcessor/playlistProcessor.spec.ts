@@ -1,7 +1,6 @@
 import * as chai from 'chai';
 import { PlaylistCommon } from '../../../src/components/playlist/playlistCommon/playlistCommon';
-import { WaitStatus } from '../../../src/enums/priorityEnums';
-import { PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';
+import { WaitStatus, PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';
 import {
 	TestablePlaylistProcessor,
 	createMockSos,
@@ -489,14 +488,14 @@ describe('PlaylistProcessor', () => {
 		const params = ['videos/a.mp4', 0, 0, 10, 10, 'RTP'];
 		const timedDebug = { log: () => undefined } as any;
 
-		function setup(contentPause: number, currentlyPlaying: any) {
+		function setup(contentPause: number, currentlyPlaying: any, stop: boolean = false) {
 			const sos = createMockSos();
 			const options = createDefaultOptions();
 			options.currentlyPlaying = currentlyPlaying;
 			options.currentlyPlayingPriority = {
 				main: [{
 					behaviour: 'none', version: 0, priority: { priorityLevel: 0 }, controlledPlaylists: [],
-					player: { contentPause, stop: false, endTime: 1, playing: true, timesPlayed: 0 },
+					player: { contentPause, stop, endTime: 1, playing: true, timesPlayed: 0 },
 				}],
 			} as any;
 			// real PlaylistPriority (no override): handleVideoPlay races on stateManager.waitUntil
@@ -512,6 +511,21 @@ describe('PlaylistProcessor', () => {
 				const { sos, processor } = setup(PAUSE_CONTENT_VALUE, {
 					main: { src: 'campaign.jpg', media: 'html', playing: true },
 				});
+				await processor.exposedHandleVideoPlay(
+					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+				);
+				expect((sos.video.play as any).calledOnce()).to.equal(true);
+				expect((sos.video.stop as any).calledOnce()).to.equal(true);
+				expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
+			},
+		);
+
+		it(
+			'stops its own video when its slot was stopped (not paused) during play()',
+			async () => {
+				const { sos, processor } = setup(0, {
+					main: { src: 'campaign.jpg', media: 'html', playing: true },
+				}, true);
 				await processor.exposedHandleVideoPlay(
 					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
 				);
