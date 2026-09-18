@@ -183,6 +183,18 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 				`wallclock(${formatDate(moment().add(60, 'seconds'))})`,
 			);
 			break;
+		case SMILUrls.priorityBootInsideWindow.split('/').pop():
+			// Campaign window already open at boot (begin in the past), closes 80s after the SMIL
+			// fetch so the test can also prove the lower class resumes once the window ends.
+			parsedFileString = parsedFileString.replace(
+				/BOOT_IN_BEGIN/g,
+				`wallclock(${formatDate(moment().subtract(60, 'seconds'))})`,
+			);
+			parsedFileString = parsedFileString.replace(
+				/BOOT_IN_END/g,
+				`wallclock(${formatDate(moment().add(80, 'seconds'))})`,
+			);
+			break;
 		case 'customerReproDelayed.smil':
 		case SMILUrls.prioritySingleCampaign.split('/').pop():
 			// Customer repro: SINGLE video in higher priorityClass, wallclock window

@@ -48,6 +48,7 @@ export enum SMILUrls {
 	priorityDeferExpiry = 'http://localhost:3000/dynamic/priorityDeferExpiry.smil',
 	priorityNever = 'http://localhost:3000/dynamic/priorityNever.smil',
 	prioritySeqCampaign = 'http://localhost:3000/dynamic/prioritySeqCampaign.smil',
+	priorityBootInsideWindow = 'http://localhost:3000/dynamic/priorityBootInsideWindow.smil',
 	prioritySingleCampaign = 'http://localhost:3000/dynamic/prioritySingleCampaign.smil',
 	priorityPeerDefer = 'http://localhost:3000/dynamic/priorityPeerDefer.smil',
 	priorityThreeLevelDeferExpiry = 'http://localhost:3000/dynamic/priorityThreeLevelDeferExpiry.smil',
