@@ -157,6 +157,8 @@ export class PriorityStateManager {
 				infoObject.player.timesPlayed = elem.player.timesPlayed;
 				infoObject.player.playingCompletionDeferred = elem.player.playingCompletionDeferred;
 				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
+				// Next pass of the same playlist claiming a slot that is still on screen.
+				infoObject.player.successorRegistered = elem.player.playing;
 				entries[matchIndex] = infoObject;
 				currentIndex = matchIndex;
 			} else if (matchType === 'parent') {
@@ -192,6 +194,8 @@ export class PriorityStateManager {
 				infoObject.player.timesPlayed = elem.player.timesPlayed;
 				infoObject.controlledPlaylists = elem.controlledPlaylists;
 				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
+				// Seq advancing while the previous element is still on screen.
+				infoObject.player.successorRegistered = elem.player.playing;
 				entries[matchIndex] = infoObject;
 				currentIndex = matchIndex;
 			} else {
@@ -265,6 +269,11 @@ export class PriorityStateManager {
 		debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
+		// A bailing element must also drop the level's coordination claim, otherwise a
+		// lower-priority element parked on `tracked <= myPriority` waits until the next
+		// successful pass of this level (or the window end). Harmless when this level
+		// does not hold the claim.
+		this.cleanupPriorityTracking(regionName, entry.version, entry.priority?.priorityLevel);
 		this.notifyWaiters(regionName);
 	}
 
@@ -284,6 +293,19 @@ export class PriorityStateManager {
 		this.notifyWaiters(regionName);
 	}
 
+	/** True when the same playlist re-registered this slot while it was playing (next pass claimed it). */
+	public hasSuccessor(regionName: string, index: number): boolean {
+		return !!this.state[regionName]?.[index]?.player.successorRegistered;
+	}
+
+	/** The element at `index` now owns the slot; its own registration is not a successor claim. */
+	public clearSuccessor(regionName: string, index: number): void {
+		const entry = this.state[regionName]?.[index];
+		if (entry) {
+			entry.player.successorRegistered = false;
+		}
+	}
+
 	/**
 	 * Un-pauses a previously paused playlist entry.
 	 */
@@ -295,23 +317,30 @@ export class PriorityStateManager {
 	}
 
 	/**
-	 * Marks a playlist as finished: resets timesPlayed, sets playing=false, resolves deferred.
-	 * Returns the indexes of playlists this entry is holding paused (copy — release
-	 * them via unpauseAllControlled, which also clears the tracking list).
+	 * Marks a pass of a playlist as finished: resets timesPlayed and consumes the successor flag.
+	 * With `keepPlaying=false` (default) it also releases the slot (playing=false, resolves the
+	 * deferred). With `keepPlaying=true` the slot stays claimed — used between repeatCount passes
+	 * when the next pass has already re-registered it, so no lower-priority waiter can slip in.
+	 * Returns the indexes of playlists this entry is holding paused (copy — release them via
+	 * unpauseAllControlled, which also clears the tracking list).
 	 */
-	public markFinished(regionName: string, index: number): { pausedIndexes: number[] } {
+	public markFinished(regionName: string, index: number, keepPlaying: boolean = false): { pausedIndexes: number[] } {
 		const entry = this.state[regionName][index];
 		const pausedIndexes = [...entry.controlledPlaylists];
 		debug(
-			'[priority-state] markFinished: region=%s, index=%d, src=%s, pausedVictims=%d',
+			'[priority-state] markFinished: region=%s, index=%d, src=%s, pausedVictims=%d, keepPlaying=%s',
 			regionName,
 			index,
 			entry.media.src,
 			pausedIndexes.length,
+			keepPlaying,
 		);
 		entry.player.timesPlayed = 0;
-		entry.player.playing = false;
-		resolvePlayingDeferred(entry.player);
+		entry.player.successorRegistered = false;
+		if (!keepPlaying) {
+			entry.player.playing = false;
+			resolvePlayingDeferred(entry.player);
+		}
 		this.notifyWaiters(regionName);
 		return { pausedIndexes };
 	}
