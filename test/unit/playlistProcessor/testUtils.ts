@@ -135,6 +135,16 @@ export class TestablePlaylistProcessor extends PlaylistProcessor {
 	public exposedGetCancelFunction: () => boolean = this.getCancelFunction;
 	public exposedWaitTimeoutOrFileUpdate: (timeout: number, version: number) => Promise<boolean> =
 		this.waitTimeoutOrFileUpdate;
+	public exposedHandleVideoPlay: (
+		video: SMILVideo,
+		params: any,
+		sosVideoObject: any,
+		currentRegionInfo: any,
+		parentRegionInfo: any,
+		version: number,
+		arrayIndex: number,
+		timedDebug: TimedDebugger,
+	) => Promise<void> = this.handleVideoPlay;
 
 	public getCurrentlyPlaying() {
 		return this.currentlyPlaying;

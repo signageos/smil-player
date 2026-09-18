@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import { PlaylistCommon } from '../../../src/components/playlist/playlistCommon/playlistCommon';
 import { WaitStatus } from '../../../src/enums/priorityEnums';
+import { PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';
 import {
 	TestablePlaylistProcessor,
 	createMockSos,
@@ -474,6 +475,59 @@ describe('PlaylistProcessor', () => {
 
 			expect(result).to.equal(WaitStatus.CONTINUE);
 			expect(order).to.deep.equal(['clear:main:0', 'play:main:0']);
+		});
+	});
+
+	describe('handleVideoPlay - own slot paused/stopped while play() was in flight', () => {
+		const regionInfo = { regionName: 'main', left: 0, top: 0, width: 10, height: 10 };
+		const video = {
+			src: 'http://x/a.mp4',
+			localFilePath: 'videos/a.mp4',
+			regionInfo,
+			fullVideoDuration: 200, // bounds the onceEnded race without the 600s backstop timer
+		} as any;
+		const params = ['videos/a.mp4', 0, 0, 10, 10, 'RTP'];
+		const timedDebug = { log: () => undefined } as any;
+
+		function setup(contentPause: number, currentlyPlaying: any) {
+			const sos = createMockSos();
+			const options = createDefaultOptions();
+			options.currentlyPlaying = currentlyPlaying;
+			options.currentlyPlayingPriority = {
+				main: [{
+					behaviour: 'none', version: 0, priority: { priorityLevel: 0 }, controlledPlaylists: [],
+					player: { contentPause, stop: false, endTime: 1, playing: true, timesPlayed: 0 },
+				}],
+			} as any;
+			// real PlaylistPriority (no override): handleVideoPlay races on stateManager.waitUntil
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+				triggers: createMockTriggers(),
+			});
+			return { sos, processor };
+		}
+
+		it(
+			'stops its own video and leaves the region to the higher-priority element that painted meanwhile',
+			async () => {
+				const { sos, processor } = setup(PAUSE_CONTENT_VALUE, {
+					main: { src: 'campaign.jpg', media: 'html', playing: true },
+				});
+				await processor.exposedHandleVideoPlay(
+					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+				);
+				expect((sos.video.play as any).calledOnce()).to.equal(true);
+				expect((sos.video.stop as any).calledOnce()).to.equal(true);
+				expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
+			},
+		);
+
+		it('takes the region normally when its slot is untouched', async () => {
+			const { sos, processor } = setup(0, {});
+			await processor.exposedHandleVideoPlay(
+				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+			);
+			expect((sos.video.stop as any).callCount()).to.equal(0);
+			expect(processor.getCurrentlyPlaying().main.src).to.equal('http://x/a.mp4');
 		});
 	});
 });
