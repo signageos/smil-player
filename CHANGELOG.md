@@ -29,6 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- A new media file whose update value (Last-Modified date or Location URL) equalled the value of a mediaInfo entry
+  whose file was no longer on the device (removed earlier by playlist cleanup, or the SMIL file's own entry) was
+  classified as already-stored "moved content": nothing was downloaded, the mapping was written anyway and the slot
+  was skipped on every pass, surviving applet reloads. Classification now requires the matching file to exist in the
+  same media folder (the rule the moved-content copy already used), and playlist cleanup drops the mediaInfo entry
+  together with the file it deletes. Genuine moved content (matching file present) is still copied, never re-downloaded
 - Lower `priorityClass` content could interrupt an active higher-priority wallclock campaign in two ways: (1) between
   two `repeatCount` passes of the campaign the region was released for ~70 ms and a deferred lower element slipped
   in, alternating with the campaign for the rest of the window whenever playlist processing had started inside an
