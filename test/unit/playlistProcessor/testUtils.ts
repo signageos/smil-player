@@ -143,6 +143,7 @@ export class TestablePlaylistProcessor extends PlaylistProcessor {
 		parentRegionInfo: any,
 		version: number,
 		arrayIndex: number,
+		currentIndex: number,
 		timedDebug: TimedDebugger,
 	) => Promise<void> = this.handleVideoPlay;
 
