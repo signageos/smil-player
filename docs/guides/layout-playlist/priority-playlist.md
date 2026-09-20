@@ -73,7 +73,8 @@ Note that the player's default values (above) differ from the W3C SMIL defaults 
 `never` and `higher` to `stop`. With `higher="pause"`, the interrupted content resumes where it left off once the
 higher-priority content finishes. For `lower`, only `defer` and `never` are meaningful: a `lower="stop"` is treated as
 `never` and `lower="pause"` as `defer` (lower-priority content is never allowed to stop or pause what is already
-playing).
+playing). A deferred or lower-priority element waits for the whole active window of the playing element (its wallclock
+`end` or the last `repeatCount` pass), never for a single pass boundary.
 
 The validity of the `<priorityClass>` is defined by the `begin`, `end` and `expr` attributes on `<par>` elements inside
 the `priorityClass:`

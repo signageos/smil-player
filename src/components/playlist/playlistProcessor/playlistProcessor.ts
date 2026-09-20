@@ -1096,6 +1096,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 								parentRegionInfo,
 								version,
 								arrayIndex,
+								currentIndex,
 								timedDebug,
 							);
 						} else {
@@ -1241,6 +1242,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		parentRegionInfo: RegionAttributes,
 		version: number,
 		arrayIndex: number,
+		currentIndex: number,
 		timedDebug: TimedDebugger,
 	) => {
 		let promiseRaceArray = [];
@@ -1312,7 +1314,9 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// checkRegionsForCancellation below would hide the higher-priority element that
 		// painted while play() was in flight, and the pause would only bite after this
 		// video ends (the contentPause wait in playVideo), i.e. one full spot too late.
-		const ownSlot = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[arrayIndex]?.player;
+		// currentIndex is this playlist's own slot; arrayIndex is "first slot flagged playing"
+		// and may point at another playlist's row.
+		const ownSlot = this.currentlyPlayingPriority[currentRegionInfo.regionName]?.[currentIndex]?.player;
 		if (ownSlot && (ownSlot.contentPause !== 0 || ownSlot.stop)) {
 			timedDebug.log(
 				'[processor] slot paused/stopped during play(), yielding region: src=%s',

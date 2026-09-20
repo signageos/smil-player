@@ -512,7 +512,7 @@ describe('PlaylistProcessor', () => {
 					main: { src: 'campaign.jpg', media: 'html', playing: true },
 				});
 				await processor.exposedHandleVideoPlay(
-					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
 				);
 				expect((sos.video.play as any).calledOnce()).to.equal(true);
 				expect((sos.video.stop as any).calledOnce()).to.equal(true);
@@ -523,11 +523,9 @@ describe('PlaylistProcessor', () => {
 		it(
 			'stops its own video when its slot was stopped (not paused) during play()',
 			async () => {
-				const { sos, processor } = setup(0, {
-					main: { src: 'campaign.jpg', media: 'html', playing: true },
-				}, true);
+				const { sos, processor } = setup(0, { main: { src: 'campaign.jpg', media: 'html', playing: true } }, true);
 				await processor.exposedHandleVideoPlay(
-					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
 				);
 				expect((sos.video.play as any).calledOnce()).to.equal(true);
 				expect((sos.video.stop as any).calledOnce()).to.equal(true);
@@ -538,10 +536,24 @@ describe('PlaylistProcessor', () => {
 		it('takes the region normally when its slot is untouched', async () => {
 			const { sos, processor } = setup(0, {});
 			await processor.exposedHandleVideoPlay(
-				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, timedDebug,
+				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
 			);
 			expect((sos.video.stop as any).callCount()).to.equal(0);
 			expect(processor.getCurrentlyPlaying().main.src).to.equal('http://x/a.mp4');
+		});
+
+		it('reads its OWN slot, not the first playing slot, when a foreign row precedes it', async () => {
+			const { sos, processor } = setup(0, { main: { src: 'campaign.jpg', media: 'html', playing: true } });
+			// row 0 = foreign playlist still flagged playing and untouched; row 1 = own slot, paused during play()
+			(processor as any).currentlyPlayingPriority.main.push({
+				behaviour: 'none', version: 0, priority: { priorityLevel: 0 }, controlledPlaylists: [],
+				player: { contentPause: PAUSE_CONTENT_VALUE, stop: false, endTime: 1, playing: false, timesPlayed: 0 },
+			});
+			await processor.exposedHandleVideoPlay(
+				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 1, timedDebug,
+			);
+			expect((sos.video.stop as any).calledOnce()).to.equal(true);
+			expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
 		});
 	});
 });
