@@ -47,6 +47,9 @@ export function createTestServer(serverPort: number = TestServer.port) {
 	// via POST /moved/bump to simulate content moving to a new URL (media-moved).
 	let movedVersion = 1;
 
+	// Content version served by the /storage-cache harness; POST /storage-cache/set/:v.
+	let storageCacheVersion = 1;
+
 	// Allow cross-origin requests from the emulator (localhost:8090)
 	app.use((_req, res, next) => {
 		res.header('Access-Control-Allow-Origin', '*');
@@ -64,6 +67,7 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		Object.keys(recoverConfig).forEach(key => delete recoverConfig[key]);
 		reportFailMode = false;
 		movedVersion = 1;
+		storageCacheVersion = 1;
 		res.json({ ok: true });
 	});
 
@@ -219,6 +223,27 @@ export function createTestServer(serverPort: number = TestServer.port) {
 	app.post('/moved/bump', (_req, res) => {
 		movedVersion++;
 		res.json({ ok: true, movedVersion });
+	});
+
+	// Storage-cache harness (smil/storage preservation + restore, location strategy).
+	// The slot 204+redirects to a versioned content PATH (not query param) — v1 red,
+	// v2 blue. Flipping 1 -> 2 replaces the slot's content and the player must preserve
+	// the v1 file to smil/storage; flipping back 2 -> 1 must restore it from there
+	// (media-restored) instead of downloading v1 again.
+	app.all('/storage-cache/slot', (_req, res) => {
+		res.set('Access-Control-Expose-Headers', 'Location');
+		res.set('Location', `http://localhost:${port}/storage-cache/content/image_v${storageCacheVersion}.png`);
+		res.status(204).end();
+	});
+
+	app.get('/storage-cache/content/:fileName', (req, res) => {
+		res.set({ ...CBP_CORS_HEADERS, 'Content-Type': 'image/png' });
+		res.send(req.params.fileName === 'image_v1.png' ? RED_PNG : BLUE_PNG);
+	});
+
+	app.post('/storage-cache/set/:version', (req, res) => {
+		storageCacheVersion = Number(req.params.version);
+		res.json({ ok: true, storageCacheVersion });
 	});
 
 	// =====================================================================
