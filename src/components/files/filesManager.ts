@@ -2356,15 +2356,32 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	private isValueAlreadyStored = (value: string | null, mediaInfoObject: MediaInfoObject): boolean => {
+	/**
+	 * True only when a file with this value actually exists in `localFilePath` — the same
+	 * rule findActualFileForMovedContent uses to source the copy. A value-only match against
+	 * a stale entry (file deleted as unused) or the SMIL entry (lives in the root folder)
+	 * would classify new content as "moved", skip the download and leave the slot empty.
+	 */
+	private isValueAlreadyStored = async (
+		value: string | null,
+		mediaInfoObject: MediaInfoObject,
+		localFilePath: string,
+	): Promise<boolean> => {
 		if (!value) {
 			return false;
 		}
 		// Compare without query params - same content with different query params should be considered stored
 		const valueNoQuery = getUrlWithoutQueryParams(value);
-		return Object.values(mediaInfoObject).some(
-			(storedValue) => storedValue && getUrlWithoutQueryParams(storedValue) === valueNoQuery,
-		);
+		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
+			if (
+				storedValue &&
+				getUrlWithoutQueryParams(storedValue) === valueNoQuery &&
+				(await this.fileExists(`${localFilePath}/${fileName}`))
+			) {
+				return true;
+			}
+		}
+		return false;
 	};
 
 	/**
@@ -3293,7 +3310,7 @@ export class FilesManager implements IFilesManager {
 			// Determine if new content (only matters if shouldUpdate=true)
 			const isNewContent =
 				updateCheck.shouldUpdate && updateCheck.value
-					? !this.isValueAlreadyStored(updateCheck.value, mediaInfoObject)
+					? !(await this.isValueAlreadyStored(updateCheck.value, mediaInfoObject, localFilePath))
 					: false;
 
 			return {
@@ -3857,6 +3874,10 @@ export class FilesManager implements IFilesManager {
 	 */
 	private deleteUnusedFiles = async (smilObject: SMILFileObject, smilUrl: string): Promise<void> => {
 		const smilMediaArray = [...smilObject.video, ...smilObject.audio, ...smilObject.ref, ...smilObject.img];
+		// mediaInfo keys are the basenames of files in the four media folders; drop the key
+		// together with the file so its value can never match a future download again.
+		const mediaFolders: string[] = [FileStructure.videos, FileStructure.audios, FileStructure.images, FileStructure.widgets];
+		const deletedMediaKeys: string[] = [];
 
 		for (let structPath in FileStructure) {
 			const downloadedFiles = await this.sos.fileSystem.listFiles({
@@ -3896,11 +3917,26 @@ export class FilesManager implements IFilesManager {
 					) {
 						debug('[files] file not in SMIL, deleting: %O', storedFile);
 						await this.deleteFile(storedFile.filePath);
+						if (mediaFolders.includes(path.dirname(storedFile.filePath))) {
+							deletedMediaKeys.push(storedFileName);
+						}
 						// The original source URL is unknown for orphaned files — report the local path.
 						// no await to not to block cleanup when server takes too long to respond
 						this.sendOptInEventReport('media-deleted', { src: storedFile.filePath });
 					}
 				}
+			}
+		}
+
+		if (deletedMediaKeys.length > 0) {
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
+			const pruned = deletedMediaKeys.filter((key) => key in mediaInfoObject);
+			for (const key of pruned) {
+				delete mediaInfoObject[key];
+			}
+			if (pruned.length > 0) {
+				debug('[files] pruned %d mediaInfo entries of deleted files: %O', pruned.length, pruned);
+				await this.writeMediaInfoFile(mediaInfoObject);
 			}
 		}
 	};
