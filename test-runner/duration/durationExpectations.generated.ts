@@ -604,6 +604,9 @@ export const GENERATED = {
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 3 },
 	],
+	"storageRestore": [
+		{ key: "slot_b9b40ee7", srcContains: "slot_b9b40ee7", layer: 'frame', expectedSec: 3 },
+	],
 	"threeLevelPriorityTransition": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 3 },

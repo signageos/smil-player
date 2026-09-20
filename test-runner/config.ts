@@ -125,6 +125,7 @@ export function getSmilUrls(port: number = 3000) {
 		reportLogDisabled: `${base}/reporting/reportLogDisabled.smil`,
 		reportEventsCopied: `${base}/reporting/reportEventsCopied.smil`,
 		reportEventsMoved: `${base}/reporting/reportEventsMoved.smil`,
+		storageRestore: `${base}/reporting/storageRestore.smil`,
 		reportEventsSkipped: `${base}/reporting/reportEventsSkipped.smil`,
 		reportEventsDeleted: `${base}/reporting/reportEventsDeleted.smil`,
 		reportEventsDeletedAfter: `${base}/reporting/reportEventsDeletedAfter.smil`,
