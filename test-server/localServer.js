@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
+const moment = require('moment');
 const enums_1 = require("./enums");
 const localServerTools_1 = require("./localServerTools");
 /**
@@ -39,6 +40,8 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
     let movedVersion = 1;
     // Content version served by the /storage-cache harness; POST /storage-cache/set/:v.
     let storageCacheVersion = 1;
+    // Origin of the /swap-stress time buckets; reset per test via POST /reset.
+    let swapOrigin = Date.now();
     // Allow cross-origin requests from the emulator (localhost:8090)
     app.use((_req, res, next) => {
         res.header('Access-Control-Allow-Origin', '*');
@@ -56,6 +59,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
         reportFailMode = false;
         movedVersion = 1;
         storageCacheVersion = 1;
+        swapOrigin = Date.now();
         res.json({ ok: true });
     });
     /** Replace hardcoded localhost:3000 in SMIL content with actual port */
@@ -134,6 +138,73 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
             'Cache-Control': 'no-cache, no-store',
         });
         res.send(fileString);
+    });
+    // Campaign-swap stress endpoint (customer "old content keeps playing after a campaign
+    // swap" investigation). Serves the customer's playlist shape — excl > par > seq(indefinite)
+    // of wallclock <seq repeatCount="1" playMode="one"> campaigns plus an always-on pool — and
+    // swaps ONE campaign slot between two videos on a fixed wall-clock period. Last-Modified is
+    // the bucket start, so HEAD and GET agree and every bucket boundary is exactly one SMIL
+    // update. GET /swap-stress-state exposes the origin/period so a test can compute buckets.
+    const SWAP_PERIOD_MS = Number(process.env.SWAP_PERIOD_MS) || 45000;
+    const swapBucket = () => Math.floor((Date.now() - swapOrigin) / SWAP_PERIOD_MS);
+    const swapLastModified = () => new Date(swapOrigin + swapBucket() * SWAP_PERIOD_MS).toUTCString();
+    const renderSwapStress = () => {
+        const wc = (m) => `wallclock(${localServerTools_1.formatDate(m)})`;
+        const swapVideo = swapBucket() % 2 === 0 ? 'assets/loader.mp4' : 'assets/landscape1.mp4';
+        const region = 'cm1kk7rmk0005bfefhlh9hqb6';
+        const video = (src) => `<video src="http://localhost:3000/${src}" soundLevel="0%" region="${region}"/>`;
+        const campaign = (begin, end, src) => `<seq repeatCount="1" begin="${wc(begin)}" end="${wc(end)}" playMode="one">${video(src)}</seq>`;
+        return `<smil>
+  <head>
+    <meta http-equiv="Refresh" content="5" onlySmilUpdate="true"/>
+    <meta defaultRepeatCount="indefinite"/>
+    <layout>
+      <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+      <region regionName="${region}" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+    </layout>
+  </head>
+  <body>
+    <par>
+      <seq end="__prefetchEnd.endEvent">
+        <seq repeatCount="indefinite">
+          <img src="http://localhost:3000/assets/content-downloading-landscape.jpeg" dur="5s" fit="fill"/>
+        </seq>
+      </seq>
+      <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+        <excl>
+          <par>
+            <seq repeatCount="indefinite">
+              ${campaign(moment().subtract(3, 'days'), moment().subtract(2, 'days'), 'assets-b/video-test-1.mp4')}
+              ${campaign(moment().subtract(1, 'days'), moment().add(1, 'days'), 'assets/video-test-1.mp4')}
+              ${campaign(moment().subtract(1, 'days'), moment().add(1, 'days'), swapVideo)}
+              ${campaign(moment().add(1, 'days'), moment().add(2, 'days'), 'assets-b/video-test-2.mp4')}
+              <seq repeatCount="1" playMode="one">
+                ${video('assets/video-test-2.mp4')}
+                ${video('assets-b/video-test-2.mp4')}
+              </seq>
+            </seq>
+          </par>
+        </excl>
+      </par>
+    </par>
+  </body>
+</smil>`;
+    };
+    app.get('/swap-stress-state', (_req, res) => {
+        res.json({ origin: swapOrigin, periodMs: SWAP_PERIOD_MS, bucket: swapBucket() });
+    });
+    app.head('/swap-stress/:fileName', (_req, res) => {
+        res.set({ 'Content-type': 'text/xml', 'Last-Modified': swapLastModified(), 'Cache-Control': 'no-cache, no-store' });
+        res.end();
+    });
+    app.get('/swap-stress/:fileName', (req, res) => {
+        res.set({
+            'Content-Disposition': `attachment; filename="${req.params.fileName}"`,
+            'Content-type': 'text/xml',
+            'Last-Modified': swapLastModified(),
+            'Cache-Control': 'no-cache, no-store',
+        });
+        res.send(rewriteSmilPort(renderSwapStress()));
     });
     // Alias route serving the same asset bytes under a distinct URL path. Lets a
     // fixture give two SMIL elements different src identities without duplicating
