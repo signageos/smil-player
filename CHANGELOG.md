@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- Player failed to boot on Chrome 38 devices (webOS 3.x and older) with `TypeError: undefined is not a function` at
+  bundle load: `luxon` (via `ical` -> `rrule`) calls `Object.assign` at module evaluation, and since 4.0.0 the entry
+  imported the player before `@signageos/front-applet`, whose bundled core-js is the only source of that polyfill.
+  Front-applet is imported first again; `npm run check:chrome38` (part of `clean-build`) loads the built bundle on a
+  Chrome-38 API surface to guard the order
 - A new media file whose update value (Last-Modified date or Location URL) equalled the value of a mediaInfo entry
   whose file was no longer on the device (removed earlier by playlist cleanup, or the SMIL file's own entry) was
   classified as already-stored "moved content": nothing was downloaded, the mapping was written anyway and the slot
