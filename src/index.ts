@@ -1,5 +1,8 @@
-import { SmilPlayer } from './components/smilPlayer';
+// MUST stay first: front-applet bundles core-js and installs the global polyfills (Object.assign,
+// Object.entries, Array.from, String.startsWith, ...) that Chrome 38 (webOS <= 3.x) lacks. The player has
+// no polyfills of its own, and luxon (via ical -> rrule) calls Object.assign at module load.
 import sos from '@signageos/front-applet';
+import { SmilPlayer } from './components/smilPlayer';
 
 function getSmilUrlFromParams(): string | undefined {
 	// Check for injected smilUrl (set by Playwright addInitScript)
