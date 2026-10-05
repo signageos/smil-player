@@ -9,70 +9,49 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Added
 
-- `events` attribute on `<meta log>` — comma-separated allowlist of custom-endpoint report events; when set, only
-  the listed events are POSTed to the endpoint or saved to the offline log. Absent/empty keeps the default set
-  (`media-download`, `media-playback`, `playlist-download`, `playlist-playback`); unknown names are ignored.
-  Custom-endpoint transport only
-- New opt-in content-lifecycle report events (sent only when listed in `events`): `media-copied` (dedup copy
-  satisfied another URL without a second download), `media-moved` (URL/redirect mapping changed, bytes already on
-  device), `media-restored` (content restored from the `smil/storage` preservation folder), `media-deleted`
-  (stored file removed by playlist cleanup or storage eviction), `media-skipped` (element skipped for a pass by
-  its `playCheckUrl` playability gate). Payload shape matches `media-download`
-- `playCheckSkipOnError` per-element attribute — with `"true"`, a `playCheckUrl` gate transport error (server
-  unreachable/timeout) or unlisted 5xx status skips the pass instead of the default fail-open; listed statuses and
-  other unlisted statuses behave as before. Only meaningful next to `playCheckUrl`; default `false` keeps today's
-  behavior
+- `events` attribute on `<meta log>` — comma-separated list of report events to send to the custom endpoint (or save
+  to the offline log). When set, only the listed events are reported; when absent or empty, the default set is used
+  (`media-download`, `media-playback`, `playlist-download`, `playlist-playback`). Unknown names are ignored.
+  Applies to the custom endpoint only
+- New opt-in report events, sent only when listed in `events`: `media-copied` (content reused for another URL without
+  a new download), `media-moved` (content found under a new URL, nothing downloaded), `media-restored` (content
+  restored from device storage instead of re-downloaded), `media-deleted` (stored content removed by playlist cleanup
+  or storage eviction), `media-skipped` (element skipped for one pass by its `playCheckUrl` gate). Payload has the
+  same shape as `media-download`
+- `playCheckSkipOnError` per-element attribute — with `"true"`, the element is skipped for the pass when its
+  `playCheckUrl` gate cannot be reached (network error, timeout) or answers an unlisted 5xx status, instead of playing
+  from cache. Only meaningful next to `playCheckUrl`; the default `false` keeps the current fail-open behavior
 
 ### Changed
 
-- `playCheckUrl` playability gate sends GET instead of HEAD (some gate backends do not answer HEAD); still only the response status code is evaluated
+- `playCheckUrl` gate requests now use GET instead of HEAD (some gate backends do not answer HEAD); only the
+  response status code is evaluated
 
 ### Fixed
 
-- Player failed to boot on Chrome 38 devices (webOS 3.x and older) with `TypeError: undefined is not a function` at
-  bundle load: `luxon` (via `ical` -> `rrule`) calls `Object.assign` at module evaluation, and since 4.0.0 the entry
-  imported the player before `@signageos/front-applet`, whose bundled core-js is the only source of that polyfill.
-  Front-applet is imported first again; `npm run check:chrome38` (part of `clean-build`) loads the built bundle on a
-  Chrome-38 API surface to guard the order
-- A new media file whose update value (Last-Modified date or Location URL) equalled the value of a mediaInfo entry
-  whose file was no longer on the device (removed earlier by playlist cleanup, or the SMIL file's own entry) was
-  classified as already-stored "moved content": nothing was downloaded, the mapping was written anyway and the slot
-  was skipped on every pass, surviving applet reloads. Classification now requires the matching file to exist in the
-  same media folder (the rule the moved-content copy already used), and playlist cleanup drops the mediaInfo entry
-  together with the file it deletes. Genuine moved content (matching file present) is still copied, never re-downloaded
-- Lower `priorityClass` content could interrupt an active higher-priority wallclock campaign in two ways: (1) between
-  two `repeatCount` passes of the campaign the region was released for ~70 ms and a deferred lower element slipped
-  in, alternating with the campaign for the rest of the window whenever playlist processing had started inside an
-  already-open window (SMIL republish picked up mid-window, applet restart, reboot); (2) a lower video whose
-  `play()` was in flight when the campaign began hid the campaign element after `play()` returned and played its
-  full length. The region now stays claimed between passes when the next pass has already registered (released
-  normally after the last pass, at window end, on SMIL update or when the next pass cannot play), and a video whose
-  slot was paused or stopped during `play()` yields the region immediately instead of after it ends. As a
-  consequence, a peer `defer`/`never` sibling in the same class now waits for the whole wallclock window of the
-  playing sibling instead of slipping in at a pass boundary
-- Priority campaign with a future wallclock `begin` delivered through a SMIL refresh never played: the new playlist
-  version's wallclock wait shared one cancel signal with the version being retired, so the cancel of the old version
-  aborted the wait and the campaign branch dropped out for the lifetime of that version. The wait is now
-  version-aware and only ends early when its own version is cancelled. Affected shapes: `<par begin end>` directly under
-  a `priorityClass` (typically with `defaultRepeatCount="indefinite"`), a single `priorityClass` in an `excl`, or a lone
-  wallclock child; the multi-class seq template picked such content up on the next pass and was not affected
-- Element identity in the priority system is now computed from the declarative SMIL attributes only (allow-list),
-  so no runtime bookkeeping the player writes onto the playlist can change an element's identity between passes
-  anymore — the class of bug where a mid-playback state change registered an element as a phantom peer of its own
-  playlist and froze the region (previously hit via `wasUpdated`, `popName`, and report-URL refresh) is closed by
-  construction. Identity now also compares full playlist depth: distinct deeply-nested playlists that previously
-  collided into one priority entry are tracked separately, with peer/lower/higher rules applied correctly
-- `skipContentOnHttpStatus` no longer destroys an element's conditional `expr`: previously the internal skip mark
-  overwrote the expression and the recovery path then deleted it, so an element with a daypart/conditional that hit
-  one transient skip status played unconditionally from then on. The mark now lives on a dedicated internal flag and
-  the declarative expression survives the whole skip→recover cycle
-- A content skip/recover transition no longer changes the element's internal identity in the priority system —
-  previously each transition could register the element as a phantom peer of its own playlist and freeze the region
-- `log="false"` now really disables custom-endpoint reporting — previously POSTs were still sent whenever
+- Player did not start on Chrome 38 devices (webOS 3.x and older) since 4.0.0 — the screen stayed blank with
+  `TypeError: undefined is not a function` in the log
+- Updated media was not downloaded when its Last-Modified date (or Location URL) matched a file that had been removed
+  from the device earlier, or matched the SMIL file itself; the element was then skipped on every pass, even across
+  player restarts. Such content is now downloaded; genuinely moved content (file still on device) is still copied
+  instead of re-downloaded
+- A higher-priority wallclock campaign could be interrupted by lower-priority content: a lower element could slip in
+  between two `repeatCount` passes of the campaign (when the player started inside an already-open window, e.g.
+  after a SMIL update, applet restart or reboot) and then alternate with the campaign for the rest of the window, and
+  a lower video that was just starting when the campaign began could cover the campaign and play to its end. Lower
+  and `defer`/`never` sibling content now waits for the whole active window of the playing campaign
+- A priority campaign with a future wallclock `begin` that arrived via a SMIL update (not at player start) never
+  played when it was a `<par>` directly under a `priorityClass` or the only wallclock element in its class
+- An element with a conditional `expr` (e.g. a dayparted campaign) lost its condition after a single
+  `skipContentOnHttpStatus` skip and played unconditionally from then on
+- Regions could freeze on a stale frame when an element was skipped and recovered, or after a report was sent for it,
+  because the player briefly treated it as a different element; deeply nested playlists could also be confused with
+  each other in priority handling
+- `log="false"` now really disables custom-endpoint reporting — previously reports were still sent whenever
   `type="manual"` and an `endpoint` were configured
-- First `playlist-playback` report is no longer dropped when logging is configured only via `<meta log>` (the
-  parsed logger config is now applied before the report is sent). The SMIL file's own `playlist-download` at boot
-  still fires only when the `reportUrl` applet config is set, before `<meta log>` is parsed
+- The first `playlist-playback` report after start was dropped when logging was configured only via `<meta log>`
+- `media-download` / `playlist-download` reports sent before first playback contained a `null` tag (and a shifted
+  URL field) when `useInReportUrl` was not set; the element's `src` is now used, matching playback reports
 
 ## [4.0.0] - 2026-07-29
 
