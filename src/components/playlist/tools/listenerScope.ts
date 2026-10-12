@@ -14,9 +14,6 @@
  * is about to re-run (so the next setup starts from a clean slate).
  */
 import { Log } from '../../../logger';
-import Debug from 'debug';
-
-const debug = Debug('@signageos/smil-player:listenerScope');
 
 export interface ListenerEntry {
 	target: EventTarget;
@@ -54,7 +51,7 @@ export class ListenerScope {
 				// cross-origin iframe whose contentWindow is no longer
 				// reachable. removeEventListener on a no-op pair never throws
 				// per spec; this catch covers only those pathological cases.
-				debug('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
+				this.log.debug('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
 			}
 		}
 		this.entries.length = 0;

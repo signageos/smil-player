@@ -2,7 +2,6 @@
 import { Log } from '../../logger';
 import * as xml2js from 'xml2js';
 import {
-	debug,
 	extractDataFromPlaylist,
 	extractRegionInfo,
 	extractTransitionsInfo,
@@ -45,7 +44,7 @@ export class XmlParser implements IXmlParser {
 			dynamic: {},
 		};
 
-		debug('[xml] parsing SMIL XML to JSON');
+		this.log.debug('[xml] parsing SMIL XML to JSON');
 		const xmlObject: XmlSmilObject = await xml2js.parseStringPromise(xmlFile, {
 			mergeAttrs: true,
 			explicitArray: false,
@@ -53,7 +52,7 @@ export class XmlParser implements IXmlParser {
 			attrValueProcessors: [parseBooleans],
 		});
 
-		debug('[xml] parsed XML to JSON: %O', xmlObject);
+		this.log.debug('[xml] parsed XML to JSON: %O', xmlObject);
 
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
@@ -66,10 +65,10 @@ export class XmlParser implements IXmlParser {
 
 		removeDataFromPlaylist(playableMedia);
 
-		debug('[xml] extracted regions: count=%d', Object.keys(regions.region || {}).length);
-		debug('[xml] extracted transitions: count=%d', Object.keys(transitions.transition || {}).length);
-		debug('[xml] extracted playable media');
-		debug(
+		this.log.debug('[xml] extracted regions: count=%d', Object.keys(regions.region || {}).length);
+		this.log.debug('[xml] extracted transitions: count=%d', Object.keys(transitions.transition || {}).length);
+		this.log.debug('[xml] extracted playable media');
+		this.log.debug(
 			'[xml] extracted downloads: video=%d, img=%d, ref=%d, audio=%d',
 			downloads.video.length,
 			downloads.img.length,
