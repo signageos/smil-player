@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
 import { CurrentlyPlayingPriority, PromiseAwaiting } from '../../../src/models/playlistModels';
@@ -14,7 +15,7 @@ describe('PriorityStateManager', () => {
 	beforeEach(() => {
 		state = {};
 		promiseAwaiting = {};
-		mgr = new PriorityStateManager(state, promiseAwaiting);
+		mgr = new PriorityStateManager(state, promiseAwaiting, noopLog);
 	});
 
 	describe('ensureRegion', () => {

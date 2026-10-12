@@ -1,31 +1,21 @@
+import { Log } from '../../../logger';
+
 /**
- * TimedDebugger - A debug logger that tracks timing information
- * Used to identify where time is spent during element playback
- * This is for debugging purposes only and has no functional impact
+ * Per-element step timer. Wraps the owner's Log and prefixes each line with the delta since the
+ * previous line and the total since construction. Only used along the playElement call chain.
  */
 export class TimedDebugger {
-	private startTime: number;
+	private readonly startTime: number;
 	private lastLogTime: number;
-	private debugId: string;
-	private debugFn: any;
 
-	constructor(debugId: string, debugFn: any) {
-		this.debugId = debugId;
-		this.debugFn = debugFn;
+	constructor(private readonly debugId: string, private readonly log: Log) {
 		this.startTime = Date.now();
 		this.lastLogTime = this.startTime;
 	}
 
-	/**
-	 * Log a message with timing information
-	 * Shows time elapsed since last log and total time since start
-	 */
-	public log(message: string, ...args: any[]) {
+	public debug(message: string, ...args: unknown[]): void {
 		const now = Date.now();
-		const totalElapsed = now - this.startTime;
-		const deltaFromLast = now - this.lastLogTime;
-
-		this.debugFn(`[${this.debugId}_${now} +${deltaFromLast}ms total:${totalElapsed}ms] ${message}`, ...args);
+		this.log.debug(`[${this.debugId}_${now} +${now - this.lastLogTime}ms total:${now - this.startTime}ms] ${message}`, ...args);
 		this.lastLogTime = now;
 	}
 }

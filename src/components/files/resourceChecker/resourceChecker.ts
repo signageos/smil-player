@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
 import { MergedDownloadList, MediaInfoObject } from '../../../models/filesModels';
@@ -38,6 +39,7 @@ export class ResourceChecker implements IResourceChecker {
 		private shouldSync: boolean,
 		private playlistNonSyncStopFunction: () => void,
 		private restartPlaylist: () => void,
+		protected readonly log: Log,
 	) {
 		this.groupResourcesByInterval();
 	}

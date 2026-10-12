@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { TriggerList } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
@@ -25,8 +26,8 @@ const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
-	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
-		super(sos, files, options);
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, log: Log) {
+		super(sos, files, options, log);
 	}
 
 	/**

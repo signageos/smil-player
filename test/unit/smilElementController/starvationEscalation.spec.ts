@@ -9,6 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { SMILElementController } from '../../../src/components/playlist/playlistProcessor/SMILElementController';
 import { Synchronization } from '../../../src/models/syncModels';
@@ -29,7 +30,7 @@ function makeSynchronization(overrides: Partial<Synchronization> = {}): Synchron
 
 describe('SMILElementController starvation escalation', () => {
 	it('escalates to free-run after 3 consecutive starvation timeouts', () => {
-		const controller = new SMILElementController(makeSynchronization()) as any;
+		const controller = new SMILElementController(makeSynchronization(), noopLog) as any;
 		expect(controller.recordStarvationTimeout('main')).to.equal(false);
 		expect(controller.recordStarvationTimeout('main')).to.equal(false);
 		expect(controller.recordStarvationTimeout('main')).to.equal(true);
@@ -37,7 +38,7 @@ describe('SMILElementController starvation escalation', () => {
 	});
 
 	it('command activity resets the counter and exits free-run', () => {
-		const controller = new SMILElementController(makeSynchronization()) as any;
+		const controller = new SMILElementController(makeSynchronization(), noopLog) as any;
 		controller.recordStarvationTimeout('main');
 		controller.recordStarvationTimeout('main');
 		controller.recordStarvationTimeout('main');
@@ -47,7 +48,7 @@ describe('SMILElementController starvation escalation', () => {
 	});
 
 	it('counters are tracked per region', () => {
-		const controller = new SMILElementController(makeSynchronization()) as any;
+		const controller = new SMILElementController(makeSynchronization(), noopLog) as any;
 		controller.recordStarvationTimeout('a');
 		controller.recordStarvationTimeout('a');
 		expect(controller.recordStarvationTimeout('b')).to.equal(false);

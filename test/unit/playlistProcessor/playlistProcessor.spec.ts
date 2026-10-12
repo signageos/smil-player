@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PlaylistCommon } from '../../../src/components/playlist/playlistCommon/playlistCommon';
 import { WaitStatus, PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';
@@ -22,7 +23,7 @@ describe('PlaylistProcessor', () => {
 			const triggers = createMockTriggers();
 			const priority = createMockPriority();
 
-			const processor = new TestablePlaylistProcessor(sos, files, options, {
+			const processor = new TestablePlaylistProcessor(sos, files, options, noopLog, {
 				triggers,
 				priority,
 			});
@@ -37,7 +38,7 @@ describe('PlaylistProcessor', () => {
 			const files = createMockFiles();
 			const options = createDefaultOptions();
 
-			const processor = new TestablePlaylistProcessor(sos, files, options, {
+			const processor = new TestablePlaylistProcessor(sos, files, options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -52,7 +53,7 @@ describe('PlaylistProcessor', () => {
 		it('should set basic playing info for a video element', () => {
 			const sos = createMockSos();
 			const options = createDefaultOptions();
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -74,7 +75,7 @@ describe('PlaylistProcessor', () => {
 		it('should set dynamic value when element has dynamicValue', () => {
 			const sos = createMockSos();
 			const options = createDefaultOptions();
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -105,7 +106,7 @@ describe('PlaylistProcessor', () => {
 				syncGroupName: 'oldGroup',
 			} as any;
 
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -133,7 +134,7 @@ describe('PlaylistProcessor', () => {
 				nextElement: nextElem,
 			} as any;
 
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -153,7 +154,7 @@ describe('PlaylistProcessor', () => {
 		it('should work for html tag (img)', () => {
 			const sos = createMockSos();
 			const options = createDefaultOptions();
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -174,7 +175,7 @@ describe('PlaylistProcessor', () => {
 	describe('playlist version management', () => {
 		it('should start with version 0', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -184,7 +185,7 @@ describe('PlaylistProcessor', () => {
 
 		it('should update version via setPlaylistVersion', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -197,7 +198,7 @@ describe('PlaylistProcessor', () => {
 	describe('cancel function management', () => {
 		it('should start with cancelFunction as false', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -207,7 +208,7 @@ describe('PlaylistProcessor', () => {
 
 		it('should update cancelFunction via setCancelFunction', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -218,7 +219,7 @@ describe('PlaylistProcessor', () => {
 
 		it('should support disableLoop', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -231,7 +232,7 @@ describe('PlaylistProcessor', () => {
 	describe('synchronization state', () => {
 		it('should have sync disabled by default', () => {
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), createDefaultOptions(), {
+				createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -245,7 +246,7 @@ describe('PlaylistProcessor', () => {
 			options.synchronization.syncGroupName = 'testGroup';
 
 			const processor = new TestablePlaylistProcessor(
-				createMockSos(), createMockFiles(), options, {
+				createMockSos(), createMockFiles(), options, noopLog, {
 					triggers: createMockTriggers(),
 					priority: createMockPriority(),
 				},
@@ -258,7 +259,7 @@ describe('PlaylistProcessor', () => {
 
 	describe('resolveContentAvailability playCheckUrl gate', () => {
 		function makeGateProcessor(files: any, smilOverrides: any = {}) {
-			const processor = new TestablePlaylistProcessor(createMockSos(), files, createDefaultOptions(), {
+			const processor = new TestablePlaylistProcessor(createMockSos(), files, createDefaultOptions(), noopLog, {
 				triggers: createMockTriggers(),
 				priority: createMockPriority(),
 			});
@@ -361,7 +362,7 @@ describe('PlaylistProcessor', () => {
 					releaseCalls.push(args);
 				},
 			};
-			const processor = new TestablePlaylistProcessor(createMockSos(), files, createDefaultOptions(), {
+			const processor = new TestablePlaylistProcessor(createMockSos(), files, createDefaultOptions(), noopLog, {
 				triggers: createMockTriggers(),
 				priority,
 			});
@@ -404,7 +405,7 @@ describe('PlaylistProcessor', () => {
 				public handleTriggers: any = stub().resolves(undefined);
 				public exposedWaitForRegionChange = () => (this as any).waitForRegionChange();
 			}
-			const triggers: any = new TriggersDouble(sos, files, options);
+			const triggers: any = new TriggersDouble(sos, files, options, noopLog);
 			triggers.dynamicPlaylist.dyn1 = {
 				play: true,
 				isMaster: false,
@@ -419,7 +420,7 @@ describe('PlaylistProcessor', () => {
 				cancelAllInRegion: stub(),
 			};
 
-			const processor = new TestablePlaylistProcessor(sos, files, options, { triggers, priority });
+			const processor = new TestablePlaylistProcessor(sos, files, options, noopLog, { triggers, priority });
 
 			let triggersWaiterWoken = false;
 			triggers.exposedWaitForRegionChange().then(() => {
@@ -428,7 +429,7 @@ describe('PlaylistProcessor', () => {
 
 			const media = { dynamicValue: 'dyn1', src: 'http://test/dynamic.smil' } as any;
 			const regionInfo = { regionName: 'dynamic' } as any;
-			const timedDebug = { log: () => undefined } as any;
+			const timedDebug = { debug: () => undefined } as any;
 
 			const result = await (processor as any).shouldWaitAndContinue(
 				media, regionInfo, 'main', 0, 0, 0, false, 0, timedDebug, undefined,
@@ -461,13 +462,13 @@ describe('PlaylistProcessor', () => {
 				clearSuccessor: (region: string, index: number) => order.push(`clear:${region}:${index}`),
 				setPlaying: (region: string, index: number) => order.push(`play:${region}:${index}`),
 			};
-			const processor = new TestablePlaylistProcessor(sos, files, options, {
+			const processor = new TestablePlaylistProcessor(sos, files, options, noopLog, {
 				triggers: createMockTriggers(),
 				priority,
 			});
 
 			const media = { src: 'img.jpg', regionInfo: { regionName: 'main' } } as any;
-			const timedDebug = { log: () => undefined } as any;
+			const timedDebug = { debug: () => undefined } as any;
 			const result = await (processor as any).shouldWaitAndContinue(
 				media, media.regionInfo, 'main', 0, 0, 1, true, 0, timedDebug, undefined,
 			);
@@ -486,7 +487,7 @@ describe('PlaylistProcessor', () => {
 			fullVideoDuration: 200, // bounds the onceEnded race without the 600s backstop timer
 		} as any;
 		const params = ['videos/a.mp4', 0, 0, 10, 10, 'RTP'];
-		const timedDebug = { log: () => undefined } as any;
+		const timedDebug = { debug: () => undefined } as any;
 
 		function setup(contentPause: number, currentlyPlaying: any, stop: boolean = false) {
 			const sos = createMockSos();
@@ -499,7 +500,7 @@ describe('PlaylistProcessor', () => {
 				}],
 			} as any;
 			// real PlaylistPriority (no override): handleVideoPlay races on stateManager.waitUntil
-			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, {
+			const processor = new TestablePlaylistProcessor(sos, createMockFiles(), options, noopLog, {
 				triggers: createMockTriggers(),
 			});
 			return { sos, processor };

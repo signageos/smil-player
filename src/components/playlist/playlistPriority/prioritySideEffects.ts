@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { cloneDeep } from 'lodash';
 import Debug from 'debug';
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
@@ -35,6 +36,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		private synchronization: Synchronization,
 		private videoPreparing: VideoPreparing,
 		private cancelAllInRegionFn: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
+		protected readonly log: Log,
 	) {}
 
 	public hideTransitionElement(regionName: string): void {

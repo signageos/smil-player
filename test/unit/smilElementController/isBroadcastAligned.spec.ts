@@ -9,6 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { SMILElementController } from '../../../src/components/playlist/playlistProcessor/SMILElementController';
 import { Synchronization, SyncMessage } from '../../../src/models/syncModels';
@@ -55,7 +56,7 @@ function callIsBroadcastAligned(
 describe('SMILElementController.isBroadcastAligned', () => {
 	it('returns true when there is no stored message', () => {
 		const sync = makeSynchronization();
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({});
 
 		expect(callIsBroadcastAligned(controller, 'cmd-prepare', 'main', group)).to.equal(true);
@@ -65,7 +66,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -82,7 +83,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 2,
@@ -99,7 +100,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -116,7 +117,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -133,7 +134,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			maxSyncIndexPerRegion: { main: 5 },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				syncIndex: 3,
@@ -147,7 +148,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			maxSyncIndexPerRegion: { main: 5 },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				syncIndex: 8,
@@ -161,7 +162,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			maxSyncIndexPerRegion: {},
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				syncIndex: 8,
@@ -175,7 +176,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: {},
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -191,7 +192,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		// Only cmd-prepare is stored; cmd-play has no stored message → should return true (no evidence)
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
@@ -214,7 +215,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		// so the predicate must not crash on optional-chaining and must still reject the
 		// peer broadcast (no local bounds to compare against → positive evidence of mismatch).
 		const sync = makeSynchronization({}); // no syncIndexBoundsPerPriority
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -230,7 +231,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,
@@ -249,7 +250,7 @@ describe('SMILElementController.isBroadcastAligned', () => {
 		const sync = makeSynchronization({
 			syncIndexBoundsPerPriority: { main: { 1: { min: 1, max: 5 } } },
 		});
-		const controller = new SMILElementController(sync);
+		const controller = new SMILElementController(sync, noopLog);
 		const group = makeSyncGroupMock({
 			'cmd-prepare|main': makeStoredMessage({
 				priorityLevel: 1,

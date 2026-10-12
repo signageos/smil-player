@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
@@ -26,7 +27,8 @@ export class PlaylistPriority implements IPlaylistPriority {
 
 	constructor(
 		options: PlaylistOptions,
-		sos?: ISos,
+		sos: ISos | undefined,
+		log: Log,
 		deps?: {
 			stateManager?: PriorityStateManager;
 			sideEffects?: IPrioritySideEffects;
@@ -37,6 +39,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		this.stateManager = deps?.stateManager ?? new PriorityStateManager(
 			options.currentlyPlayingPriority,
 			options.promiseAwaiting,
+			log.child('priorityStateManager'),
 		);
 		this._sideEffects = deps?.sideEffects ?? new PrioritySideEffects(
 			sos!,
@@ -45,6 +48,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			options.synchronization,
 			options.videoPreparing,
 			(regionName, filter) => this.stateManager.cancelAllInRegion(regionName, filter),
+			log.child('prioritySideEffects'),
 		);
 		this.conflictResolver = deps?.conflictResolver ?? new PriorityConflictResolver(
 			this.stateManager,
@@ -52,6 +56,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			options.synchronization,
 			() => this.getCancelFunction(),
 			(regionName) => options.currentlyPlaying[regionName]?.src,
+			log.child('priorityConflictResolver'),
 		);
 	}
 

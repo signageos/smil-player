@@ -3,6 +3,7 @@
 // no polyfills of its own, and luxon (via ical -> rrule) calls Object.assign at module load.
 import sos from '@signageos/front-applet';
 import { SmilPlayer } from './components/smilPlayer';
+import { createLogger } from './loggers';
 
 function getSmilUrlFromParams(): string | undefined {
 	// Check for injected smilUrl (set by Playwright addInitScript)
@@ -28,4 +29,5 @@ function getConfigOverrides(): Record<string, string> | undefined {
 const smilUrl = getSmilUrlFromParams();
 const configOverrides = getConfigOverrides();
 console.log('[SMIL-PLAYER] index.ts loaded, smilUrl from params:', smilUrl);
-new SmilPlayer(sos, smilUrl, configOverrides).start();
+// Implementation is chosen by the `logger` applet config key (default 'console'); see src/loggers/index.ts.
+new SmilPlayer(sos, createLogger(sos), smilUrl, configOverrides).start();

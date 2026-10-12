@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace indent  tab indentation expected align   arguments are not aligned*/
+import { Log } from '../../../logger';
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import { PlaylistElement } from '../../../models/playlistModels';
@@ -130,6 +131,7 @@ export interface ITraverserControl {
  * In tests, use createMockEngine() helpers.
  */
 export interface IPlaylistEngine {
+	log: Log;
 	config: ITraverserConfig;
 	actions: ITraverserActions;
 	control: ITraverserControl;
@@ -141,11 +143,13 @@ export interface IPlaylistEngine {
  * actual media playback to the engine.
  */
 export class PlaylistTraverser {
+	protected readonly log: Log;
 	private config: ITraverserConfig;
 	private actions: ITraverserActions;
 	private control: ITraverserControl;
 
 	constructor(engine: IPlaylistEngine) {
+		this.log = engine.log;
 		this.config = engine.config;
 		this.actions = engine.actions;
 		this.control = engine.control;

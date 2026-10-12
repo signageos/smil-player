@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PlaylistPriority } from '../../../src/components/playlist/playlistPriority/playlistPriority';
 import { CurrentlyPlayingPriority, PlaylistOptions, PromiseAwaiting } from '../../../src/models/playlistModels';
@@ -26,7 +27,7 @@ describe('PlaylistPriority integration', () => {
 			videoPreparing: {},
 			randomPlaylist: {},
 		} as PlaylistOptions;
-		priority = new PlaylistPriority(options, undefined, { sideEffects: makeMockSideEffects() });
+		priority = new PlaylistPriority(options, undefined, noopLog, { sideEffects: makeMockSideEffects() });
 	});
 
 	describe('stop lifecycle', () => {

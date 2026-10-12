@@ -566,7 +566,7 @@ function getTimestamp(): string {
  */
 export function logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
 	if (timedDebug) {
-		timedDebug.log(message, ...args);
+		timedDebug.debug(message, ...args);
 	} else {
 		debug('[%s] ' + message, getTimestamp(), ...args);
 	}

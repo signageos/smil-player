@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { Deferred } from '../tools/Deferred';
 import { getConfigString, sleep } from '../tools/generalTools';
@@ -52,7 +53,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	// every SMIL reload stacks a fresh layer of handlers on top of the
 	// old ones (no removeEventListener was called anywhere prior to this
 	// fix).
-	private readonly listenerScope: ListenerScope = new ListenerScope();
+	private readonly listenerScope: ListenerScope;
 
 	private cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;
 
@@ -60,10 +61,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		sos: ISos,
 		files: FilesManager,
 		options: PlaylistOptions,
+		log: Log,
 		processPlaylist: Function,
 		cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 	) {
-		super(sos, files, options);
+		super(sos, files, options, log);
+		this.listenerScope = new ListenerScope(log.child('listenerScope'));
 		this.processPlaylist = processPlaylist;
 		this.cancelAllInRegion = cancelAllInRegion;
 	}

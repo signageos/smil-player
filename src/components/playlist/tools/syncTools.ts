@@ -1,3 +1,4 @@
+import { noopLog } from '../../../logger';
 import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
@@ -77,7 +78,7 @@ export async function createSyncGroup(sos: ISos, groupName: string, deviceId?: s
 	}
 
 	debug('[sync] creating sync group: name=%s, deviceId=%s', groupName, deviceId);
-	const syncGroup = new SyncGroup(sos, groupName, deviceId);
+	const syncGroup = new SyncGroup(sos, groupName, deviceId, noopLog); // TODO(Task 12): real Log from createSyncTools(log)
 	await syncGroup.join();
 	syncGroups.set(groupName, syncGroup);
 	return syncGroup;

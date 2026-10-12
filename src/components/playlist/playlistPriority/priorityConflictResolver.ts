@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { removeDigits } from '../tools/generalTools';
@@ -24,6 +25,7 @@ export class PriorityConflictResolver {
 		private synchronization: { syncingInAction: boolean },
 		private getCancelFunction: () => boolean,
 		private getCurrentlyPlayingSrc: (regionName: string) => string | undefined,
+		protected readonly log: Log,
 	) {}
 
 	public handlePriorityBeforePlay = async (

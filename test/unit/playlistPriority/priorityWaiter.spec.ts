@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import {
 	waitForPriorityRelease,
@@ -18,7 +19,7 @@ describe('priorityWaiter', () => {
 		beforeEach(() => {
 			state = {};
 			promiseAwaiting = {};
-			stateManager = new PriorityStateManager(state, promiseAwaiting);
+			stateManager = new PriorityStateManager(state, promiseAwaiting, noopLog);
 		});
 
 		it('should return "released" immediately when blocker is not playing and no new blocker', async () => {

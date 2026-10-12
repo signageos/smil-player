@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon */
+import { Log } from '../../logger';
 import * as xml2js from 'xml2js';
 import {
 	debug,
@@ -18,6 +19,8 @@ import { IXmlParser } from './IXmlParser';
 
 export class XmlParser implements IXmlParser {
 	private tagNameCounter: number = 0;
+
+	constructor(protected readonly log: Log) {}
 
 	public processSmilXml = async (xmlFile: string): Promise<SMILFileObject> => {
 		// reset counter during media update

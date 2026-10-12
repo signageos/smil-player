@@ -1,3 +1,4 @@
+import { Log, Logger } from '../logger';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config/parameters';
 import { ISos } from '../models/sosModels';
@@ -25,6 +26,7 @@ import Debug from 'debug';
 import { getStrategy } from './files/fetchingStrategies/fetchingStrategies';
 
 export class SmilPlayer implements ISmilPlayer {
+	protected readonly log: Log;
 	private readonly files: FilesManager;
 	private readonly smilUrl: string | undefined;
 	private xmlParser: XmlParser;
@@ -33,11 +35,13 @@ export class SmilPlayer implements ISmilPlayer {
 	private dataPrepare: PlaylistDataPrepare;
 	private isPollingForPlaylist: boolean = false;
 
-	constructor(private sos: ISos, smilUrl?: string, private configOverrides?: Record<string, string>) {
+	constructor(private sos: ISos, logger: Logger, smilUrl?: string, private configOverrides?: Record<string, string>) {
+		const root = new Log(logger, '@signageos/smil-player');
+		this.log = root.child('main');
 		this.smilUrl = smilUrl;
-		this.files = new FilesManager(sos);
-		this.xmlParser = new XmlParser();
-		this.playlist = new SmilPlayerPlaylist(sos, this.files);
+		this.files = new FilesManager(sos, root.child('filesManager'));
+		this.xmlParser = new XmlParser(root.child('xmlParser'));
+		this.playlist = new SmilPlayerPlaylist(sos, this.files, root);
 		this.processor = this.playlist.processor;
 		this.dataPrepare = this.playlist.dataPrepare;
 	}
