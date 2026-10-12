@@ -1421,7 +1421,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		promiseRaceArray.push(
-			waitForSuccessOrFailEvents(this.smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent),
+			waitForSuccessOrFailEvents(this.smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent, this.log),
 		);
 
 		try {
