@@ -9,9 +9,10 @@ import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { IPrioritySideEffects, PrioritySideEffects } from './prioritySideEffects';
 import {
+	createPriorityDecisionEngine,
 	isEndTimeExpired,
-	isPlaylistFinished,
 	isRepeatCountExpired,
+	PriorityDecisionEngine,
 } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
 import { PriorityConflictResolver } from './priorityConflictResolver';
@@ -21,6 +22,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 	private _sideEffects: IPrioritySideEffects;
 	private conflictResolver: PriorityConflictResolver;
 	private cancelFunction: boolean[];
+	private readonly engine: PriorityDecisionEngine;
 
 	constructor(
 		options: PlaylistOptions,
@@ -33,6 +35,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		},
 	) {
 		this.cancelFunction = options.cancelFunction;
+		this.engine = createPriorityDecisionEngine(log);
 		this.stateManager = deps?.stateManager ?? new PriorityStateManager(
 			options.currentlyPlayingPriority,
 			options.promiseAwaiting,
@@ -139,7 +142,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			expiredVersion,
 		);
 
-		if (isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
+		if (this.engine.isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
 			this.log.debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 			// The next repeatCount pass of THIS playlist has already re-registered the slot

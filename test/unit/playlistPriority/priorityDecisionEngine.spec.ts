@@ -1,18 +1,23 @@
 import * as chai from 'chai';
 import {
-	determinePriorityRelation,
-	selectApplicableRule,
-	isPeerConflict,
+	createPriorityDecisionEngine,
 	isEndTimeExpired,
 	isRepeatCountExpired,
-	isPlaylistFinished,
-	shouldContinueWaiting,
-	findMatchingEntryIndex,
 	isMediaMatch,
 } from '../../../src/components/playlist/playlistPriority/priorityDecisionEngine';
+import { noopLog } from '../../../src/logger';
 import { PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
 import { SMILMedia } from '../../../src/models/mediaModels';
 import { makePriorityObject, makeRegion } from './testHelpers';
+
+const {
+	determinePriorityRelation,
+	selectApplicableRule,
+	isPeerConflict,
+	isPlaylistFinished,
+	shouldContinueWaiting,
+	findMatchingEntryIndex,
+} = createPriorityDecisionEngine(noopLog);
 
 const expect = chai.expect;
 
