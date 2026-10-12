@@ -4,17 +4,11 @@ import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import cloneDeep = require('lodash/cloneDeep');
 import moment from 'moment';
-import {
-	BackupPlaylist,
-	CurrentlyPlayingRegion,
-	PlaylistElement,
-	RandomPlaylist,
-} from '../../../models/playlistModels';
+import { BackupPlaylist, RandomPlaylist } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { DeviceModels } from '../../../enums/deviceEnums';
-import Debug from 'debug';
-import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
+import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import {
 	parentGenerationAllow,
@@ -22,14 +16,12 @@ import {
 	randomPlaylistPlayableTagsRegex,
 	SMILEnums,
 } from '../../../enums/generalEnums';
-import { parseNestedRegions } from '../../xmlParser/tools';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
 import omit from 'lodash/omit';
 
 const hasher = require('node-object-hash');
 
-export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
@@ -149,30 +141,6 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 	return resultObject;
 }
 
-export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	let regionInfo = <RegionAttributes>get(regionObject.region, regionName, regionObject.rootLayout);
-	// unify regionName for further uses in code ( xml:id -> regionName )
-	if (regionInfo.hasOwnProperty(XmlTags.regionNameAlias)) {
-		regionInfo.regionName = <string>regionInfo[XmlTags.regionNameAlias];
-		delete regionInfo[XmlTags.regionNameAlias];
-	}
-
-	regionInfo = fixVideoDimension(regionInfo);
-	// fix nested regions and its values for dynamic use
-	if (regionInfo.hasOwnProperty(SMILEnums.region)) {
-		regionInfo = parseNestedRegions(regionInfo);
-	}
-	debug('[general] getting region info: region=%s', regionName);
-	regionInfo = {
-		...regionInfo,
-		...(!isNil(regionInfo.top) && { top: parseInt(String(regionInfo.top)) }),
-		...(!isNil(regionInfo.left) && { left: parseInt(String(regionInfo.left)) }),
-		width: parseInt(String(regionInfo.width)),
-		height: parseInt(String(regionInfo.height)),
-	};
-	return regionInfo;
-}
-
 /**
  * extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
  * @param value - represents SMIL media file object
@@ -251,21 +219,6 @@ export function projectForParentGeneration(value: unknown): unknown {
 	return value;
 }
 
-// seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
-// Element identity — MUST be identical for the same SMIL element on every traversal
-// pass (priority peer detection). Device-local: sync coordination keys are built from
-// regionName + syncIndex, never from this hash.
-export function generateParentId(tagName: string, value: PlaylistElement): string {
-	try {
-		return `${tagName}-${hashSortCoerce.hash(projectForParentGeneration(value))}`;
-	} catch (err) {
-		debug('[general] error during parent generation: %O', err);
-		// per-shape fallback — the old shared `${tagName}-undefined` collapsed ALL
-		// failures into one identity
-		return `${tagName}-fallback-${Object.keys(value || {}).join('.')}`;
-	}
-}
-
 export function generateBackupImagePlaylist(imageUrl: string, repeatCount: string): BackupPlaylist {
 	return {
 		seq: {
@@ -293,17 +246,6 @@ export function getDefaultRegion() {
 
 export function getDefaultVideoParams(): VideoParams {
 	return ['', 0, 0, 0, 0, 'RTP'];
-}
-
-export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
-	debug('[general] getting index of playing priority: %O', currentlyPlaying);
-	// no element was played before ( trigger/dynamic playlist case )
-	if (isNil(currentlyPlaying)) {
-		return 0;
-	}
-	return currentlyPlaying.findIndex((element) => {
-		return element.player?.playing === true;
-	});
 }
 
 export function generateCurrentDate(utc: boolean) {
@@ -498,24 +440,6 @@ export function computePlayModeSyncRanges(
 		}
 	}
 	return ranges;
-}
-
-export function processRandomPlayMode(
-	playlist: { [key in string]: string },
-	randomPlaylistInfo: RandomPlaylist,
-	parent: string,
-) {
-	switch (playlist.playMode.toLowerCase()) {
-		case 'random':
-			return shuffleObject(playlist);
-		case 'random_one':
-			return pickRandomOne(playlist);
-		case 'one':
-			return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
-		default:
-			debug('[general] no valid playMode, returning original: playMode=%s', playlist.playmode);
-			return playlist;
-	}
 }
 
 /**

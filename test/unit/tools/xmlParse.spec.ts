@@ -2,7 +2,13 @@ import { noopLog } from '../../../src/logger';
 import { promises as fsPromise } from 'fs';
 import * as path from 'path';
 import { XmlParser } from '../../../src/components/xmlParser/xmlParser';
-import { parseNestedRegions, containsElement, extractRegionInfo, extractTransitionsInfo, mergeLoggerWithConfigReportUrl } from '../../../src/components/xmlParser/tools';
+import {
+	createXmlTools,
+	containsElement,
+	extractRegionInfo,
+	extractTransitionsInfo,
+	mergeLoggerWithConfigReportUrl,
+} from '../../../src/components/xmlParser/tools';
 import { smilLogging } from '../../../src/enums/fileEnums';
 import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
 import { mockSMILFileParsed99 } from '../../mocks/playlistMock/mock99';
@@ -14,6 +20,7 @@ import { triggerRfid } from '../../mocks/playlistMock/mockTriggerRfId';
 import * as chai from 'chai';
 
 const expect = chai.expect;
+const { parseNestedRegions } = createXmlTools(noopLog);
 const xmlParser = new XmlParser(noopLog);
 const FIXTURES = path.join(__dirname, '../../mocks/xmlParserMock');
 

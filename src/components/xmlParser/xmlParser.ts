@@ -1,13 +1,7 @@
 /* tslint:disable:Unnecessary semicolon */
 import { Log } from '../../logger';
 import * as xml2js from 'xml2js';
-import {
-	extractDataFromPlaylist,
-	extractRegionInfo,
-	extractTransitionsInfo,
-	parseHeadInfo,
-	removeDataFromPlaylist,
-} from './tools';
+import { createXmlTools, extractRegionInfo, extractTransitionsInfo, XmlTools } from './tools';
 import { XmlTags } from '../../enums/xmlEnums';
 import { DynamicPlaylistList, TriggerList } from '../../models/triggerModels';
 import { DownloadsList, SMILFileObject } from '../../models/filesModels';
@@ -19,7 +13,11 @@ import { IXmlParser } from './IXmlParser';
 export class XmlParser implements IXmlParser {
 	private tagNameCounter: number = 0;
 
-	constructor(protected readonly log: Log) {}
+	private readonly xml: XmlTools;
+
+	constructor(protected readonly log: Log) {
+		this.xml = createXmlTools(log);
+	}
 
 	public processSmilXml = async (xmlFile: string): Promise<SMILFileObject> => {
 		// reset counter during media update
@@ -57,13 +55,13 @@ export class XmlParser implements IXmlParser {
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
-		parseHeadInfo(xmlObject.smil.head, regions, triggerList);
+		this.xml.parseHeadInfo(xmlObject.smil.head, regions, triggerList);
 		playableMedia.playlist = xmlObject.smil.body as SMILPlaylist;
 
 		// traverse json as tree of nodes
-		extractDataFromPlaylist(playableMedia, downloads, triggerList, dynamicList);
+		this.xml.extractDataFromPlaylist(playableMedia, downloads, triggerList, dynamicList);
 
-		removeDataFromPlaylist(playableMedia);
+		this.xml.removeDataFromPlaylist(playableMedia);
 
 		this.log.debug('[xml] extracted regions: count=%d', Object.keys(regions.region || {}).length);
 		this.log.debug('[xml] extracted transitions: count=%d', Object.keys(transitions.transition || {}).length);

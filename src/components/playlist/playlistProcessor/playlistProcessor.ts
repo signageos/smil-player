@@ -31,8 +31,6 @@ import {
 import {
 	getConfigString,
 	getDefaultVideoParams,
-	getIndexOfPlayingMedia,
-	getRegionInfo,
 	removeDigits,
 	sleep,
 	getFileStructureForMediaType,
@@ -79,6 +77,7 @@ import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamic
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
 import { createSyncTools, hasDynamicContent, SyncTools } from '../tools/syncTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
@@ -101,6 +100,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private readonly smilEventEmitter: SmilEventEmitter;
 	private readonly html: HtmlTools;
 	private readonly sync: SyncTools;
+	private readonly tools: PlaylistTools;
 
 	constructor(
 		sos: ISos,
@@ -115,6 +115,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		super(sos, files, options, log);
 		this.html = createHtmlTools(log);
 		this.sync = createSyncTools(log);
+		this.tools = createPlaylistTools(log);
 		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos, log.child('playlistPriority'));
 		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, log.child('playlistTriggers'), this.processPlaylist,
 			(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter));
@@ -1481,7 +1482,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.priority.stateManager.cloneRegion(parentRegionInfo.regionName, currentRegionInfo.regionName);
 		}
 
-		const index = getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
+		const index = this.tools.getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
 
 		// Early pause gate: a paused (higher/peer="pause") playlist must NOT enter
 		// sync coordination or element preparation. Without this, a held playlist's
@@ -2265,7 +2266,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const currentVideoDetails =
 			await this.files.getFileDetails(video, FileStructure.videos)
 
-		video.regionInfo = getRegionInfo(region, video.region);
+		video.regionInfo = this.tools.getRegionInfo(region, video.region);
 		video.localFilePath = currentVideoDetails ? currentVideoDetails.localUri : '';
 		this.log.debug('[processor] setting up intro video: src=%s', video.src);
 		await this.sos.video.prepare(
@@ -2282,7 +2283,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private setupIntroImage = async (image: SMILImage, region: RegionsObject, key: string): Promise<HTMLElement> => {
 		const currentImageDetails =
 			await this.files.getFileDetails(image, FileStructure.images);
-		image.regionInfo = getRegionInfo(region, image.region);
+		image.regionInfo = this.tools.getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		this.log.debug('[processor] setting up intro image: src=%s', image.src);
 		const element: HTMLElement = this.html.createHtmlElement(

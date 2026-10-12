@@ -17,23 +17,20 @@ import {
 	findFirstMediaDescendant,
 	generateBackupImagePlaylist,
 	generateElementId,
-	generateParentId,
 	getConfigBoolean,
 	getConfigString,
 	getDefaultVideoParams,
-	getIndexOfPlayingMedia,
 	getLastArrayItem,
 	getNextElementToPlay,
-	getRegionInfo,
 	getStringToIntDefault,
 	pickRandomOne,
-	processRandomPlayMode,
 	shuffleObject,
 	removeDigits,
 	removeLastArrayItem,
 	removeWhitespace,
 	sleep,
 } from '../../../src/components/playlist/tools/generalTools';
+import { createPlaylistTools } from '../../../src/components/playlist/tools/playlistTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
 import { createScheduleTools, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
 import { noopLog } from '../../../src/logger';
@@ -43,6 +40,7 @@ import { RegionsObject } from '../../../src/models/xmlJsonModels';
 
 const expect = chai.expect;
 const { areAllWallclocksPermanentlyExpired, setDefaultAwait, setElementDuration } = createScheduleTools(noopLog);
+const { generateParentId, getIndexOfPlayingMedia, getRegionInfo, processRandomPlayMode } = createPlaylistTools(noopLog);
 
 describe('Playlist tools component', () => {
 	describe('Playlist tools component getIndexOfPlayingMedia tests', () => {

@@ -7,14 +7,13 @@ import { SMILMedia } from '../../../models/mediaModels';
 import { RandomPlaylist } from '../../../models/playlistModels';
 import {
 	findFirstMediaDescendant,
-	generateParentId,
 	getLastArrayItem,
-	processRandomPlayMode,
 	removeDigits,
 } from '../tools/generalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { createScheduleTools, ScheduleTools } from '../tools/scheduleTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
 import { XmlTags } from '../../../enums/xmlEnums';
@@ -147,11 +146,13 @@ export class PlaylistTraverser {
 	private control: ITraverserControl;
 	private readonly wallclock: WallclockTools;
 	private readonly schedule: ScheduleTools;
+	private readonly tools: PlaylistTools;
 
 	constructor(engine: IPlaylistEngine) {
 		this.log = engine.log;
 		this.wallclock = createWallclockTools(this.log);
 		this.schedule = createScheduleTools(this.log);
+		this.tools = createPlaylistTools(this.log);
 		this.config = engine.config;
 		this.actions = engine.actions;
 		this.control = engine.control;
@@ -365,7 +366,7 @@ export class PlaylistTraverser {
 			}
 
 			if (removeDigits(key) === 'par') {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				if (Array.isArray(value)) {
 					// In priority context, peer <par> siblings must run concurrently so the
 					// priority system can detect conflicts and apply peer rules (defer/pause/stop).
@@ -422,7 +423,7 @@ export class PlaylistTraverser {
 
 						// Per-element parent ID so handlePriorityInfoObject creates separate
 						// tracking entries and handlePriorityBeforePlay detects peer conflicts
-						const elemParent = hasPriority ? generateParentId(key, elem) : newParent;
+						const elemParent = hasPriority ? this.tools.generateParentId(key, elem) : newParent;
 
 						let elemTimeToStart = -1;
 						let elemTimeToEnd = endTime;
@@ -616,7 +617,7 @@ export class PlaylistTraverser {
 			}
 
 			if (removeDigits(key) === 'seq') {
-				let newParent = generateParentId('seq', value);
+				let newParent = this.tools.generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
@@ -625,7 +626,7 @@ export class PlaylistTraverser {
 					this.log.debug('[traverser-seq] processing seq element');
 
 					if (valueElement.playMode) {
-						const playModeParentId = generateParentId('seq', valueElement);
+						const playModeParentId = this.tools.generateParentId('seq', valueElement);
 						this.log.debug('[traverser-seq] processing random play mode: parent=%s', playModeParentId);
 
 						// Coordinate playMode=one index BEFORE element selection.
@@ -656,7 +657,7 @@ export class PlaylistTraverser {
 							}
 						}
 
-						valueElement = processRandomPlayMode(
+						valueElement = this.tools.processRandomPlayMode(
 							valueElement,
 							this.control.randomPlaylist,
 							playModeParentId,
@@ -982,7 +983,7 @@ export class PlaylistTraverser {
 
 		let counter = 0;
 		return (async () => {
-			let newParent = generateParentId(parent, value);
+			let newParent = this.tools.generateParentId(parent, value);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
 			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
@@ -1029,7 +1030,7 @@ export class PlaylistTraverser {
 			}
 			// when endTime is not set, play indefinitely
 			if (endTime === 0) {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				let dynamicPlaylistId = undefined;
 				if (value.hasOwnProperty('begin') && value.begin?.startsWith(SMILDynamicEnum.dynamicFormat)) {
 					dynamicPlaylistId = value.begin;
@@ -1051,13 +1052,13 @@ export class PlaylistTraverser {
 				}
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000 && version >= this.control.getPlaylistVersion()) {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
 				}
 				await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 			} else {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				while (Date.now() <= endTime && version >= this.control.getPlaylistVersion()) {
 					await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 					// force stop because new version of smil file was detected

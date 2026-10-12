@@ -6,7 +6,8 @@ import { SMILFileObject } from '../../../models/filesModels';
 import { IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { computePlayModeSyncRanges, computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
+import { computePlayModeSyncRanges, computeSyncIndex, extractAdditionalInfo, removeDigits } from '../tools/generalTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -25,11 +26,13 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 	private readonly html: HtmlTools;
 	private readonly ticker: TickerTools;
+	private readonly tools: PlaylistTools;
 
 	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, log: Log) {
 		super(sos, files, options, log);
 		this.html = createHtmlTools(log);
 		this.ticker = createTickerTools(log);
+		this.tools = createPlaylistTools(log);
 	}
 
 	/**
@@ -112,7 +115,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				}
 
 				for (const elem of value) {
-					elem.regionInfo = getRegionInfo(smilObject, elem.region);
+					elem.regionInfo = this.tools.getRegionInfo(smilObject, elem.region);
 					extractAdditionalInfo(elem);
 					// relative path for triggers has to be fixed here, because trigger media objects are not included in parallel download
 					// there are two ways of computing sync index, more at jsdoc for computeSyncIndex

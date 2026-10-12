@@ -6,7 +6,7 @@ import { PriorityObject } from '../../../models/priorityModels';
 import { SMILMedia } from '../../../models/mediaModels';
 import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete } from '../tools/deferredTools';
 import { Deferred } from '../tools/Deferred';
-import { getIndexOfPlayingMedia } from '../tools/generalTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { findMatchingEntryIndex } from './priorityDecisionEngine';
 
 interface RegionWaiter {
@@ -21,13 +21,16 @@ interface RegionWaiter {
  * Takes the same object references as PlaylistCommon, so all consumers see changes immediately.
  */
 export class PriorityStateManager {
+	private readonly tools: PlaylistTools;
 	private regionWaiters: Map<string, Set<RegionWaiter>> = new Map<string, Set<RegionWaiter>>();
 
 	constructor(
 		private state: CurrentlyPlayingPriority,
 		private promiseAwaiting: PromiseAwaiting,
 		protected readonly log: Log,
-	) {}
+	) {
+		this.tools = createPlaylistTools(log);
+	}
 
 	// --- Reactive waiting ---
 
@@ -59,7 +62,7 @@ export class PriorityStateManager {
 	}
 
 	public getPlayingIndex(regionName: string): number {
-		return getIndexOfPlayingMedia(this.state[regionName]);
+		return this.tools.getIndexOfPlayingMedia(this.state[regionName]);
 	}
 
 	public getRegionLength(regionName: string): number {
@@ -136,7 +139,7 @@ export class PriorityStateManager {
 			skipLoop = true;
 		}
 
-		let previousPlayingIndex = getIndexOfPlayingMedia(this.state[regionName]);
+		let previousPlayingIndex = this.tools.getIndexOfPlayingMedia(this.state[regionName]);
 		previousPlayingIndex = previousPlayingIndex > -1 ? previousPlayingIndex : 0;
 
 		let currentIndex = 0;
