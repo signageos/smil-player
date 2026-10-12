@@ -16,7 +16,6 @@ import {
 	createLocalFilePath,
 	createPoPMessagePayload,
 	createSourceReportObject,
-	debug,
 	getCanonicalFileName,
 	getFileName,
 	getOfflineReportFileIndex,
@@ -126,7 +125,7 @@ export class FilesManager implements IFilesManager {
 	public setLocalStorageUnit = (internalStorageUnit: IStorageUnit) => {
 		this.internalStorageUnit = internalStorageUnit;
 		this.estimatedFreeSpace = internalStorageUnit.usableSpace || internalStorageUnit.freeSpace || 0;
-		debug(
+		this.log.debug(
 			'Initialized estimated free space: %d MB (usableSpace: %d, freeSpace: %d)',
 			Math.round(this.estimatedFreeSpace / (1024 * 1024)),
 			internalStorageUnit.usableSpace,
@@ -140,14 +139,14 @@ export class FilesManager implements IFilesManager {
 
 	public sendReport = async (message: Report) => {
 		if (this.smilLogging.enabled) {
-			debug('[files] sending report: endpoint=%s', this.smilLogging?.endpoint);
+			this.log.debug('[files] sending report: endpoint=%s', this.smilLogging?.endpoint);
 			await this.sos.command.dispatch(message);
 		}
 	};
 
 	public sendPoPReport = async (message: IRecordItemOptions) => {
 		if (this.smilLogging.enabled) {
-			debug('[files] sending PoP report');
+			this.log.debug('[files] sending PoP report');
 			await this.sos.proofOfPlay.recordItemPlayed(message);
 		}
 	};
@@ -161,7 +160,7 @@ export class FilesManager implements IFilesManager {
 				filePath: FileStructure.offlineReports,
 			});
 
-			debug('[files] found offline report files: count=%d', arrayOfReportFiles.length);
+			this.log.debug('[files] found offline report files: count=%d', arrayOfReportFiles.length);
 
 			for (const file of arrayOfReportFiles) {
 				try {
@@ -172,7 +171,7 @@ export class FilesManager implements IFilesManager {
 					}
 
 					if (arrayOfReports.length > 0) {
-						debug('[files] sending offline report: file=%s', file.filePath);
+						this.log.debug('[files] sending offline report: file=%s', file.filePath);
 						const start = Date.now();
 
 						await this.sendCustomEndpointReport(
@@ -180,7 +179,7 @@ export class FilesManager implements IFilesManager {
 							true,
 						);
 
-						debug(
+						this.log.debug(
 							'[files] sent offline report: file=%s, took=%d ms',
 							file.filePath,
 							Date.now() - start,
@@ -189,9 +188,9 @@ export class FilesManager implements IFilesManager {
 
 					await this.deleteFile(file.filePath);
 
-					debug('[files] deleted offline report: file=%s', file.filePath);
+					this.log.debug('[files] deleted offline report: file=%s', file.filePath);
 				} catch (err) {
-					debug(
+					this.log.debug(
 						'[files] error sending offline report: file=%s, error=%O',
 						file.filePath,
 						err,
@@ -199,7 +198,7 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		} catch (err) {
-			debug('Unexpected error occurred during offline reports watcher pass: %O', err);
+			this.log.debug('Unexpected error occurred during offline reports watcher pass: %O', err);
 		}
 		await sleep(CUSTOM_ENDPOINT_OFFLINE_INTERVAL);
 	};
@@ -211,7 +210,7 @@ export class FilesManager implements IFilesManager {
 		try {
 			const payload = Array.isArray(message) ? message : [message];
 
-			debug(
+			this.log.debug(
 				'[files] sending custom report: endpoint=%s',
 				this.smilLogging.endpoint!,
 			);
@@ -223,13 +222,13 @@ export class FilesManager implements IFilesManager {
 				body: JSON.stringify(payload),
 			});
 
-			debug('[files] custom report sent');
+			this.log.debug('[files] custom report sent');
 
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 		} catch (error) {
-			debug('[files] custom report error: %O', error);
+			this.log.debug('[files] custom report error: %O', error);
 			if (offlineUpload) {
 				throw new Error('Error during offline custom endpoint report upload');
 			}
@@ -260,7 +259,7 @@ export class FilesManager implements IFilesManager {
 			// to create difference between download and media played
 			value.popName = fileType === 'smil' ? 'playlist-download' : 'media-download';
 			if (this.smilLogging.endpoint) {
-				debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
+				this.log.debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
 					await this.sendCustomEndpointReport(
 						createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
@@ -299,14 +298,14 @@ export class FilesManager implements IFilesManager {
 		// Fall back to value.src for legacy cases or edge cases
 		if ('src' in value && !value.useInReportUrl) {
 			value.useInReportUrl = value.src;
-			debug('useInReportUrl not set, falling back to src: %s', value.src);
+			this.log.debug('useInReportUrl not set, falling back to src: %s', value.src);
 		}
 
 		if (this.smilLogging.type?.includes(smilLogging.proofOfPlay)) {
 			// to create difference between download and media played
 			value.popName = 'media-playback';
 			if (this.smilLogging.endpoint) {
-				debug('[files] custom endpoint report enabled: %s', this.smilLogging.enabled);
+				this.log.debug('[files] custom endpoint report enabled: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
 					const payload = createCustomEndpointMessagePayload(
 						createPoPMessagePayload(value),
@@ -314,7 +313,7 @@ export class FilesManager implements IFilesManager {
 						statusCode,
 					);
 					if (value.reportMode === 'batch') {
-						debug('[files] report mode is batch, saving to offline storage');
+						this.log.debug('[files] report mode is batch, saving to offline storage');
 						await this.saveCustomEndpointInfo(payload, 'batch');
 					} else {
 						await this.sendCustomEndpointReport(payload);
@@ -391,16 +390,16 @@ export class FilesManager implements IFilesManager {
 		} catch (err) {
 			// Every call site is fire-and-forget; never let a failed report (or a
 			// failed offline save inside it) surface as an unhandled rejection.
-			debug('[files] error sending opt-in event report %s: %O', eventName, err);
+			this.log.debug('[files] error sending opt-in event report %s: %O', eventName, err);
 		}
 	};
 
 	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
 		await this.deleteUnusedFiles(smilObject, smilUrl);
-		debug('[files] unused files deleted');
+		this.log.debug('[files] unused files deleted');
 
 		await this.extractWidgets(widgets);
-		debug('[files] widgets extracted');
+		this.log.debug('[files] widgets extracted');
 	};
 
 	public getFileDetails = async (
@@ -408,7 +407,7 @@ export class FilesManager implements IFilesManager {
 		fileStructure: string,
 		suffix: string = '',
 	) => {
-		debug('[files] getting file details: %O', media);
+		this.log.debug('[files] getting file details: %O', media);
 		// Resolve the canonical name against the persisted mediaInfoObject so we find
 		// the file even when the SMIL src URL has no extension (the on-disk filename
 		// will have inherited it from the Location header).
@@ -443,18 +442,18 @@ export class FilesManager implements IFilesManager {
 
 		// file was not found
 		if (isNil(updateCheckResult) || isNil(currentValue)) {
-			debug('[files] file not found on remote: %s', media.src);
+			this.log.debug('[files] file not found on remote: %s', media.src);
 			return { shouldUpdate: false, statusCode };
 		}
 
 		// Check if content should be skipped (set by fetch strategy)
 		if (media.skipContentMark) {
-			debug('[files] content marked as skip, not downloading: %s', media.src);
+			this.log.debug('[files] content marked as skip, not downloading: %s', media.src);
 			return { shouldUpdate: false, statusCode };
 		}
 
 		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
-			debug('[files] file not in local storage, downloading: %s', media.src);
+			this.log.debug('[files] file not in local storage, downloading: %s', media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
@@ -466,7 +465,7 @@ export class FilesManager implements IFilesManager {
 		// Use the canonical key (which carries the resolved extension when applicable)
 		// so a previously-committed entry for an extensionless SMIL src still hits.
 		const storedValue = mediaInfoObject[getCanonicalFileName(media.src, mediaInfoObject)];
-		debug('[files] stored value for file: %s, value: %O', media.src, storedValue);
+		this.log.debug('[files] stored value for file: %s, value: %O', media.src, storedValue);
 
 		if (isNil(storedValue)) {
 			return {
@@ -479,7 +478,7 @@ export class FilesManager implements IFilesManager {
 
 		// Location strategy uses strings as values, while lastModified uses timestamps
 		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
-		debug('[files] using location strategy: %s', isLocationStrategy);
+		this.log.debug('[files] using location strategy: %s', isLocationStrategy);
 
 		// Helper function to strip __smil_version query parameter from URL
 		const stripSmilVersion = (url: string | null): string | null => {
@@ -499,13 +498,13 @@ export class FilesManager implements IFilesManager {
 		// Debug logging for location strategy edge cases
 		if (isLocationStrategy) {
 			if (currentValue === null) {
-				debug('[files] location strategy: currentValue is null (request failed or no Location header)');
+				this.log.debug('[files] location strategy: currentValue is null (request failed or no Location header)');
 			}
 			if (stripSmilVersion(currentValue) === stripSmilVersion(media.src)) {
-				debug('[files] location strategy: currentValue equals media.src (no redirect, same URL returned)');
+				this.log.debug('[files] location strategy: currentValue equals media.src (no redirect, same URL returned)');
 			}
 			// Log the comparison values for debugging
-			debug(
+			this.log.debug(
 				'[files] location strategy comparison - currentValue: %s, media.src: %s, storedValue: %s',
 				stripSmilVersion(currentValue),
 				stripSmilVersion(media.src),
@@ -524,7 +523,7 @@ export class FilesManager implements IFilesManager {
 				moment(storedValue).valueOf() !== moment(currentValue).valueOf();
 
 		if (isNewVersion) {
-			debug('[files] new file version detected: %s', media.src);
+			this.log.debug('[files] new file version detected: %s', media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
@@ -534,7 +533,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (!(await this.fileExists(`${localFilePath}/${getCanonicalFileName(media.src, mediaInfoObject)}`))) {
-			debug('[files] file not in local storage, downloading: %s', media.src);
+			this.log.debug('[files] file not in local storage, downloading: %s', media.src);
 			return {
 				shouldUpdate: true,
 				value: currentValue,
@@ -554,11 +553,11 @@ export class FilesManager implements IFilesManager {
 			stripSmilVersion(currentValue) !== stripSmilVersion(media.src) &&
 			currentValue !== storedValue
 		) {
-			debug('[files] location URL query params changed, returning value for mapping update: %s', media.src);
+			this.log.debug('[files] location URL query params changed, returning value for mapping update: %s', media.src);
 			return { shouldUpdate: false, value: currentValue, statusCode };
 		}
 
-		debug('[files] file already in local storage: %s', media.src);
+		this.log.debug('[files] file already in local storage: %s', media.src);
 		return { shouldUpdate: false, statusCode };
 	};
 
@@ -570,7 +569,7 @@ export class FilesManager implements IFilesManager {
 			},
 			JSON.stringify(mediaInfoObject),
 		);
-		debug('[files] wrote mediaInfo to storage: %O', mediaInfoObject);
+		this.log.debug('[files] wrote mediaInfo to storage: %O', mediaInfoObject);
 	};
 
 	public deleteFile = async (filePath: string) => {
@@ -583,7 +582,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		try {
-			debug('[files] deleting file: %s', filePath);
+			this.log.debug('[files] deleting file: %s', filePath);
 			await this.sos.fileSystem.deleteFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -594,7 +593,7 @@ export class FilesManager implements IFilesManager {
 
 			if (freedBytes > 0) {
 				this.estimatedFreeSpace += freedBytes;
-				debug(
+				this.log.debug(
 					'Space freed: %d MB for %s (estimated free: %d MB)',
 					Math.round(freedBytes / (1024 * 1024)),
 					filePath,
@@ -602,7 +601,7 @@ export class FilesManager implements IFilesManager {
 				);
 			}
 		} catch (err) {
-			debug('[files] error deleting file: %s', filePath);
+			this.log.debug('[files] error deleting file: %s', filePath);
 			await this.sendGeneralErrorReport(err.message);
 		}
 	};
@@ -642,7 +641,7 @@ export class FilesManager implements IFilesManager {
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
-		debug('[files] received media info: %s', JSON.stringify(mediaInfoObject));
+		this.log.debug('[files] received media info: %s', JSON.stringify(mediaInfoObject));
 
 		// Create a map to track which files need to be updated in mediaInfoObject
 		const filesToUpdate: Map<string, number | string> = new Map();
@@ -651,14 +650,14 @@ export class FilesManager implements IFilesManager {
 		const isLocationStrategy = fetchStrategy.strategyType === SMILEnums.location;
 
 		if (isLocationStrategy) {
-			debug('DEDUP: Starting duplicate detection for location header strategy');
+			this.log.debug('DEDUP: Starting duplicate detection for location header strategy');
 
 			// Phase 1: Collect all update checks in parallel
 			const checkResults = await Promise.all(
 				filesList.map(async (file) => {
 					// do not download website widgets or video streams
 					if (shouldNotDownload(localFilePath, file)) {
-						debug('Will not download file: %O', file);
+						this.log.debug('Will not download file: %O', file);
 						return null;
 					}
 
@@ -726,9 +725,9 @@ export class FilesManager implements IFilesManager {
 			for (const [locationUrl, group] of locationGroups) {
 				if (group.length > 1) {
 					const urls = group.map((g) => g.file.src).join(', ');
-					debug('DEDUP: Found %d URLs pointing to same content: %s', group.length, locationUrl);
-					debug('DEDUP: Affected URLs: %s', urls);
-					debug('DEDUP: Potential download savings: %d duplicate downloads', group.length - 1);
+					this.log.debug('DEDUP: Found %d URLs pointing to same content: %s', group.length, locationUrl);
+					this.log.debug('DEDUP: Affected URLs: %s', urls);
+					this.log.debug('DEDUP: Potential download savings: %d duplicate downloads', group.length - 1);
 				}
 			}
 
@@ -751,7 +750,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			const downloadTasks: DownloadTask[] = [];
-			debug('Phase 3a: Building download tasks for %d files', validResults.length);
+			this.log.debug('Phase 3a: Building download tasks for %d files', validResults.length);
 
 			for (const result of validResults) {
 				const { file, updateCheck, fileName } = result;
@@ -820,7 +819,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Phase 3b: Group download tasks by content (for location strategy)
-			debug('Phase 3b: Grouping %d download tasks by content', downloadTasks.length);
+			this.log.debug('Phase 3b: Grouping %d download tasks by content', downloadTasks.length);
 
 			// Group tasks by their download URL (which represents the actual content location)
 			const taskGroups = new Map<string, DownloadTask[]>();
@@ -836,25 +835,25 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Log grouped structure
-			debug('Grouped download tasks into %d unique content groups:', taskGroups.size);
+			this.log.debug('Grouped download tasks into %d unique content groups:', taskGroups.size);
 			let totalDuplicates = 0;
 			taskGroups.forEach((tasks, url) => {
 				if (tasks.length > 1) {
-					debug('  Content group: %s', url);
-					debug('    - %d files need this content:', tasks.length);
+					this.log.debug('  Content group: %s', url);
+					this.log.debug('    - %d files need this content:', tasks.length);
 					tasks.forEach((task) => {
-						debug('      * %s (fileName: %s)', task.file.src, task.fileName);
+						this.log.debug('      * %s (fileName: %s)', task.file.src, task.fileName);
 					});
 					totalDuplicates += tasks.length - 1;
 				}
 			});
 
 			if (totalDuplicates > 0) {
-				debug('DEDUP: Total duplicate downloads that could be optimized: %d', totalDuplicates);
+				this.log.debug('DEDUP: Total duplicate downloads that could be optimized: %d', totalDuplicates);
 			}
 
 			// Phase 3b.5: Check for existing content that can be reused
-			debug('Phase 3b.5: Checking for existing content that can be reused');
+			this.log.debug('Phase 3b.5: Checking for existing content that can be reused');
 			for (const [contentUrl, tasks] of taskGroups) {
 				// Check if this content already exists locally (only check once per group)
 				const existingFilePath = await this.findExistingContentFile(
@@ -866,7 +865,7 @@ export class FilesManager implements IFilesManager {
 					// Store this info in the first task (we'll check it in Phase 3c)
 					// We only set it on the first task to keep it simple
 					tasks[0].existingFilePath = existingFilePath;
-					debug(
+					this.log.debug(
 						'DEDUP: Found existing content at %s for %d tasks (content: %s)',
 						existingFilePath,
 						tasks.length,
@@ -882,7 +881,7 @@ export class FilesManager implements IFilesManager {
 					if (storageFilePath) {
 						// Store this info in the first task (we'll check it in Phase 3c)
 						tasks[0].storageFilePath = storageFilePath;
-						debug(
+						this.log.debug(
 							'DEDUP: Found content in storage at %s for %d tasks (content: %s)',
 							storageFilePath,
 							tasks.length,
@@ -893,7 +892,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Phase 3c: Execute download tasks with optimization (download once per content group)
-			debug('Phase 3c: Executing downloads WITH OPTIMIZATION - download once per content group');
+			this.log.debug('Phase 3c: Executing downloads WITH OPTIMIZATION - download once per content group');
 
 			// Collect all storage paths needed by content groups to protect from eviction
 			const protectedStoragePaths = new Set<string>();
@@ -907,7 +906,7 @@ export class FilesManager implements IFilesManager {
 			let skippedDownloads = 0;
 
 			for (const [contentUrl, tasks] of taskGroups) {
-				debug('Processing content group: %s (%d tasks)', contentUrl, tasks.length);
+				this.log.debug('Processing content group: %s (%d tasks)', contentUrl, tasks.length);
 
 				// Check if we found existing content for this group
 				const existingFilePath = tasks[0].existingFilePath;
@@ -915,27 +914,27 @@ export class FilesManager implements IFilesManager {
 
 				if (existingFilePath) {
 					// SAFE: Copy existing content to temp for ALL tasks in group
-					debug('DEDUP: Reusing existing content from %s for %d tasks', existingFilePath, tasks.length);
+					this.log.debug('DEDUP: Reusing existing content from %s for %d tasks', existingFilePath, tasks.length);
 
 					for (const task of tasks) {
 						// Handle storage preservation if needed (keep existing logic)
 						if (task.shouldPreserve && task.existingValue) {
-							debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
+							this.log.debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
 							await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
 						} else if (task.existingValue && !task.shouldPreserve) {
-							debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+							this.log.debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 						}
 
 						try {
 							// Floor guard: skip the dedup copy if it would breach MINIMAL_STORAGE_FREE_SPACE
 							if (!(await this.hasFloorRoomForCopy(existingFilePath))) {
-								debug('DEDUP: Skipping copy for %s - would breach minimum free space floor', task.file.src);
+								this.log.debug('DEDUP: Skipping copy for %s - would breach minimum free space floor', task.file.src);
 								skippedDownloads++;
 								continue;
 							}
 
 							// SAFE: Copy to temp folder
-							debug(
+							this.log.debug(
 								'DEDUP: Copying existing content to temp: %s -> %s',
 								existingFilePath,
 								task.actualDownloadPath,
@@ -954,7 +953,7 @@ export class FilesManager implements IFilesManager {
 								},
 							);
 
-							debug(
+							this.log.debug(
 								'DEDUP: Successfully copied existing content for: %s (fileName: %s)',
 								task.file.src,
 								task.fileName,
@@ -969,11 +968,11 @@ export class FilesManager implements IFilesManager {
 							// CRITICAL: Track in tempDownloads for migration
 							if (task.isNewContent) {
 								this.tempDownloads.set(task.fileName, task.actualDownloadPath);
-								debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
+								this.log.debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
 							}
 
 						} catch (err) {
-							debug('DEDUP: Failed to copy existing content: %O', err);
+							this.log.debug('DEDUP: Failed to copy existing content: %O', err);
 							// On error, we'll fall through to normal download logic below
 							// Remove the existingFilePath marker so it will download instead
 							tasks[0].existingFilePath = undefined;
@@ -985,12 +984,12 @@ export class FilesManager implements IFilesManager {
 					if (tasks[0].existingFilePath) {
 						optimizedDownloads++;
 						skippedDownloads += tasks.length;
-						debug('DEDUP: Successfully reused existing content for all %d tasks', tasks.length);
+						this.log.debug('DEDUP: Successfully reused existing content for all %d tasks', tasks.length);
 						continue; // Skip to next content group
 					}
 				} else if (storageFilePath) {
 					// Step 7: Restore from storage (similar to Step 6 pattern)
-					debug('DEDUP: Restoring content from storage at %s for %d tasks', storageFilePath, tasks.length);
+					this.log.debug('DEDUP: Restoring content from storage at %s for %d tasks', storageFilePath, tasks.length);
 
 					// Restore once for the first task
 					let restoredTempPath: string | null = null;
@@ -998,7 +997,7 @@ export class FilesManager implements IFilesManager {
 
 					// Handle storage preservation if needed for first task
 					if (firstTask.shouldPreserve && firstTask.existingValue) {
-						debug('Preserving old content to storage before restoration: %s', firstTask.fullLocalFilePath);
+						this.log.debug('Preserving old content to storage before restoration: %s', firstTask.fullLocalFilePath);
 						await this.preserveFileToStorage(
 							firstTask.fullLocalFilePath,
 							firstTask.existingValue,
@@ -1019,7 +1018,7 @@ export class FilesManager implements IFilesManager {
 						);
 
 						if (restoredTempPath) {
-							debug('DEDUP: Successfully restored from storage to: %s', restoredTempPath);
+							this.log.debug('DEDUP: Successfully restored from storage to: %s', restoredTempPath);
 							this.sendOptInEventReport(
 								'media-restored',
 								firstTask.file,
@@ -1030,7 +1029,7 @@ export class FilesManager implements IFilesManager {
 							// Track it in tempDownloads
 							if (firstTask.isNewContent) {
 								this.tempDownloads.set(firstTask.fileName, restoredTempPath);
-								debug('Tracked restored temp file: %s -> %s', firstTask.fileName, restoredTempPath);
+								this.log.debug('Tracked restored temp file: %s -> %s', firstTask.fileName, restoredTempPath);
 							}
 
 							// Copy locally for remaining tasks in the group
@@ -1039,7 +1038,7 @@ export class FilesManager implements IFilesManager {
 
 								// Handle storage preservation if needed
 								if (task.shouldPreserve && task.existingValue) {
-									debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
+									this.log.debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
 									await this.preserveFileToStorage(
 										task.fullLocalFilePath,
 										task.existingValue,
@@ -1051,12 +1050,15 @@ export class FilesManager implements IFilesManager {
 								try {
 									// Floor guard: skip if this copy would breach the minimum free space floor
 									if (!(await this.hasFloorRoomForCopy(restoredTempPath))) {
-										debug('DEDUP: Skipping restored copy for %s - would breach minimum free space floor', task.file.src);
+										this.log.debug(
+											'DEDUP: Skipping restored copy for %s - would breach minimum free space floor',
+											task.file.src,
+										);
 										continue;
 									}
 
 									// Copy the restored file to this task's temp location
-									debug(
+									this.log.debug(
 										'DEDUP: Copying restored content to temp: %s -> %s',
 										restoredTempPath,
 										task.actualDownloadPath,
@@ -1075,7 +1077,7 @@ export class FilesManager implements IFilesManager {
 										},
 									);
 
-									debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
+									this.log.debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
 									await this.trackSpaceConsumed(task.actualDownloadPath);
 									this.sendOptInEventReport(
 										'media-copied',
@@ -1086,25 +1088,25 @@ export class FilesManager implements IFilesManager {
 									// Track in tempDownloads
 									if (task.isNewContent) {
 										this.tempDownloads.set(task.fileName, task.actualDownloadPath);
-										debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
+										this.log.debug('Tracked temp copy: %s -> %s', task.fileName, task.actualDownloadPath);
 									}
 
 								} catch (err) {
-									debug('DEDUP: Failed to copy restored content: %O', err);
+									this.log.debug('DEDUP: Failed to copy restored content: %O', err);
 									// Continue trying for other tasks
 								}
 							}
 
 							optimizedDownloads++;
 							skippedDownloads += tasks.length;
-							debug(
+							this.log.debug(
 								'DEDUP: Successfully restored and reused content from storage for %d tasks',
 								tasks.length,
 							);
 							continue; // Skip to next content group
 						}
 					} catch (err) {
-						debug('DEDUP: Failed to restore from storage: %O', err);
+						this.log.debug('DEDUP: Failed to restore from storage: %O', err);
 						// Fall through to normal download logic
 					}
 				}
@@ -1115,15 +1117,15 @@ export class FilesManager implements IFilesManager {
 					const task = tasks[0];
 
 					if (task.isNewContent) {
-						debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
+						this.log.debug('Using temp folder for new content: %s instead of %s', task.downloadPath, localFilePath);
 					}
 
 					// Preserve existing file to storage if needed
 					if (task.shouldPreserve && task.existingValue) {
-						debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
+						this.log.debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
 						await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
 					} else if (task.existingValue && !task.shouldPreserve) {
-						debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
+						this.log.debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 					}
 
 					// Download as normal for single file
@@ -1131,14 +1133,14 @@ export class FilesManager implements IFilesManager {
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
 							if (!(await this.checkAvailableSpace(task.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-								debug('[files] skipping download (insufficient storage space): %s', task.file.src);
+								this.log.debug('[files] skipping download (insufficient storage space): %s', task.file.src);
 								filesToUpdate.delete(task.fileName);
 								return;
 							}
 
 							try {
-								debug('[files] downloading file: %s', task.updateValue ?? task.file.src);
-								debug('[files] using downloadUrl: %s for file: %s', task.downloadUrl, task.file.src);
+								this.log.debug('[files] downloading file: %s', task.updateValue ?? task.file.src);
+								this.log.debug('[files] using downloadUrl: %s for file: %s', task.downloadUrl, task.file.src);
 								const authHeaders = window.getAuthHeaders?.(task.downloadUrl);
 
 								await this.sos.fileSystem.downloadFile(
@@ -1150,13 +1152,13 @@ export class FilesManager implements IFilesManager {
 									authHeaders,
 								);
 
-								debug('[files] file downloaded to: %s', task.actualDownloadPath);
+								this.log.debug('[files] file downloaded to: %s', task.actualDownloadPath);
 								await this.trackSpaceConsumed(task.actualDownloadPath);
 
 								// Track file in temp if using temp folder
 								if (task.isNewContent) {
 									this.tempDownloads.set(task.fileName, task.actualDownloadPath);
-									debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
+									this.log.debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
 								}
 
 								this.sendDownloadReport(
@@ -1168,7 +1170,7 @@ export class FilesManager implements IFilesManager {
 									getReportUrlFromUpdateValue(task.updateValue),
 								);
 							} catch (err) {
-								debug('[files] download error: %O, file: %s', err, task.file.src);
+								this.log.debug('[files] download error: %O, file: %s', err, task.file.src);
 								this.sendDownloadReport(
 									fileType,
 									task.fullLocalFilePath,
@@ -1184,18 +1186,18 @@ export class FilesManager implements IFilesManager {
 					optimizedDownloads++;
 				} else {
 					// Multiple tasks for same content - OPTIMIZATION APPLIES
-					debug('DEDUP: Optimizing download for content group with %d files', tasks.length);
+					this.log.debug('DEDUP: Optimizing download for content group with %d files', tasks.length);
 
 					// Process the first task - this will be the primary download
 					const primaryTask = tasks[0];
-					debug(
+					this.log.debug(
 						'DEDUP: Primary download task: %s (fileName: %s)',
 						primaryTask.file.src,
 						primaryTask.fileName,
 					);
 
 					if (primaryTask.isNewContent) {
-						debug(
+						this.log.debug(
 							'Using temp folder for new content: %s instead of %s',
 							primaryTask.downloadPath,
 							localFilePath,
@@ -1204,7 +1206,7 @@ export class FilesManager implements IFilesManager {
 
 					// Preserve existing file to storage if needed (only for primary)
 					if (primaryTask.shouldPreserve && primaryTask.existingValue) {
-						debug('Preserving old content to storage before download: %s', primaryTask.fullLocalFilePath);
+						this.log.debug('Preserving old content to storage before download: %s', primaryTask.fullLocalFilePath);
 						await this.preserveFileToStorage(
 							primaryTask.fullLocalFilePath,
 							primaryTask.existingValue,
@@ -1212,7 +1214,7 @@ export class FilesManager implements IFilesManager {
 							protectedStoragePaths,
 						);
 					} else if (primaryTask.existingValue && !primaryTask.shouldPreserve) {
-						debug('Content still needed by other URLs, not preserving: %s', primaryTask.existingValue);
+						this.log.debug('Content still needed by other URLs, not preserving: %s', primaryTask.existingValue);
 					}
 
 					// Download only the primary file
@@ -1220,7 +1222,7 @@ export class FilesManager implements IFilesManager {
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
 							if (!(await this.checkAvailableSpace(primaryTask.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-								debug('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
+								this.log.debug('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
 								filesToUpdate.delete(primaryTask.fileName);
 								for (let i = 1; i < tasks.length; i++) {
 									filesToUpdate.delete(tasks[i].fileName);
@@ -1229,11 +1231,11 @@ export class FilesManager implements IFilesManager {
 							}
 
 							try {
-								debug(
+								this.log.debug(
 									`DEDUP: Downloading primary file: %O`,
 									primaryTask.updateValue ?? primaryTask.file.src,
 								);
-								debug(
+								this.log.debug(
 									`Using downloadUrl: %s for file: %s`,
 									primaryTask.downloadUrl,
 									primaryTask.file.src,
@@ -1249,13 +1251,13 @@ export class FilesManager implements IFilesManager {
 									authHeaders,
 								);
 
-								debug(`DEDUP: Primary file downloaded to: %s`, primaryTask.actualDownloadPath);
+								this.log.debug(`DEDUP: Primary file downloaded to: %s`, primaryTask.actualDownloadPath);
 								await this.trackSpaceConsumed(primaryTask.actualDownloadPath);
 
 								// Track file in temp if using temp folder
 								if (primaryTask.isNewContent) {
 									this.tempDownloads.set(primaryTask.fileName, primaryTask.actualDownloadPath);
-									debug(
+									this.log.debug(
 										`Tracked temp download: %s -> %s`,
 										primaryTask.fileName,
 										primaryTask.actualDownloadPath,
@@ -1272,7 +1274,7 @@ export class FilesManager implements IFilesManager {
 								);
 
 								// Step 5: Copy the primary file for all other tasks in this group
-								debug('DEDUP: Copying primary file for %d duplicate URLs', tasks.length - 1);
+								this.log.debug('DEDUP: Copying primary file for %d duplicate URLs', tasks.length - 1);
 
 								for (let i = 1; i < tasks.length; i++) {
 									const duplicateTask = tasks[i];
@@ -1283,11 +1285,14 @@ export class FilesManager implements IFilesManager {
 										// (e.g. download just landed and stats not flushed).
 										const fallback = primaryTask.contentLength || MINIMAL_STORAGE_FREE_SPACE;
 										if (!(await this.hasFloorRoomForCopy(primaryTask.actualDownloadPath, fallback))) {
-											debug('DEDUP: Skipping duplicate copy for %s - would breach minimum free space floor', duplicateTask.file.src);
+											this.log.debug(
+												'DEDUP: Skipping duplicate copy for %s - would breach minimum free space floor',
+												duplicateTask.file.src,
+											);
 											continue;
 										}
 
-										debug(
+										this.log.debug(
 											'DEDUP: Copying for duplicate: %s -> %s',
 											primaryTask.actualDownloadPath,
 											duplicateTask.actualDownloadPath,
@@ -1308,7 +1313,7 @@ export class FilesManager implements IFilesManager {
 											},
 										);
 
-										debug(
+										this.log.debug(
 											'DEDUP: Successfully copied file for: %s (fileName: %s)',
 											duplicateTask.file.src,
 											duplicateTask.fileName,
@@ -1326,7 +1331,7 @@ export class FilesManager implements IFilesManager {
 												duplicateTask.fileName,
 												duplicateTask.actualDownloadPath,
 											);
-											debug(
+											this.log.debug(
 												`Tracked temp copy: %s -> %s`,
 												duplicateTask.fileName,
 												duplicateTask.actualDownloadPath,
@@ -1334,7 +1339,7 @@ export class FilesManager implements IFilesManager {
 										}
 
 									} catch (copyErr) {
-										debug(
+										this.log.debug(
 											'DEDUP: ERROR - Failed to copy for duplicate: %s, error: %O',
 											duplicateTask.file.src,
 											copyErr,
@@ -1344,9 +1349,9 @@ export class FilesManager implements IFilesManager {
 									}
 								}
 
-								debug('DEDUP: Copy phase complete for content group');
+								this.log.debug('DEDUP: Copy phase complete for content group');
 							} catch (err) {
-								debug(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
+								this.log.debug(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
 								this.sendDownloadReport(
 									fileType,
 									primaryTask.fullLocalFilePath,
@@ -1368,7 +1373,7 @@ export class FilesManager implements IFilesManager {
 						const duplicateTask = tasks[i];
 						// Preserve existing files to storage if needed
 						if (duplicateTask.shouldPreserve && duplicateTask.existingValue) {
-							debug(
+							this.log.debug(
 								'Preserving old content to storage (duplicate task): %s',
 								duplicateTask.fullLocalFilePath,
 							);
@@ -1380,18 +1385,18 @@ export class FilesManager implements IFilesManager {
 							);
 						}
 						// Files will be created by copy operation after primary download
-						debug('DEDUP: Download skipped for: %s (will copy from primary)', duplicateTask.file.src);
+						this.log.debug('DEDUP: Download skipped for: %s (will copy from primary)', duplicateTask.file.src);
 					}
 				}
 			}
 
-			debug(
+			this.log.debug(
 				'DEDUP: Download optimization complete - Downloaded: %d, Skipped: %d',
 				optimizedDownloads,
 				skippedDownloads,
 			);
 			if (skippedDownloads > 0) {
-				debug(
+				this.log.debug(
 					'DEDUP: Optimization saved %d duplicate downloads (files copied locally instead)',
 					skippedDownloads,
 				);
@@ -1404,7 +1409,7 @@ export class FilesManager implements IFilesManager {
 			);
 
 			for (const result of noDownloadResults) {
-				debug(`Updating mediaInfoObject for %s without download`, result.file.src);
+				this.log.debug(`Updating mediaInfoObject for %s without download`, result.file.src);
 				filesToUpdate.set(result.fileName, result.updateCheck.value);
 				this.sendOptInEventReport(
 					'media-moved',
@@ -1418,7 +1423,7 @@ export class FilesManager implements IFilesManager {
 				filesList.map(async (file) => {
 					// do not download website widgets or video streams
 					if (shouldNotDownload(localFilePath, file)) {
-						debug('Will not download file: %O', file);
+						this.log.debug('Will not download file: %O', file);
 						return;
 					}
 
@@ -1481,7 +1486,7 @@ export class FilesManager implements IFilesManager {
 						const downloadPath = usesTempFolder ? tempFolder : localFilePath;
 
 						if (usesTempFolder) {
-							debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
+							this.log.debug('Using temp folder for new content: %s instead of %s', downloadPath, localFilePath);
 						}
 
 						const fullLocalFilePath = `${localFilePath}/${canonicalName}`;
@@ -1501,10 +1506,10 @@ export class FilesManager implements IFilesManager {
 							);
 
 							if (!stillNeeded) {
-								debug('Preserving old content to storage before download: %s', fullLocalFilePath);
+								this.log.debug('Preserving old content to storage before download: %s', fullLocalFilePath);
 								await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
 							} else {
-								debug('Content still needed by other URLs, not preserving: %s', existingValue);
+								this.log.debug('Content still needed by other URLs, not preserving: %s', existingValue);
 							}
 						}
 
@@ -1512,13 +1517,13 @@ export class FilesManager implements IFilesManager {
 							(async () => {
 								// Check storage before downloading to prevent wasted bandwidth
 								if (!(await this.checkAvailableSpace(updateCheck.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-									debug('Skipping download for %s - insufficient storage space', file.src);
+									this.log.debug('Skipping download for %s - insufficient storage space', file.src);
 									filesToUpdate.delete(canonicalName);
 									return;
 								}
 
 								try {
-									debug(`Downloading file: %O`, updateValue ?? file.src);
+									this.log.debug(`Downloading file: %O`, updateValue ?? file.src);
 									// Location strategy uses strings as values, while lastModified uses timestamps
 									let downloadUrl: string;
 
@@ -1527,7 +1532,7 @@ export class FilesManager implements IFilesManager {
 									} else {
 										downloadUrl = createDownloadPath(file.src);
 									}
-									debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
+									this.log.debug(`Using downloadUrl: %s for file: %s`, downloadUrl, file.src);
 									const authHeaders = window.getAuthHeaders?.(downloadUrl);
 
 									await this.sos.fileSystem.downloadFile(
@@ -1539,13 +1544,13 @@ export class FilesManager implements IFilesManager {
 										authHeaders,
 									);
 
-									debug(`File downloaded to: %s`, actualDownloadPath);
+									this.log.debug(`File downloaded to: %s`, actualDownloadPath);
 									await this.trackSpaceConsumed(actualDownloadPath);
 
 									// Track file in temp if using temp folder
 									if (usesTempFolder) {
 										this.tempDownloads.set(canonicalName, actualDownloadPath);
-										debug(`Tracked temp download: %s -> %s`, canonicalName, actualDownloadPath);
+										this.log.debug(`Tracked temp download: %s -> %s`, canonicalName, actualDownloadPath);
 									}
 
 									this.sendDownloadReport(
@@ -1557,7 +1562,7 @@ export class FilesManager implements IFilesManager {
 										getReportUrlFromUpdateValue(updateValue),
 									);
 								} catch (err) {
-									debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+									this.log.debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
 									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, 502);
 									// Remove from filesToUpdate if download failed
 									filesToUpdate.delete(canonicalName);
@@ -1567,7 +1572,7 @@ export class FilesManager implements IFilesManager {
 					} else if (updateCheck.value) {
 						// File doesn't need download but we need to update the mediaInfoObject
 						// This happens when content is already downloaded but moved to a new URL
-						debug(`Updating mediaInfoObject for %s without download`, file.src);
+						this.log.debug(`Updating mediaInfoObject for %s without download`, file.src);
 						filesToUpdate.set(
 							getFileName(file.src, updateCheck.value as string | undefined),
 							updateCheck.value,
@@ -1593,7 +1598,7 @@ export class FilesManager implements IFilesManager {
 	): Promise<void> => {
 		// Update mediaInfoObject with successful downloads
 		filesToUpdate.forEach((value, fileName) => {
-			debug('[files] updating mediaInfo: file=%s', fileName);
+			this.log.debug('[files] updating mediaInfo: file=%s', fileName);
 			updateJsonObject(mediaInfoObject, fileName, value);
 		});
 
@@ -1607,14 +1612,14 @@ export class FilesManager implements IFilesManager {
 	public createFileStructure = async () => {
 		for (const structPath of Object.values(FileStructure)) {
 			if (await this.fileExists(structPath)) {
-				debug('[files] directory exists: %s', structPath);
+				this.log.debug('[files] directory exists: %s', structPath);
 				continue;
 			}
 			// Add specific debug for temp folders
 			if (structPath.endsWith('/tmp')) {
-				debug('[files] creating temp directory for atomic updates: %s', structPath);
+				this.log.debug('[files] creating temp directory for atomic updates: %s', structPath);
 			} else {
-				debug('[files] creating directory: %s', structPath);
+				this.log.debug('[files] creating directory: %s', structPath);
 			}
 			await this.sos.fileSystem.createDirectory({
 				storageUnit: this.internalStorageUnit,
@@ -1624,7 +1629,7 @@ export class FilesManager implements IFilesManager {
 	};
 
 	public prepareDownloadMediaSetup = async (smilObject: SMILFileObject): Promise<void> => {
-		debug('[files] starting download batch');
+		this.log.debug('[files] starting download batch');
 
 		// Clean up orphaned temp files from any prior crashed run so they don't accumulate on disk.
 		await this.clearTempFolders();
@@ -1655,7 +1660,7 @@ export class FilesManager implements IFilesManager {
 		const movedContent = detections.filter((d) => !d.needsDownload);
 		const newContent = detections.filter((d) => d.needsDownload);
 
-		debug(
+		this.log.debug(
 			'prepareDownloadMediaSetup: %d moved content, %d new content detections',
 			movedContent.length, newContent.length,
 		);
@@ -1689,7 +1694,7 @@ export class FilesManager implements IFilesManager {
 
 	public prepareLastModifiedSetup = async (smilObject: SMILFileObject, smilFile: SMILFile): Promise<Resource[]> => {
 		let resourceCheckers: Resource[] = [];
-		debug('[files] starting update check');
+		this.log.debug('[files] starting update check');
 		try {
 			// For SMIL file, always use lastModified strategy
 			const smilFetchStrategy = getStrategy(SMILEnums.lastModified);
@@ -1803,7 +1808,7 @@ export class FilesManager implements IFilesManager {
 
 			return resourceCheckers;
 		} catch (err) {
-			debug('[files] lastModified check error: %O', err);
+			this.log.debug('[files] lastModified check error: %O', err);
 			// return empty arrays as if no new versions of files were found
 		}
 		return [];
@@ -1820,7 +1825,7 @@ export class FilesManager implements IFilesManager {
 				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
 			))
 		) {
-			debug('[files] mediaInfo not found, creating new');
+			this.log.debug('[files] mediaInfo not found, creating new');
 			return createJsonStructureMediaInfo(filesList);
 		}
 
@@ -1834,7 +1839,7 @@ export class FilesManager implements IFilesManager {
 			// Include a short prefix of the read content so a corrupted or
 			// truncated mediaInfo file can be diagnosed without re-reading it
 			// manually. The typed fallback keeps the happy path unchanged.
-			debug(
+			this.log.debug(
 				'[files] cannot parse media info: snippet=%s, error=%O',
 				(response ?? '').slice(0, 100),
 				error,
@@ -1854,31 +1859,31 @@ export class FilesManager implements IFilesManager {
 		const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
 		const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
 		if (removed.length > 0) {
-			debug('Pruned %d stale extensionless mediaInfo keys: %O', removed.length, removed);
+			this.log.debug('Pruned %d stale extensionless mediaInfo keys: %O', removed.length, removed);
 			await this.writeMediaInfoFile(mediaInfoObject);
 		}
 	};
 
 	// Batch update methods for atomic mediaInfoObject updates
 	public startBatch = (): void => {
-		debug('Starting batch collection for mediaInfoObject updates');
+		this.log.debug('Starting batch collection for mediaInfoObject updates');
 		this.batchUpdates.clear();
 		this.pendingWasUpdated.clear();
 	};
 
 	public collectUpdate = (fileName: string, value: string | number): void => {
-		debug('Collecting batch update for file: %s with value: %s', fileName, value);
+		this.log.debug('Collecting batch update for file: %s with value: %s', fileName, value);
 		this.batchUpdates.set(fileName, value);
 	};
 
 	public commitBatch = async (filesList: MergedDownloadList[]): Promise<void> => {
 		if (this.batchUpdates.size === 0 && this.tempDownloads.size === 0
 			&& this.pendingWasUpdated.size === 0) {
-			debug('No batch updates, temp downloads, or pending wasUpdated to commit');
+			this.log.debug('No batch updates, temp downloads, or pending wasUpdated to commit');
 			return;
 		}
 
-		debug(
+		this.log.debug(
 			'Committing %d batch updates, %d temp downloads, %d pending wasUpdated',
 			this.batchUpdates.size, this.tempDownloads.size, this.pendingWasUpdated.size,
 		);
@@ -1892,7 +1897,7 @@ export class FilesManager implements IFilesManager {
 					tempUriMap.set(fileName, fileDetails.localUri);
 				}
 			} catch (err) {
-				debug('commitBatch: Failed to resolve temp URI for %s: %O', fileName, err);
+				this.log.debug('commitBatch: Failed to resolve temp URI for %s: %O', fileName, err);
 			}
 		}
 
@@ -1908,7 +1913,7 @@ export class FilesManager implements IFilesManager {
 		for (const [fileName, value] of this.batchUpdates) {
 			const oldValue = mediaInfoObject[fileName];
 			mediaInfoObject[fileName] = value;
-			debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
+			this.log.debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
 		}
 
 		// Swap localFilePath to temp URIs so playlist reads NEW content immediately
@@ -1918,7 +1923,7 @@ export class FilesManager implements IFilesManager {
 				const tempUri = tempUriMap.get(fileName);
 				if (tempUri) {
 					file.localFilePath = tempUri;
-					debug('commitBatch: Swapped localFilePath for %s to temp URI: %s', fileName, tempUri);
+					this.log.debug('commitBatch: Swapped localFilePath for %s to temp URI: %s', fileName, tempUri);
 				}
 			}
 		}
@@ -1963,10 +1968,10 @@ export class FilesManager implements IFilesManager {
 		// Log failed files (mediaInfoObject already written with new values;
 		// migration failure means file is still at temp path which localFilePath already points to)
 		for (const failedFile of failedFiles) {
-			debug('commitBatch: Migration failed for %s, temp URI still valid', failedFile);
+			this.log.debug('commitBatch: Migration failed for %s, temp URI still valid', failedFile);
 		}
 
-		debug('Batch updates committed and mediaInfoObject saved');
+		this.log.debug('Batch updates committed and mediaInfoObject saved');
 
 		// Clear batch after successful commit
 		this.batchUpdates.clear();
@@ -1991,13 +1996,13 @@ export class FilesManager implements IFilesManager {
 		const maxContentLength = Math.max(...detections.map((d) => d.contentLength || 0));
 		const requiredSpace = maxContentLength || MINIMAL_STORAGE_FREE_SPACE;
 		if (!(await this.checkAvailableSpace(requiredSpace))) {
-			debug('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
+			this.log.debug('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
 			return [];
 		}
 
 		const processedResults: ProcessedFileUpdate[] = [];
 
-		debug('processNewContentUpdates: Processing %d new content detections', detections.length);
+		this.log.debug('processNewContentUpdates: Processing %d new content detections', detections.length);
 
 		// Build complete pending updates map for ALL files in this batch
 		// This is critical for preservation checks to see the future state of ALL files across all phases
@@ -2008,7 +2013,7 @@ export class FilesManager implements IFilesManager {
 			const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 			allPendingUpdates.set(fileName, detection.updateValue);
 		}
-		debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
+		this.log.debug('processNewContentUpdates: Built pending updates map with %d entries', allPendingUpdates.size);
 
 		// Group by updateValue (content URL) and localFilePath
 		// Only files needing the same content in the same folder are batched together
@@ -2023,7 +2028,7 @@ export class FilesManager implements IFilesManager {
 			groups.get(key)!.push(detection);
 		}
 
-		debug('processNewContentUpdates: Grouped into %d batches', groups.size);
+		this.log.debug('processNewContentUpdates: Grouped into %d batches', groups.size);
 
 		// Batch download each group
 		for (const [key, groupDetections] of groups) {
@@ -2031,7 +2036,7 @@ export class FilesManager implements IFilesManager {
 			const fetchStrategy = groupDetections[0].fetchStrategy;
 			const localFilePath = groupDetections[0].localFilePath;
 
-			debug(
+			this.log.debug(
 				'processNewContentUpdates: Batch downloading %d files for %s with strategy %s',
 				files.length,
 				localFilePath,
@@ -2063,7 +2068,7 @@ export class FilesManager implements IFilesManager {
 				// Wait for all downloads to complete
 				await Promise.all(result.promises);
 
-				debug('processNewContentUpdates: Downloads complete for group: %s', key);
+				this.log.debug('processNewContentUpdates: Downloads complete for group: %s', key);
 
 				// Post-process: collectUpdate and set wasUpdated for each file
 				for (const detection of groupDetections) {
@@ -2076,7 +2081,7 @@ export class FilesManager implements IFilesManager {
 					// skipUpdateCheck optimization, which is wrong for groups with
 					// multiple files pointing to the same content.
 					if (downloadSucceeded || !detection.needsDownload) {
-						debug(
+						this.log.debug(
 							'processNewContentUpdates: Collecting batch update for %s with value: %s',
 							fileName,
 							detection.updateValue,
@@ -2084,7 +2089,7 @@ export class FilesManager implements IFilesManager {
 						this.collectUpdate(fileName, String(detection.updateValue));
 					} else {
 						// NEW_CONTENT but not in filesToUpdate — download/copy failed
-						debug(
+						this.log.debug(
 							'processNewContentUpdates: Skipping failed download for %s',
 							fileName,
 						);
@@ -2133,14 +2138,14 @@ export class FilesManager implements IFilesManager {
 					});
 				}
 
-				debug('processNewContentUpdates: Batch processing complete for group: %s', key);
+				this.log.debug('processNewContentUpdates: Batch processing complete for group: %s', key);
 			} catch (err) {
-				debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
+				this.log.debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
 				// Continue with other groups even if one fails
 			}
 		}
 
-		debug('processNewContentUpdates: All batches processed');
+		this.log.debug('processNewContentUpdates: All batches processed');
 		return processedResults;
 	};
 
@@ -2151,7 +2156,7 @@ export class FilesManager implements IFilesManager {
 	 * @param detection Update detection for moved content
 	 */
 	public handleMovedContent = async (detection: UpdateDetection): Promise<void> => {
-		debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
+		this.log.debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
 
 		await this.updateLocalFilePathForMovedContent(
 			detection.file,
@@ -2162,7 +2167,7 @@ export class FilesManager implements IFilesManager {
 
 		// Update mapping in mediaInfoObject
 		const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
-		debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
+		this.log.debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
 		this.collectUpdate(fileName, String(detection.updateValue));
 		this.sendOptInEventReport('media-moved', detection.file, getReportUrlFromUpdateValue(detection.updateValue));
 	};
@@ -2185,7 +2190,7 @@ export class FilesManager implements IFilesManager {
 		if (!smilObject.skipPlaybackOnHttpStatus || smilObject.skipPlaybackOnHttpStatus.length === 0) {
 			if (!this.playCheckGateMissingMetaWarned) {
 				this.playCheckGateMissingMetaWarned = true;
-				debug(
+				this.log.debug(
 					'playCheckGate: playCheckUrl present but skipPlaybackOnHttpStatus meta is not configured - gate inactive: %s',
 					media.playCheckUrl,
 				);
@@ -2202,7 +2207,7 @@ export class FilesManager implements IFilesManager {
 				smilObject.skipPlaybackOnHttpStatus,
 				media.playCheckSkipOnError === true,
 			);
-			debug(
+			this.log.debug(
 				'playCheckGate: url=%s, status=%d, skipPlayback=%s',
 				media.playCheckUrl,
 				response.status,
@@ -2213,7 +2218,7 @@ export class FilesManager implements IFilesManager {
 			// transport error (network/timeout/CORS): fail-open by default, skip when the
 			// element opted in via playCheckSkipOnError ("no green light -> no play")
 			const skipOnError = media.playCheckSkipOnError === true;
-			debug(
+			this.log.debug(
 				'playCheckGate: request failed, %s: url=%s, error=%O',
 				skipOnError ? 'skipping playback (playCheckSkipOnError)' : 'playing from cache (fail-open)',
 				media.playCheckUrl,
@@ -2230,7 +2235,7 @@ export class FilesManager implements IFilesManager {
 		allMediaList: MergedDownloadList[],
 	): Promise<void> => {
 		try {
-			debug('prePlayCheck: Checking %s in folder %s', media.src, mediaFolder);
+			this.log.debug('prePlayCheck: Checking %s in folder %s', media.src, mediaFolder);
 			const fetchStrategy = getStrategy(smilObject.updateMechanism);
 
 			// Phase 1: Detection (HEAD request) — runs concurrently across regions.
@@ -2243,7 +2248,7 @@ export class FilesManager implements IFilesManager {
 			);
 
 			if (!detection) {
-				debug('prePlayCheck: No update detected for %s', media.src);
+				this.log.debug('prePlayCheck: No update detected for %s', media.src);
 				return;
 			}
 
@@ -2252,7 +2257,7 @@ export class FilesManager implements IFilesManager {
 			// and the maps (tempDownloads, batchUpdates) use.
 			const fileName = getFileName(media.src, detection.updateValue as string | undefined);
 			if (this.activePrePlayDownloads.has(fileName)) {
-				debug('prePlayCheck: Download already in progress for %s, skipping', fileName);
+				this.log.debug('prePlayCheck: Download already in progress for %s, skipping', fileName);
 				return;
 			}
 
@@ -2260,7 +2265,7 @@ export class FilesManager implements IFilesManager {
 			// NOTE: Because this is not awaited by the caller (runPrePlayCheck), the updated content
 			// will not be available until the next playlist iteration. This is intentional — blocking
 			// playback on large downloads would cause visible stalls.
-			debug('prePlayCheck: Starting background download for %s', fileName);
+			this.log.debug('prePlayCheck: Starting background download for %s', fileName);
 			const backgroundDownload = (async () => {
 				try {
 					// Phase 2: Download — returns per-file results so we don't need to read
@@ -2301,7 +2306,7 @@ export class FilesManager implements IFilesManager {
 								true,
 							);
 							this.reclaimOverwrittenSpace(overwrittenSize, standardPath);
-							debug('prePlayCheck: Migrated temp file to standard folder for %s', fileName);
+							this.log.debug('prePlayCheck: Migrated temp file to standard folder for %s', fileName);
 						}
 
 						// Step 4b: Resolve localFilePath from the slot's own file.
@@ -2312,7 +2317,7 @@ export class FilesManager implements IFilesManager {
 							const fileDetails = await this.getFileByPath(knownPath);
 							if (fileDetails) {
 								media.localFilePath = fileDetails.localUri;
-								debug('prePlayCheck: Updated localFilePath for %s to %s', fileName, fileDetails.localUri);
+								this.log.debug('prePlayCheck: Updated localFilePath for %s to %s', fileName, fileDetails.localUri);
 							}
 						}
 
@@ -2326,19 +2331,19 @@ export class FilesManager implements IFilesManager {
 						// This ensures the playlist only sees the update when the file content is ready.
 						if (hadPendingUpdate && 'localFilePath' in media) {
 							(media as any).wasUpdated = true;
-							debug('prePlayCheck: Set wasUpdated=true for %s after migration', fileName);
+							this.log.debug('prePlayCheck: Set wasUpdated=true for %s after migration', fileName);
 						}
 						if (ourBatchValue !== undefined && 'useInReportUrl' in media) {
 							media.useInReportUrl = String(ourBatchValue);
-							debug('prePlayCheck: Set useInReportUrl for %s to %s', fileName, ourBatchValue);
+							this.log.debug('prePlayCheck: Set useInReportUrl for %s to %s', fileName, ourBatchValue);
 						}
 
-						debug('prePlayCheck: Commit complete for %s', fileName);
+						this.log.debug('prePlayCheck: Commit complete for %s', fileName);
 					});
 					this.prePlayLock = commit.catch(() => {/* errors surface via the awaited commit below */});
 					await commit;
 				} catch (error) {
-					debug('Background prePlayCheck download failed for %s: %O', media.src, error);
+					this.log.debug('Background prePlayCheck download failed for %s: %O', media.src, error);
 				} finally {
 					this.activePrePlayDownloads.delete(fileName);
 				}
@@ -2346,7 +2351,7 @@ export class FilesManager implements IFilesManager {
 
 			this.activePrePlayDownloads.set(fileName, backgroundDownload);
 		} catch (error) {
-			debug('Pre-play check failed for %s, using cached version: %O', media.src, error);
+			this.log.debug('Pre-play check failed for %s, using cached version: %O', media.src, error);
 		}
 	};
 
@@ -2399,7 +2404,7 @@ export class FilesManager implements IFilesManager {
 			case FileStructure.widgets:
 				return FileStructure.widgetsTmp;
 			default:
-				debug('No temp folder defined for: %s, using standard folder', standardFolder);
+				this.log.debug('No temp folder defined for: %s, using standard folder', standardFolder);
 				return standardFolder;
 		}
 	};
@@ -2408,7 +2413,7 @@ export class FilesManager implements IFilesManager {
 	 * Clear temp downloads tracking
 	 */
 	private clearTempDownloads = (): void => {
-		debug('Clearing temp downloads tracking. Previous count: %d', this.tempDownloads.size);
+		this.log.debug('Clearing temp downloads tracking. Previous count: %d', this.tempDownloads.size);
 		this.tempDownloads.clear();
 	};
 
@@ -2424,15 +2429,15 @@ export class FilesManager implements IFilesManager {
 			const filePath = `${folder}/${fileName}`;
 			try {
 				if (await this.fileExists(filePath)) {
-					debug('Found file %s at path: %s', fileName, filePath);
+					this.log.debug('Found file %s at path: %s', fileName, filePath);
 					return filePath;
 				}
 			} catch (err) {
-				debug('Error checking file existence at %s: %O', filePath, err);
+				this.log.debug('Error checking file existence at %s: %O', filePath, err);
 			}
 		}
 
-		debug('File %s not found in any media folder', fileName);
+		this.log.debug('File %s not found in any media folder', fileName);
 		return null;
 	};
 
@@ -2461,7 +2466,7 @@ export class FilesManager implements IFilesManager {
 			const hasEnoughSpace =
 				availableSpace - requiredWithMargin >= MINIMAL_STORAGE_FREE_SPACE;
 
-			debug(
+			this.log.debug(
 				'Storage check: Available: %d MB, Required: %d MB (with margin: %d MB), Floor: %d MB, Sufficient: %s',
 				Math.round(availableSpace / (1024 * 1024)),
 				Math.round(estimatedRequiredSpace / (1024 * 1024)),
@@ -2472,7 +2477,7 @@ export class FilesManager implements IFilesManager {
 
 			return hasEnoughSpace;
 		} catch (err) {
-			debug('Error checking available storage space: %O', err);
+			this.log.debug('Error checking available storage space: %O', err);
 			// If we can't check space, proceed anyway and handle errors later
 			return true;
 		}
@@ -2506,7 +2511,7 @@ export class FilesManager implements IFilesManager {
 			const fileInfo = await this.getFileByPath(filePath);
 			if (fileInfo?.sizeBytes && fileInfo.sizeBytes > 0) {
 				this.estimatedFreeSpace -= fileInfo.sizeBytes;
-				debug(
+				this.log.debug(
 					'Space consumed: %d MB for %s (estimated free: %d MB)',
 					Math.round(fileInfo.sizeBytes / (1024 * 1024)),
 					filePath,
@@ -2514,7 +2519,7 @@ export class FilesManager implements IFilesManager {
 				);
 			} else if (fileInfo && !this.sizeBytesUnavailableWarned) {
 				this.sizeBytesUnavailableWarned = true;
-				debug('WARNING: sizeBytes unavailable for %s — space tracking may be inaccurate', filePath);
+				this.log.debug('WARNING: sizeBytes unavailable for %s — space tracking may be inaccurate', filePath);
 			}
 		} catch (_) {
 			// Best-effort tracking
@@ -2541,7 +2546,7 @@ export class FilesManager implements IFilesManager {
 	private reclaimOverwrittenSpace = (freedBytes: number, filePath: string) => {
 		if (freedBytes > 0) {
 			this.estimatedFreeSpace += freedBytes;
-			debug(
+			this.log.debug(
 				'Space reclaimed from overwritten file: %d MB at %s (estimated free: %d MB)',
 				Math.round(freedBytes / (1024 * 1024)),
 				filePath,
@@ -2564,7 +2569,7 @@ export class FilesManager implements IFilesManager {
 	): Map<string, ContentMovement> => {
 		const movements = new Map<string, ContentMovement>();
 
-		debug('Detecting content movements for %d files', filesList.length);
+		this.log.debug('Detecting content movements for %d files', filesList.length);
 
 		// Check each file to see if its content has changed
 		for (const file of filesList) {
@@ -2591,7 +2596,7 @@ export class FilesManager implements IFilesManager {
 				continue;
 			}
 
-			debug('File %s: content changing from %s to %s', destFileName, currentValue || 'none', newValue);
+			this.log.debug('File %s: content changing from %s to %s', destFileName, currentValue || 'none', newValue);
 
 			// Find where this new content currently exists
 			// Simple approach: whoever has it now is the source
@@ -2600,7 +2605,7 @@ export class FilesManager implements IFilesManager {
 			for (const [sourceFileName, sourceValue] of Object.entries(currentMediaInfo)) {
 				if (sourceValue && getUrlWithoutQueryParams(sourceValue) === newValueNoQuery && sourceFileName !== destFileName) {
 					// Found: content is moving FROM sourceFileName TO destFileName
-					debug('Content %s is moving from %s to %s', newValue, sourceFileName, destFileName);
+					this.log.debug('Content %s is moving from %s to %s', newValue, sourceFileName, destFileName);
 
 					// Track this movement - use base URL without query params as key to group movements
 					const contentKey = newValueNoQuery;
@@ -2619,7 +2624,7 @@ export class FilesManager implements IFilesManager {
 
 		// Log summary
 		for (const [value, movement] of movements) {
-			debug(
+			this.log.debug(
 				'Movement detected: Content %s from %s to %d destination(s): %s',
 				value,
 				movement.sourceFileName,
@@ -2628,7 +2633,7 @@ export class FilesManager implements IFilesManager {
 			);
 		}
 
-		debug('Total content movements detected: %d', movements.size);
+		this.log.debug('Total content movements detected: %d', movements.size);
 		return movements;
 	};
 
@@ -2649,17 +2654,17 @@ export class FilesManager implements IFilesManager {
 		let failedCopies = 0;
 		const failedFileNames = new Set<string>();
 
-		debug('Starting content copy operations for %d movements', movements.size);
+		this.log.debug('Starting content copy operations for %d movements', movements.size);
 
 		// First, populate source file paths for all movements
 		for (const movement of movements.values()) {
 			const sourcePath = await this.determineFilePath(movement.sourceFileName);
 			if (!sourcePath) {
-				debug('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
+				this.log.debug('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
 				// Track all destination files as failed since we can't copy without source
 				for (const destFileName of movement.destinationFileNames) {
 					failedFileNames.add(destFileName);
-					debug('Marking destination %s as failed due to missing source', destFileName);
+					this.log.debug('Marking destination %s as failed due to missing source', destFileName);
 				}
 				continue;
 			}
@@ -2680,7 +2685,7 @@ export class FilesManager implements IFilesManager {
 					estimatedSpace += fileInfo.sizeBytes * (movement.destinationFileNames.size + 1);
 				}
 			} catch (err) {
-				debug('Could not get file size for %s: %O', movement.sourceFilePath, err);
+				this.log.debug('Could not get file size for %s: %O', movement.sourceFilePath, err);
 			}
 		}
 
@@ -2688,7 +2693,7 @@ export class FilesManager implements IFilesManager {
 		if (estimatedSpace > 0) {
 			const hasSpace = await this.checkAvailableSpace(estimatedSpace);
 			if (!hasSpace) {
-				debug(
+				this.log.debug(
 					'WARNING: May not have enough space for all copies. Required: %d MB',
 					Math.round(estimatedSpace / (1024 * 1024)),
 				);
@@ -2698,7 +2703,7 @@ export class FilesManager implements IFilesManager {
 
 		// Step 1: Copy all source files to temp locations to preserve them
 		const tempCopies = new Map<string, string>(); // Map from original path to temp path
-		debug('Creating temp copies to preserve source content...');
+		this.log.debug('Creating temp copies to preserve source content...');
 
 		for (const [, movement] of movements) {
 			if (!movement.sourceFilePath) {
@@ -2724,14 +2729,14 @@ export class FilesManager implements IFilesManager {
 			try {
 				// Floor guard: skip the temp copy if it would breach the minimum free space floor
 				if (!(await this.hasFloorRoomForCopy(movement.sourceFilePath))) {
-					debug('  Skipping temp copy for %s - would breach minimum free space floor', movement.sourceFileName);
+					this.log.debug('  Skipping temp copy for %s - would breach minimum free space floor', movement.sourceFileName);
 					// Fall back to using the original file directly (consistent with the catch path below)
 					tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
 					continue;
 				}
 
 				// Copy to temp location
-				debug('  Creating temp copy: %s -> %s', movement.sourceFilePath, tempPath);
+				this.log.debug('  Creating temp copy: %s -> %s', movement.sourceFilePath, tempPath);
 				await this.sos.fileSystem.copyFile(
 					{
 						storageUnit: this.internalStorageUnit,
@@ -2748,27 +2753,27 @@ export class FilesManager implements IFilesManager {
 
 				await this.trackSpaceConsumed(tempPath);
 				tempCopies.set(movement.sourceFilePath, tempPath);
-				debug('  ✓ Created temp copy for %s', movement.sourceFileName);
+				this.log.debug('  ✓ Created temp copy for %s', movement.sourceFileName);
 			} catch (err) {
-				debug('ERROR: Failed to create temp copy for %s: %O', movement.sourceFileName, err);
+				this.log.debug('ERROR: Failed to create temp copy for %s: %O', movement.sourceFileName, err);
 				// Try to continue with original file
 				tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
 			}
 		}
 
 		// Step 2: Copy from temp locations to final destinations
-		debug('Copying from temp locations to final destinations...');
+		this.log.debug('Copying from temp locations to final destinations...');
 
 		for (const [contentValue, movement] of movements) {
 			if (!movement.sourceFilePath) {
-				debug('Skipping movement for content %s - no source path', contentValue);
+				this.log.debug('Skipping movement for content %s - no source path', contentValue);
 				continue;
 			}
 
 			// Use temp copy if available, otherwise use original
 			const sourcePath = tempCopies.get(movement.sourceFilePath) || movement.sourceFilePath;
 
-			debug(
+			this.log.debug(
 				'Copying content %s from %s to %d destination(s)',
 				contentValue,
 				movement.sourceFileName,
@@ -2795,7 +2800,7 @@ export class FilesManager implements IFilesManager {
 					} else if (movement.sourceFilePath.includes(FileStructure.widgets)) {
 						destFolder = FileStructure.widgets;
 					} else {
-						debug('Could not determine destination folder for %s', destFileName);
+						this.log.debug('Could not determine destination folder for %s', destFileName);
 						failedCopies++;
 						failedFileNames.add(destFileName);
 						continue;
@@ -2817,7 +2822,7 @@ export class FilesManager implements IFilesManager {
 						);
 
 						if (!stillNeeded) {
-							debug(
+							this.log.debug(
 								'  Preserving destination content before overwrite: %s (value: %s)',
 								finalDestPath,
 								destValue,
@@ -2825,16 +2830,16 @@ export class FilesManager implements IFilesManager {
 							const mediaType = mapFileType(destFolder);
 							await this.preserveFileToStorage(finalDestPath, destValue, mediaType);
 						} else {
-							debug('  Destination content still needed elsewhere, not preserving: %s', destValue);
+							this.log.debug('  Destination content still needed elsewhere, not preserving: %s', destValue);
 						}
 					}
 				}
 
 				try {
 					// Copy file from temp location (this will overwrite if destination exists)
-					debug('  Executing copy operation:');
-					debug('    Source: %s', sourcePath);
-					debug('    Destination: %s', finalDestPath);
+					this.log.debug('  Executing copy operation:');
+					this.log.debug('    Source: %s', sourcePath);
+					this.log.debug('    Destination: %s', finalDestPath);
 
 					const overwrittenSize = await this.getExistingFileSize(finalDestPath);
 					await this.sos.fileSystem.copyFile(
@@ -2854,32 +2859,32 @@ export class FilesManager implements IFilesManager {
 
 					await this.trackSpaceConsumed(finalDestPath);
 					successfulCopies++;
-					debug('  ✓ Successfully copied %s to %s', movement.sourceFileName, destFileName);
+					this.log.debug('  ✓ Successfully copied %s to %s', movement.sourceFileName, destFileName);
 				} catch (err) {
 					failedCopies++;
 					failedFileNames.add(destFileName);
-					debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
+					this.log.debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
 					// Continue with other copies even if this one fails
 				}
 			}
 		}
 
 		// Step 3: Clean up temp copies
-		debug('Cleaning up temp copies...');
+		this.log.debug('Cleaning up temp copies...');
 		for (const [originalPath, tempPath] of tempCopies) {
 			if (tempPath !== originalPath) {
 				// Only delete if it's actually a temp copy
 				try {
 					await this.deleteFile(tempPath);
-					debug('  Deleted temp copy: %s', tempPath);
+					this.log.debug('  Deleted temp copy: %s', tempPath);
 				} catch (err) {
-					debug('  Warning: Could not delete temp copy %s: %O', tempPath, err);
+					this.log.debug('  Warning: Could not delete temp copy %s: %O', tempPath, err);
 					// Non-critical, continue
 				}
 			}
 		}
 
-		debug('Content copy operations complete. Successful: %d, Failed: %d', successfulCopies, failedCopies);
+		this.log.debug('Content copy operations complete. Successful: %d, Failed: %d', successfulCopies, failedCopies);
 
 		return { successfulCopies, failedFileNames };
 	};
@@ -2902,19 +2907,19 @@ export class FilesManager implements IFilesManager {
 					filePath: folder,
 				});
 
-				debug('Clearing %d files from temp folder: %s', files.length, folder);
+				this.log.debug('Clearing %d files from temp folder: %s', files.length, folder);
 
 				for (const file of files) {
 					try {
 						await this.deleteFile(file.filePath);
-						debug('Deleted temp file: %s', file.filePath);
+						this.log.debug('Deleted temp file: %s', file.filePath);
 					} catch (err) {
-						debug('Error deleting temp file %s: %O', file.filePath, err);
+						this.log.debug('Error deleting temp file %s: %O', file.filePath, err);
 					}
 				}
 			} catch (err) {
 				// Folder might not exist or be empty
-				debug('Error listing temp folder %s: %O', folder, err);
+				this.log.debug('Error listing temp folder %s: %O', folder, err);
 			}
 		}
 	};
@@ -2929,7 +2934,7 @@ export class FilesManager implements IFilesManager {
 		// Apply pending batch updates
 		for (const [fileName, value] of this.batchUpdates) {
 			mergedState[fileName] = value;
-			debug('Applying pending update to merged state: %s = %s', fileName, value);
+			this.log.debug('Applying pending update to merged state: %s = %s', fileName, value);
 		}
 
 		return mergedState;
@@ -2945,16 +2950,16 @@ export class FilesManager implements IFilesManager {
 		mediaInfoObject: MediaInfoObject,
 	): Promise<Set<string>> => {
 		const failedFileNames = new Set<string>();
-		debug('Starting migration process. Temp downloads: %d', this.tempDownloads.size);
+		this.log.debug('Starting migration process. Temp downloads: %d', this.tempDownloads.size);
 
 		// Step 1: Detect content movements (including batch updates)
-		debug('\n=== STEP 1: DETECTING CONTENT MOVEMENTS ===');
+		this.log.debug('\n=== STEP 1: DETECTING CONTENT MOVEMENTS ===');
 		const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
-		debug('Merged state includes %d batch updates', this.batchUpdates.size);
+		this.log.debug('Merged state includes %d batch updates', this.batchUpdates.size);
 		const contentMovements = this.detectContentMovements(filesList, mediaInfoObject, mergedState);
-		debug('Detected %d content movements', contentMovements.size);
+		this.log.debug('Detected %d content movements', contentMovements.size);
 		for (const [value, movement] of contentMovements) {
-			debug(
+			this.log.debug(
 				'  Movement: content %s from %s to %s',
 				value,
 				movement.sourceFileName,
@@ -2967,29 +2972,33 @@ export class FilesManager implements IFilesManager {
 		const hasSpace = await this.checkAvailableSpace(estimatedSpaceNeeded);
 
 		if (!hasSpace) {
-			debug('WARNING: Insufficient space for content copies. Proceeding with limited migration');
+			this.log.debug('WARNING: Insufficient space for content copies. Proceeding with limited migration');
 		}
 
 		// Step 3: Perform content copies for moved content
-		debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
+		this.log.debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
 		if (contentMovements.size > 0 && hasSpace) {
-			debug('Starting copy operations for %d movements', contentMovements.size);
+			this.log.debug('Starting copy operations for %d movements', contentMovements.size);
 			const copyResult = await this.copyContentToNewLocations(contentMovements, mediaInfoObject, filesList);
 			for (const fileName of copyResult.failedFileNames) {
 				failedFileNames.add(fileName);
 			}
-			debug('Content copy phase complete. Successful: %d, Failed: %d', copyResult.successfulCopies, copyResult.failedFileNames.size);
+			this.log.debug(
+				'Content copy phase complete. Successful: %d, Failed: %d',
+				copyResult.successfulCopies,
+				copyResult.failedFileNames.size,
+			);
 		} else if (contentMovements.size > 0 && !hasSpace) {
 			// No space available - mark all destination files as failed
-			debug('No space for content copies - marking all destinations as failed');
+			this.log.debug('No space for content copies - marking all destinations as failed');
 			for (const movement of contentMovements.values()) {
 				for (const destFileName of movement.destinationFileNames) {
 					failedFileNames.add(destFileName);
-					debug('Marking destination %s as failed due to insufficient space', destFileName);
+					this.log.debug('Marking destination %s as failed due to insufficient space', destFileName);
 				}
 			}
 		} else {
-			debug('No content copies needed (movements: %d)', contentMovements.size);
+			this.log.debug('No content copies needed (movements: %d)', contentMovements.size);
 		}
 
 		// Step 4 (Pass 1): Copy temp downloads to standard locations.
@@ -2998,11 +3007,11 @@ export class FilesManager implements IFilesManager {
 		// video.prepare() in the playlist could reference a tmp URI whose file was
 		// just deleted, producing PLAYER_ERROR_INVALID_URI on Tizen AVPlayer.
 		const tmpPathsToDelete: string[] = [];
-		debug('\n=== STEP 4: PROCESSING TEMP DOWNLOADS ===');
+		this.log.debug('\n=== STEP 4: PROCESSING TEMP DOWNLOADS ===');
 		if (this.tempDownloads.size > 0) {
-			debug('Processing %d temp downloads:', this.tempDownloads.size);
+			this.log.debug('Processing %d temp downloads:', this.tempDownloads.size);
 			for (const [fileName, tempPath] of this.tempDownloads) {
-				debug('  Temp file: %s at %s', fileName, tempPath);
+				this.log.debug('  Temp file: %s at %s', fileName, tempPath);
 			}
 
 			// Pass 1: copy tmp → standard, collect tmp paths to delete later.
@@ -3015,7 +3024,7 @@ export class FilesManager implements IFilesManager {
 					.replace(FileStructure.widgetsTmp, FileStructure.widgets);
 
 				try {
-					debug('Copying file from %s to %s', tempPath, standardPath);
+					this.log.debug('Copying file from %s to %s', tempPath, standardPath);
 					const overwrittenSize = await this.getExistingFileSize(standardPath);
 					await this.sos.fileSystem.copyFile(
 						{
@@ -3035,10 +3044,10 @@ export class FilesManager implements IFilesManager {
 					// Defer tmp delete until after Step 5 updates localFilePath.
 					tmpPathsToDelete.push(tempPath);
 
-					debug('Successfully migrated: %s', fileName);
+					this.log.debug('Successfully migrated: %s', fileName);
 				} catch (err) {
 					failedFileNames.add(fileName);
-					debug('Error migrating file %s: %O', fileName, err);
+					this.log.debug('Error migrating file %s: %O', fileName, err);
 					// Continue with other files even if one fails. The tmp file is
 					// NOT queued for deletion — the playlist can keep using it.
 				}
@@ -3050,18 +3059,18 @@ export class FilesManager implements IFilesManager {
 
 		// Step 5: Update localFilePath for all media items
 		// Note: We check tempDownloads before clearing it
-		debug('\n=== STEP 5: UPDATING LOCAL FILE PATHS ===');
-		debug('Processing %d files for localFilePath updates', filesList.length);
+		this.log.debug('\n=== STEP 5: UPDATING LOCAL FILE PATHS ===');
+		this.log.debug('Processing %d files for localFilePath updates', filesList.length);
 
 		for (const file of filesList) {
-			debug('\n--- Processing file: %s ---', file.src);
+			this.log.debug('\n--- Processing file: %s ---', file.src);
 			if ('localFilePath' in file) {
 				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
-				debug('  Generated fileName from URL: %s', fileName);
-				debug('  Current localFilePath: %s', file.localFilePath);
+				this.log.debug('  Generated fileName from URL: %s', fileName);
+				this.log.debug('  Current localFilePath: %s', file.localFilePath);
 
 				const actualPath = await this.determineFilePath(fileName);
-				debug('  Found file at path: %s', actualPath || 'NOT FOUND');
+				this.log.debug('  Found file at path: %s', actualPath || 'NOT FOUND');
 
 				if (actualPath) {
 					try {
@@ -3070,36 +3079,36 @@ export class FilesManager implements IFilesManager {
 							const oldPath = file.localFilePath;
 							const newPath = fileDetails.localUri;
 
-							debug('  File details retrieved:');
-							debug('    - Old localFilePath: %s', oldPath);
-							debug('    - New localFilePath: %s', newPath);
-							debug('    - Path changed: %s', oldPath !== newPath);
+							this.log.debug('  File details retrieved:');
+							this.log.debug('    - Old localFilePath: %s', oldPath);
+							this.log.debug('    - New localFilePath: %s', newPath);
+							this.log.debug('    - Path changed: %s', oldPath !== newPath);
 
 							file.localFilePath = newPath;
 						} else {
-							debug('  WARNING: No file details returned for path: %s', actualPath);
+							this.log.debug('  WARNING: No file details returned for path: %s', actualPath);
 						}
 					} catch (err) {
-						debug('  ERROR updating localFilePath for %s: %O', file.src, err);
+						this.log.debug('  ERROR updating localFilePath for %s: %O', file.src, err);
 					}
 				} else {
-					debug('  WARNING: No file found for fileName: %s', fileName);
-					debug('  This file may not have been downloaded yet');
+					this.log.debug('  WARNING: No file found for fileName: %s', fileName);
+					this.log.debug('  This file may not have been downloaded yet');
 				}
 			} else {
-				debug('  Skipping - file has no localFilePath property');
+				this.log.debug('  Skipping - file has no localFilePath property');
 			}
 		}
 
-		debug('\n=== END OF STEP 5 ===');
+		this.log.debug('\n=== END OF STEP 5 ===');
 
 		// Step 6 (Pass 2): now that every localFilePath references the standard
 		// path, it is safe to delete the tmp sources we copied in Step 4. Running
 		// this after Step 5 closes the race where video.prepare() could hit a
 		// just-deleted tmp URI.
 		if (tmpPathsToDelete.length > 0) {
-			debug('\n=== STEP 6: DELETING MIGRATED TEMP FILES ===');
-			debug('Deleting %d migrated temp files', tmpPathsToDelete.length);
+			this.log.debug('\n=== STEP 6: DELETING MIGRATED TEMP FILES ===');
+			this.log.debug('Deleting %d migrated temp files', tmpPathsToDelete.length);
 			for (const tempPath of tmpPathsToDelete) {
 				try {
 					await this.sos.fileSystem.deleteFile(
@@ -3109,11 +3118,11 @@ export class FilesManager implements IFilesManager {
 						},
 						true,
 					);
-					debug('  Deleted temp file: %s', tempPath);
+					this.log.debug('  Deleted temp file: %s', tempPath);
 				} catch (err) {
 					// Non-fatal: localFilePath already points at the standard copy.
 					// Orphan tmp files are reaped by clearTempFolders() on next boot.
-					debug('  Failed to delete temp file %s (non-fatal): %O', tempPath, err);
+					this.log.debug('  Failed to delete temp file %s (non-fatal): %O', tempPath, err);
 				}
 			}
 		}
@@ -3123,7 +3132,7 @@ export class FilesManager implements IFilesManager {
 			this.clearTempDownloads();
 		}
 
-		debug('Migration process completed. Failed migrations: %d', failedFileNames.size);
+		this.log.debug('Migration process completed. Failed migrations: %d', failedFileNames.size);
 		return failedFileNames;
 	};
 
@@ -3133,36 +3142,36 @@ export class FilesManager implements IFilesManager {
 		localFilePath: string,
 	): Promise<{ localUri: string; filePath: string } | null> => {
 		if (!currentValue) {
-			debug('findActualFileForMovedContent: No value provided, returning null');
+			this.log.debug('findActualFileForMovedContent: No value provided, returning null');
 			return null;
 		}
 
-		debug('findActualFileForMovedContent: Looking for files with value: %s', currentValue);
+		this.log.debug('findActualFileForMovedContent: Looking for files with value: %s', currentValue);
 
 		// Find which file has this content (by matching the value, compare without query params)
 		const currentValueNoQuery = getUrlWithoutQueryParams(currentValue);
 		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
 			if (storedValue && getUrlWithoutQueryParams(storedValue) === currentValueNoQuery) {
-				debug('findActualFileForMovedContent: Found matching file: %s with value: %s', fileName, storedValue);
+				this.log.debug('findActualFileForMovedContent: Found matching file: %s with value: %s', fileName, storedValue);
 				const filePath = `${localFilePath}/${fileName}`;
 
 				// Get the file details to get localUri
 				const fileDetails = await this.getFileByPath(filePath);
 
 				if (fileDetails) {
-					debug(
+					this.log.debug(
 						'findActualFileForMovedContent: File exists at %s, localUri: %s',
 						filePath,
 						fileDetails.localUri,
 					);
 					return { localUri: fileDetails.localUri, filePath };
 				} else {
-					debug('findActualFileForMovedContent: File not found at expected path: %s', filePath);
+					this.log.debug('findActualFileForMovedContent: File not found at expected path: %s', filePath);
 				}
 			}
 		}
 
-		debug('findActualFileForMovedContent: No matching file found for value: %s', currentValue);
+		this.log.debug('findActualFileForMovedContent: No matching file found for value: %s', currentValue);
 		return null;
 	};
 
@@ -3202,7 +3211,7 @@ export class FilesManager implements IFilesManager {
 				// a conservative upper bound for the floor guard.
 				const netSize = Math.max(sourceSize - overwrittenSize, 0);
 				if (!(await this.checkAvailableSpace(netSize))) {
-					debug('Skipping MOVED_CONTENT slot copy for %s - would breach minimum free space floor', file.src);
+					this.log.debug('Skipping MOVED_CONTENT slot copy for %s - would breach minimum free space floor', file.src);
 					return false;
 				}
 				await this.sos.fileSystem.copyFile(
@@ -3212,7 +3221,7 @@ export class FilesManager implements IFilesManager {
 				);
 				this.reclaimOverwrittenSpace(overwrittenSize, destPath);
 				await this.trackSpaceConsumed(destPath);
-				debug('Copied moved content from %s to %s for %s', actualFile.filePath, destPath, file.src);
+				this.log.debug('Copied moved content from %s to %s for %s', actualFile.filePath, destPath, file.src);
 				copyExecuted = true;
 			}
 
@@ -3223,7 +3232,7 @@ export class FilesManager implements IFilesManager {
 				const oldPath = file.localFilePath;
 				if (oldPath !== slotFileDetails.localUri) {
 					file.localFilePath = slotFileDetails.localUri;
-					debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, slotFileDetails.localUri);
+					this.log.debug('Updated localFilePath for %s from %s to %s', file.src, oldPath, slotFileDetails.localUri);
 					localFilePathChanged = true;
 				}
 			}
@@ -3249,27 +3258,27 @@ export class FilesManager implements IFilesManager {
 		contentValue: string,
 		mediaInfoObject: MediaInfoObject,
 	): Promise<string | null> => {
-		debug('findExistingContentFile: Looking for existing content with value: %s', contentValue);
+		this.log.debug('findExistingContentFile: Looking for existing content with value: %s', contentValue);
 
 		// Search for any file with this content value (compare without query params)
 		const contentValueNoQuery = getUrlWithoutQueryParams(contentValue);
 		for (const [fileName, storedValue] of Object.entries(mediaInfoObject)) {
 			if (storedValue && getUrlWithoutQueryParams(storedValue) === contentValueNoQuery) {
-				debug('findExistingContentFile: Found matching file: %s', fileName);
+				this.log.debug('findExistingContentFile: Found matching file: %s', fileName);
 
 				// Use existing method to determine file path
 				const filePath = await this.determineFilePath(fileName);
 
 				if (filePath && (await this.fileExists(filePath))) {
-					debug('findExistingContentFile: File exists at: %s', filePath);
+					this.log.debug('findExistingContentFile: File exists at: %s', filePath);
 					return filePath;
 				} else {
-					debug('findExistingContentFile: File not found at expected path: %s', filePath);
+					this.log.debug('findExistingContentFile: File not found at expected path: %s', filePath);
 				}
 			}
 		}
 
-		debug('findExistingContentFile: No existing file found for content: %s', contentValue);
+		this.log.debug('findExistingContentFile: No existing file found for content: %s', contentValue);
 		return null;
 	};
 
@@ -3320,7 +3329,7 @@ export class FilesManager implements IFilesManager {
 				isNewContent,
 			};
 		} catch (err) {
-			debug('Error during update detection for %s: %O', file.src, err);
+			this.log.debug('Error during update detection for %s: %O', file.src, err);
 			return null;
 		}
 	};
@@ -3351,7 +3360,7 @@ export class FilesManager implements IFilesManager {
 		try {
 			if (updateCheck.shouldUpdate) {
 				if (isNewContent) {
-					debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
+					this.log.debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
 
 					// Download new content to temp folder
 					const result = await this.parallelDownloadAllFiles(
@@ -3369,7 +3378,7 @@ export class FilesManager implements IFilesManager {
 
 					// Collect updates for batch processing
 					result.filesToUpdate.forEach((value, fileName) => {
-						debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
+						this.log.debug(`Collecting batch update for file: %s with value: %O`, fileName, value);
 						this.collectUpdate(fileName, String(value));
 					});
 
@@ -3380,7 +3389,7 @@ export class FilesManager implements IFilesManager {
 
 					return result.promises;
 				} else {
-					debug('checkLastModified: Content already exists locally, skipping download for %s', file.src);
+					this.log.debug('checkLastModified: Content already exists locally, skipping download for %s', file.src);
 
 					// Content exists but may have moved - update mapping without downloading
 					if (updateCheck.value) {
@@ -3403,7 +3412,7 @@ export class FilesManager implements IFilesManager {
 				}
 			} else if (updateCheck.value && 'localFilePath' in file) {
 				// Content hasn't changed but may have moved
-				debug(
+				this.log.debug(
 					'checkLastModified: Content exists, no update needed. Value: %s for file: %s',
 					updateCheck.value,
 					file.src,
@@ -3424,7 +3433,7 @@ export class FilesManager implements IFilesManager {
 				// → wasUpdated (forces re-prepare); mapping-only churn (e.g. query-param
 				// change) → useInReportUrlStale (refresh report URL only).
 				if (String(oldValue) !== String(updateCheck.value)) {
-					debug(
+					this.log.debug(
 						'checkLastModified: Collecting batch update for mediaInfoObject[%s] from %s to %s',
 						fileName,
 						oldValue,
@@ -3441,16 +3450,16 @@ export class FilesManager implements IFilesManager {
 				if (updated) {
 					// Defer wasUpdated to commitBatch for consistency with batch flow
 					this.pendingWasUpdated.add(file as MergedDownloadList);
-					debug('checkLastModified: Batch update collected for moved content');
+					this.log.debug('checkLastModified: Batch update collected for moved content');
 				} else if (String(oldValue) !== String(updateCheck.value)) {
 					(file as any).useInReportUrlStale = true;
-					debug('checkLastModified: Mapping-only update; flagged useInReportUrlStale for %s', fileName);
+					this.log.debug('checkLastModified: Mapping-only update; flagged useInReportUrlStale for %s', fileName);
 				}
 			} else {
-				debug('checkLastModified: No update needed for file: %s', file.src);
+				this.log.debug('checkLastModified: No update needed for file: %s', file.src);
 			}
 		} catch (err) {
-			debug('[files] version check error: %O, file: %O', err, file);
+			this.log.debug('[files] version check error: %O, file: %O', err, file);
 		}
 
 		return [];
@@ -3488,11 +3497,11 @@ export class FilesManager implements IFilesManager {
 				if (contentValue) {
 					const fullPath = `${localFilePath}/${fileName}`;
 					const mediaType = mapFileType(localFilePath);
-					debug('detectUpdateOnly: Preserving skipped content to storage: %s', file.src);
+					this.log.debug('detectUpdateOnly: Preserving skipped content to storage: %s', file.src);
 					await this.preserveFileToStorage(fullPath, contentValue, mediaType);
 				}
 			}
-			debug('detectUpdateOnly: No update found for %s', file.src);
+			this.log.debug('detectUpdateOnly: No update found for %s', file.src);
 			return null;
 		}
 
@@ -3504,7 +3513,7 @@ export class FilesManager implements IFilesManager {
 
 			// If file needs to point to different content (compare without query params)
 			if (getUrlWithoutQueryParams(currentLocalValue) !== getUrlWithoutQueryParams(detection.updateCheck.value)) {
-				debug(
+				this.log.debug(
 					'MOVED_CONTENT detected: %s needs to update from %s to %s',
 					file.src,
 					currentLocalValue,
@@ -3524,7 +3533,7 @@ export class FilesManager implements IFilesManager {
 
 			// Query params changed but base URL is the same — update mapping for reporting, no download needed
 			if (currentLocalValue !== detection.updateCheck.value) {
-				debug(
+				this.log.debug(
 					'QUERY_PARAMS_CHANGED detected: %s needs mapping update from %s to %s',
 					file.src,
 					currentLocalValue,
@@ -3543,7 +3552,7 @@ export class FilesManager implements IFilesManager {
 			}
 
 			// Content mapping is already correct, no action needed
-			debug('detectUpdateOnly: Content already up-to-date for %s', file.src);
+			this.log.debug('detectUpdateOnly: Content already up-to-date for %s', file.src);
 			return null;
 		}
 
@@ -3554,7 +3563,7 @@ export class FilesManager implements IFilesManager {
 		// exists locally (handled by the shouldUpdate=false check above at line 2518-2545).
 		const needsDownload = detection.isNewContent;
 
-		debug(
+		this.log.debug(
 			'detectUpdateOnly: Update detected for %s - needsDownload: %s, value: %s',
 			file.src,
 			needsDownload,
@@ -3684,7 +3693,7 @@ export class FilesManager implements IFilesManager {
 	private collectReportsForUpload = async (filePath: string): Promise<CustomEndpointReport[] | null> => {
 		return this.runWithOfflineReportsLock(async () => {
 			const fileIndex = getOfflineReportFileIndex(filePath);
-			debug('[files] got offline report file index: %d', fileIndex);
+			this.log.debug('[files] got offline report file index: %d', fileIndex);
 
 			const fileContent = await this.sos.fileSystem.readFile({
 				storageUnit: this.internalStorageUnit,
@@ -3702,7 +3711,7 @@ export class FilesManager implements IFilesManager {
 					this.smilLogging.reportFileLimit,
 				)
 			) {
-				debug(
+				this.log.debug(
 					'[files] skipping active batch: fileIndex=%d, reports=%d/%d',
 					fileIndex,
 					reports.length,
@@ -3734,7 +3743,7 @@ export class FilesManager implements IFilesManager {
 		// (KB-range), so we don't need to budget per-report bytes; the floor is
 		// what matters.
 		if (!(await this.checkAvailableSpace(0))) {
-			debug('[files] not enough space on device to save custom endpoint report');
+			this.log.debug('[files] not enough space on device to save custom endpoint report');
 			return;
 		}
 
@@ -3752,12 +3761,12 @@ export class FilesManager implements IFilesManager {
 			// First save after restart - find highest existing index and start fresh
 			const highestExistingIndex = await this.initializeOfflineReportsIndex();
 			currentFileIndex = highestExistingIndex + 1; // Start with new file to avoid appending
-			debug('[files] first save after restart: fileIndex=%d', currentFileIndex);
+			this.log.debug('[files] first save after restart: fileIndex=%d', currentFileIndex);
 		} else {
 			// Use the highest tracked index from current session
 			const trackedIndexes = Object.keys(this.offlineReportsInfoObject).map(k => parseInt(k, 10));
 			currentFileIndex = Math.max(...trackedIndexes);
-			debug('[files] using tracked index: %d', currentFileIndex);
+			this.log.debug('[files] using tracked index: %d', currentFileIndex);
 		}
 
 		if (!this.offlineReportsInfoObject[currentFileIndex]) {
@@ -3767,7 +3776,7 @@ export class FilesManager implements IFilesManager {
 		}
 		// -1 because its indexed from 0
 		if (this.offlineReportsInfoObject[currentFileIndex].numberOfReports > this.smilLogging.reportFileLimit - 1) {
-			debug('[files] record limit exceeded: index=%d', currentFileIndex);
+			this.log.debug('[files] record limit exceeded: index=%d', currentFileIndex);
 			currentFileIndex += 1;
 			this.offlineReportsInfoObject[currentFileIndex] = {
 				numberOfReports: 0,
@@ -3775,7 +3784,7 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (await this.fileExists(`${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`)) {
-			debug('[files] appending to file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			this.log.debug('[files] appending to file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.appendFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -3785,7 +3794,7 @@ export class FilesManager implements IFilesManager {
 			);
 			this.offlineReportsInfoObject[currentFileIndex].numberOfReports += 1;
 		} else {
-			debug('[files] creating new file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
+			this.log.debug('[files] creating new file: %s', `${FileStructure.offlineReports}/offlineReports${currentFileIndex}.csv`);
 			await this.sos.fileSystem.writeFile(
 				{
 					storageUnit: this.internalStorageUnit,
@@ -3816,7 +3825,7 @@ export class FilesManager implements IFilesManager {
 			});
 
 			if (reportFiles.length === 0) {
-				debug('[files] no offline report files found');
+				this.log.debug('[files] no offline report files found');
 				return -1; // Will start from index 0
 			}
 
@@ -3827,16 +3836,16 @@ export class FilesManager implements IFilesManager {
 			}).filter(index => index >= 0);
 
 			if (indexes.length === 0) {
-				debug('[files] no valid offline report indexes found');
+				this.log.debug('[files] no valid offline report indexes found');
 				return -1;
 			}
 
 			const highestIndex = Math.max(...indexes);
-			debug('[files] found highest report index: %d from %d files', highestIndex, reportFiles.length);
+			this.log.debug('[files] found highest report index: %d from %d files', highestIndex, reportFiles.length);
 
 			return highestIndex;
 		} catch (error) {
-			debug('[files] error finding report index: %O', error);
+			this.log.debug('[files] error finding report index: %O', error);
 			return -1; // Safe fallback to start from 0
 		}
 	};
@@ -3845,7 +3854,7 @@ export class FilesManager implements IFilesManager {
 		for (let i = 0; i < widgets.length; i++) {
 			try {
 				if (isUrl(widgets[i].src) && isWidgetUrl(widgets[i].src)) {
-					debug(
+					this.log.debug(
 						'[files] extracting widget: %O to destination path: %s',
 						widgets[i],
 						`${FileStructure.extracted}/${getFileName(widgets[i].src)}`,
@@ -3863,7 +3872,7 @@ export class FilesManager implements IFilesManager {
 					);
 				}
 			} catch (err) {
-				debug('[files] widget extract error: %O, widget: %O', err, widgets[i]);
+				this.log.debug('[files] widget extract error: %O, widget: %O', err, widgets[i]);
 			}
 		}
 	};
@@ -3895,7 +3904,7 @@ export class FilesManager implements IFilesManager {
 					// canonical produced when getFileName borrowed an extension from a
 					// resolved Location URL. Mirrors getCanonicalFileName's prefix scan.
 					if (storedFileName === candidateBase || storedFileName.startsWith(candidateBase + '.')) {
-						debug('[files] file found in SMIL: %s', storedFile.filePath);
+						this.log.debug('[files] file found in SMIL: %s', storedFile.filePath);
 						found = true;
 						break;
 					}
@@ -3916,7 +3925,7 @@ export class FilesManager implements IFilesManager {
 							filePath: storedFile.filePath,
 						}))
 					) {
-						debug('[files] file not in SMIL, deleting: %O', storedFile);
+						this.log.debug('[files] file not in SMIL, deleting: %O', storedFile);
 						await this.deleteFile(storedFile.filePath);
 						if (mediaFolders.includes(path.dirname(storedFile.filePath))) {
 							deletedMediaKeys.push(storedFileName);
@@ -3936,7 +3945,7 @@ export class FilesManager implements IFilesManager {
 				delete mediaInfoObject[key];
 			}
 			if (pruned.length > 0) {
-				debug('[files] pruned %d mediaInfo entries of deleted files: %O', pruned.length, pruned);
+				this.log.debug('[files] pruned %d mediaInfo entries of deleted files: %O', pruned.length, pruned);
 				await this.writeMediaInfoFile(mediaInfoObject);
 			}
 		}
@@ -4007,7 +4016,7 @@ export class FilesManager implements IFilesManager {
 			case 'ref':
 				return FileStructure.storageWidgets;
 			default:
-				debug('Unknown media type for storage folder: %s', mediaType);
+				this.log.debug('Unknown media type for storage folder: %s', mediaType);
 				return FileStructure.storageVideos; // Default fallback
 		}
 	};
@@ -4022,7 +4031,7 @@ export class FilesManager implements IFilesManager {
 
 		try {
 			if (!(await this.fileExists(infoPath))) {
-				debug('Storage info not found, creating new: %s', infoPath);
+				this.log.debug('Storage info not found, creating new: %s', infoPath);
 				return {};
 			}
 
@@ -4032,11 +4041,11 @@ export class FilesManager implements IFilesManager {
 			});
 
 			const parsed = JSON.parse(content);
-			debug('Loaded storage info from %s with %d entries', infoPath, Object.keys(parsed).length);
+			this.log.debug('Loaded storage info from %s with %d entries', infoPath, Object.keys(parsed).length);
 			return parsed || {};
 		} catch (err) {
 			// Handle corrupted file gracefully - storage is optimization, not critical
-			debug('Error reading storage info from %s, returning empty: %O', infoPath, err);
+			this.log.debug('Error reading storage info from %s, returning empty: %O', infoPath, err);
 			return {};
 		}
 	};
@@ -4057,10 +4066,10 @@ export class FilesManager implements IFilesManager {
 				JSON.stringify(info, null, 2),
 			);
 
-			debug('Saved storage info to %s with %d entries', infoPath, Object.keys(info).length);
+			this.log.debug('Saved storage info to %s with %d entries', infoPath, Object.keys(info).length);
 		} catch (err) {
 			// Log but don't fail - storage is optimization, not critical
-			debug('Failed to save storage info to %s: %O', storageFolder, err);
+			this.log.debug('Failed to save storage info to %s: %O', storageFolder, err);
 		}
 	};
 
@@ -4096,16 +4105,16 @@ export class FilesManager implements IFilesManager {
 						// Storage-info keys are the content's base source URLs.
 						// no await to not to block eviction when server takes too long to respond
 						this.sendOptInEventReport('media-deleted', { src: keyToDelete });
-						debug(
+						this.log.debug(
 							'Deleted oldest storage file to make room (was at %d files): %s',
 							entries.length,
 							entryToDelete.storagePath,
 						);
 					} catch (err) {
-						debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
+						this.log.debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
 					}
 				} else {
-					debug(
+					this.log.debug(
 						'All storage files are protected, temporarily exceeding limit (%d/%d) in %s',
 						entries.length,
 						STORAGE_MAX_FILES,
@@ -4113,10 +4122,10 @@ export class FilesManager implements IFilesManager {
 					);
 				}
 			} else {
-				debug('Storage space OK: %d/%d files in %s', entries.length, STORAGE_MAX_FILES, storageFolder);
+				this.log.debug('Storage space OK: %d/%d files in %s', entries.length, STORAGE_MAX_FILES, storageFolder);
 			}
 		} catch (err) {
-			debug('Error ensuring storage space for %s: %O', storageFolder, err);
+			this.log.debug('Error ensuring storage space for %s: %O', storageFolder, err);
 			// Continue anyway - we'll just overwrite if needed
 		}
 	};
@@ -4137,7 +4146,7 @@ export class FilesManager implements IFilesManager {
 		try {
 			// SMIL files should never be preserved to storage
 			if (filePath.includes('.smil')) {
-				debug('Skipping storage preservation for SMIL file: %s', filePath);
+				this.log.debug('Skipping storage preservation for SMIL file: %s', filePath);
 				return false;
 			}
 
@@ -4146,7 +4155,7 @@ export class FilesManager implements IFilesManager {
 
 			// Check if file exists
 			if (!fileStats) {
-				debug('File not found or inaccessible, cannot preserve: %s', filePath);
+				this.log.debug('File not found or inaccessible, cannot preserve: %s', filePath);
 				return false;
 			}
 
@@ -4154,7 +4163,7 @@ export class FilesManager implements IFilesManager {
 
 			const hasSpace = await this.checkAvailableSpace(fileSize);
 			if (!hasSpace) {
-				debug('Not enough space to preserve file to storage: %s (size: %d bytes)', filePath, fileSize);
+				this.log.debug('Not enough space to preserve file to storage: %s (size: %d bytes)', filePath, fileSize);
 				return false;
 			}
 
@@ -4167,7 +4176,7 @@ export class FilesManager implements IFilesManager {
 
 			// Skip if already in storage — no need to re-copy
 			if (existingInfo[storageKey]) {
-				debug('Content already in storage, skipping preservation: %s', storageKey);
+				this.log.debug('Content already in storage, skipping preservation: %s', storageKey);
 				return true;
 			}
 
@@ -4179,7 +4188,7 @@ export class FilesManager implements IFilesManager {
 			const storageFileName = getStorageFileName(String(contentValue));
 			const storagePath = `${storageFolder}/${storageFileName}`;
 
-			debug('Preserving file to storage: %s -> %s (content: %s)', filePath, storagePath, contentValue);
+			this.log.debug('Preserving file to storage: %s -> %s (content: %s)', filePath, storagePath, contentValue);
 
 			// Copy file to storage with rename
 			await this.sos.fileSystem.copyFile(
@@ -4207,10 +4216,10 @@ export class FilesManager implements IFilesManager {
 			};
 			await this.saveStorageInfo(storageFolder, storageInfo);
 
-			debug('Successfully preserved file to storage: %s', storagePath);
+			this.log.debug('Successfully preserved file to storage: %s', storagePath);
 			return true;
 		} catch (err) {
-			debug('Failed to preserve file to storage: %s, error: %O', filePath, err);
+			this.log.debug('Failed to preserve file to storage: %s, error: %O', filePath, err);
 			return false;
 		}
 	};
@@ -4231,11 +4240,11 @@ export class FilesManager implements IFilesManager {
 			const expectedFileName = getStorageFileName(String(contentValue));
 			const expectedPath = `${storageFolder}/${expectedFileName}`;
 
-			debug('Checking storage for content: %s in %s', contentValue, expectedPath);
+			this.log.debug('Checking storage for content: %s in %s', contentValue, expectedPath);
 
 			// Direct file check first (fastest path)
 			if (await this.fileExists(expectedPath)) {
-				debug('Found in storage by direct path: %s', expectedPath);
+				this.log.debug('Found in storage by direct path: %s', expectedPath);
 				return expectedPath;
 			}
 
@@ -4267,26 +4276,26 @@ export class FilesManager implements IFilesManager {
 					delete storageInfo[key];
 				}
 				await this.saveStorageInfo(storageFolder, storageInfo);
-				debug('Cleaned up %d legacy storage keys for: %s', keysToClean.length, contentValueNoQuery);
+				this.log.debug('Cleaned up %d legacy storage keys for: %s', keysToClean.length, contentValueNoQuery);
 			}
 
 			if (matchedEntry) {
 				// Verify the file actually exists
 				if (await this.fileExists(matchedEntry.storagePath)) {
-					debug('Found in storage via info lookup: %s', matchedEntry.storagePath);
+					this.log.debug('Found in storage via info lookup: %s', matchedEntry.storagePath);
 					return matchedEntry.storagePath;
 				} else {
 					// File in metadata but not on disk - clean up metadata
-					debug('Storage info references missing file, cleaning up: %s', matchedEntry.storagePath);
+					this.log.debug('Storage info references missing file, cleaning up: %s', matchedEntry.storagePath);
 					delete storageInfo[contentValueNoQuery];
 					await this.saveStorageInfo(storageFolder, storageInfo);
 				}
 			}
 
-			debug('Content not found in storage: %s', contentValue);
+			this.log.debug('Content not found in storage: %s', contentValue);
 			return null;
 		} catch (err) {
-			debug('Error checking storage for content %s: %O', contentValue, err);
+			this.log.debug('Error checking storage for content %s: %O', contentValue, err);
 			return null; // On error, proceed with download
 		}
 	};
@@ -4311,7 +4320,7 @@ export class FilesManager implements IFilesManager {
 
 			// Check if file exists
 			if (!fileStats) {
-				debug('Storage file not found or inaccessible: %s', storagePath);
+				this.log.debug('Storage file not found or inaccessible: %s', storagePath);
 				return null;
 			}
 
@@ -4319,7 +4328,7 @@ export class FilesManager implements IFilesManager {
 			// (Updated 2026-04-19: was previously a deliberate non-check; now we enforce the
 			// MINIMAL_STORAGE_FREE_SPACE floor uniformly across every consume path.)
 			if (!(await this.hasFloorRoomForCopy(storagePath))) {
-				debug('Skipping restore-from-storage for %s - would breach minimum free space floor', storagePath);
+				this.log.debug('Skipping restore-from-storage for %s - would breach minimum free space floor', storagePath);
 				return null;
 			}
 
@@ -4332,7 +4341,7 @@ export class FilesManager implements IFilesManager {
 			const tempFolder = this.getTempFolder(targetFolder);
 			const fullTargetPath = `${tempFolder}/${targetFileName}`;
 
-			debug('Restoring from storage to temp: %s -> %s (for URL: %s)', storagePath, fullTargetPath, requestingUrl);
+			this.log.debug('Restoring from storage to temp: %s -> %s (for URL: %s)', storagePath, fullTargetPath, requestingUrl);
 
 			// Copy file from storage to temp folder with the correct name
 			// We copy instead of move to keep it available for other potential uses
@@ -4350,11 +4359,11 @@ export class FilesManager implements IFilesManager {
 				},
 			);
 
-			debug('Successfully restored from storage to temp: %s -> %s', storagePath, fullTargetPath);
+			this.log.debug('Successfully restored from storage to temp: %s -> %s', storagePath, fullTargetPath);
 			await this.trackSpaceConsumed(fullTargetPath);
 			return fullTargetPath; // Return the temp path for tracking
 		} catch (err) {
-			debug('Failed to restore from storage: %s, error: %O', storagePath, err);
+			this.log.debug('Failed to restore from storage: %s, error: %O', storagePath, err);
 			return null; // Will trigger normal download
 		}
 	};
