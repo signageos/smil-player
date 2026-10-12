@@ -1,10 +1,24 @@
 import * as chai from 'chai';
-import { initSyncObject, hasDynamicContent } from '../../../src/components/playlist/tools/syncTools';
+import { createSyncTools, initSyncObject, hasDynamicContent } from '../../../src/components/playlist/tools/syncTools';
+import { noopLog } from '../../../src/logger';
 import { SMILFileObject } from '../../../src/models/filesModels';
 
 const expect = chai.expect;
 
 describe('syncTools', () => {
+	it('createSyncTools exposes sync and dynamic functions', () => {
+		const t = createSyncTools(noopLog);
+		[
+			'broadcastEndActionToAllDynamics',
+			'joinAllSyncGroupsOnSmilStart',
+			'createSyncGroup',
+			'connectSyncSafe',
+			'joinSyncGroup',
+			'broadcastSyncValue',
+			'cancelDynamicPlaylistMaster',
+		].forEach((k) => expect((t as any)[k]).to.be.a('function'));
+	});
+
 	describe('initSyncObject', () => {
 		it('should return an object with shouldSync set to false', () => {
 			const sync = initSyncObject();

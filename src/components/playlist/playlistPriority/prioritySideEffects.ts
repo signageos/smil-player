@@ -5,7 +5,7 @@ import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion, Vid
 import { Synchronization } from '../../../models/syncModels';
 import { ISos } from '../../../models/sosModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
-import { cancelDynamicPlaylistMaster } from '../tools/dynamicTools';
+import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
 
 /**
@@ -26,6 +26,8 @@ export interface IPrioritySideEffects {
  * Concrete implementation that delegates to the real DOM and SOS APIs.
  */
 export class PrioritySideEffects implements IPrioritySideEffects {
+	private readonly sync: SyncTools;
+
 	constructor(
 		private sos: ISos,
 		private currentlyPlaying: CurrentlyPlaying,
@@ -34,7 +36,9 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		private videoPreparing: VideoPreparing,
 		private cancelAllInRegionFn: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 		protected readonly log: Log,
-	) {}
+	) {
+		this.sync = createSyncTools(log);
+	}
 
 	public hideTransitionElement(regionName: string): void {
 		const nextElementHtml = document.getElementById(this.currentlyPlaying[regionName].nextElement.id!);
@@ -58,7 +62,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		_value: SMILMedia,
 		dynamicValue: string,
 	): Promise<void> {
-		await cancelDynamicPlaylistMaster(
+		await this.sync.cancelDynamicPlaylistMaster(
 			triggers,
 			this.sos,
 			this.currentlyPlaying,

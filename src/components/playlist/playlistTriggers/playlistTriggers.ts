@@ -35,7 +35,8 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { StatusEvent } from '@signageos/front-applet/es6/FrontApplet/Sync/syncEvents';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-import { clearDynamicSyncCoordination, joinSyncGroup } from '../tools/dynamicTools';
+import { clearDynamicSyncCoordination } from '../tools/dynamicTools';
+import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { findTriggerToCancelByEndId } from '../tools/triggerTools';
 
 export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTriggers {
@@ -51,6 +52,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	// old ones (no removeEventListener was called anywhere prior to this
 	// fix).
 	private readonly listenerScope: ListenerScope;
+	private readonly sync: SyncTools;
 
 	private cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;
 
@@ -64,6 +66,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	) {
 		super(sos, files, options, log);
 		this.listenerScope = new ListenerScope(log.child('listenerScope'));
+		this.sync = createSyncTools(log);
 		this.processPlaylist = processPlaylist;
 		this.cancelAllInRegion = cancelAllInRegion;
 	}
@@ -330,7 +333,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			if (dynamicPlaylistConfig.action === 'start' && dynamicPlaylistConfig.syncId) {
 				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
-				await joinSyncGroup(
+				await this.sync.joinSyncGroup(
 					this.sos,
 					this.synchronization,
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
