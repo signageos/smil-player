@@ -78,13 +78,7 @@ import { IPlaylistProcessor } from './IPlaylistProcessor';
 import { DynamicPlaylist, DynamicPlaylistElement } from '../../../models/dynamicModels';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { getDynamicPlaylistAndId } from '../tools/dynamicPlaylistTools';
-import { broadcastSyncValue, cancelDynamicPlaylistMaster, joinSyncGroup } from '../tools/dynamicTools';
-import {
-	broadcastEndActionToAllDynamics,
-	connectSyncSafe,
-	hasDynamicContent,
-	joinAllSyncGroupsOnSmilStart,
-} from '../tools/syncTools';
+import { createSyncTools, hasDynamicContent, SyncTools } from '../tools/syncTools';
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
 import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
@@ -106,6 +100,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private traverser: PlaylistTraverser;
 	private readonly smilEventEmitter: SmilEventEmitter;
 	private readonly html: HtmlTools;
+	private readonly sync: SyncTools;
 
 	constructor(
 		sos: ISos,
@@ -119,6 +114,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) {
 		super(sos, files, options, log);
 		this.html = createHtmlTools(log);
+		this.sync = createSyncTools(log);
 		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos, log.child('playlistPriority'));
 		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, log.child('playlistTriggers'), this.processPlaylist,
 			(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter));
@@ -313,13 +309,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			if (dynamicPlaylistConfig.syncId) {
 				const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-				await joinSyncGroup(this.sos, this.synchronization, syncGroupName);
+				await this.sync.joinSyncGroup(this.sos, this.synchronization, syncGroupName);
 				this.log.debug(
 					'[processor] master dynamic playlist joining sync group: group=%s',
 					syncGroupName,
 				);
 			}
-			await broadcastSyncValue(
+			await this.sync.broadcastSyncValue(
 				this.sos,
 				dynamicPlaylistConfig,
 				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
@@ -328,7 +324,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
-					await broadcastSyncValue(
+					await this.sync.broadcastSyncValue(
 						this.sos,
 						dynamicPlaylistConfig,
 						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
@@ -895,7 +891,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				'[processor] dynamic playlist skipped, sync stopped: dynamicValue=%s',
 				media.dynamicValue,
 			);
-			await cancelDynamicPlaylistMaster(
+			await this.sync.cancelDynamicPlaylistMaster(
 				this.triggers,
 				this.sos,
 				this.currentlyPlaying,
@@ -2821,13 +2817,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (this.sos.config.syncGroupName) {
 				this.log.debug('[processor-sync] syncGroupName is defined, starting sync setup');
 				if (firstIteration) {
-					await connectSyncSafe(this.sos);
+					await this.sync.connectSyncSafe(this.sos);
 				}
 
-				await joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+				await this.sync.joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
 
 				if (firstIteration && hasDynamicContent(this.smilObject)) {
-					await broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+					await this.sync.broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
 				}
 				// give some time for master selection
 				await sleep(500);
