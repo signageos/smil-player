@@ -10,7 +10,7 @@ browser console when `debugEnabled` is on. To send logs elsewhere, implement one
 ## The contract
 
 ```ts
-import { Logger, LogEntry, formatMessage } from './logger';
+import { Logger, LogEntry, formatMessage } from '../logger'; // from src/loggers/
 
 interface LogEntry {
 	level: 'debug' | 'info' | 'warn' | 'error';
@@ -30,7 +30,7 @@ Rules for `write`:
   cannot stop playback, but you will not be told about them either.
 - Filtering by level or namespace is your decision; the player emits everything.
 - `args` may contain `Error` objects, DOM nodes, `sos` objects and large playlist structures. Call
-  `formatMessage(entry.message, entry.args)` for a readable line; it handles `%s %d %O %X`, renders
+  `formatMessage(entry.message, entry.args)` for a readable line; it handles `%s %d %O`, renders
   errors with their stack, survives circular structures and truncates at 2 KB.
 - If you buffer, flush on `pagehide`/`beforeunload`. Applet restarts are frequent and the last buffer
   usually holds the reason.
@@ -92,7 +92,7 @@ export class HtmlLogger implements Logger {
 ## Example: remote server with batching
 
 Mind the deployment target: Chrome 38 (webOS 3.x) has no `fetch` and no `navigator.sendBeacon`, which is why
-this example uses `XMLHttpRequest` and why `npm run clean-build` deletes those builtins before loading the bundle.
+this example uses `XMLHttpRequest`. `npm run clean-build` loads the bundle with `fetch` deleted to catch that class of mistake.
 
 ```ts
 export class RemoteLogger implements Logger {

@@ -22,7 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
   `playCheckUrl` gate cannot be reached (network error, timeout) or answers an unlisted 5xx status, instead of playing
   from cache. Only meaningful next to `playCheckUrl`; the default `false` keeps the current fail-open behavior
 - `logger` applet config key — selects where the player's diagnostic output goes (`console` by default, the only
-  implementation shipped). Custom implementations can be registered and switched per device without a rebuild
+  implementation shipped). Switching between registered implementations needs no rebuild; adding one is a code change
 
 ### Changed
 

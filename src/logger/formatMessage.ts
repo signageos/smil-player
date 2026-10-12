@@ -1,4 +1,5 @@
-const SPECIFIER = /%[sdOX]/g;
+// %X is deliberately not a specifier: the only %X in the player is the literal '%XX' text of the malformed-URL lines.
+const SPECIFIER = /%[sdO]/g;
 
 function renderObject(value: unknown): string {
 	if (value instanceof Error) {
@@ -22,15 +23,13 @@ function renderOne(spec: string, value: unknown): string {
 			return String(value);
 		case '%d':
 			return String(Number(value));
-		case '%X':
-			return Number(value).toString(16);
 		default:
 			return renderObject(value);
 	}
 }
 
 /**
- * Renders a printf-style template and its args into one string. Supports %s %d %O %X.
+ * Renders a printf-style template and its args into one string. Supports %s %d %O.
  * A missing arg leaves its specifier in place; leftover args are appended space-separated.
  * Never throws. Output is truncated to maxLength with a trailing ellipsis.
  */

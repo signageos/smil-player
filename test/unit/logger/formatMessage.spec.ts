@@ -4,8 +4,14 @@ import { formatMessage } from '../../../src/logger/formatMessage';
 const expect = chai.expect;
 
 describe('formatMessage', () => {
-	it('substitutes %s %d %X in order', () => {
-		expect(formatMessage('a=%s b=%d c=%X', ['x', '42', 255])).to.equal('a=x b=42 c=ff');
+	it('substitutes %s %d in order', () => {
+		expect(formatMessage('a=%s b=%d', ['x', '42'])).to.equal('a=x b=42');
+	});
+
+	it('leaves literal %XX text alone and still substitutes the following %s', () => {
+		expect(formatMessage('malformed %XX in URL stem: src=%s', ['http://h/a%ZZ.mp4'])).to.equal(
+			'malformed %XX in URL stem: src=http://h/a%ZZ.mp4',
+		);
 	});
 
 	it('renders %O objects as JSON', () => {

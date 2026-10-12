@@ -7,7 +7,7 @@ export interface LogEntry {
 	 * shared tool functions carry the module name of the class that called them.
 	 */
 	namespace: string;
-	/** printf-style template (%s %d %O %X), e.g. '[files] sending report: endpoint=%s' */
+	/** printf-style template (%s %d %O), e.g. '[files] sending report: endpoint=%s' */
 	message: string;
 	/**
 	 * Template values, passed by reference, never pre-formatted. May contain Error objects, DOM nodes
