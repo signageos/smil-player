@@ -16,12 +16,9 @@ import { createDomElement } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
-import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
-
-const debug = Debug('@signageos/smil-player:playlistDataPrepare');
 
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
 	private globalRegionSyncIndex: { [key: string]: number } = {};
@@ -81,7 +78,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
-				debug('[prepare] processing %s element', key);
+				this.log.debug('[prepare] processing %s element', key);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
@@ -106,7 +103,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						htmlElement = HtmlEnum.ticker;
 						break;
 					default:
-						debug('[prepare] unsupported element type: %s', key);
+						this.log.debug('[prepare] unsupported element type: %s', key);
 				}
 
 				for (const elem of value) {
@@ -166,7 +163,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						if (!isNil(smilObject.transition[transitionId])) {
 							elem.transitionInfo = smilObject.transition[transitionId];
 						} else {
-							debug(
+							this.log.debug(
 								'[prepare] no matching transition: type=%s',
 								transitionId,
 							);
@@ -181,7 +178,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					if (key.startsWith(HtmlEnum.ticker)) {
 						elem.id = createTickerElement(elem, elem.regionInfo, key);
 					}
-					debug('[prepare] element info extracted: src=%s', elem.src);
+					this.log.debug('[prepare] element info extracted: src=%s', elem.src);
 				}
 				// reset widget expression for next elements
 				widgetRootFile = '';
@@ -202,7 +199,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						this.synchronization.playModeSyncRanges[region] = [];
 					}
 					this.synchronization.playModeSyncRanges[region].push(range);
-					debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', region, range.start, range.end);
+					this.log.debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', region, range.start, range.end);
 				}
 			}
 		}
@@ -227,19 +224,19 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, smilUrl, true);
-		debug('[prepare] all triggers extracted');
+		this.log.debug('[prepare] all triggers extracted');
 
 		await this.getAllInfo(smilObject.dynamic, smilObject, smilUrl, true);
-		debug('[prepare] all dynamic playlists extracted');
+		this.log.debug('[prepare] all dynamic playlists extracted');
 
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, smilUrl);
-		debug('[prepare] all elements extracted');
+		this.log.debug('[prepare] all elements extracted');
 
 		// Set max sync indices for each region in synchronization object
 		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
 			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
-			debug('[prepare] set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+			this.log.debug('[prepare] set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
 		}
 	};
 }

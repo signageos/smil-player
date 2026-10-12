@@ -1,6 +1,5 @@
 import { Log } from '../../../logger';
 import { cloneDeep } from 'lodash';
-import Debug from 'debug';
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
 import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion, VideoPreparing } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
@@ -8,8 +7,6 @@ import { ISos } from '../../../models/sosModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { cancelDynamicPlaylistMaster } from '../tools/dynamicTools';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
-
-const debug = Debug('@signageos/smil-player:prioritySideEffects');
 
 /**
  * Interface for side effects performed during priority operations.
@@ -53,7 +50,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 			regionInfo.height,
 		);
 		this.videoPreparing.fullScreenTrigger = cloneDeep(video);
-		debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
+		this.log.debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
 	}
 
 	public async cancelDynamicPlaylist(
