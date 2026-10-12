@@ -18,6 +18,7 @@ import {
 	createSourceReportObject,
 	getCanonicalFileName,
 	getFileName,
+	hasMalformedStem,
 	getOfflineReportFileIndex,
 	getStorageFileName,
 	getReportUrlFromUpdateValue,
@@ -693,6 +694,9 @@ export class FilesManager implements IFilesManager {
 								fetchStrategy,
 							);
 
+					if (hasMalformedStem(file.src)) {
+						this.log.debug('[files] malformed %XX in URL stem, using raw stem for file name: src=%s', file.src);
+					}
 					return {
 						file,
 						updateCheck,
@@ -4190,6 +4194,9 @@ export class FilesManager implements IFilesManager {
 
 			// Generate storage filename based on content value (without query params in hash)
 			// This ensures same content with different query params gets same filename
+			if (hasMalformedStem(String(contentValue))) {
+				this.log.debug('[files] malformed %XX in storage URL stem, using raw stem: value=%s', String(contentValue));
+			}
 			const storageFileName = getStorageFileName(String(contentValue));
 			const storagePath = `${storageFolder}/${storageFileName}`;
 

@@ -12,6 +12,7 @@ import {
 	generateSmilUrlVersion,
 	getFileName,
 	getPath,
+	hasMalformedStem,
 	getProtocol,
 	getSmilVersionUrl,
 	isCustomEndpointEventAllowed,
@@ -29,6 +30,18 @@ import { MergedDownloadList } from '../../../src/models/filesModels';
 const expect = chai.expect;
 
 describe('Files tools component', () => {
+	describe('hasMalformedStem', () => {
+		it('is true for the malformed %XX inputs that make getFileName fall back', () => {
+			expect(hasMalformedStem('https://example.com/assets/my%XXvideo.mp4')).to.equal(true);
+			expect(hasMalformedStem('https://example.com/assets/clip%E.mp4')).to.equal(true);
+		});
+		it('is false for well-formed and empty urls', () => {
+			expect(hasMalformedStem('https://example.com/assets/my%20video.mp4')).to.equal(false);
+			expect(hasMalformedStem('https://butikstv.test.com/play/smil/234.smil?some=var')).to.equal(false);
+			expect(hasMalformedStem('')).to.equal(false);
+		});
+	});
+
 	describe('Files tools component getFileName tests', () => {
 		const filesPaths = [
 			`https://butikstv.test.com/play/smil/234.smil`,
