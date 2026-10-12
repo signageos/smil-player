@@ -1,14 +1,12 @@
 import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
-import {
-	waitForPriorityRelease,
-	WaitCondition,
-} from '../../../src/components/playlist/playlistPriority/priorityWaiter';
+import { createPriorityWaiter, WaitCondition } from '../../../src/components/playlist/playlistPriority/priorityWaiter';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
 import { CurrentlyPlayingPriority, PromiseAwaiting } from '../../../src/models/playlistModels';
 import { makePriorityObject, makeRegion } from './testHelpers';
 
 const expect = chai.expect;
+const { waitForPriorityRelease } = createPriorityWaiter(noopLog);
 
 describe('priorityWaiter', () => {
 	describe('waitForPriorityRelease', () => {

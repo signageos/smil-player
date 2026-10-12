@@ -4,18 +4,17 @@ import { SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { removeDigits } from '../tools/generalTools';
 import { PriorityBehaviour, PriorityRule } from '../../../enums/priorityEnums';
-import { waitForPriorityRelease } from './priorityWaiter';
+import { createPriorityWaiter, PriorityWaiter } from './priorityWaiter';
 import { IPrioritySideEffects } from './prioritySideEffects';
-import {
-	determinePriorityRelation,
-	isPeerConflict,
-	selectApplicableRule,
-} from './priorityDecisionEngine';
+import { createPriorityDecisionEngine, PriorityDecisionEngine } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
 
 export class PriorityConflictResolver {
 
 	private static readonly MAX_PRIORITY_RECURSION_DEPTH: number = 3;
+	private readonly engine: PriorityDecisionEngine;
+	private readonly waiter: PriorityWaiter;
+
 	constructor(
 		private stateManager: PriorityStateManager,
 		private sideEffects: IPrioritySideEffects,
@@ -23,7 +22,10 @@ export class PriorityConflictResolver {
 		private getCancelFunction: () => boolean,
 		private getCurrentlyPlayingSrc: (regionName: string) => string | undefined,
 		protected readonly log: Log,
-	) {}
+	) {
+		this.engine = createPriorityDecisionEngine(log);
+		this.waiter = createPriorityWaiter(log);
+	}
 
 	public handlePriorityBeforePlay = async (
 		elementKey: string,
@@ -38,7 +40,7 @@ export class PriorityConflictResolver {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		const previousIndexPriority = this.stateManager.getEntry(priorityRegionName, previousPlayingIndex);
 
-		const peerConflict = isPeerConflict(previousIndexPriority, {
+		const peerConflict = this.engine.isPeerConflict(previousIndexPriority, {
 			priorityLevel: priorityObject.priorityLevel,
 			parent,
 			endTime,
@@ -61,10 +63,10 @@ export class PriorityConflictResolver {
 			);
 		}
 
-		const relation = determinePriorityRelation(priorityObject.priorityLevel, previousIndexPriority.priority.priorityLevel);
+		const relation = this.engine.determinePriorityRelation(priorityObject.priorityLevel, previousIndexPriority.priority.priorityLevel);
 
 		if (relation === 'higher' && previousIndexPriority.player.playing) {
-			const rule = selectApplicableRule('higher', previousIndexPriority.priority);
+			const rule = this.engine.selectApplicableRule('higher', previousIndexPriority.priority);
 			this.log.debug(
 				'[priority] detected conflict: type=higher, rule=%s, incoming=%s (pri=%d), existing=%s (pri=%d)',
 				rule,
@@ -85,7 +87,7 @@ export class PriorityConflictResolver {
 				depth,
 			);
 		} else if (peerConflict) {
-			const rule = selectApplicableRule('peer', previousIndexPriority.priority);
+			const rule = this.engine.selectApplicableRule('peer', previousIndexPriority.priority);
 			this.log.debug(
 				'[priority] detected conflict: type=peer, rule=%s, incoming=%s (pri=%d), existing=%s (pri=%d)',
 				rule,
@@ -106,7 +108,7 @@ export class PriorityConflictResolver {
 				depth,
 			);
 		} else if (relation === 'lower' && previousIndexPriority.player.playing) {
-			const rule = selectApplicableRule('lower', previousIndexPriority.priority);
+			const rule = this.engine.selectApplicableRule('lower', previousIndexPriority.priority);
 			this.log.debug(
 				'[priority] detected conflict: type=lower, rule=%s, incoming=%s (pri=%d), existing=%s (pri=%d)',
 				rule,
@@ -144,7 +146,7 @@ export class PriorityConflictResolver {
 			currentIndexPriority.media.src,
 		);
 
-		const result = await waitForPriorityRelease(
+		const result = await this.waiter.waitForPriorityRelease(
 			this.stateManager,
 			currentPriorityRegion,
 			currentIndexPriority,
@@ -219,7 +221,7 @@ export class PriorityConflictResolver {
 		// beginning — its begin is ignored and it is not added to the queue.
 		this.stateManager.setNeverBlocked(priorityRegionName, currentIndex);
 
-		await waitForPriorityRelease(
+		await this.waiter.waitForPriorityRelease(
 			this.stateManager,
 			this.stateManager.getRegion(priorityRegionName)!,
 			currentIndexPriority,
@@ -291,7 +293,7 @@ export class PriorityConflictResolver {
 			this.log.debug('[priority] defer error: failed to prepare dynamic video: %O', err);
 		}
 
-		const result = await waitForPriorityRelease(
+		const result = await this.waiter.waitForPriorityRelease(
 			this.stateManager,
 			currentPriorityRegion,
 			currentIndexPriority,

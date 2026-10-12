@@ -7,7 +7,7 @@ import { SMILMedia } from '../../../models/mediaModels';
 import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete } from '../tools/deferredTools';
 import { Deferred } from '../tools/Deferred';
 import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
-import { findMatchingEntryIndex } from './priorityDecisionEngine';
+import { createPriorityDecisionEngine, PriorityDecisionEngine } from './priorityDecisionEngine';
 
 interface RegionWaiter {
 	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
@@ -22,6 +22,7 @@ interface RegionWaiter {
  */
 export class PriorityStateManager {
 	private readonly tools: PlaylistTools;
+	private readonly engine: PriorityDecisionEngine;
 	private regionWaiters: Map<string, Set<RegionWaiter>> = new Map<string, Set<RegionWaiter>>();
 
 	constructor(
@@ -30,6 +31,7 @@ export class PriorityStateManager {
 		protected readonly log: Log,
 	) {
 		this.tools = createPlaylistTools(log);
+		this.engine = createPriorityDecisionEngine(log);
 	}
 
 	// --- Reactive waiting ---
@@ -146,7 +148,7 @@ export class PriorityStateManager {
 
 		if (!skipLoop) {
 			const entries = this.state[regionName];
-			const { matchIndex, matchType } = findMatchingEntryIndex(entries, value, parent, version);
+			const { matchIndex, matchType } = this.engine.findMatchingEntryIndex(entries, value, parent, version);
 
 			if (matchType === 'exact') {
 				// Same element re-registering (cycling): preserve play/pause state
