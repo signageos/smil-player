@@ -3,7 +3,6 @@ import { Log } from '../../../logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
-import Debug from 'debug';
 import { PlaylistOptions } from '../../../models/playlistModels';
 import { ISos } from '../../../models/sosModels';
 import { IPlaylistPriority } from './IPlaylistPriority';
@@ -17,8 +16,6 @@ import {
 import { PriorityStateManager } from './priorityStateManager';
 import { PriorityConflictResolver } from './priorityConflictResolver';
 
-const debug = Debug('@signageos/smil-player:playlistPriority');
-
 export class PlaylistPriority implements IPlaylistPriority {
 	public readonly stateManager: PriorityStateManager;
 	private _sideEffects: IPrioritySideEffects;
@@ -28,7 +25,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 	constructor(
 		options: PlaylistOptions,
 		sos: ISos | undefined,
-		log: Log,
+		private readonly log: Log,
 		deps?: {
 			stateManager?: PriorityStateManager;
 			sideEffects?: IPrioritySideEffects;
@@ -81,7 +78,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			priorityObject,
 			version,
 		);
-		debug(
+		this.log.debug(
 			'[priority] registered element: region=%s, currentIndex=%d, previousIndex=%d',
 			priorityRegionName,
 			currentIndex,
@@ -89,7 +86,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		);
 
 		if (this.stateManager.hasConflict(priorityRegionName, currentIndex, previousPlayingIndex)) {
-			debug(
+			this.log.debug(
 				'[priority] detected conflict: region=%s, src=%s',
 				priorityRegionName,
 				this.stateManager.getEntry(priorityRegionName, currentIndex).media.src,
@@ -121,7 +118,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		triggers: PlaylistTriggers,
 	): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
-		debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+		this.log.debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 		if (isNil(value.triggerValue) && endTime !== 0 && value.src === currentIndexPriority.isFirstInPlaylist.src) {
 			this.stateManager.incrementTimesPlayed(priorityRegionName, currentIndex);
@@ -132,7 +129,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		const smilFileUpdated = this.getCancelFunction();
 		const expiredVersion = version < currentVersion;
 
-		debug(
+		this.log.debug(
 			'[priority-done] checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
 			priorityRegionName,
 			endTimeExpired,
@@ -143,7 +140,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		);
 
 		if (isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
-			debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+			this.log.debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 			// The next repeatCount pass of THIS playlist has already re-registered the slot
 			// (traverser lookahead). Releasing now would let a deferred / coordination-gated
@@ -167,7 +164,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
 			if (priorityLevel !== undefined && !holdForSuccessor) {
 				this.stateManager.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
-				debug(
+				this.log.debug(
 					'[priority-done] cleaned up priority tracking for completed priority %s in region %s',
 					priorityLevel,
 					priorityRegionName,
@@ -187,24 +184,28 @@ export class PlaylistPriority implements IPlaylistPriority {
 
 			if (pausedIndexes.length > 0) {
 				if (windowStillOpen || holdForSuccessor) {
-					debug(
+					this.log.debug(
 						'[priority-done] holding paused playlist: region=%s, windowStillOpen=%s, holdForSuccessor=%s',
 						priorityRegionName,
 						windowStillOpen,
 						holdForSuccessor,
 					);
 				} else {
-					debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);
+					this.log.debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);
 					this.stateManager.unpauseAllControlled(priorityRegionName, currentIndex);
 				}
 			}
 
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
-				debug('[priority-done] dynamic playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+				this.log.debug(
+					'[priority-done] dynamic playlist finished: region=%s, src=%s',
+					priorityRegionName,
+					currentIndexPriority.media.src,
+				);
 				await this._sideEffects.cancelDynamicPlaylist(triggers, value, value.dynamicValue!);
 			}
 		} else {
-			debug(
+			this.log.debug(
 				'[priority-done] not finished: region=%s, isLast=%s, endTimeExpired=%s, repeatCountExpired=%s',
 				priorityRegionName,
 				isLast,

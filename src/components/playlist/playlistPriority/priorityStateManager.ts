@@ -8,9 +8,6 @@ import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete
 import { Deferred } from '../tools/Deferred';
 import { getIndexOfPlayingMedia } from '../tools/generalTools';
 import { findMatchingEntryIndex } from './priorityDecisionEngine';
-import Debug from 'debug';
-
-const debug = Debug('@signageos/smil-player:priorityStateManager');
 
 interface RegionWaiter {
 	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
@@ -214,7 +211,7 @@ export class PriorityStateManager {
 
 	public setPlaying(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setPlaying: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] setPlaying: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = true;
 		ensurePlayingDeferred(entry.player);
 		this.notifyWaiters(regionName);
@@ -222,7 +219,7 @@ export class PriorityStateManager {
 
 	public setStopped(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setStopped: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] setStopped: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.stop = true;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -232,7 +229,13 @@ export class PriorityStateManager {
 
 	public setPaused(regionName: string, index: number, controllerIndex: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d', regionName, index, entry.media.src, controllerIndex);
+		this.log.debug(
+			'[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d',
+			regionName,
+			index,
+			entry.media.src,
+			controllerIndex,
+		);
 		entry.player.contentPause = PAUSE_CONTENT_VALUE;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -268,7 +271,7 @@ export class PriorityStateManager {
 		if (!entry) {
 			return;
 		}
-		debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = false;
 		// A bailing successor is no successor: let the predecessor's finish release normally.
 		entry.player.successorRegistered = false;
@@ -331,7 +334,7 @@ export class PriorityStateManager {
 	public markFinished(regionName: string, index: number, keepPlaying: boolean = false): { pausedIndexes: number[] } {
 		const entry = this.state[regionName][index];
 		const pausedIndexes = [...entry.controlledPlaylists];
-		debug(
+		this.log.debug(
 			'[priority-state] markFinished: region=%s, index=%d, src=%s, pausedVictims=%d, keepPlaying=%s',
 			regionName,
 			index,
@@ -363,7 +366,7 @@ export class PriorityStateManager {
 		const victims = controller.controlledPlaylists.splice(0);
 		for (const victimIndex of victims) {
 			if (this.state[regionName][victimIndex]) {
-				debug(
+				this.log.debug(
 					'[priority-state] unpauseAllControlled: region=%s, controller=%d, victim=%d',
 					regionName,
 					controllerIndex,
@@ -509,7 +512,7 @@ export class PriorityStateManager {
 					const entryIndex = priorityRegion.indexOf(entry);
 					const released = this.unpauseAllControlled(regionName, entryIndex);
 					if (released.length > 0) {
-						debug(
+						this.log.debug(
 							'[priority-state] cleanupExpiredPriority: unpaused controlled playlists: region=%s, victims=%s',
 							regionName,
 							released.join(','),
@@ -567,7 +570,7 @@ export class PriorityStateManager {
 			try {
 				satisfied = !!entries && waiter.predicate(entries);
 			} catch (err) {
-				debug('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
+				this.log.debug('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
 				waiter.deferred.resolve();
 				waiters.delete(waiter);
 				continue;
