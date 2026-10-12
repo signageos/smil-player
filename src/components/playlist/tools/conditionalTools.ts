@@ -13,34 +13,90 @@ import {
 	ObsoleteConditionalExprPrefix,
 	BinaryOperatorChar,
 } from '../../../enums/conditionalEnums';
-import { setDefaultAwait } from './scheduleTools';
-import { debug, generateCurrentDate } from './generalTools';
+import { Log } from '../../../logger';
+import { generateCurrentDate } from './generalTools';
 import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';
 
-export function shouldSkipElement(
-	element: SMILMediaSingle | PlaylistElement | PlaylistElement[],
-	playerName: string = '',
-	playerId: string = '',
-): boolean {
-	if (Array.isArray(element)) {
-		const result = setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
-		if (result) {
-			debug('[conditional] array conditional expired: no playable item found');
+export type SetDefaultAwaitFn = (elementsArray: PlaylistElement[], playerName?: string, playerId?: string) => number;
+
+/**
+ * Built by createScheduleTools(log): shouldSkipElement needs setDefaultAwait and setDefaultAwait needs
+ * shouldSkipElement, so the two modules form one factory and the cycle is closed by this parameter.
+ */
+export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitFn) {
+	function shouldSkipElement(
+		element: SMILMediaSingle | PlaylistElement | PlaylistElement[],
+		playerName: string = '',
+		playerId: string = '',
+	): boolean {
+		if (Array.isArray(element)) {
+			const result = setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
+			if (result) {
+				log.debug('[conditional] array conditional expired: no playable item found');
+			}
+			return result;
 		}
-		return result;
+		// Runtime unavailable-content flag (fetch strategies) — overrides any declarative
+		// expr outcome; the element is unplayable until the next successful content check.
+		if (element.skipContentMark) {
+			log.debug('[conditional] content marked as skip, treating as expired: src=%s', (element as { src?: string }).src);
+			return true;
+		}
+		if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId)) {
+			log.debug('[conditional] expression false, skipping: expr=%s', element.expr);
+			return true;
+		}
+		return false;
 	}
-	// Runtime unavailable-content flag (fetch strategies) — overrides any declarative
-	// expr outcome; the element is unplayable until the next successful content check.
-	if (element.skipContentMark) {
-		debug('[conditional] content marked as skip, treating as expired: src=%s', (element as { src?: string }).src);
-		return true;
+
+	/**
+	 * Checks if conditional expression evaluates true or false
+	 * @param expression - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
+	 * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
+	 * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
+	 */
+	function checkConditionalExprSafe(expression: string, playerName: string = '', playerId: string = '') {
+		try {
+			expression = sanitizeConditionalExpr(expression);
+			return checkConditionalExpr(expression, playerName, playerId);
+		} catch (error) {
+			log.debug('[conditional] parse error in expr: %O', error);
+			return false;
+		}
 	}
-	if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId)) {
-		debug('[conditional] expression false, skipping: expr=%s', element.expr);
-		return true;
+
+	function checkConditionalExpr(expression: string, playerName: string, playerId: string): boolean {
+		const splitByAnd = split(expression, {
+			...algebraicSplitOpts,
+			separator: [BinaryOperatorChar.AND, BinaryOperatorChar.and],
+		});
+		if (splitByAnd.length > 1) {
+			for (const element of splitByAnd) {
+				if (!checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		const splitByOr = split(expression, {
+			...algebraicSplitOpts,
+			separator: [BinaryOperatorChar.OR, BinaryOperatorChar.or],
+		});
+		if (splitByOr.length > 1) {
+			for (const element of splitByOr) {
+				if (checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		return executeConditionalExpr(expression, playerName, playerId);
 	}
-	return false;
+
+	return { shouldSkipElement, checkConditionalExprSafe, checkConditionalExpr };
 }
 
 /**
@@ -64,22 +120,6 @@ const algebraicSplitOpts: Options = {
 	quotes: ["'"],
 };
 
-/**
- * Checks if conditional expression evaluates true or false
- * @param expression - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
- * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
- * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
- */
-export function checkConditionalExprSafe(expression: string, playerName: string = '', playerId: string = '') {
-	try {
-		expression = sanitizeConditionalExpr(expression);
-		return checkConditionalExpr(expression, playerName, playerId);
-	} catch (error) {
-		debug('[conditional] parse error in expr: %O', error);
-		return false;
-	}
-}
-
 function sanitizeConditionalExpr(expression: string) {
 	expression = he.decode(expression.trim());
 	const initialSplit = split(expression, {
@@ -90,36 +130,6 @@ function sanitizeConditionalExpr(expression: string) {
 		expression = trimAndRemoveEdgeBrackets(expression);
 	}
 	return expression;
-}
-
-export function checkConditionalExpr(expression: string, playerName: string, playerId: string): boolean {
-	const splitByAnd = split(expression, {
-		...algebraicSplitOpts,
-		separator: [BinaryOperatorChar.AND, BinaryOperatorChar.and],
-	});
-	if (splitByAnd.length > 1) {
-		for (const element of splitByAnd) {
-			if (!checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	const splitByOr = split(expression, {
-		...algebraicSplitOpts,
-		separator: [BinaryOperatorChar.OR, BinaryOperatorChar.or],
-	});
-	if (splitByOr.length > 1) {
-		for (const element of splitByOr) {
-			if (checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	return executeConditionalExpr(expression, playerName, playerId);
 }
 
 /**

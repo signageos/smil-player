@@ -7,7 +7,7 @@ import { FunctionKeys, SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { isNil, isObject } from 'lodash';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { SMILFileObject } from '../../../models/filesModels';
-import { findDuration, setElementDuration } from '../tools/scheduleTools';
+import { findDuration } from '../tools/scheduleTools';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { addEventOnTriggerWidget } from '../tools/htmlTools';
@@ -851,7 +851,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		stringDuration: string,
 		priorityObject: PriorityObject = {} as PriorityObject,
 	) => {
-		const durationMillis = setElementDuration(stringDuration);
+		const durationMillis = this.schedule.setElementDuration(stringDuration);
 		const triggerRandom = getRandomInt(100000);
 		const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 

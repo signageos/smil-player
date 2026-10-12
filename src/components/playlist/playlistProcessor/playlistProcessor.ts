@@ -39,10 +39,8 @@ import {
 	needsUnknownDurationBackstop,
 } from '../tools/generalTools';
 import { SMILEnums } from '../../../enums/generalEnums';
-import { shouldSkipElement } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { setElementDuration } from '../tools/scheduleTools';
 import { PriorityObject } from '../../../models/priorityModels';
 import { PriorityBehaviour, WaitStatus } from '../../../enums/priorityEnums';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
@@ -525,7 +523,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						const hasTransition = 'transitionInfo' in value;
 						if (hasTransition) {
-							transitionDuration = setElementDuration(value.transitionInfo!.dur);
+							transitionDuration = this.schedule.setElementDuration(value.transitionInfo!.dur);
 						}
 						changeZIndex(value, element, +1, false);
 
@@ -676,7 +674,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timedDebug: TimedDebugger,
 	): Promise<void> => {
 		timedDebug.debug('[processor] starting wait media on screen: src=%s, id=%s', element.src, element.id);
-		const duration = setElementDuration(element.dur);
+		const duration = this.schedule.setElementDuration(element.dur);
 
 		await this.checkRegionsForCancellation(element, currentRegionInfo, parentRegionInfo, version, timedDebug);
 
@@ -1363,7 +1361,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		// if video has specified duration in smil file, cancel it after given duration passes
 		if ('dur' in video) {
-			const parsedDuration = setElementDuration(video.dur!);
+			const parsedDuration = this.schedule.setElementDuration(video.dur!);
 			timedDebug.debug('[processor] got dur: %sms, src=%s', parsedDuration, video.localFilePath);
 			promiseRaceArray.push(sleep(parsedDuration));
 		}
@@ -1413,7 +1411,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.setCurrentlyPlaying(stream, 'video', currentRegionInfo.regionName, timedDebug);
 
 		if ('dur' in stream) {
-			const parsedDuration: number = setElementDuration(stream.dur!);
+			const parsedDuration: number = this.schedule.setElementDuration(stream.dur!);
 			timedDebug.debug('[processor] got dur: %sms for stream: src=%s', parsedDuration, stream.src);
 			promiseRaceArray.push(sleep(parsedDuration));
 		}
@@ -2558,7 +2556,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Genuine (non-skipContent) conditionals, and the checkAheadCount case (recovered by
 		// prefetchAheadElements), keep the fast intentional skip.
 		const skipContentRecheck = this.isSkipContentRecheckable(value);
-		if (shouldSkipElement(value, this.playerName, this.playerId) && !skipContentRecheck) {
+		if (this.schedule.shouldSkipElement(value, this.playerName, this.playerId) && !skipContentRecheck) {
 			this.log.debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;
@@ -2589,7 +2587,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Re-check conditional expression after prePlayCheck.
 		// The fetch strategy inside detectUpdateOnly may have set the skipContentMark flag
 		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
-		if (!this.smilObject.checkAheadCount && shouldSkipElement(value, this.playerName, this.playerId)) {
+		if (!this.smilObject.checkAheadCount && this.schedule.shouldSkipElement(value, this.playerName, this.playerId)) {
 			this.log.debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;

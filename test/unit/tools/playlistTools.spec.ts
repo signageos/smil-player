@@ -35,17 +35,14 @@ import {
 	sleep,
 } from '../../../src/components/playlist/tools/generalTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
-import {
-	areAllWallclocksPermanentlyExpired,
-	setDefaultAwait,
-	setElementDuration,
-	findDuration,
-} from '../../../src/components/playlist/tools/scheduleTools';
+import { createScheduleTools, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
+import { noopLog } from '../../../src/logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 import { CurrentlyPlayingRegion } from '../../../src/models/playlistModels';
 import { RegionsObject } from '../../../src/models/xmlJsonModels';
 
 const expect = chai.expect;
+const { areAllWallclocksPermanentlyExpired, setDefaultAwait, setElementDuration } = createScheduleTools(noopLog);
 
 describe('Playlist tools component', () => {
 	describe('Playlist tools component getIndexOfPlayingMedia tests', () => {
