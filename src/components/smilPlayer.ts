@@ -21,11 +21,12 @@ import { SmilPlayerPlaylist } from './playlist/playlist';
 import { PlaylistProcessor } from './playlist/playlistProcessor/playlistProcessor';
 import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistDataPrepare';
 import { ISmilPlayer } from './ISmilPlayer';
-import { getStrategy } from './files/fetchingStrategies/fetchingStrategies';
+import { createFetchingStrategies, FetchingStrategies } from './files/fetchingStrategies/fetchingStrategies';
 
 export class SmilPlayer implements ISmilPlayer {
 	protected readonly log: Log;
 	private readonly html: HtmlTools;
+	private readonly strategies: FetchingStrategies;
 	private readonly files: FilesManager;
 	private readonly smilUrl: string | undefined;
 	private xmlParser: XmlParser;
@@ -38,6 +39,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const root = new Log(logger, '@signageos/smil-player');
 		this.log = root.child('main');
 		this.html = createHtmlTools(this.log);
+		this.strategies = createFetchingStrategies(this.log);
 		this.smilUrl = smilUrl;
 		this.files = new FilesManager(sos, root.child('filesManager'));
 		this.xmlParser = new XmlParser(root.child('xmlParser'));
@@ -157,7 +159,7 @@ export class SmilPlayer implements ISmilPlayer {
 				SMILScheduleEnum.fileCheckTimeout,
 				[],
 				[],
-				getStrategy(SMILEnums.lastModified),
+				this.strategies.getStrategy(SMILEnums.lastModified),
 			);
 
 			await Promise.all(result.promises);
@@ -248,7 +250,7 @@ export class SmilPlayer implements ISmilPlayer {
 						SMILScheduleEnum.fileCheckTimeout,
 						[],
 						[],
-						getStrategy(SMILEnums.lastModified),
+						this.strategies.getStrategy(SMILEnums.lastModified),
 						false,
 					);
 					await Promise.all(result.promises);

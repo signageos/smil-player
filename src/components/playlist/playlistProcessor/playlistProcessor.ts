@@ -80,7 +80,7 @@ import { createSyncTools, hasDynamicContent, SyncTools } from '../tools/syncTool
 import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { startTickerAnimation } from '../tools/tickerTools';
 import { ResourceChecker } from '../../files/resourceChecker/resourceChecker';
-import { getStrategy } from '../../files/fetchingStrategies/fetchingStrategies';
+import { createFetchingStrategies, FetchingStrategies } from '../../files/fetchingStrategies/fetchingStrategies';
 import { SMILElementController, ProcessAction } from './SMILElementController';
 import { TimedDebugger } from './TimedDebugger';
 import { PlaylistTraverser, IPlaylistEngine } from './playlistTraverser';
@@ -101,6 +101,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private readonly html: HtmlTools;
 	private readonly sync: SyncTools;
 	private readonly tools: PlaylistTools;
+	private readonly strategies: FetchingStrategies;
 
 	constructor(
 		sos: ISos,
@@ -116,6 +117,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		this.html = createHtmlTools(log);
 		this.sync = createSyncTools(log);
 		this.tools = createPlaylistTools(log);
+		this.strategies = createFetchingStrategies(log);
 		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos, log.child('playlistPriority'));
 		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, log.child('playlistTriggers'), this.processPlaylist,
 			(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter));
@@ -180,7 +182,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.smilObject.refresh.timeOut,
 			[],
 			[],
-			getStrategy(SMILEnums.lastModified),
+			this.strategies.getStrategy(SMILEnums.lastModified),
 		);
 		downloadPromises = downloadPromises.concat(result.promises);
 

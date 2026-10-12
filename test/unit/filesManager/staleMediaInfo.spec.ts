@@ -13,7 +13,7 @@ import { noopLog } from '../../../src/logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';
-import { getStrategy } from '../../../src/components/files/fetchingStrategies/fetchingStrategies';
+import { createFetchingStrategies } from '../../../src/components/files/fetchingStrategies/fetchingStrategies';
 import { FileStructure } from '../../../src/enums/fileEnums';
 import { SMILEnums } from '../../../src/enums/generalEnums';
 import { ISos } from '../../../src/models/sosModels';
@@ -59,7 +59,7 @@ function makeFilesManager(files: Set<string>, mediaInfo: Record<string, string>)
 }
 
 describe('components/files/filesManager - stale mediaInfo entries', () => {
-	const strategy = getStrategy(SMILEnums.lastModified);
+	const strategy = createFetchingStrategies(noopLog).getStrategy(SMILEnums.lastModified);
 	const newFile = () => ({ src: NEW_SRC, localFilePath: '' } as any);
 
 	it('downloads a new file whose Last-Modified only matches an entry with no file on disk', async () => {

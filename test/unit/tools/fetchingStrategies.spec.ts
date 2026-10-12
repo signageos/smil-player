@@ -4,7 +4,8 @@ if (typeof (global as any).window === 'undefined') {
 	const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' });
 	(global as any).window = dom.window;
 }
-import { getStrategy } from '../../../src/components/files/fetchingStrategies/fetchingStrategies';
+import { createFetchingStrategies } from '../../../src/components/files/fetchingStrategies/fetchingStrategies';
+import { noopLog } from '../../../src/logger';
 import { SMILEnums } from '../../../src/enums/generalEnums';
 import { MergedDownloadList } from '../../../src/models/filesModels';
 
@@ -34,6 +35,7 @@ const makeResponse = (status: number, headers: { [key: string]: string } = {}) =
 		headers: { get: (key: string) => headers[key.toLowerCase()] ?? null },
 	} as unknown as Response);
 
+const { getStrategy } = createFetchingStrategies(noopLog);
 const strategy = getStrategy(SMILEnums.lastModified);
 
 describe('fetchingStrategies skipContent marking', () => {

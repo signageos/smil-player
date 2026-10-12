@@ -1,4 +1,3 @@
-import Debug from 'debug';
 import * as path from 'path';
 import * as querystring from 'querystring';
 import * as URLVar from 'url';
@@ -20,8 +19,6 @@ import get = require('lodash/get');
 import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfPlay/IRecordItemOptions';
 import { removeLastArrayItem } from '../../playlist/tools/generalTools';
 import moment from 'moment';
-
-export const debug = Debug('@signageos/smil-player:filesManager');
 
 const isUrl = require('is-url-superb');
 
