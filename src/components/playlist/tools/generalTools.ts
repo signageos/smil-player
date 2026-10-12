@@ -15,7 +15,6 @@ import { FileStructure } from '../../../enums/fileEnums';
 import { DeviceModels } from '../../../enums/deviceEnums';
 import Debug from 'debug';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
-import { TimedDebugger } from '../playlistProcessor/TimedDebugger';
 import { XmlTags } from '../../../enums/xmlEnums';
 import {
 	parentGenerationAllow,
@@ -552,24 +551,6 @@ export function getConfigBoolean(
 		return value.toLowerCase() === 'true';
 	}
 	return defaultValue;
-}
-
-/**
- * Get ISO timestamp for debug logs
- */
-function getTimestamp(): string {
-	return new Date().toISOString();
-}
-
-/**
- * Helper to log debug messages, using TimedDebugger if available
- */
-export function logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
-	if (timedDebug) {
-		timedDebug.debug(message, ...args);
-	} else {
-		debug('[%s] ' + message, getTimestamp(), ...args);
-	}
 }
 
 /**
