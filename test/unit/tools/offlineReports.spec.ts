@@ -1,7 +1,9 @@
 import * as chai from 'chai';
-import { parseOfflineReportLines } from '../../../src/components/files/tools/offlineReports';
+import { createOfflineReportTools } from '../../../src/components/files/tools/offlineReports';
+import { noopLog } from '../../../src/logger';
 
 const expect = chai.expect;
+const { parseOfflineReportLines } = createOfflineReportTools(noopLog);
 
 /**
  * Coverage for the pure helper extracted from

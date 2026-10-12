@@ -32,7 +32,7 @@ import {
 	shouldSkipActiveReportFile,
 	updateJsonObject,
 } from './tools';
-import { parseOfflineReportLines } from './tools/offlineReports';
+import { createOfflineReportTools, OfflineReportTools } from './tools/offlineReports';
 import {
 	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
 	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
@@ -61,7 +61,7 @@ import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfP
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
-import { getStrategy } from './fetchingStrategies/fetchingStrategies';
+import { createFetchingStrategies, FetchingStrategies } from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
 
 declare global {
@@ -110,8 +110,13 @@ export class FilesManager implements IFilesManager {
 	private estimatedFreeSpace: number = 0;
 	private sizeBytesUnavailableWarned: boolean = false;
 
+	private readonly strategies: FetchingStrategies;
+	private readonly offline: OfflineReportTools;
+
 	constructor(sos: ISos, protected readonly log: Log) {
 		this.sos = sos;
+		this.strategies = createFetchingStrategies(log);
+		this.offline = createOfflineReportTools(log);
 	}
 
 	public getStorageUnitType = (): string => {
@@ -1634,7 +1639,7 @@ export class FilesManager implements IFilesManager {
 		// Clean up orphaned temp files from any prior crashed run so they don't accumulate on disk.
 		await this.clearTempFolders();
 
-		const fetchStrategy = getStrategy(smilObject.updateMechanism);
+		const fetchStrategy = this.strategies.getStrategy(smilObject.updateMechanism);
 		const timeOut = smilObject.refresh.timeOut;
 		const skipCodes = smilObject.skipContentOnHttpStatus;
 		const updateCodes = smilObject.updateContentOnHttpStatus;
@@ -1697,7 +1702,7 @@ export class FilesManager implements IFilesManager {
 		this.log.debug('[files] starting update check');
 		try {
 			// For SMIL file, always use lastModified strategy
-			const smilFetchStrategy = getStrategy(SMILEnums.lastModified);
+			const smilFetchStrategy = this.strategies.getStrategy(SMILEnums.lastModified);
 
 			resourceCheckers = resourceCheckers.concat(
 				this.convertToResourcesCheckerFormat(
@@ -1715,7 +1720,7 @@ export class FilesManager implements IFilesManager {
 			// check for media updates only if its not switched off in the smil file
 			if (!smilObject.onlySmilFileUpdate) {
 				// For media files, use the strategy based on update mechanism
-				const mediaFetchStrategy = getStrategy(smilObject.updateMechanism);
+				const mediaFetchStrategy = this.strategies.getStrategy(smilObject.updateMechanism);
 
 				resourceCheckers = resourceCheckers.concat(
 					this.convertToResourcesCheckerFormat(
@@ -2236,7 +2241,7 @@ export class FilesManager implements IFilesManager {
 	): Promise<void> => {
 		try {
 			this.log.debug('prePlayCheck: Checking %s in folder %s', media.src, mediaFolder);
-			const fetchStrategy = getStrategy(smilObject.updateMechanism);
+			const fetchStrategy = this.strategies.getStrategy(smilObject.updateMechanism);
 
 			// Phase 1: Detection (HEAD request) — runs concurrently across regions.
 			const detection = await this.detectUpdateOnly(
@@ -3702,7 +3707,7 @@ export class FilesManager implements IFilesManager {
 
 			// parseOfflineReportLines tolerates and logs corrupted lines internally,
 			// returning only the salvageable reports.
-			const reports = parseOfflineReportLines(fileContent, filePath);
+			const reports = this.offline.parseOfflineReportLines(fileContent, filePath);
 
 			if (
 				shouldSkipActiveReportFile(
