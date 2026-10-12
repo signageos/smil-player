@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PlaylistPriority } from '../../../src/components/playlist/playlistPriority/playlistPriority';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -34,7 +35,7 @@ describe('PlaylistPriority', () => {
 		state = {};
 		promiseAwaiting = {};
 		cancelFunction = [false];
-		stateManager = new PriorityStateManager(state, promiseAwaiting);
+		stateManager = new PriorityStateManager(state, promiseAwaiting, noopLog);
 		sideEffects = makeMockSideEffects();
 		const conflictResolver = new PriorityConflictResolver(
 			stateManager,
@@ -42,10 +43,12 @@ describe('PlaylistPriority', () => {
 			{ syncingInAction: false },
 			() => cancelFunction[cancelFunction.length - 1],
 			() => undefined,
+			noopLog,
 		);
 		priority = new PlaylistPriority(
 			makeOptions({ cancelFunction, currentlyPlayingPriority: state, promiseAwaiting }),
 			undefined,
+			noopLog,
 			{ stateManager, sideEffects, conflictResolver },
 		);
 		mockTriggers = { dynamicPlaylist: {} };

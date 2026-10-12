@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { EventEmitter } from 'events';
 import Debug from 'debug';
 import { ISos } from '../../../models/sosModels';
@@ -25,7 +26,8 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	constructor(
 		private sos: ISos,
 		public readonly groupName: string,
-		deviceId?: string,
+		deviceId: string | undefined,
+		protected readonly log: Log,
 	) {
 		// Use provided deviceId or generate a unique one
 		this.id = deviceId || `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

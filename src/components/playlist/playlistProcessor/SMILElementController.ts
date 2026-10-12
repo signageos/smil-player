@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { logDebug } from '../tools/generalTools';
 import {
 	Synchronization,
@@ -330,7 +331,7 @@ export class SMILElementController {
 	/** When each region escalated — only newer coordination messages prove the master is back */
 	private freeRunSince: { [regionName: string]: number } = {};
 
-	constructor(private synchronization: Synchronization) {}
+	constructor(private synchronization: Synchronization, protected readonly log: Log) {}
 
 	/**
 	 * Coordinate the start of element preparation

@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';
@@ -30,7 +31,7 @@ const TEST_MEDIA = { src: TEST_SRC } as any;
 
 describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	it('should return shouldUpdate: false when server is unreachable (null)', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const fetchStrategy = createFetchStrategy(null);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 
@@ -42,7 +43,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: true when file does not exist locally', async () => {
-		const filesManager = new FilesManager(createSosMock(false));
+		const filesManager = new FilesManager(createSosMock(false), noopLog);
 		const serverDate = 'Mon, 01 Jan 2024 00:00:00 GMT';
 		const fetchStrategy = createFetchStrategy(serverDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: serverDate };
@@ -56,7 +57,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: true when no stored value exists (first tracked download)', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const serverDate = 'Mon, 01 Jan 2024 00:00:00 GMT';
 		const fetchStrategy = createFetchStrategy(serverDate);
 		// stored value is null (key missing from mediaInfoObject)
@@ -71,7 +72,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: false when Last-Modified is unchanged', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const serverDate = 'Mon, 01 Jan 2024 00:00:00 GMT';
 		const fetchStrategy = createFetchStrategy(serverDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: serverDate };
@@ -84,7 +85,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: true when Last-Modified is newer', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const newerDate = 'Tue, 02 Jan 2024 00:00:00 GMT';
 		const fetchStrategy = createFetchStrategy(newerDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
@@ -98,7 +99,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: true when Last-Modified is older (rollback)', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const olderDate = 'Sun, 31 Dec 2023 00:00:00 GMT';
 		const fetchStrategy = createFetchStrategy(olderDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
@@ -112,7 +113,7 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 	});
 
 	it('should return shouldUpdate: false when server has no header (DEFAULT_LAST_MODIFIED fallback)', async () => {
-		const filesManager = new FilesManager(createSosMock(true));
+		const filesManager = new FilesManager(createSosMock(true), noopLog);
 		const fetchStrategy = createFetchStrategy(DEFAULT_LAST_MODIFIED);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 

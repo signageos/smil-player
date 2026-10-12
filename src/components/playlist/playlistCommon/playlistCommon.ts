@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import {
 	CurrentlyPlaying,
 	CurrentlyPlayingPriority,
@@ -40,7 +41,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected cancelDeferred: Deferred<void> = new Deferred<void>();
 	protected regionChangeDeferred: Deferred<void> = new Deferred<void>();
 
-	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, protected readonly log: Log) {
 		this.sos = sos;
 		this.files = files;
 		this.cancelFunction = options.cancelFunction;

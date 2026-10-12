@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { debug } from '../tools/generalTools';
 import { EventEmitter } from 'events';
 import { SMILVideo } from '../../../models/mediaModels';
@@ -5,7 +6,7 @@ import { StreamEnums } from '../../../enums/mediaEnums';
 import { ISos } from '../../../models/sosModels';
 
 export class SmilEventEmitter extends EventEmitter {
-	constructor(sos: ISos) {
+	constructor(sos: ISos, protected readonly log: Log) {
 		super();
 		sos.stream.onDisconnected((event) => {
 			this.emit(StreamEnums.disconnectedEvent);

@@ -9,6 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
+import { noopLog } from '../../../src/logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';
@@ -48,7 +49,7 @@ function makeFilesManager(files: Set<string>, mediaInfo: Record<string, string>)
 				files.has(filePath) ? { filePath, localUri: `file://${filePath}` } : null,
 		},
 	} as unknown as ISos;
-	const fm = new FilesManager(sos);
+	const fm = new FilesManager(sos, noopLog);
 	(fm as any).makeXhrRequest = async (_method: string, url: string) => ({
 		status: 200,
 		url,

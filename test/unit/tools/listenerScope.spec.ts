@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { ListenerScope } from '../../../src/components/playlist/tools/listenerScope';
 
@@ -38,7 +39,7 @@ describe('ListenerScope', () => {
 	}
 
 	it('add forwards to the target and tracks the entry', () => {
-		const scope = new ListenerScope();
+		const scope = new ListenerScope(noopLog);
 		const target = makeStubTarget();
 		const handler = () => {/* noop */};
 
@@ -51,7 +52,7 @@ describe('ListenerScope', () => {
 	});
 
 	it('removeAll calls removeEventListener with the same listener reference and options', () => {
-		const scope = new ListenerScope();
+		const scope = new ListenerScope(noopLog);
 		const target = makeStubTarget();
 		const handler = () => {/* noop */};
 		const opts = { capture: true };
@@ -66,7 +67,7 @@ describe('ListenerScope', () => {
 	});
 
 	it('removeAll empties the registry and is a no-op on a second call', () => {
-		const scope = new ListenerScope();
+		const scope = new ListenerScope(noopLog);
 		const target = makeStubTarget();
 
 		scope.add(target as unknown as EventTarget, 'click', () => {/* noop */});
@@ -79,7 +80,7 @@ describe('ListenerScope', () => {
 	});
 
 	it('removeAll swallows errors from a misbehaving target and still clears entries', () => {
-		const scope = new ListenerScope();
+		const scope = new ListenerScope(noopLog);
 		const throwingTarget = {
 			addEventListener: () => {/* noop */},
 			removeEventListener: () => {
@@ -94,7 +95,7 @@ describe('ListenerScope', () => {
 	});
 
 	it('preserves insertion order across multiple targets', () => {
-		const scope = new ListenerScope();
+		const scope = new ListenerScope(noopLog);
 		const a = makeStubTarget();
 		const b = makeStubTarget();
 		const ha = () => {/* noop */};

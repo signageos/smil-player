@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { isNil, cloneDeep } from 'lodash';
 import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting, PromiseAwaitingEntry } from '../../../models/playlistModels';
 import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../enums/priorityEnums';
@@ -28,6 +29,7 @@ export class PriorityStateManager {
 	constructor(
 		private state: CurrentlyPlayingPriority,
 		private promiseAwaiting: PromiseAwaiting,
+		protected readonly log: Log,
 	) {}
 
 	// --- Reactive waiting ---

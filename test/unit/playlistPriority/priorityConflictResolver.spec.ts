@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PriorityConflictResolver } from '../../../src/components/playlist/playlistPriority/priorityConflictResolver';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -20,7 +21,7 @@ describe('PriorityConflictResolver', () => {
 	beforeEach(() => {
 		state = {};
 		promiseAwaiting = {};
-		stateManager = new PriorityStateManager(state, promiseAwaiting);
+		stateManager = new PriorityStateManager(state, promiseAwaiting, noopLog);
 		sideEffects = makeMockSideEffects();
 		synchronization = { syncingInAction: false };
 		resolver = new PriorityConflictResolver(
@@ -29,6 +30,7 @@ describe('PriorityConflictResolver', () => {
 			synchronization,
 			() => false,
 			() => undefined,
+			noopLog,
 		);
 	});
 
@@ -249,6 +251,7 @@ describe('PriorityConflictResolver', () => {
 				synchronization,
 				() => false,
 				() => 'different-src.mp4', // currently playing has different src
+				noopLog,
 			);
 
 			state.main = [

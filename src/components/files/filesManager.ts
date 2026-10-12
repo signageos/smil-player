@@ -1,4 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../logger';
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 
@@ -110,7 +111,7 @@ export class FilesManager implements IFilesManager {
 	private estimatedFreeSpace: number = 0;
 	private sizeBytesUnavailableWarned: boolean = false;
 
-	constructor(sos: ISos) {
+	constructor(sos: ISos, protected readonly log: Log) {
 		this.sos = sos;
 	}
 

@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import { promises as fsPromise } from 'fs';
 import * as path from 'path';
 import { XmlParser } from '../../../src/components/xmlParser/xmlParser';
@@ -13,7 +14,7 @@ import { triggerRfid } from '../../mocks/playlistMock/mockTriggerRfId';
 import * as chai from 'chai';
 
 const expect = chai.expect;
-const xmlParser = new XmlParser();
+const xmlParser = new XmlParser(noopLog);
 const FIXTURES = path.join(__dirname, '../../mocks/xmlParserMock');
 
 describe('XmlParse tools component', () => {

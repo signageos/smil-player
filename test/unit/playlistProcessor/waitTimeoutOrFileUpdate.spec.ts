@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import {
 	TestablePlaylistProcessor,
@@ -13,7 +14,7 @@ const expect = chai.expect;
 // Mirrors smilPlayer.main(): every playlist iteration pushes a fresh `false` onto
 // cancelFunction, so after one SMIL refresh the array is [v0, v1] and v1 is current.
 function processorWithTwoVersions(): TestablePlaylistProcessor {
-	const processor = new TestablePlaylistProcessor(createMockSos(), createMockFiles(), createDefaultOptions(), {
+	const processor = new TestablePlaylistProcessor(createMockSos(), createMockFiles(), createDefaultOptions(), noopLog, {
 		triggers: createMockTriggers(),
 		priority: createMockPriority(),
 	});
