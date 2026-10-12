@@ -4,7 +4,7 @@ import * as URLVar from 'url';
 import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
-import { getFileName, getStorageFileName } from './fileName';
+import { getFileName, getStorageFileName, hasMalformedStem } from './fileName';
 import {
 	DEFAULT_CUSTOM_ENDPOINT_EVENTS,
 	DEFAULT_LAST_MODIFIED,
@@ -45,7 +45,7 @@ export function getProtocol(url: string): string {
 	return protocol;
 }
 
-export { getFileName, getStorageFileName };
+export { getFileName, getStorageFileName, hasMalformedStem };
 
 export function getPath(filePath: string) {
 	return path.dirname(filePath);

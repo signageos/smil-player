@@ -1,9 +1,6 @@
-import Debug from 'debug';
 import * as path from 'path';
 import * as URLVar from 'url';
 import { checksumString } from './checksum';
-
-const debug = Debug('@signageos/smil-player:filesManager');
 
 /**
  * Checksummed local filename for a source URL — the single source of truth,
@@ -53,12 +50,29 @@ export function getFileName(url: string, fallbackUrlForExt?: string) {
 	let decodedStem: string;
 	try {
 		decodedStem = decodeURIComponent(rawStem);
-	} catch (err) {
-		debug('[files] malformed %XX in URL stem, using raw: stem=%s, error=%O', rawStem.slice(0, 50), err);
-		decodedStem = rawStem;
+	} catch (_err) {
+		decodedStem = rawStem; // observable through hasMalformedStem(); logged by FilesManager
 	}
 	const sanitizedFileName = decodedStem.replace(/[^\w\.\-]+/gi, '-').substr(0, 10);
 	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
+}
+
+/**
+ * True when the URL's basename contains a malformed %XX sequence, in which case getFileName() and
+ * getStorageFileName() silently fall back to the raw stem. Callers that own a Log use this to record
+ * the fallback; the name functions themselves stay pure so test tooling can import them.
+ */
+export function hasMalformedStem(url: string): boolean {
+	if (!url) {
+		return false;
+	}
+	const parsedUrl = URLVar.parse(url);
+	try {
+		decodeURIComponent(path.basename(parsedUrl.pathname ?? url));
+		return false;
+	} catch (_err) {
+		return true;
+	}
 }
 
 /**
@@ -84,9 +98,8 @@ export function getStorageFileName(url: string) {
 	let decodedStem: string;
 	try {
 		decodedStem = decodeURIComponent(rawStem);
-	} catch (err) {
-		debug('[files] malformed %XX in storage URL stem, using raw: stem=%s, error=%O', rawStem.slice(0, 50), err);
-		decodedStem = rawStem;
+	} catch (_err) {
+		decodedStem = rawStem; // observable through hasMalformedStem(); logged by FilesManager
 	}
 	const sanitizedFileName = decodedStem.replace(/[^\w\.\-]+/gi, '-').substr(0, 10);
 	return `${sanitizedFileName}${filePathChecksum}${sanitizedExtname}`;
