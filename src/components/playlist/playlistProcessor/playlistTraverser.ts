@@ -19,7 +19,7 @@ import { areAllWallclocksPermanentlyExpired, setDefaultAwait } from '../tools/sc
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { parseSmilSchedule } from '../tools/wallclockTools';
+import { createWallclockTools, WallclockTools } from '../tools/wallclockTools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
@@ -146,9 +146,11 @@ export class PlaylistTraverser {
 	private config: ITraverserConfig;
 	private actions: ITraverserActions;
 	private control: ITraverserControl;
+	private readonly wallclock: WallclockTools;
 
 	constructor(engine: IPlaylistEngine) {
 		this.log = engine.log;
+		this.wallclock = createWallclockTools(this.log);
 		this.config = engine.config;
 		this.actions = engine.actions;
 		this.control = engine.control;
@@ -380,7 +382,7 @@ export class PlaylistTraverser {
 							let timeToEnd = elem.repeatCount ? parseInt(elem.repeatCount as string) : 0;
 
 							if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
-								const schedule = parseSmilSchedule(elem.begin!, elem.end);
+								const schedule = this.wallclock.parseSmilSchedule(elem.begin!, elem.end);
 								if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
 									continue;
 								}
@@ -425,7 +427,7 @@ export class PlaylistTraverser {
 						let elemTimeToEnd = endTime;
 
 						if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
-							const schedule = parseSmilSchedule(elem.begin!, elem.end);
+							const schedule = this.wallclock.parseSmilSchedule(elem.begin!, elem.end);
 							if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
 								continue;
 							}
@@ -480,7 +482,7 @@ export class PlaylistTraverser {
 				}
 
 				if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
-					const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
+					const { timeToStart, timeToEnd } = this.wallclock.parseSmilSchedule(value.begin!, value.end);
 					if (timeToEnd === SMILScheduleEnum.neverPlay) {
 						this.log.debug('[traverser-par] wallclock permanently expired, skipping: begin=%s, end=%s', value.begin, value.end);
 						processedAnyContent = true;
@@ -666,7 +668,7 @@ export class PlaylistTraverser {
 					}
 
 					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
-						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
+						const { timeToStart, timeToEnd } = this.wallclock.parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (
 							arrayIndex === value?.length - 1 &&

@@ -6,7 +6,10 @@ import isObject = require('lodash/isObject');
 import { PlaylistElement } from '../../../models/playlistModels';
 import { shouldSkipElement } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
-import { parseSmilSchedule } from './wallclockTools';
+import { createWallclockTools } from './wallclockTools';
+import { noopLog } from '../../../logger';
+
+const wallclock = createWallclockTools(noopLog); // TODO(Task 10): replaced by createScheduleTools(log)
 import { debug, removeDigits } from './generalTools';
 
 /**
@@ -15,7 +18,7 @@ import { debug, removeDigits } from './generalTools';
  */
 export function setDefaultAwaitWallclock(playlistElement: PlaylistElement): number {
 	const nowMillis: number = moment().valueOf();
-	const { timeToStart, timeToEnd } = parseSmilSchedule(playlistElement.begin!, playlistElement.end);
+	const { timeToStart, timeToEnd } = wallclock.parseSmilSchedule(playlistElement.begin!, playlistElement.end);
 	// found element which can be player right now
 	if (timeToStart <= 0 && timeToEnd > nowMillis) {
 		return SMILScheduleEnum.playImmediately;
@@ -133,7 +136,7 @@ export function areAllWallclocksPermanentlyExpired(elements: PlaylistElement[]):
 		if (!elem.hasOwnProperty('begin') || !elem.begin || elem.begin.indexOf('wallclock') === -1) {
 			return false;
 		}
-		const { timeToEnd } = parseSmilSchedule(elem.begin, elem.end);
+		const { timeToEnd } = wallclock.parseSmilSchedule(elem.begin, elem.end);
 		if (timeToEnd !== SMILScheduleEnum.neverPlay) {
 			return false;
 		}
