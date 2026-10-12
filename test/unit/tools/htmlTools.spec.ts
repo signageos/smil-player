@@ -1,9 +1,23 @@
 import * as chai from 'chai';
-import { computeBillboardColumns, extractAttributesByPrefix } from '../../../src/components/playlist/tools/htmlTools';
+import {
+	computeBillboardColumns,
+	createHtmlTools,
+	extractAttributesByPrefix,
+} from '../../../src/components/playlist/tools/htmlTools';
+import { noopLog } from '../../../src/logger';
 
 const expect = chai.expect;
 
 describe('htmlTools', () => {
+	it('createHtmlTools exposes the logging functions', () => {
+		const t = createHtmlTools(noopLog);
+		expect(t.createHtmlElement).to.be.a('function');
+		expect(t.changeZIndex).to.be.a('function');
+		expect(t.createDomElement).to.be.a('function');
+		expect(t.resetBodyContent).to.be.a('function');
+		expect(t.setTransitionCss).to.be.a('function');
+	});
+
 	describe('computeBillboardColumns', () => {
 		it('returns one column descriptor per requested column', () => {
 			expect(computeBillboardColumns(1920, 4)).to.have.lengthOf(4);

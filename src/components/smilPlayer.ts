@@ -6,7 +6,7 @@ import { SMILFile, SMILFileObject } from '../models/filesModels';
 import { isNil, isEmpty } from 'lodash';
 import { CUSTOM_ENDPOINT_REPORT_FILE_LIMIT, FileStructure, smilLogging } from '../enums/fileEnums';
 import { createLocalFilePath, getFileName } from './files/tools';
-import { resetBodyContent, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
+import { createHtmlTools, HtmlTools, resetBodyMargin, setTransitionsDefinition } from './playlist/tools/htmlTools';
 // @ts-ignore
 import backupImageLandscape from '../../public/backupImage/backupImage_landscape.jpg';
 // @ts-ignore
@@ -25,6 +25,7 @@ import { getStrategy } from './files/fetchingStrategies/fetchingStrategies';
 
 export class SmilPlayer implements ISmilPlayer {
 	protected readonly log: Log;
+	private readonly html: HtmlTools;
 	private readonly files: FilesManager;
 	private readonly smilUrl: string | undefined;
 	private xmlParser: XmlParser;
@@ -36,6 +37,7 @@ export class SmilPlayer implements ISmilPlayer {
 	constructor(private sos: ISos, logger: Logger, smilUrl?: string, private configOverrides?: Record<string, string>) {
 		const root = new Log(logger, '@signageos/smil-player');
 		this.log = root.child('main');
+		this.html = createHtmlTools(this.log);
 		this.smilUrl = smilUrl;
 		this.files = new FilesManager(sos, root.child('filesManager'));
 		this.xmlParser = new XmlParser(root.child('xmlParser'));
@@ -301,7 +303,7 @@ export class SmilPlayer implements ISmilPlayer {
 				// reset body content on first iteration to clear the default background image from public/index.html,
 				// or on billboard transitions because of dynamic div elements for columns
 				if (firstIteration || smilObject.transition?.billboard) {
-					resetBodyContent();
+					this.html.resetBodyContent();
 				} else {
 					resetBodyMargin();
 				}

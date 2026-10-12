@@ -55,12 +55,11 @@ import {
 } from './playlistProcessorDecisions';
 import moment from 'moment';
 import {
-	changeZIndex,
-	createHtmlElement,
+	createHtmlTools,
+	HtmlTools,
 	extractAttributesByPrefix,
 	generateElementSrc,
 	removeTransitionCss,
-	setTransitionCss,
 } from '../tools/htmlTools';
 import Video from '@signageos/front-applet/es6/FrontApplet/Video/Video';
 import Stream from '@signageos/front-applet/es6/FrontApplet/Stream/Stream';
@@ -106,6 +105,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	private elementController: SMILElementController;
 	private traverser: PlaylistTraverser;
 	private readonly smilEventEmitter: SmilEventEmitter;
+	private readonly html: HtmlTools;
 
 	constructor(
 		sos: ISos,
@@ -118,6 +118,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		},
 	) {
 		super(sos, files, options, log);
+		this.html = createHtmlTools(log);
 		this.priority = overrides?.priority ?? new PlaylistPriority(options, sos, log.child('playlistPriority'));
 		this.triggers = overrides?.triggers ?? new PlaylistTriggers(sos, files, options, log.child('playlistTriggers'), this.processPlaylist,
 			(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter));
@@ -525,7 +526,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						if (hasTransition) {
 							transitionDuration = this.schedule.setElementDuration(value.transitionInfo!.dur);
 						}
-						changeZIndex(value, element, +1, false);
+						this.html.changeZIndex(value, element, +1, false);
 
 						if (
 							(this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
@@ -590,7 +591,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							removeTransitionCss(element);
 						}
 
-						changeZIndex(value, element, -2);
+						this.html.changeZIndex(value, element, -2);
 
 						timedDebug.debug('[processor] finished playing html element: src=%s', value.localFilePath);
 					} catch (err) {
@@ -1865,7 +1866,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) => {
 		timedDebug.debug('[processor] starting html element preparation: src=%s, id=%s', value.src, value.id);
 
-		changeZIndex(value, element, +1);
+		this.html.changeZIndex(value, element, +1);
 		timedDebug.debug('[processor] changed z-index for element');
 
 		// value.wasUpdated is there for a case when file updates in localstorage under same url,
@@ -2210,7 +2211,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							duration,
 							transitionDuration,
 						);
-						setTransitionCss(
+						this.html.setTransitionCss(
 							element,
 							elementHtml,
 							this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
@@ -2254,7 +2255,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlaying[currentRegionInfo.regionName]?.nextElement?.type === 'html'
 			) {
 				transitionSet = true;
-				setTransitionCss(
+				this.html.setTransitionCss(
 					element,
 					elementHtml,
 					this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
@@ -2288,7 +2289,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		image.regionInfo = getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		this.log.debug('[processor] setting up intro image: src=%s', image.src);
-		const element: HTMLElement = createHtmlElement(
+		const element: HTMLElement = this.html.createHtmlElement(
 			image,
 			HtmlEnum.img,
 			image.localFilePath,
