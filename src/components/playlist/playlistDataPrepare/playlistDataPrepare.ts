@@ -11,8 +11,8 @@ import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { convertRelativePathToAbsolute, getProtocol } from '../../files/tools';
-import { createTickerElement } from '../tools/tickerTools';
-import { createDomElement } from '../tools/htmlTools';
+import { createTickerTools, TickerTools } from '../tools/tickerTools';
+import { createHtmlTools, HtmlTools } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
@@ -23,8 +23,13 @@ import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
+	private readonly html: HtmlTools;
+	private readonly ticker: TickerTools;
+
 	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, log: Log) {
 		super(sos, files, options, log);
+		this.html = createHtmlTools(log);
+		this.ticker = createTickerTools(log);
 	}
 
 	/**
@@ -172,11 +177,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-						elem.id = createDomElement(elem, htmlElement, key, isSpecial);
+						elem.id = this.html.createDomElement(elem, htmlElement, key, isSpecial);
 					}
 
 					if (key.startsWith(HtmlEnum.ticker)) {
-						elem.id = createTickerElement(elem, elem.regionInfo, key);
+						elem.id = this.ticker.createTickerElement(elem, elem.regionInfo, key);
 					}
 					this.log.debug('[prepare] element info extracted: src=%s', elem.src);
 				}
