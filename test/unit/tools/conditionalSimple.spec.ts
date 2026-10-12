@@ -1,12 +1,13 @@
 import * as chai from 'chai';
 import moment from 'moment';
 import MockDate from 'mockdate';
-import { checkConditionalExprSafe, shouldSkipElement } from '../../../src/components/playlist/tools/conditionalTools';
-import { setDefaultAwaitConditional } from '../../../src/components/playlist/tools/scheduleTools';
+import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
+import { noopLog } from '../../../src/logger';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import { ExprTag } from '../../../src/enums/conditionalEnums';
 
 const expect = chai.expect;
+const { checkConditionalExprSafe, shouldSkipElement, setDefaultAwaitConditional } = createScheduleTools(noopLog);
 
 describe('Playlist tools checkConditionalExprSafe', () => {
 	beforeEach(() => {

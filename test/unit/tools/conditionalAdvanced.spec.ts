@@ -2,9 +2,11 @@ import * as chai from 'chai';
 import moment from 'moment';
 import MockDate from 'mockdate';
 
-import { checkConditionalExprSafe } from '../../../src/components/playlist/tools/conditionalTools';
+import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
+import { noopLog } from '../../../src/logger';
 
 const expect = chai.expect;
+const { checkConditionalExprSafe } = createScheduleTools(noopLog);
 
 describe('Playlist tools checkConditionalExprSafe', () => {
 	beforeEach(() => {

@@ -15,7 +15,7 @@ import { isNil } from 'lodash';
 import { SMILVideo } from '../../../models/mediaModels';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
-import { shouldSkipElement } from '../tools/conditionalTools';
+import { createScheduleTools, ScheduleTools } from '../tools/scheduleTools';
 import { stopTickerAnimation } from '../tools/tickerTools';
 import { ExprTag } from '../../../enums/conditionalEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
@@ -40,7 +40,10 @@ export class PlaylistCommon implements IPlaylistCommon {
 	protected cancelDeferred: Deferred<void> = new Deferred<void>();
 	protected regionChangeDeferred: Deferred<void> = new Deferred<void>();
 
+	protected readonly schedule: ScheduleTools;
+
 	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, protected readonly log: Log) {
+		this.schedule = createScheduleTools(log);
 		this.sos = sos;
 		this.files = files;
 		this.cancelFunction = options.cancelFunction;
@@ -92,7 +95,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	) => {
 		while (
 			!this.cancelFunction[version] &&
-			(conditionalExpr === '' || !shouldSkipElement({ [ExprTag]: conditionalExpr })) &&
+			(conditionalExpr === '' || !this.schedule.shouldSkipElement({ [ExprTag]: conditionalExpr })) &&
 			(!dynamicPlaylistId ||
 				!dynamicPlaylist[dynamicPlaylistId] ||
 				dynamicPlaylist[dynamicPlaylistId]?.play === true)

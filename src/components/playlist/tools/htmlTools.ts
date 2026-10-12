@@ -17,7 +17,10 @@ import { SMILFileObject } from '../../../models/filesModels';
 import { copyQueryParameters, createVersionedUrl } from '../../files/tools';
 import { CssElementsPosition } from '../../../models/htmlModels';
 import { BillboardTransition, BillboardTransitionDirection } from '../../../enums/transitionEnums';
-import { setElementDuration } from './scheduleTools';
+import { createScheduleTools } from './scheduleTools';
+import { noopLog } from '../../../logger';
+
+const { setElementDuration } = createScheduleTools(noopLog); // TODO(Task 11): replaced by createHtmlTools(log)
 
 export interface BillboardColumn {
 	/** strip width in px: regionWidth / columnCount + 2 (the +2 overlaps strips so seams don't show) */
