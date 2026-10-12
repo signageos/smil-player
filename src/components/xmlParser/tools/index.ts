@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import Debug from 'debug';
+import { Log } from '../../../logger';
 // @ts-ignore no ts declaration
 import { JefNode } from 'json-easy-filter';
 import isNil from 'lodash/isNil';
@@ -40,8 +40,6 @@ import { smilLogging, CUSTOM_ENDPOINT_EVENTS, CUSTOM_ENDPOINT_REPORT_FILE_LIMIT 
 import cloneDeep = require('lodash/cloneDeep');
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 
-export const debug = Debug('@signageos/smil-player:xmlParser');
-
 export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolean {
 	return (
 		arr.filter(function (elem: SMILMediaSingle) {
@@ -50,181 +48,377 @@ export function containsElement(arr: SMILMediaSingle[], fileSrc: string): boolea
 	);
 }
 
-export function parseNestedRegions(paramValue: RegionAttributes): RegionAttributes {
-	if (!Array.isArray(paramValue.region)) {
-		paramValue.region = [paramValue.region];
-	}
-	const value = cloneDeep(paramValue);
-	for (let [, innerValue] of Object.entries(value.region)) {
-		for (let [innerRegionKey] of Object.entries(innerValue)) {
-			// if top and left do not exist on nested region, set default value 0
-			innerValue.top = innerValue.top || 0;
-			innerValue.left = innerValue.left || 0;
-			if (XmlTags.cssElementsPosition.includes(innerRegionKey)) {
-				switch (innerRegionKey) {
-					case HtmlEnum.width:
-						if (innerValue.width.indexOf('%') > -1) {
-							innerValue.width = Math.floor((value.width * parseInt(innerValue.width)) / 100);
+export function createXmlTools(log: Log) {
+	function parseNestedRegions(paramValue: RegionAttributes): RegionAttributes {
+		if (!Array.isArray(paramValue.region)) {
+			paramValue.region = [paramValue.region];
+		}
+		const value = cloneDeep(paramValue);
+		for (let [, innerValue] of Object.entries(value.region)) {
+			for (let [innerRegionKey] of Object.entries(innerValue)) {
+				// if top and left do not exist on nested region, set default value 0
+				innerValue.top = innerValue.top || 0;
+				innerValue.left = innerValue.left || 0;
+				if (XmlTags.cssElementsPosition.includes(innerRegionKey)) {
+					switch (innerRegionKey) {
+						case HtmlEnum.width:
+							if (innerValue.width.indexOf('%') > -1) {
+								innerValue.width = Math.floor((value.width * parseInt(innerValue.width)) / 100);
+								break;
+							}
+							innerValue.width = parseInt(innerValue.width);
 							break;
-						}
-						innerValue.width = parseInt(innerValue.width);
-						break;
-					case HtmlEnum.height:
-						if (innerValue.height.indexOf('%') > -1) {
-							innerValue.height = Math.floor((value.height * parseInt(innerValue.height)) / 100);
-							break;
-						}
-						innerValue.height = parseInt(innerValue.height);
-						break;
-					case HtmlEnum.left:
-						if (innerValue.left.indexOf('%') > -1) {
-							innerValue.left =
-								Math.floor((value.width * parseInt(innerValue.left)) / 100) +
-								parseInt(String(value.left));
-							break;
-						}
-						innerValue.left = parseInt(String(value.left)) + parseInt(innerValue.left) || 0;
-						break;
-					case HtmlEnum.top:
-						if (innerValue.top.indexOf('%') > -1) {
-							innerValue.top =
-								Math.floor((value.height * parseInt(innerValue.top)) / 100) +
-								parseInt(String(value.top));
-							break;
-						}
-						innerValue.top = parseInt(String(value.top)) + parseInt(innerValue.top) || 0;
-						break;
-					case HtmlEnum.bottom:
-						if (innerValue.bottom.indexOf('%') > -1) {
+						case HtmlEnum.height:
 							if (innerValue.height.indexOf('%') > -1) {
-								innerValue.height = String((value.height * parseInt(innerValue.height)) / 100);
+								innerValue.height = Math.floor((value.height * parseInt(innerValue.height)) / 100);
+								break;
+							}
+							innerValue.height = parseInt(innerValue.height);
+							break;
+						case HtmlEnum.left:
+							if (innerValue.left.indexOf('%') > -1) {
+								innerValue.left =
+									Math.floor((value.width * parseInt(innerValue.left)) / 100) +
+									parseInt(String(value.left));
+								break;
+							}
+							innerValue.left = parseInt(String(value.left)) + parseInt(innerValue.left) || 0;
+							break;
+						case HtmlEnum.top:
+							if (innerValue.top.indexOf('%') > -1) {
+								innerValue.top =
+									Math.floor((value.height * parseInt(innerValue.top)) / 100) +
+									parseInt(String(value.top));
+								break;
+							}
+							innerValue.top = parseInt(String(value.top)) + parseInt(innerValue.top) || 0;
+							break;
+						case HtmlEnum.bottom:
+							if (innerValue.bottom.indexOf('%') > -1) {
+								if (innerValue.height.indexOf('%') > -1) {
+									innerValue.height = String((value.height * parseInt(innerValue.height)) / 100);
+								}
+								innerValue.top = Math.max(
+									value.top,
+									Math.floor(
+										value.height -
+											((value.height * parseInt(innerValue.bottom)) / 100 +
+												parseInt(innerValue.height)) +
+											parseInt(String(value.top)),
+									),
+								);
+								delete innerValue.bottom;
+								break;
 							}
 							innerValue.top = Math.max(
 								value.top,
-								Math.floor(
-									value.height -
-										((value.height * parseInt(innerValue.bottom)) / 100 +
-											parseInt(innerValue.height)) +
-										parseInt(String(value.top)),
-								),
+								value.height -
+									(parseInt(innerValue.bottom) + parseInt(innerValue.height)) +
+									parseInt(String(value.top)),
 							);
 							delete innerValue.bottom;
 							break;
-						}
-						innerValue.top = Math.max(
-							value.top,
-							value.height -
-								(parseInt(innerValue.bottom) + parseInt(innerValue.height)) +
-								parseInt(String(value.top)),
-						);
-						delete innerValue.bottom;
-						break;
-					case HtmlEnum.right:
-						if (innerValue.right.indexOf('%') > -1) {
-							if (innerValue.width.indexOf('%') > -1) {
-								innerValue.width = String((value.width * parseInt(innerValue.width)) / 100);
+						case HtmlEnum.right:
+							if (innerValue.right.indexOf('%') > -1) {
+								if (innerValue.width.indexOf('%') > -1) {
+									innerValue.width = String((value.width * parseInt(innerValue.width)) / 100);
+								}
+								innerValue.left = Math.max(
+									value.left,
+									Math.floor(
+										value.width -
+											((value.width * parseInt(innerValue.right)) / 100 +
+												parseInt(innerValue.width)) +
+											parseInt(String(value.left)),
+									),
+								);
+								delete innerValue.right;
+								break;
 							}
 							innerValue.left = Math.max(
 								value.left,
-								Math.floor(
-									value.width -
-										((value.width * parseInt(innerValue.right)) / 100 +
-											parseInt(innerValue.width)) +
-										parseInt(String(value.left)),
-								),
+								value.width - (parseInt(innerValue.right) + parseInt(innerValue.width)),
 							);
 							delete innerValue.right;
 							break;
-						}
-						innerValue.left = Math.max(
-							value.left,
-							value.width - (parseInt(innerValue.right) + parseInt(innerValue.width)),
-						);
-						delete innerValue.right;
-						break;
-					default:
-						debug('[xml] skipping unhandled nested region attribute: %s', innerRegionKey);
+						default:
+							log.debug('[xml] skipping unhandled nested region attribute: %s', innerRegionKey);
+					}
 				}
 			}
+		}
+
+		return value;
+	}
+
+	/**
+	 * removes unnecessary data from playlist ( intro, infinite loops, triggers ) so we dont need to worry about it later in the code
+	 * @param playableMedia
+	 */
+	function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
+		let foundMedia = false;
+		new JefNode(playableMedia.playlist).remove(
+			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
+				// delete intro from playlist, may not exist
+				if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
+					return node.parent;
+				}
+
+				// delete prefetch object from playlist, may not exist
+				if (node.key === 'prefetch') {
+					return node.parent;
+				}
+
+				// delete triggers from playlist, triggers are played on demand
+				if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
+					return node;
+				}
+
+				// delete dynamic playlists from playlist, triggers are played on demand
+				if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
+					return node;
+				}
+
+				// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
+				if (
+					(!isUrl(get(node.value, 'src', 'default')) &&
+						!isRelativePath(get(node.value, 'src', 'default')) &&
+						get(node.value, 'isStream') !== true) ||
+					get(node.value, 'src', 'default') === ''
+				) {
+					return node;
+				}
+			},
+		);
+
+		new JefNode(playableMedia.playlist).remove(
+			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
+				// remove all infinite loops from playlist
+				if (!isNil(node.key) && XmlTags.structureTags.includes(removeDigits(node.key))) {
+					foundMedia = removeNodes(node);
+					if (!foundMedia) {
+						return node.parent;
+					}
+				}
+			},
+		);
+
+		new JefNode(playableMedia.playlist).remove(
+			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
+				// remove all infinite loops from playlist
+				if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
+					foundMedia = removeNodes(node);
+					if (!foundMedia) {
+						return node.parent;
+					}
+				}
+			},
+		);
+
+		new JefNode(playableMedia.playlist).remove((node: { key: string; value: any }) => {
+			if (node.key === 'ticker') {
+				if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
+					log.debug('[xml] invalid ticker: must have "text" array with at least one string');
+					return node;
+				}
+			}
+		});
+	}
+
+	/**
+	 * traverse json object represented as tree and extracts data for media downloads and trigger objects
+	 * @param playableMedia
+	 * @param downloads
+	 * @param triggerList
+	 * @param dynamicList
+	 */
+	function extractDataFromPlaylist(
+		playableMedia: SMILPlaylist,
+		downloads: DownloadsList,
+		triggerList: TriggerList,
+		dynamicList: DynamicPlaylistList,
+	) {
+		new JefNode(playableMedia.playlist).filter(
+			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
+				// detect intro element, may not exist
+				if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
+					new JefNode(node.parent.value).filter(
+						(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
+							if (!isNil(introNode.key) && XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
+								log.debug('[xml] intro element found: %O', introNode.parent.value);
+								downloads.intro.push(introNode.parent.value);
+							}
+						},
+					);
+				}
+
+				if (!isNil(node.key) && XmlTags.extractedElements.includes(removeDigits(node.key))) {
+					// create media arrays for easy download/update check
+					if (!Array.isArray(node.value)) {
+						node.value = [node.value];
+					}
+					node.value.forEach((element: SMILMediaSingle) => {
+						if (
+							'src' in element &&
+							!containsElement(downloads[removeDigits(node.key)], element.src as string)
+						) {
+							// @ts-ignore
+							downloads[removeDigits(node.key)].push(element);
+						}
+					});
+				}
+
+				if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
+					triggerList.triggers[node.value.begin] = merge(
+						triggerList.triggers[node.value.begin],
+						node.parent.value,
+					);
+				}
+
+				if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
+					// TODO: find a better way to parse arrays and object of dynamic playlist
+					if (Array.isArray(node.parent.value)) {
+						dynamicList.dynamic[node.value.begin] = {
+							seq: node.value,
+						};
+					} else {
+						// one dynamic playlist in smil file, not grouped in array
+						dynamicList.dynamic[node.value.begin] = merge(
+							dynamicList.dynamic[node.value.begin],
+							node.parent.value,
+						);
+					}
+				}
+			},
+		);
+	}
+
+	function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
+		if (!isNil(metaObjects.meta)) {
+			parseMetaInfo(metaObjects.meta, regions);
+		}
+
+		if (!isNil(metaObjects.sensors)) {
+			triggerList.sensors = parseSensorsInfo(metaObjects.sensors);
+		}
+
+		if (!isNil(metaObjects.triggers)) {
+			triggerList.triggerSensorInfo = parseTriggersInfo(metaObjects.triggers);
 		}
 	}
 
-	return value;
-}
-
-/**
- * removes unnecessary data from playlist ( intro, infinite loops, triggers ) so we dont need to worry about it later in the code
- * @param playableMedia
- */
-export function removeDataFromPlaylist(playableMedia: SMILPlaylist) {
-	let foundMedia = false;
-	new JefNode(playableMedia.playlist).remove(
-		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
-			// delete intro from playlist, may not exist
-			if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
-				return node.parent;
-			}
-
-			// delete prefetch object from playlist, may not exist
-			if (node.key === 'prefetch') {
-				return node.parent;
-			}
-
-			// delete triggers from playlist, triggers are played on demand
-			if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
-				return node;
-			}
-
-			// delete dynamic playlists from playlist, triggers are played on demand
-			if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
-				return node;
-			}
-
-			// delete elements which dont have correct src (url or relative path) eg: adapi:blankScreen
+	function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
+		if (!Array.isArray(meta)) {
+			meta = [meta];
+		}
+		// TODO: find better way
+		let smilFileRefreshSet = false;
+		for (const metaRecord of meta) {
 			if (
-				(!isUrl(get(node.value, 'src', 'default')) &&
-					!isRelativePath(get(node.value, 'src', 'default')) &&
-					get(node.value, 'isStream') !== true) ||
-				get(node.value, 'src', 'default') === ''
+				metaRecord.hasOwnProperty(SMILEnums.metaContent) ||
+				metaRecord.hasOwnProperty(SMILEnums.metaContentRefresh)
 			) {
-				return node;
+				// Support both content and contentRefresh parameters
+				const refreshValue = metaRecord.contentRefresh || metaRecord.content;
+				regions.refresh.refreshInterval = refreshValue
+					? (parseInt(refreshValue) || SMILEnums.defaultRefresh) * 1000
+					: SMILEnums.defaultRefresh * 1000;
+				// timeout for last-modified header check
+				regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
+				regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;
 			}
-		},
-	);
 
-	new JefNode(playableMedia.playlist).remove(
-		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
-			// remove all infinite loops from playlist
-			if (!isNil(node.key) && XmlTags.structureTags.includes(removeDigits(node.key))) {
-				foundMedia = removeNodes(node);
-				if (!foundMedia) {
-					return node.parent;
-				}
+			if (metaRecord.hasOwnProperty(SMILEnums.metaSmilRefresh)) {
+				regions.refresh.smilFileRefresh = metaRecord.smilFileRefresh
+					? (parseInt(metaRecord.smilFileRefresh) || regions.refresh.refreshInterval) * 1000
+					: regions.refresh.refreshInterval;
+				smilFileRefreshSet = true;
 			}
-		},
-	);
 
-	new JefNode(playableMedia.playlist).remove(
-		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
-			// remove all infinite loops from playlist
-			if (node.key === 'begin' || (node.key === 'repeatCount' && node.value === 'indefinite')) {
-				foundMedia = removeNodes(node);
-				if (!foundMedia) {
-					return node.parent;
-				}
+			if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
+				regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
 			}
-		},
-	);
 
-	new JefNode(playableMedia.playlist).remove((node: { key: string; value: any }) => {
-		if (node.key === 'ticker') {
-			if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
-				debug('[xml] invalid ticker: must have "text" array with at least one string');
-				return node;
+			if (metaRecord.hasOwnProperty(SMILEnums.skipContentOnHttpStatus)) {
+				regions.skipContentOnHttpStatus = parseHttpStatusList(metaRecord.skipContentOnHttpStatus);
+			}
+
+			if (metaRecord.hasOwnProperty(SMILEnums.skipPlaybackOnHttpStatus)) {
+				regions.skipPlaybackOnHttpStatus = parseHttpStatusList(metaRecord.skipPlaybackOnHttpStatus);
+			}
+
+			if (metaRecord.hasOwnProperty(SMILEnums.updateMechanism)) {
+				regions.updateMechanism =
+					metaRecord.updateMechanism === SMILEnums.location ? SMILEnums.location : SMILEnums.lastModified;
+			}
+
+			if (metaRecord.hasOwnProperty(SMILEnums.updateContentOnHttpStatus)) {
+				regions.updateContentOnHttpStatus = parseHttpStatusList(metaRecord.updateContentOnHttpStatus);
+			}
+
+			if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
+				const filteredLoggingType = metaRecord.type?.split(',').filter(isAllowedSmilLogging) || [];
+				const result: (smilLogging.standard | smilLogging.proofOfPlay)[] =
+					filteredLoggingType.length > 0 ? filteredLoggingType : [smilLogging.standard];
+				const parsedEvents = parseReportEventsList(metaRecord.events);
+
+				regions.logger = {
+					enabled: metaRecord.log === true,
+					type: result,
+					endpoint: metaRecord.endpoint,
+					reportFileLimit: metaRecord.reportFileLimit
+						? parseInt(metaRecord.reportFileLimit, 10)
+						: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
+					...(parsedEvents ? { events: parsedEvents } : {}),
+				};
+			}
+			if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
+				regions.syncServerUrl = metaRecord.syncServerUrl;
+			}
+			if (metaRecord.hasOwnProperty(SMILEnums.defaultRepeatCount)) {
+				regions.defaultRepeatCount = metaRecord.defaultRepeatCount;
+			}
+			if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
+				regions.defaultTransition = metaRecord.defaultTransition;
+			}
+			if (metaRecord.hasOwnProperty(SMILEnums.checkBeforePlay)) {
+				const cbpVal = metaRecord.checkBeforePlay;
+				regions.checkBeforePlay = cbpVal === true
+					|| (typeof cbpVal === 'string' && cbpVal.toLowerCase() === 'true');
+			}
+			if (metaRecord.hasOwnProperty(SMILEnums.checkAheadCount)) {
+				regions.checkAheadCount = Math.max(0, parseInt(metaRecord.checkAheadCount!) || 0);
 			}
 		}
-	});
+
+		if (!smilFileRefreshSet) {
+			regions.refresh.smilFileRefresh = regions.refresh.refreshInterval;
+		}
+	}
+
+	/**
+	 * Parses the <meta events="..."> allowlist for custom-endpoint reporting.
+	 * Unknown names are ignored (forward-compatible); an absent/empty attribute
+	 * returns undefined, which means "use the default event set".
+	 */
+	function parseReportEventsList(rawEvents: string | undefined): string[] | undefined {
+		if (typeof rawEvents !== 'string' || rawEvents.trim() === '') {
+			return undefined;
+		}
+		const names = rawEvents
+			.split(',')
+			.map((name) => name.trim())
+			.filter((name) => name.length > 0);
+		const known = names.filter((name) => CUSTOM_ENDPOINT_EVENTS.includes(name));
+		for (const unknown of names.filter((name) => !CUSTOM_ENDPOINT_EVENTS.includes(name))) {
+			log.debug('Ignoring unknown report event name in meta events attribute: %s', unknown);
+		}
+		return known.length > 0 ? known : undefined;
+	}
+
+	return { parseNestedRegions, removeDataFromPlaylist, extractDataFromPlaylist, parseHeadInfo, parseReportEventsList };
 }
+export type XmlTools = ReturnType<typeof createXmlTools>;
 
 function removeNodes(node: { key: string; value: any; parent: { key: string; value: any } }): boolean {
 	let foundMedia = false;
@@ -244,88 +438,6 @@ function removeNodes(node: { key: string; value: any; parent: { key: string; val
 	return foundMedia;
 }
 
-/**
- * traverse json object represented as tree and extracts data for media downloads and trigger objects
- * @param playableMedia
- * @param downloads
- * @param triggerList
- * @param dynamicList
- */
-export function extractDataFromPlaylist(
-	playableMedia: SMILPlaylist,
-	downloads: DownloadsList,
-	triggerList: TriggerList,
-	dynamicList: DynamicPlaylistList,
-) {
-	new JefNode(playableMedia.playlist).filter(
-		(node: { key: string; value: any; parent: { key: string; value: any } }) => {
-			// detect intro element, may not exist
-			if (node.key === 'end' && node.value === '__prefetchEnd.endEvent') {
-				new JefNode(node.parent.value).filter(
-					(introNode: { key: string; value: any; parent: { key: string; value: any } }) => {
-						if (!isNil(introNode.key) && XmlTags.extractedElements.includes(removeDigits(introNode.key))) {
-							debug('[xml] intro element found: %O', introNode.parent.value);
-							downloads.intro.push(introNode.parent.value);
-						}
-					},
-				);
-			}
-
-			if (!isNil(node.key) && XmlTags.extractedElements.includes(removeDigits(node.key))) {
-				// create media arrays for easy download/update check
-				if (!Array.isArray(node.value)) {
-					node.value = [node.value];
-				}
-				node.value.forEach((element: SMILMediaSingle) => {
-					if (
-						'src' in element &&
-						!containsElement(downloads[removeDigits(node.key)], element.src as string)
-					) {
-						// @ts-ignore
-						downloads[removeDigits(node.key)].push(element);
-					}
-				});
-			}
-
-			if (get(node.value, 'begin', 'default').startsWith(SMILTriggersEnum.triggerFormat)) {
-				triggerList.triggers[node.value.begin] = merge(
-					triggerList.triggers[node.value.begin],
-					node.parent.value,
-				);
-			}
-
-			if (get(node.value, 'begin', 'default').startsWith(SMILDynamicEnum.dynamicFormat)) {
-				// TODO: find a better way to parse arrays and object of dynamic playlist
-				if (Array.isArray(node.parent.value)) {
-					dynamicList.dynamic[node.value.begin] = {
-						seq: node.value,
-					};
-				} else {
-					// one dynamic playlist in smil file, not grouped in array
-					dynamicList.dynamic[node.value.begin] = merge(
-						dynamicList.dynamic[node.value.begin],
-						node.parent.value,
-					);
-				}
-			}
-		},
-	);
-}
-
-export function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
-	if (!isNil(metaObjects.meta)) {
-		parseMetaInfo(metaObjects.meta, regions);
-	}
-
-	if (!isNil(metaObjects.sensors)) {
-		triggerList.sensors = parseSensorsInfo(metaObjects.sensors);
-	}
-
-	if (!isNil(metaObjects.triggers)) {
-		triggerList.triggerSensorInfo = parseTriggersInfo(metaObjects.triggers);
-	}
-}
-
 // Comma-separated HTTP status list from a meta attribute. Tolerates malformed input:
 // xml2js parseBooleans can deliver a boolean instead of a string (String() guard), and
 // non-numeric or empty segments are dropped so NaN/0 never enter the list - a fully
@@ -340,117 +452,8 @@ function parseHttpStatusList(value: string | undefined): number[] {
 		.filter((status: number) => !isNaN(status) && status > 0);
 }
 
-function parseMetaInfo(meta: SMILMetaObject[], regions: RegionsObject) {
-	if (!Array.isArray(meta)) {
-		meta = [meta];
-	}
-	// TODO: find better way
-	let smilFileRefreshSet = false;
-	for (const metaRecord of meta) {
-		if (
-			metaRecord.hasOwnProperty(SMILEnums.metaContent) ||
-			metaRecord.hasOwnProperty(SMILEnums.metaContentRefresh)
-		) {
-			// Support both content and contentRefresh parameters
-			const refreshValue = metaRecord.contentRefresh || metaRecord.content;
-			regions.refresh.refreshInterval = refreshValue
-				? (parseInt(refreshValue) || SMILEnums.defaultRefresh) * 1000
-				: SMILEnums.defaultRefresh * 1000;
-			// timeout for last-modified header check
-			regions.refresh.timeOut = parseInt(metaRecord.timeOut!) || SMILScheduleEnum.fileCheckTimeout;
-			regions.refresh.fallbackToPreviousPlaylist = metaRecord.fallbackToPreviousPlaylist === true;
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.metaSmilRefresh)) {
-			regions.refresh.smilFileRefresh = metaRecord.smilFileRefresh
-				? (parseInt(metaRecord.smilFileRefresh) || regions.refresh.refreshInterval) * 1000
-				: regions.refresh.refreshInterval;
-			smilFileRefreshSet = true;
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.onlySmilUpdate)) {
-			regions.onlySmilFileUpdate = metaRecord.onlySmilUpdate === true;
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.skipContentOnHttpStatus)) {
-			regions.skipContentOnHttpStatus = parseHttpStatusList(metaRecord.skipContentOnHttpStatus);
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.skipPlaybackOnHttpStatus)) {
-			regions.skipPlaybackOnHttpStatus = parseHttpStatusList(metaRecord.skipPlaybackOnHttpStatus);
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.updateMechanism)) {
-			regions.updateMechanism =
-				metaRecord.updateMechanism === SMILEnums.location ? SMILEnums.location : SMILEnums.lastModified;
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.updateContentOnHttpStatus)) {
-			regions.updateContentOnHttpStatus = parseHttpStatusList(metaRecord.updateContentOnHttpStatus);
-		}
-
-		if (metaRecord.hasOwnProperty(SMILEnums.metaLog)) {
-			const filteredLoggingType = metaRecord.type?.split(',').filter(isAllowedSmilLogging) || [];
-			const result: (smilLogging.standard | smilLogging.proofOfPlay)[] =
-				filteredLoggingType.length > 0 ? filteredLoggingType : [smilLogging.standard];
-			const parsedEvents = parseReportEventsList(metaRecord.events);
-
-			regions.logger = {
-				enabled: metaRecord.log === true,
-				type: result,
-				endpoint: metaRecord.endpoint,
-				reportFileLimit: metaRecord.reportFileLimit
-					? parseInt(metaRecord.reportFileLimit, 10)
-					: CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
-				...(parsedEvents ? { events: parsedEvents } : {}),
-			};
-		}
-		if (metaRecord.hasOwnProperty(SMILEnums.syncServer)) {
-			regions.syncServerUrl = metaRecord.syncServerUrl;
-		}
-		if (metaRecord.hasOwnProperty(SMILEnums.defaultRepeatCount)) {
-			regions.defaultRepeatCount = metaRecord.defaultRepeatCount;
-		}
-		if (metaRecord.hasOwnProperty(SMILEnums.defaultTransition)) {
-			regions.defaultTransition = metaRecord.defaultTransition;
-		}
-		if (metaRecord.hasOwnProperty(SMILEnums.checkBeforePlay)) {
-			const cbpVal = metaRecord.checkBeforePlay;
-			regions.checkBeforePlay = cbpVal === true
-				|| (typeof cbpVal === 'string' && cbpVal.toLowerCase() === 'true');
-		}
-		if (metaRecord.hasOwnProperty(SMILEnums.checkAheadCount)) {
-			regions.checkAheadCount = Math.max(0, parseInt(metaRecord.checkAheadCount!) || 0);
-		}
-	}
-
-	if (!smilFileRefreshSet) {
-		regions.refresh.smilFileRefresh = regions.refresh.refreshInterval;
-	}
-}
-
 function isAllowedSmilLogging(item: string): item is smilLogging.standard | smilLogging.proofOfPlay {
 	return item === smilLogging.standard || item === smilLogging.proofOfPlay;
-}
-
-/**
- * Parses the <meta events="..."> allowlist for custom-endpoint reporting.
- * Unknown names are ignored (forward-compatible); an absent/empty attribute
- * returns undefined, which means "use the default event set".
- */
-export function parseReportEventsList(rawEvents: string | undefined): string[] | undefined {
-	if (typeof rawEvents !== 'string' || rawEvents.trim() === '') {
-		return undefined;
-	}
-	const names = rawEvents
-		.split(',')
-		.map((name) => name.trim())
-		.filter((name) => name.length > 0);
-	const known = names.filter((name) => CUSTOM_ENDPOINT_EVENTS.includes(name));
-	for (const unknown of names.filter((name) => !CUSTOM_ENDPOINT_EVENTS.includes(name))) {
-		debug('Ignoring unknown report event name in meta events attribute: %s', unknown);
-	}
-	return known.length > 0 ? known : undefined;
 }
 
 /**
