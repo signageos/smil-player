@@ -1,14 +1,25 @@
 import { ISos } from '../models/sosModels';
 import { LogEntry, Logger } from '../logger';
 import { ConsoleLogger } from './consoleLogger';
+import { RemoteLogger } from './remoteLogger';
 
 export { ConsoleLogger } from './consoleLogger';
+export { RemoteLogger } from './remoteLogger';
 
 export type LoggerFactory = (sos: ISos) => Logger;
 
+const isDebugEnabled = (sos: ISos) => () => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true';
+
+const consoleFactory: LoggerFactory = (sos) => new ConsoleLogger(isDebugEnabled(sos));
+
 /** Loggers selectable through the `logger` applet config key. Add new implementations here. */
 export const loggerFactories: Record<string, LoggerFactory> = {
-	console: (sos) => new ConsoleLogger(() => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true'),
+	console: consoleFactory,
+	// `remote` needs `loggerUrl`; without it there is nowhere to send, so behave like console instead of buffering into nothing.
+	remote: (sos) =>
+		sos.config.loggerUrl
+			? new RemoteLogger(String(sos.config.loggerUrl), isDebugEnabled(sos), () => sos.management.getSerialNumber())
+			: consoleFactory(sos),
 };
 
 export const DEFAULT_LOGGER_NAME = 'console';
