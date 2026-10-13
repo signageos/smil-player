@@ -21,8 +21,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - `playCheckSkipOnError` per-element attribute — with `"true"`, the element is skipped for the pass when its
   `playCheckUrl` gate cannot be reached (network error, timeout) or answers an unlisted 5xx status, instead of playing
   from cache. Only meaningful next to `playCheckUrl`; the default `false` keeps the current fail-open behavior
-- `logger` applet config key — selects where the player's diagnostic output goes (`console` by default, the only
-  implementation shipped). Switching between registered implementations needs no rebuild; adding one is a code change
+- `logger` applet config key — selects where the player's diagnostic output goes: `console` (default) or `remote`.
+  `remote` batches every log line and POSTs them as JSON to the `loggerUrl` applet config key every 5 seconds, so
+  logs can be collected from devices without access to a developer console. Both honour `debugEnabled`, so logging
+  is switched on and off from device config without a redeploy. Switching between loggers needs no rebuild
 
 ### Changed
 
