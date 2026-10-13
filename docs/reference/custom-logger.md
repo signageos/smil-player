@@ -99,6 +99,8 @@ export class HtmlLogger implements Logger {
   config without a redeploy. The console prints nothing while `remote` is selected; set `logger=console` to get it back.
 - Lines are rendered with `formatMessage` at write time, buffered (cap 1000, oldest dropped) and POSTed every
   5 seconds and on `pagehide`. A failed POST is dropped, there is no retry.
+- One request at a time: while a POST is pending, ticks keep buffering instead of opening more connections to a
+  slow server; each request times out after 10 seconds, which frees the slot. `pagehide` sends regardless.
 - The body is JSON sent with `Content-Type: text/plain`, which makes it a CORS "simple request": the server does not
   need to answer a preflight or send CORS headers for the bytes to arrive. The player never reads the response.
 - `deviceId` is `sos.management.getSerialNumber()`, resolved after boot; the first batch may say `unknown`.

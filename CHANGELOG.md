@@ -24,7 +24,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 - `logger` applet config key — selects where the player's diagnostic output goes: `console` (default) or `remote`.
   `remote` batches every log line and POSTs them as JSON to the `loggerUrl` applet config key every 5 seconds, so
   logs can be collected from devices without access to a developer console. Both honour `debugEnabled`, so logging
-  is switched on and off from device config without a redeploy. Switching between loggers needs no rebuild
+  is switched on and off from device config without a redeploy. Switching between loggers needs no rebuild. The
+  remote logger keeps one request in flight at a time with a 10 s timeout, so a slow log server costs the device
+  dropped log batches, never piled-up connections
 
 ### Changed
 

@@ -19,9 +19,12 @@ interface SentRequest {
 }
 
 const sent: SentRequest[] = [];
+const instances: FakeXhr[] = [];
 let xhrBehaviour: 'ok' | 'throwOnOpen' | 'throwOnSend' = 'ok';
 
 class FakeXhr {
+	public timeout: number = 0;
+	public onloadend: (() => void) | null = null;
 	private method: string = '';
 	private url: string = '';
 	private headers: Record<string, string> = {};
@@ -40,6 +43,13 @@ class FakeXhr {
 			throw new Error('network down');
 		}
 		sent.push({ method: this.method, url: this.url, headers: this.headers, body });
+		instances.push(this);
+	}
+	/** The server answered (or the request errored / timed out): loadend fires in every case. */
+	public finish(): void {
+		if (this.onloadend) {
+			this.onloadend();
+		}
 	}
 }
 
@@ -75,6 +85,7 @@ describe('RemoteLogger', () => {
 	beforeEach(() => {
 		(global as any).XMLHttpRequest = FakeXhr;
 		sent.length = 0;
+		instances.length = 0;
 		xhrBehaviour = 'ok';
 		enabled = true;
 		loggers = [];
@@ -151,6 +162,7 @@ describe('RemoteLogger', () => {
 		const logger = make();
 		logger.write(entry());
 		logger.flush();
+		instances[0].finish();
 		logger.flush();
 		logger.write(entry({ message: 'second', args: [] }));
 		logger.flush();
@@ -185,6 +197,55 @@ describe('RemoteLogger', () => {
 		xhrBehaviour = 'ok';
 		logger.flush();
 		expect(sent).to.deep.equal([]);
+	});
+
+	it('sends one request at a time: ticks while a POST is pending keep buffering, the next tick after it answers sends the rest', () => {
+		const logger = make();
+		logger.write(entry({ message: 'a', args: [] }));
+		logger.flush();
+		expect(sent).to.have.length(1);
+		logger.write(entry({ message: 'b', args: [] }));
+		logger.flush();
+		expect(sent).to.have.length(1, 'no second POST while the first has not answered');
+		logger.write(entry({ message: 'c', args: [] }));
+		instances[0].finish();
+		logger.flush();
+		expect(sent).to.have.length(2);
+		expect(JSON.parse(sent[1].body).entries.map((e: { text: string }) => e.text)).to.deep.equal(['b', 'c']);
+	});
+
+	it('gives every request a timeout so a stalled server cannot hold the slot forever', () => {
+		const logger = make();
+		logger.write(entry());
+		logger.flush();
+		expect(instances[0].timeout).to.equal(10000);
+		expect(instances[0].onloadend).to.be.a('function', 'loadend (incl. timeout/error) frees the slot');
+		const custom = new RemoteLogger('http://logs.example/in', () => true, () => Promise.resolve('d'), { flushMs: 0, timeoutMs: 2500 });
+		custom.write(entry());
+		custom.flush();
+		expect(instances[1].timeout).to.equal(2500);
+	});
+
+	it('a throwing send frees the slot for the next flush', () => {
+		const logger = make();
+		xhrBehaviour = 'throwOnSend';
+		logger.write(entry({ message: 'lost', args: [] }));
+		logger.flush();
+		xhrBehaviour = 'ok';
+		logger.write(entry({ message: 'next', args: [] }));
+		logger.flush();
+		expect(sent).to.have.length(1);
+		expect(JSON.parse(sent[0].body).entries.map((e: { text: string }) => e.text)).to.deep.equal(['next']);
+	});
+
+	it('pagehide sends even while a request is pending: it is the last chance', () => {
+		const logger = make();
+		logger.write(entry({ message: 'a', args: [] }));
+		logger.flush();
+		logger.write(entry({ message: 'b', args: [] }));
+		(global as any).window.dispatchEvent(new (global as any).window.Event('pagehide'));
+		expect(sent).to.have.length(2);
+		expect(JSON.parse(sent[1].body).entries.map((e: { text: string }) => e.text)).to.deep.equal(['b']);
 	});
 
 	it('flushes on the interval', async () => {
