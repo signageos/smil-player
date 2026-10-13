@@ -175,6 +175,18 @@
         "placeholder": "true"
       },
       {
+        "name": "logger",
+        "valueType": "string",
+        "description": "Log output implementation: console (default) or remote",
+        "placeholder": "console"
+      },
+      {
+        "name": "loggerUrl",
+        "valueType": "string",
+        "description": "URL that receives batched JSON log lines when logger=remote",
+        "placeholder": "https://logs.example.com/smil"
+      },
+      {
         "name": "reportUrl",
         "valueType": "string",
         "description": "Url where to should player send reporting events",

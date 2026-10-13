@@ -5,7 +5,8 @@ sidebar_position: 6
 
 The SMIL Player writes all diagnostic output through one injected logger. The contract lives in
 `src/logger/`; implementations live in `src/loggers/`, where the default `ConsoleLogger` prints to the
-browser console when `debugEnabled` is on. To send logs elsewhere, implement one method and register it.
+browser console when `debugEnabled` is on. A `remote` logger that POSTs batches to a URL ships as well; see below.
+To send logs elsewhere, implement one method and register it.
 
 ## The contract
 
@@ -89,43 +90,38 @@ export class HtmlLogger implements Logger {
 }
 ```
 
-## Example: remote server with batching
+## Shipped: `remote`
 
-Mind the deployment target: Chrome 38 (webOS 3.x) has no `fetch` and no `navigator.sendBeacon`, which is why
-this example uses `XMLHttpRequest`. `npm run clean-build` loads the bundle with `fetch` deleted to catch that class of mistake.
+`RemoteLogger` (`src/loggers/remoteLogger.ts`) is selected with the applet config `logger=remote` and needs
+`loggerUrl`. It is for devices where nobody can open a developer console.
 
-```ts
-export class RemoteLogger implements Logger {
-	private buffer: object[] = [];
-	constructor(private readonly endpoint: string, private readonly deviceId: string, flushMs = 5000) {
-		setInterval(() => this.flush(), flushMs);
-		window.addEventListener('pagehide', () => this.flush());
-	}
-	write(entry: LogEntry): void {
-		if (entry.level === 'debug') { return; }
-		this.buffer.push({ ...entry, args: undefined, text: formatMessage(entry.message, entry.args), deviceId: this.deviceId });
-	}
-	private flush(): void {
-		if (!this.buffer.length) { return; }
-		const body = JSON.stringify(this.buffer.splice(0));
-		try {
-			const xhr = new XMLHttpRequest();
-			xhr.open('POST', this.endpoint, true);
-			xhr.setRequestHeader('content-type', 'application/json');
-			xhr.send(body);
-		} catch (_e) {
-			// network failures are dropped; a logger must never throw into the player
+- Sends every level. Nothing is sent while `debugEnabled` is off, so the stream is switched on and off from
+  config without a redeploy. The console prints nothing while `remote` is selected; set `logger=console` to get it back.
+- Lines are rendered with `formatMessage` at write time, buffered (cap 1000, oldest dropped) and POSTed every
+  5 seconds and on `pagehide`. A failed POST is dropped, there is no retry.
+- The body is JSON sent with `Content-Type: text/plain`, which makes it a CORS "simple request": the server does not
+  need to answer a preflight or send CORS headers for the bytes to arrive. The player never reads the response.
+- `deviceId` is `sos.management.getSerialNumber()`, resolved after boot; the first batch may say `unknown`.
+
+Payload:
+
+```json
+{
+	"deviceId": "ABC123SERIAL",
+	"entries": [
+		{
+			"timestamp": 1760300000000,
+			"level": "debug",
+			"namespace": "@signageos/smil-player:filesManager",
+			"text": "[files] sending report: endpoint=https://..."
 		}
-	}
+	]
 }
 ```
 
-Registering it with device context and the endpoint taken from `sos.config`:
-
-```ts
-// src/loggers/index.ts
-remote: (sos) => new RemoteLogger(String(sos.config.loggerUrl), String(sos.config.deviceId ?? 'unknown')),
-```
+A receiver can be as small as an HTTP server that appends each request body to a file. Chrome 38 (webOS 3.x)
+has no `fetch` and no `navigator.sendBeacon`, which is why the logger uses `XMLHttpRequest`; `npm run clean-build`
+loads the bundle with `fetch` deleted to catch that class of mistake in new loggers.
 
 ## Example: several loggers at once
 

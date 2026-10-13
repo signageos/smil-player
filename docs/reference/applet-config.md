@@ -22,7 +22,8 @@ Here is the list of built-in options:
 | [`syncGroupIds`](#syncgroupids) | string (comma-separated) | no (required for failover triggers) | none | Comma-separated list of the device identifiers in the sync group. |
 | [`syncDeviceId`](#syncdeviceid) | string | no (required for failover triggers) | random per boot | This device's identifier within `syncGroupIds`. |
 | `debugEnabled` | boolean | no | `false` | Set to `true` to enable debug logging output. |
-| `logger` | string | no | `console` | Selects the log output implementation by name. Only `console` ships today; see [Custom logger](custom-logger.md) for adding others. Unknown names fall back to `console`. |
+| `logger` | string | no | `console` | Selects the log output implementation: `console` (browser console) or `remote` (batched POSTs to `loggerUrl`). Unknown names fall back to `console`. Re-read on every line, so a change takes effect without restart. See [Custom logger](custom-logger.md). |
+| `loggerUrl` | string (URL) | no (required for `logger=remote`) | none | Endpoint that receives log batches. When missing, `logger=remote` behaves like `console`. |
 
 ## `videoBackground`
 
