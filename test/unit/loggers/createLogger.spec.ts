@@ -72,6 +72,19 @@ describe('createLogger', () => {
 		expect(constructed).to.deep.equal(['console', 'other']);
 	});
 
+	it('rebuilds the selected logger when loggerUrl changes under the same name', () => {
+		config.logger = 'other';
+		const logger = createLogger(sos, factories);
+		logger.write(entry('1'));
+		config.loggerUrl = 'http://a.example/';
+		logger.write(entry('2'));
+		config.loggerUrl = 'http://b.example/';
+		logger.write(entry('3'));
+		logger.write(entry('4'));
+		expect(constructed).to.deep.equal(['other', 'other', 'other']);
+		expect(b.seen).to.deep.equal(['1', '2', '3', '4']);
+	});
+
 	it('does not construct any logger until the first write', () => {
 		createLogger(sos, factories);
 		expect(constructed).to.deep.equal([]);

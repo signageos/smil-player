@@ -32,13 +32,16 @@ export const DEFAULT_LOGGER_NAME = 'console';
  * (old deployments wrote it whenever debugEnabled was on and relied on Debug.disable() at boot to wipe it).
  */
 export function createLogger(sos: ISos, factories: Record<string, LoggerFactory> = loggerFactories): Logger {
-	let current: { name: string; logger: Logger } | undefined;
+	let current: { key: string; logger: Logger } | undefined;
 	return {
 		write(entry: LogEntry): void {
 			const requested = String(sos.config.logger || DEFAULT_LOGGER_NAME);
 			const name = factories[requested] ? requested : DEFAULT_LOGGER_NAME;
-			if (!current || current.name !== name) {
-				current = { name, logger: factories[name](sos) };
+			// loggerUrl is part of the key so a URL fix, or a URL that lands after `logger=remote`, takes effect
+			// without a restart instead of leaving the console fallback cached under the name `remote`.
+			const key = name + '|' + String(sos.config.loggerUrl || '');
+			if (!current || current.key !== key) {
+				current = { key, logger: factories[name](sos) };
 			}
 			current.logger.write(entry);
 		},
