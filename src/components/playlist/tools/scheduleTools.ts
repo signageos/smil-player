@@ -117,7 +117,7 @@ export function createScheduleTools(log: Log) {
 		dur = dur.replace(/[^0-9.]/g, '');
 		// empty string or NaN
 		if (isNaN(Number(dur)) || dur.length === 0) {
-			log.debug('[schedule] parsed duration: default (invalid format: %s)', dur);
+			log.warn('[schedule] parsed duration: default (invalid format: %s)', dur);
 			return SMILScheduleEnum.defaultDuration;
 		}
 

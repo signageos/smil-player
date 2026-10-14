@@ -29,7 +29,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
   dropped log batches, never piled-up connections
 
 ### Changed
-
+- Log levels now mean something: failures the player recovers from (download errors, playback errors, sync setup or
+  coordination failures, storage and migration errors, trigger initialisation failures) are logged at `error`, and
+  degraded-but-handled conditions (local fallback after an HTTP error, skipped content, insufficient storage,
+  sync timeouts, invalid SMIL kept out by `fallbackToPreviousPlaylist`, unsupported elements) at `warn`. Everything
+  else stays `debug`. All levels are still gated only by `debugEnabled`, so nothing disappears from the console or
+  the remote log stream; in the browser console the promoted lines now show as warnings and errors
 - `playCheckUrl` gate requests now use GET instead of HEAD (some gate backends do not answer HEAD); only the
   response status code is evaluated
 

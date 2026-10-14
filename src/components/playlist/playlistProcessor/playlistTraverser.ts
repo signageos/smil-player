@@ -201,7 +201,7 @@ export class PlaylistTraverser {
 			// dont play intro in the actual playlist
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				if (isNil((value as SMILMedia).regionInfo)) {
-					this.log.debug('[traverser] skipping element with no regionInfo: key=%s', key);
+					this.log.warn('[traverser] skipping element with no regionInfo: key=%s', key);
 					continue;
 				}
 
@@ -279,7 +279,7 @@ export class PlaylistTraverser {
 
 					if (result === 'RETRY') {
 						retryCount++;
-						this.log.debug('[traverser] retrying element: attempt=%d/%d, key=%s', retryCount, MAX_RETRIES, key);
+						this.log.warn('[traverser] retrying element: attempt=%d/%d, key=%s', retryCount, MAX_RETRIES, key);
 						// Small delay before retry to allow higher-priority element to proceed
 						await this.control.sleep(100);
 					} else {

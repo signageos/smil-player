@@ -52,7 +52,7 @@ export function createPlaylistTools(log: Log) {
 		try {
 			return `${tagName}-${hashSortCoerce.hash(projectForParentGeneration(value))}`;
 		} catch (err) {
-			log.debug('[general] error during parent generation: %O', err);
+			log.error('[general] error during parent generation: %O', err);
 			// per-shape fallback — the old shared `${tagName}-undefined` collapsed ALL
 			// failures into one identity
 			return `${tagName}-fallback-${Object.keys(value || {}).join('.')}`;

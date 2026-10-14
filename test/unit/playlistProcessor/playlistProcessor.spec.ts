@@ -429,7 +429,7 @@ describe('PlaylistProcessor', () => {
 
 			const media = { dynamicValue: 'dyn1', src: 'http://test/dynamic.smil' } as any;
 			const regionInfo = { regionName: 'dynamic' } as any;
-			const timedDebug = { debug: () => undefined } as any;
+			const timedDebug = { debug: () => undefined, warn: () => undefined, error: () => undefined } as any;
 
 			const result = await (processor as any).shouldWaitAndContinue(
 				media, regionInfo, 'main', 0, 0, 0, false, 0, timedDebug, undefined,
@@ -468,7 +468,7 @@ describe('PlaylistProcessor', () => {
 			});
 
 			const media = { src: 'img.jpg', regionInfo: { regionName: 'main' } } as any;
-			const timedDebug = { debug: () => undefined } as any;
+			const timedDebug = { debug: () => undefined, warn: () => undefined, error: () => undefined } as any;
 			const result = await (processor as any).shouldWaitAndContinue(
 				media, media.regionInfo, 'main', 0, 0, 1, true, 0, timedDebug, undefined,
 			);
@@ -487,7 +487,7 @@ describe('PlaylistProcessor', () => {
 			fullVideoDuration: 200, // bounds the onceEnded race without the 600s backstop timer
 		} as any;
 		const params = ['videos/a.mp4', 0, 0, 10, 10, 'RTP'];
-		const timedDebug = { debug: () => undefined } as any;
+		const timedDebug = { debug: () => undefined, warn: () => undefined, error: () => undefined } as any;
 
 		function setup(contentPause: number, currentlyPlaying: any, stop: boolean = false) {
 			const sos = createMockSos();

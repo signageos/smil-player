@@ -84,7 +84,7 @@ export class ResourceChecker implements IResourceChecker {
 										detections.push(detection);
 									}
 								} catch (error) {
-									this.log.debug('[files] error detecting update: url=%s, error=%O', resource.url, error);
+									this.log.warn('[files] error detecting update: url=%s, error=%O', resource.url, error);
 								}
 							} else {
 								// Resources without detectFunction (like SMIL files) - process later
@@ -113,7 +113,7 @@ export class ResourceChecker implements IResourceChecker {
 								this.log.debug('[files] phase 3: batch downloading new content files=%d', newContentDetections.length);
 								await this.filesManager.processNewContentUpdates(newContentDetections, allFilesList);
 							} catch (error) {
-								this.log.debug('[files] error processing new content updates: error=%O', error);
+								this.log.error('[files] error processing new content updates: error=%O', error);
 							}
 						}
 
@@ -123,7 +123,7 @@ export class ResourceChecker implements IResourceChecker {
 								this.log.debug('[files] phase 4: batch processing moved content files=%d', movedContentDetections.length);
 								await this.filesManager.processNewContentUpdates(movedContentDetections, allFilesList);
 							} catch (error) {
-								this.log.debug('[files] error processing moved content updates: error=%O', error);
+								this.log.error('[files] error processing moved content updates: error=%O', error);
 							}
 						}
 
@@ -138,7 +138,7 @@ export class ResourceChecker implements IResourceChecker {
 								const response = await resource.checkFunction();
 								await resource.actionOnSuccess(response, async () => this.stop());
 							} catch (error) {
-								this.log.debug('[files] resource check error: url=%s, error=%O', resource.url, error);
+								this.log.warn('[files] resource check error: url=%s, error=%O', resource.url, error);
 							}
 						}
 
@@ -204,7 +204,7 @@ export class ResourceChecker implements IResourceChecker {
 				this.clearAllTimers();
 				this.log.debug('[files] resource checker cleaned up');
 			} catch (error) {
-				this.log.debug('[files] resource checker stop error: %O', error);
+				this.log.warn('[files] resource checker stop error: %O', error);
 				throw error;
 			} finally {
 				this.stopPromise = null;

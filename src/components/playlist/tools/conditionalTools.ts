@@ -61,7 +61,7 @@ export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitF
 			expression = sanitizeConditionalExpr(expression);
 			return checkConditionalExpr(expression, playerName, playerId);
 		} catch (error) {
-			log.debug('[conditional] parse error in expr: %O', error);
+			log.warn('[conditional] parse error in expr: %O', error);
 			return false;
 		}
 	}

@@ -101,7 +101,7 @@ export class SmilPlayer implements ISmilPlayer {
 					break;
 				}
 			} catch (err) {
-				this.log.debug('[smil] iteration error, retrying: %O', err);
+				this.log.error('[smil] iteration error, retrying: %O', err);
 				await sleep(SMILEnums.defaultRefresh * 1000);
 			}
 		}
@@ -138,7 +138,7 @@ export class SmilPlayer implements ISmilPlayer {
 			}
 		} catch (err) {
 			// Handle any errors that might occur during file operations
-			this.log.debug('[smil] media info file error: %O', err);
+			this.log.warn('[smil] media info file error: %O', err);
 		}
 	}
 
@@ -170,7 +170,7 @@ export class SmilPlayer implements ISmilPlayer {
 			// Update the mediaInfoObject after download completes
 			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 		} catch (err) {
-			this.log.debug('[smil] failed to download backup image: %O', err);
+			this.log.warn('[smil] failed to download backup image: %O', err);
 		}
 	}
 
@@ -261,7 +261,7 @@ export class SmilPlayer implements ISmilPlayer {
 					// Update the mediaInfoObject after download completes
 					await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
 				} catch (downloadErr) {
-					this.log.debug('[smil] download failed, trying cached version: %O', downloadErr);
+					this.log.warn('[smil] download failed, trying cached version: %O', downloadErr);
 				}
 
 				// Always try to read from local storage (works with fresh download or cached file)
@@ -276,7 +276,7 @@ export class SmilPlayer implements ISmilPlayer {
 				this.log.debug('[smil] parsed SMIL: %O', smilObject);
 
 				if (isEmpty(smilObject.playlist)) {
-					this.log.debug('[smil] WARN empty SMIL playlist, throttling before continuing');
+					this.log.warn('[smil] WARN empty SMIL playlist, throttling before continuing');
 					await sleep(1000);
 				}
 
@@ -353,9 +353,9 @@ export class SmilPlayer implements ISmilPlayer {
 				await this.processor.processingLoop(smilFile, firstIteration, restart);
 			} catch (err) {
 				if (smilFileContent === '') {
-					this.log.debug('[smil] SMIL download error: %O', err);
+					this.log.error('[smil] SMIL download error: %O', err);
 				} else {
-					this.log.debug('[smil] XML parse error: %O', err);
+					this.log.error('[smil] XML parse error: %O', err);
 					await this.files.sendSmiFileReport(
 						`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
 						smilFile.src,
@@ -366,10 +366,10 @@ export class SmilPlayer implements ISmilPlayer {
 				if (ignoreInvalidSmil) {
 					// If already polling (called from interval), return failure and let interval continue
 					if (this.isPollingForPlaylist) {
-						this.log.debug('[smil] skipping invalid SMIL from poll: %s, will retry next interval', err.message || err);
+						this.log.warn('[smil] skipping invalid SMIL from poll: %s, will retry next interval', err.message || err);
 						return smilUpdate.invalid;
 					}
-					this.log.debug('[smil] ignoring invalid SMIL: fallbackToPreviousPlaylist enabled');
+					this.log.warn('[smil] ignoring invalid SMIL: fallbackToPreviousPlaylist enabled');
 					return await this.fallbackToPreviousPlaylist(
 						internalStorageUnit,
 						smilUrl,

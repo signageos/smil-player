@@ -107,7 +107,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 					break;
 				}
 			} catch (err) {
-				this.log.debug('[playback] error in %s: %O', fn.name, err);
+				this.log.error('[playback] error in %s: %O', fn.name, err);
 				throw err;
 			}
 		}
@@ -163,7 +163,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			case 'ticker':
 				await this.cancelPreviousTicker(regionInfo);
 			default:
-				this.log.debug('[playback] unsupported element for cancellation');
+				this.log.warn('[playback] unsupported element for cancellation');
 				break;
 		}
 	};
@@ -222,7 +222,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			this.clearRegionIdentity(regionInfo.regionName);
 			this.notifyRegionChange();
 		} catch (err) {
-			this.log.debug('[playback] ticker cancellation error: %O', err);
+			this.log.warn('[playback] ticker cancellation error: %O', err);
 		}
 	};
 
@@ -267,7 +267,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 			this.notifyRegionChange();
 			this.log.debug('[playback] previous %s stopped: %O', videoElement, video);
 		} catch (err) {
-			this.log.debug('[playback] video cancellation error: %O', err);
+			this.log.warn('[playback] video cancellation error: %O', err);
 		}
 	};
 }

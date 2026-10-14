@@ -290,7 +290,7 @@ export class PriorityConflictResolver {
 				}
 			}
 		} catch (err) {
-			this.log.debug('[priority] defer error: failed to prepare dynamic video: %O', err);
+			this.log.error('[priority] defer error: failed to prepare dynamic video: %O', err);
 		}
 
 		const result = await this.waiter.waitForPriorityRelease(
@@ -380,7 +380,7 @@ export class PriorityConflictResolver {
 				);
 				break;
 			default:
-				this.log.debug('[priority] unsupported priority rule: %s', priorityRule);
+				this.log.warn('[priority] unsupported priority rule: %s', priorityRule);
 		}
 	};
 }

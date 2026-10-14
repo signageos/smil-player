@@ -575,7 +575,7 @@ export class PriorityStateManager {
 			try {
 				satisfied = !!entries && waiter.predicate(entries);
 			} catch (err) {
-				this.log.debug('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
+				this.log.error('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
 				waiter.deferred.resolve();
 				waiters.delete(waiter);
 				continue;

@@ -111,7 +111,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						htmlElement = HtmlEnum.ticker;
 						break;
 					default:
-						this.log.debug('[prepare] unsupported element type: %s', key);
+						this.log.warn('[prepare] unsupported element type: %s', key);
 				}
 
 				for (const elem of value) {

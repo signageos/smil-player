@@ -51,7 +51,7 @@ export class ListenerScope {
 				// cross-origin iframe whose contentWindow is no longer
 				// reachable. removeEventListener on a no-op pair never throws
 				// per spec; this catch covers only those pathological cases.
-				this.log.debug('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
+				this.log.warn('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
 			}
 		}
 		this.entries.length = 0;

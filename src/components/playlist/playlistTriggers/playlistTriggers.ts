@@ -211,7 +211,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
 				);
 			} catch (err) {
-				this.log.debug('[trigger-dynamic] cancel wait failed: id=%s, error=%O', dynamicPlaylistId, err);
+				this.log.warn('[trigger-dynamic] cancel wait failed: id=%s, error=%O', dynamicPlaylistId, err);
 			}
 		}
 
@@ -256,7 +256,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					await sleep(5e3);
 					await this.sos.management.power.appRestart();
 				} catch (e) {
-					this.log.debug('[trigger] restart failed: error=%O', e);
+					this.log.error('[trigger] restart failed: error=%O', e);
 				}
 			}
 		});
@@ -272,14 +272,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			);
 
 			if (!dynamicPlaylistConfig?.data) {
-				this.log.debug('[trigger-dynamic] skipping udp request: data is undefined');
+				this.log.warn('[trigger-dynamic] skipping udp request: data is undefined');
 				return;
 			}
 
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
 			if (!dynamicPlaylistId || !dynamicMedia) {
-				this.log.debug('[trigger-dynamic] playlist not found: data=%s', dynamicPlaylistConfig.data);
+				this.log.warn('[trigger-dynamic] playlist not found: data=%s', dynamicPlaylistConfig.data);
 				return;
 			}
 
@@ -388,7 +388,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				// turn off sync and play default content if one or more devices are not connected in sync group
 				await this.handleSyncTriggers(onStatus);
 			} catch (err) {
-				this.log.debug('[trigger-sync] error processing status: error=%O', err);
+				this.log.error('[trigger-sync] error processing status: error=%O', err);
 			}
 		});
 	};
@@ -488,7 +488,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					!isNil(this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.syncPrefix}-${syncTriggerId}`]) &&
 					!this.triggersEndless[triggerInfo.trigger]?.play
 				) {
-					this.log.debug('[trigger-sync] starting failover trigger: trigger=%s', triggerInfo.trigger);
+					this.log.warn('[trigger-sync] starting failover trigger: trigger=%s', triggerInfo.trigger);
 					set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
 					const triggerMedia = this.smilObject.triggers[triggerInfo.trigger];
@@ -535,7 +535,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			'sosEvent',
 			async (event: CustomEvent) => {
 				if (!event.detail || isObject(event.detail)) {
-					this.log.debug('[trigger-widget] invalid widget event data: detail=%O', event.detail);
+					this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
 					return;
 				}
 
@@ -622,7 +622,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				baudRate: SMILTriggersEnum.nexmoBaudRate as number,
 			});
 		} catch (err) {
-			this.log.debug('[trigger-rfid] initialization failed: error=%O', err);
+			this.log.error('[trigger-rfid] initialization failed: error=%O', err);
 			await this.files.sendGeneralErrorReport(err.message);
 			return;
 		}
@@ -635,7 +635,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			if (sensor.driver === SMILTriggersEnum.sensorNexmo && sensor.type === SMILTriggersEnum.sensorRfid) {
 				// sensor does not have address
 				if (isNil(sensor.address)) {
-					this.log.debug('[trigger-rfid] sensor missing address: id=%s', sensor.id);
+					this.log.warn('[trigger-rfid] sensor missing address: id=%s', sensor.id);
 					continue;
 				}
 
@@ -645,7 +645,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					try {
 						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PICKED);
 					} catch (err) {
-						this.log.debug('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=picked', sensor.id, tag);
+						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=picked', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
@@ -653,7 +653,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					try {
 						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PLACED);
 					} catch (err) {
-						this.log.debug('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=placed', sensor.id, tag);
+						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=placed', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
 					}
 				});
@@ -671,7 +671,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				await this.processOnTouchOnClick();
 			});
 		} catch (err) {
-			this.log.debug('[trigger-mouse] failed to add event listener: error=%O', err);
+			this.log.error('[trigger-mouse] failed to add event listener: error=%O', err);
 		}
 
 		this.listenerScope.add(document, SMILTriggersEnum.mouseEventType, async () => {
@@ -751,7 +751,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				state = await this.processKeyDownEvent(event, state);
 			});
 		} catch (err) {
-			this.log.debug('[trigger-keyboard] failed to add event listener: error=%O', err);
+			this.log.error('[trigger-keyboard] failed to add event listener: error=%O', err);
 		}
 
 		this.listenerScope.add(document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
@@ -984,7 +984,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				}
 				break;
 			default:
-				this.log.debug('[trigger] unsupported logic condition: operator=%s', logicCondition);
+				this.log.warn('[trigger] unsupported logic condition: operator=%s', logicCondition);
 		}
 		this.log.debug('[trigger] condition result: matched=false, action=%s', action);
 		return false;

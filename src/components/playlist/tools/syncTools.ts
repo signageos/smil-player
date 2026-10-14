@@ -134,7 +134,7 @@ export function createSyncTools(log: Log) {
 			await sos.sync.connect(options);
 			resetAppRestartCount();
 		} catch (error) {
-			log.debug('[sync] connection error: %O', error);
+			log.error('[sync] connection error: %O', error);
 			const nextTryMultiplier = 1 / (Math.log(retryCount) + 1);
 			await sleep(nextTryMultiplier * 2000);
 			if (retryCount > 0) {
