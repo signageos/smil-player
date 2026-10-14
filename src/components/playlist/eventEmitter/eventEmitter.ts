@@ -9,12 +9,12 @@ export class SmilEventEmitter extends EventEmitter {
 		super();
 		sos.stream.onDisconnected((event) => {
 			this.emit(StreamEnums.disconnectedEvent);
-			this.log.debug('[events] stream disconnected: %O', event);
+			this.log.warn('[events] stream disconnected: %O', event);
 		});
 
 		sos.stream.onError((event) => {
 			this.emit(StreamEnums.errorEvent);
-			this.log.debug('[events] stream error: %O', event);
+			this.log.error('[events] stream error: %O', event);
 		});
 	}
 }
@@ -36,7 +36,7 @@ export async function waitForSuccessOrFailEvents(
 		};
 		failListener = () => {
 			eventEmitter.removeListener(successEvent, successListener);
-			log.debug('[events] stream fail: event=%s, src=%s', failEvent, stream.src);
+			log.error('[events] stream fail: event=%s, src=%s', failEvent, stream.src);
 			reject(new Error('error: ' + failEvent));
 		};
 		eventEmitter.once(successEvent, successListener);

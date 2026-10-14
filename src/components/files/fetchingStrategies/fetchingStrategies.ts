@@ -59,17 +59,17 @@ export function createFetchingStrategies(log: Log) {
 			response = await makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
 		} catch (err) {
 			if (err.message === 'Request timeout') {
-				log.debug('[files] %s request aborted (timeout=%d): src=%s', prefix, timeOut, media.src);
+				log.warn('[files] %s request aborted (timeout=%d): src=%s', prefix, timeOut, media.src);
 				return { shouldUpdate: false, value: callbacks.fallbackValue(media), statusCode: 408 };
 			}
 
-			log.debug('[files] %s HEAD request failed: src=%s, error=%O', prefix, media.src, err);
+			log.warn('[files] %s HEAD request failed: src=%s, error=%O', prefix, media.src, err);
 
 			if (media.allowLocalFallback === false) {
-				log.debug('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
+				log.warn('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
 				media.skipContentMark = true;
 			} else {
-				log.debug('[files] %s using local fallback: src=%s', prefix, media.src);
+				log.warn('[files] %s using local fallback: src=%s', prefix, media.src);
 			}
 			return { shouldUpdate: false, value: undefined, statusCode: 503 };
 		}
@@ -91,25 +91,25 @@ export function createFetchingStrategies(log: Log) {
 				contentLength = parseInt(cdnResponse?.headers?.get('content-length') || '0', 10) || 0;
 				log.debug('[files] %s content-length from CDN HEAD: %d bytes for %s', prefix, contentLength, resourceLocation);
 			} catch (err) {
-				log.debug('[files] %s CDN HEAD request failed for %s: %O', prefix, resourceLocation, err);
+				log.warn('[files] %s CDN HEAD request failed for %s: %O', prefix, resourceLocation, err);
 				// Best-effort: fall back to 0 (will use MINIMAL_STORAGE_FREE_SPACE)
 			}
 		}
 
 		if (response.status >= 500 && response.status < 600) {
-			log.debug('[files] %s server error: status=%d, src=%s', prefix, response.status, media.src);
+			log.warn('[files] %s server error: status=%d, src=%s', prefix, response.status, media.src);
 
 			if (media.allowLocalFallback === false) {
-				log.debug('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
+				log.warn('[files] %s skipping content (no local fallback): src=%s', prefix, media.src);
 				media.skipContentMark = true;
 			} else {
-				log.debug('[files] %s using local fallback: src=%s', prefix, media.src);
+				log.warn('[files] %s using local fallback: src=%s', prefix, media.src);
 			}
 			return { shouldUpdate: false, value: callbacks.fallbackValue(media), statusCode: response.status };
 		}
 
 		if (response && skipContentHttpStatusCodes.includes(response.status)) {
-			log.debug('[files] %s skipping content (status=%d matched skip codes): src=%s', prefix, response.status, media.src);
+			log.warn('[files] %s skipping content (status=%d matched skip codes): src=%s', prefix, response.status, media.src);
 			media.skipContentMark = true;
 			return { shouldUpdate: false, value: callbacks.fallbackValue(media), statusCode: response.status };
 		}

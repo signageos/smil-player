@@ -236,7 +236,7 @@ class AckTracker {
 	public adjustExpectedCount(key: string, newExpectedCount: number): void {
 		const round = this.activeRounds.get(key);
 		if (!round) {
-			this.log.debug('Cannot adjust count for unknown round: %s', key);
+			this.log.warn('Cannot adjust count for unknown round: %s', key);
 			return;
 		}
 
@@ -580,7 +580,7 @@ export class SMILElementController {
 		const receivedIndex = await this.waitForPlayModeCommand(syncParentId, syncGroup, regionName);
 
 		if (receivedIndex === undefined) {
-			this.log.debug('Slave timeout waiting for cmd-playMode for %s, using local index', syncParentId);
+			this.log.warn('Slave timeout waiting for cmd-playMode for %s, using local index', syncParentId);
 			return randomPlaylist[localParentId]?.previousIndex ?? 0;
 		}
 
@@ -1168,7 +1168,7 @@ export class SMILElementController {
 				return { action: ProcessAction.WAIT, ackIndex: message.syncIndex, ackState: expectedState };
 
 			default:
-				(timedDebug ?? this.log).debug('Unexpected action from processElementState: %s', action);
+				(timedDebug ?? this.log).warn('Unexpected action from processElementState: %s', action);
 				return null;
 		}
 	}
@@ -1217,7 +1217,7 @@ export class SMILElementController {
 						return;
 					}
 					const timeoutMsg = `Timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName} after 10 minutes`;
-					(timedDebug ?? this.log).debug(timeoutMsg);
+					(timedDebug ?? this.log).warn(timeoutMsg);
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
 				},                     SYNC_TIMEOUTS.resyncTargetTimeout);
@@ -1240,7 +1240,7 @@ export class SMILElementController {
 						resolve(ProcessAction.CONTINUE);
 						return;
 					}
-					(timedDebug ?? this.log).debug('Timeout waiting for %s at syncIndex=%d - triggering resync', commandType, syncIndex);
+					(timedDebug ?? this.log).warn('Timeout waiting for %s at syncIndex=%d - triggering resync', commandType, syncIndex);
 					this.synchronization.syncingInAction = true;
 
 					// Use range-aware computation + wraparound for timeout recovery
@@ -1636,7 +1636,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): Promise<void> {
 		if (phase === 'playMode') {
-			(timedDebug ?? this.log).debug('Signal-ready timeout for playMode phase - no resync needed');
+			(timedDebug ?? this.log).warn('Signal-ready timeout for playMode phase - no resync needed');
 			return;
 		}
 
@@ -1658,7 +1658,7 @@ export class SMILElementController {
 				regionName,
 			);
 			this.synchronization.resyncTargets[config.resyncField] = nextTarget;
-			(timedDebug ?? this.log).debug('Timeout recovery: setting %s resync target to %d (master at %d)', phase, nextTarget, masterPos);
+			(timedDebug ?? this.log).warn('Timeout recovery: setting %s resync target to %d (master at %d)', phase, nextTarget, masterPos);
 		}
 	}
 
@@ -1728,7 +1728,7 @@ export class SMILElementController {
 					return;
 				}
 				const timeoutMsg = `Timeout waiting for ${signalType} from master for region=${regionName}, syncIndex=${syncIndex}`;
-				(timedDebug ?? this.log).debug(timeoutMsg);
+				(timedDebug ?? this.log).warn(timeoutMsg);
 				cleanup();
 				resolve(false);
 			},                     SYNC_TIMEOUTS.signalReadyTimeout);
@@ -1818,7 +1818,7 @@ export class SMILElementController {
 
 			timeoutId = setTimeout(() => {
 				if (resolved) { return; }
-				this.log.debug('Timeout waiting for cmd-playMode for %s', parentId);
+				this.log.warn('Timeout waiting for cmd-playMode for %s', parentId);
 				cleanup();
 				resolve(undefined);
 			},                     SYNC_TIMEOUTS.playModeCmdTimeout);

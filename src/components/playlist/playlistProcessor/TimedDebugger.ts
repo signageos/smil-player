@@ -14,8 +14,21 @@ export class TimedDebugger {
 	}
 
 	public debug(message: string, ...args: unknown[]): void {
+		this.log.debug(this.stamp(message), ...args);
+	}
+
+	public warn(message: string, ...args: unknown[]): void {
+		this.log.warn(this.stamp(message), ...args);
+	}
+
+	public error(message: string, ...args: unknown[]): void {
+		this.log.error(this.stamp(message), ...args);
+	}
+
+	private stamp(message: string): string {
 		const now = Date.now();
-		this.log.debug(`[${this.debugId}_${now} +${now - this.lastLogTime}ms total:${now - this.startTime}ms] ${message}`, ...args);
+		const prefix = `[${this.debugId}_${now} +${now - this.lastLogTime}ms total:${now - this.startTime}ms] ${message}`;
 		this.lastLogTime = now;
+		return prefix;
 	}
 }

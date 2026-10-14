@@ -181,7 +181,7 @@ export function createHtmlTools(log: Log) {
 				}
 			}
 		} catch (err) {
-			log.debug('[html] error removing image: %O', err);
+			log.warn('[html] error removing image: %O', err);
 		}
 
 		// reset body content

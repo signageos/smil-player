@@ -204,7 +204,7 @@ export class FilesManager implements IFilesManager {
 				}
 			}
 		} catch (err) {
-			this.log.debug('Unexpected error occurred during offline reports watcher pass: %O', err);
+			this.log.error('Unexpected error occurred during offline reports watcher pass: %O', err);
 		}
 		await sleep(CUSTOM_ENDPOINT_OFFLINE_INTERVAL);
 	};
@@ -234,7 +234,7 @@ export class FilesManager implements IFilesManager {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 		} catch (error) {
-			this.log.debug('[files] custom report error: %O', error);
+			this.log.warn('[files] custom report error: %O', error);
 			if (offlineUpload) {
 				throw new Error('Error during offline custom endpoint report upload');
 			}
@@ -396,7 +396,7 @@ export class FilesManager implements IFilesManager {
 		} catch (err) {
 			// Every call site is fire-and-forget; never let a failed report (or a
 			// failed offline save inside it) surface as an unhandled rejection.
-			this.log.debug('[files] error sending opt-in event report %s: %O', eventName, err);
+			this.log.warn('[files] error sending opt-in event report %s: %O', eventName, err);
 		}
 	};
 
@@ -448,7 +448,7 @@ export class FilesManager implements IFilesManager {
 
 		// file was not found
 		if (isNil(updateCheckResult) || isNil(currentValue)) {
-			this.log.debug('[files] file not found on remote: %s', media.src);
+			this.log.warn('[files] file not found on remote: %s', media.src);
 			return { shouldUpdate: false, statusCode };
 		}
 
@@ -504,7 +504,7 @@ export class FilesManager implements IFilesManager {
 		// Debug logging for location strategy edge cases
 		if (isLocationStrategy) {
 			if (currentValue === null) {
-				this.log.debug('[files] location strategy: currentValue is null (request failed or no Location header)');
+				this.log.warn('[files] location strategy: currentValue is null (request failed or no Location header)');
 			}
 			if (stripSmilVersion(currentValue) === stripSmilVersion(media.src)) {
 				this.log.debug('[files] location strategy: currentValue equals media.src (no redirect, same URL returned)');
@@ -607,7 +607,7 @@ export class FilesManager implements IFilesManager {
 				);
 			}
 		} catch (err) {
-			this.log.debug('[files] error deleting file: %s', filePath);
+			this.log.warn('[files] error deleting file: %s', filePath);
 			await this.sendGeneralErrorReport(err.message);
 		}
 	};
@@ -937,7 +937,7 @@ export class FilesManager implements IFilesManager {
 						try {
 							// Floor guard: skip the dedup copy if it would breach MINIMAL_STORAGE_FREE_SPACE
 							if (!(await this.hasFloorRoomForCopy(existingFilePath))) {
-								this.log.debug('DEDUP: Skipping copy for %s - would breach minimum free space floor', task.file.src);
+								this.log.warn('DEDUP: Skipping copy for %s - would breach minimum free space floor', task.file.src);
 								skippedDownloads++;
 								continue;
 							}
@@ -981,7 +981,7 @@ export class FilesManager implements IFilesManager {
 							}
 
 						} catch (err) {
-							this.log.debug('DEDUP: Failed to copy existing content: %O', err);
+							this.log.error('DEDUP: Failed to copy existing content: %O', err);
 							// On error, we'll fall through to normal download logic below
 							// Remove the existingFilePath marker so it will download instead
 							tasks[0].existingFilePath = undefined;
@@ -1101,7 +1101,7 @@ export class FilesManager implements IFilesManager {
 									}
 
 								} catch (err) {
-									this.log.debug('DEDUP: Failed to copy restored content: %O', err);
+									this.log.error('DEDUP: Failed to copy restored content: %O', err);
 									// Continue trying for other tasks
 								}
 							}
@@ -1115,7 +1115,7 @@ export class FilesManager implements IFilesManager {
 							continue; // Skip to next content group
 						}
 					} catch (err) {
-						this.log.debug('DEDUP: Failed to restore from storage: %O', err);
+						this.log.warn('DEDUP: Failed to restore from storage: %O', err);
 						// Fall through to normal download logic
 					}
 				}
@@ -1142,7 +1142,7 @@ export class FilesManager implements IFilesManager {
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
 							if (!(await this.checkAvailableSpace(task.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-								this.log.debug('[files] skipping download (insufficient storage space): %s', task.file.src);
+								this.log.warn('[files] skipping download (insufficient storage space): %s', task.file.src);
 								filesToUpdate.delete(task.fileName);
 								return;
 							}
@@ -1179,7 +1179,7 @@ export class FilesManager implements IFilesManager {
 									getReportUrlFromUpdateValue(task.updateValue),
 								);
 							} catch (err) {
-								this.log.debug('[files] download error: %O, file: %s', err, task.file.src);
+								this.log.error('[files] download error: %O, file: %s', err, task.file.src);
 								this.sendDownloadReport(
 									fileType,
 									task.fullLocalFilePath,
@@ -1231,7 +1231,7 @@ export class FilesManager implements IFilesManager {
 						(async () => {
 							// Check storage before downloading to prevent wasted bandwidth
 							if (!(await this.checkAvailableSpace(primaryTask.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-								this.log.debug('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
+								this.log.warn('Skipping dedup download for %s - insufficient storage space', primaryTask.file.src);
 								filesToUpdate.delete(primaryTask.fileName);
 								for (let i = 1; i < tasks.length; i++) {
 									filesToUpdate.delete(tasks[i].fileName);
@@ -1360,7 +1360,7 @@ export class FilesManager implements IFilesManager {
 
 								this.log.debug('DEDUP: Copy phase complete for content group');
 							} catch (err) {
-								this.log.debug(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
+								this.log.error(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
 								this.sendDownloadReport(
 									fileType,
 									primaryTask.fullLocalFilePath,
@@ -1526,7 +1526,7 @@ export class FilesManager implements IFilesManager {
 							(async () => {
 								// Check storage before downloading to prevent wasted bandwidth
 								if (!(await this.checkAvailableSpace(updateCheck.contentLength || MINIMAL_STORAGE_FREE_SPACE))) {
-									this.log.debug('Skipping download for %s - insufficient storage space', file.src);
+									this.log.warn('Skipping download for %s - insufficient storage space', file.src);
 									filesToUpdate.delete(canonicalName);
 									return;
 								}
@@ -1571,7 +1571,7 @@ export class FilesManager implements IFilesManager {
 										getReportUrlFromUpdateValue(updateValue),
 									);
 								} catch (err) {
-									this.log.debug(`Unexpected error: %O during downloading file: %s`, err, file.src);
+									this.log.error(`Unexpected error: %O during downloading file: %s`, err, file.src);
 									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, 502);
 									// Remove from filesToUpdate if download failed
 									filesToUpdate.delete(canonicalName);
@@ -1817,7 +1817,7 @@ export class FilesManager implements IFilesManager {
 
 			return resourceCheckers;
 		} catch (err) {
-			this.log.debug('[files] lastModified check error: %O', err);
+			this.log.warn('[files] lastModified check error: %O', err);
 			// return empty arrays as if no new versions of files were found
 		}
 		return [];
@@ -1906,7 +1906,7 @@ export class FilesManager implements IFilesManager {
 					tempUriMap.set(fileName, fileDetails.localUri);
 				}
 			} catch (err) {
-				this.log.debug('commitBatch: Failed to resolve temp URI for %s: %O', fileName, err);
+				this.log.error('commitBatch: Failed to resolve temp URI for %s: %O', fileName, err);
 			}
 		}
 
@@ -1977,7 +1977,7 @@ export class FilesManager implements IFilesManager {
 		// Log failed files (mediaInfoObject already written with new values;
 		// migration failure means file is still at temp path which localFilePath already points to)
 		for (const failedFile of failedFiles) {
-			this.log.debug('commitBatch: Migration failed for %s, temp URI still valid', failedFile);
+			this.log.warn('commitBatch: Migration failed for %s, temp URI still valid', failedFile);
 		}
 
 		this.log.debug('Batch updates committed and mediaInfoObject saved');
@@ -2005,7 +2005,7 @@ export class FilesManager implements IFilesManager {
 		const maxContentLength = Math.max(...detections.map((d) => d.contentLength || 0));
 		const requiredSpace = maxContentLength || MINIMAL_STORAGE_FREE_SPACE;
 		if (!(await this.checkAvailableSpace(requiredSpace))) {
-			this.log.debug('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
+			this.log.warn('processNewContentUpdates: Skipping %d downloads - insufficient storage space', detections.length);
 			return [];
 		}
 
@@ -2149,7 +2149,7 @@ export class FilesManager implements IFilesManager {
 
 				this.log.debug('processNewContentUpdates: Batch processing complete for group: %s', key);
 			} catch (err) {
-				this.log.debug('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
+				this.log.error('processNewContentUpdates: Error processing batch for group %s: %O', key, err);
 				// Continue with other groups even if one fails
 			}
 		}
@@ -2352,7 +2352,7 @@ export class FilesManager implements IFilesManager {
 					this.prePlayLock = commit.catch(() => {/* errors surface via the awaited commit below */});
 					await commit;
 				} catch (error) {
-					this.log.debug('Background prePlayCheck download failed for %s: %O', media.src, error);
+					this.log.warn('Background prePlayCheck download failed for %s: %O', media.src, error);
 				} finally {
 					this.activePrePlayDownloads.delete(fileName);
 				}
@@ -2360,7 +2360,7 @@ export class FilesManager implements IFilesManager {
 
 			this.activePrePlayDownloads.set(fileName, backgroundDownload);
 		} catch (error) {
-			this.log.debug('Pre-play check failed for %s, using cached version: %O', media.src, error);
+			this.log.warn('Pre-play check failed for %s, using cached version: %O', media.src, error);
 		}
 	};
 
@@ -2442,11 +2442,11 @@ export class FilesManager implements IFilesManager {
 					return filePath;
 				}
 			} catch (err) {
-				this.log.debug('Error checking file existence at %s: %O', filePath, err);
+				this.log.warn('Error checking file existence at %s: %O', filePath, err);
 			}
 		}
 
-		this.log.debug('File %s not found in any media folder', fileName);
+		this.log.warn('File %s not found in any media folder', fileName);
 		return null;
 	};
 
@@ -2486,7 +2486,7 @@ export class FilesManager implements IFilesManager {
 
 			return hasEnoughSpace;
 		} catch (err) {
-			this.log.debug('Error checking available storage space: %O', err);
+			this.log.warn('Error checking available storage space: %O', err);
 			// If we can't check space, proceed anyway and handle errors later
 			return true;
 		}
@@ -2528,7 +2528,7 @@ export class FilesManager implements IFilesManager {
 				);
 			} else if (fileInfo && !this.sizeBytesUnavailableWarned) {
 				this.sizeBytesUnavailableWarned = true;
-				this.log.debug('WARNING: sizeBytes unavailable for %s — space tracking may be inaccurate', filePath);
+				this.log.warn('WARNING: sizeBytes unavailable for %s — space tracking may be inaccurate', filePath);
 			}
 		} catch (_) {
 			// Best-effort tracking
@@ -2669,11 +2669,11 @@ export class FilesManager implements IFilesManager {
 		for (const movement of movements.values()) {
 			const sourcePath = await this.determineFilePath(movement.sourceFileName);
 			if (!sourcePath) {
-				this.log.debug('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
+				this.log.warn('WARNING: Source file %s not found, skipping movement', movement.sourceFileName);
 				// Track all destination files as failed since we can't copy without source
 				for (const destFileName of movement.destinationFileNames) {
 					failedFileNames.add(destFileName);
-					this.log.debug('Marking destination %s as failed due to missing source', destFileName);
+					this.log.warn('Marking destination %s as failed due to missing source', destFileName);
 				}
 				continue;
 			}
@@ -2738,7 +2738,7 @@ export class FilesManager implements IFilesManager {
 			try {
 				// Floor guard: skip the temp copy if it would breach the minimum free space floor
 				if (!(await this.hasFloorRoomForCopy(movement.sourceFilePath))) {
-					this.log.debug('  Skipping temp copy for %s - would breach minimum free space floor', movement.sourceFileName);
+					this.log.warn('  Skipping temp copy for %s - would breach minimum free space floor', movement.sourceFileName);
 					// Fall back to using the original file directly (consistent with the catch path below)
 					tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
 					continue;
@@ -2764,7 +2764,7 @@ export class FilesManager implements IFilesManager {
 				tempCopies.set(movement.sourceFilePath, tempPath);
 				this.log.debug('  ✓ Created temp copy for %s', movement.sourceFileName);
 			} catch (err) {
-				this.log.debug('ERROR: Failed to create temp copy for %s: %O', movement.sourceFileName, err);
+				this.log.error('ERROR: Failed to create temp copy for %s: %O', movement.sourceFileName, err);
 				// Try to continue with original file
 				tempCopies.set(movement.sourceFilePath, movement.sourceFilePath);
 			}
@@ -2872,7 +2872,7 @@ export class FilesManager implements IFilesManager {
 				} catch (err) {
 					failedCopies++;
 					failedFileNames.add(destFileName);
-					this.log.debug('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
+					this.log.error('ERROR: Failed to copy %s to %s: %O', movement.sourceFileName, destFileName, err);
 					// Continue with other copies even if this one fails
 				}
 			}
@@ -2887,7 +2887,7 @@ export class FilesManager implements IFilesManager {
 					await this.deleteFile(tempPath);
 					this.log.debug('  Deleted temp copy: %s', tempPath);
 				} catch (err) {
-					this.log.debug('  Warning: Could not delete temp copy %s: %O', tempPath, err);
+					this.log.warn('  Warning: Could not delete temp copy %s: %O', tempPath, err);
 					// Non-critical, continue
 				}
 			}
@@ -2923,12 +2923,12 @@ export class FilesManager implements IFilesManager {
 						await this.deleteFile(file.filePath);
 						this.log.debug('Deleted temp file: %s', file.filePath);
 					} catch (err) {
-						this.log.debug('Error deleting temp file %s: %O', file.filePath, err);
+						this.log.warn('Error deleting temp file %s: %O', file.filePath, err);
 					}
 				}
 			} catch (err) {
 				// Folder might not exist or be empty
-				this.log.debug('Error listing temp folder %s: %O', folder, err);
+				this.log.warn('Error listing temp folder %s: %O', folder, err);
 			}
 		}
 	};
@@ -2981,7 +2981,7 @@ export class FilesManager implements IFilesManager {
 		const hasSpace = await this.checkAvailableSpace(estimatedSpaceNeeded);
 
 		if (!hasSpace) {
-			this.log.debug('WARNING: Insufficient space for content copies. Proceeding with limited migration');
+			this.log.warn('WARNING: Insufficient space for content copies. Proceeding with limited migration');
 		}
 
 		// Step 3: Perform content copies for moved content
@@ -2999,11 +2999,11 @@ export class FilesManager implements IFilesManager {
 			);
 		} else if (contentMovements.size > 0 && !hasSpace) {
 			// No space available - mark all destination files as failed
-			this.log.debug('No space for content copies - marking all destinations as failed');
+			this.log.error('No space for content copies - marking all destinations as failed');
 			for (const movement of contentMovements.values()) {
 				for (const destFileName of movement.destinationFileNames) {
 					failedFileNames.add(destFileName);
-					this.log.debug('Marking destination %s as failed due to insufficient space', destFileName);
+					this.log.warn('Marking destination %s as failed due to insufficient space', destFileName);
 				}
 			}
 		} else {
@@ -3056,7 +3056,7 @@ export class FilesManager implements IFilesManager {
 					this.log.debug('Successfully migrated: %s', fileName);
 				} catch (err) {
 					failedFileNames.add(fileName);
-					this.log.debug('Error migrating file %s: %O', fileName, err);
+					this.log.error('Error migrating file %s: %O', fileName, err);
 					// Continue with other files even if one fails. The tmp file is
 					// NOT queued for deletion — the playlist can keep using it.
 				}
@@ -3095,13 +3095,13 @@ export class FilesManager implements IFilesManager {
 
 							file.localFilePath = newPath;
 						} else {
-							this.log.debug('  WARNING: No file details returned for path: %s', actualPath);
+							this.log.warn('  WARNING: No file details returned for path: %s', actualPath);
 						}
 					} catch (err) {
-						this.log.debug('  ERROR updating localFilePath for %s: %O', file.src, err);
+						this.log.error('  ERROR updating localFilePath for %s: %O', file.src, err);
 					}
 				} else {
-					this.log.debug('  WARNING: No file found for fileName: %s', fileName);
+					this.log.warn('  WARNING: No file found for fileName: %s', fileName);
 					this.log.debug('  This file may not have been downloaded yet');
 				}
 			} else {
@@ -3131,7 +3131,7 @@ export class FilesManager implements IFilesManager {
 				} catch (err) {
 					// Non-fatal: localFilePath already points at the standard copy.
 					// Orphan tmp files are reaped by clearTempFolders() on next boot.
-					this.log.debug('  Failed to delete temp file %s (non-fatal): %O', tempPath, err);
+					this.log.warn('  Failed to delete temp file %s (non-fatal): %O', tempPath, err);
 				}
 			}
 		}
@@ -3220,7 +3220,7 @@ export class FilesManager implements IFilesManager {
 				// a conservative upper bound for the floor guard.
 				const netSize = Math.max(sourceSize - overwrittenSize, 0);
 				if (!(await this.checkAvailableSpace(netSize))) {
-					this.log.debug('Skipping MOVED_CONTENT slot copy for %s - would breach minimum free space floor', file.src);
+					this.log.warn('Skipping MOVED_CONTENT slot copy for %s - would breach minimum free space floor', file.src);
 					return false;
 				}
 				await this.sos.fileSystem.copyFile(
@@ -3338,7 +3338,7 @@ export class FilesManager implements IFilesManager {
 				isNewContent,
 			};
 		} catch (err) {
-			this.log.debug('Error during update detection for %s: %O', file.src, err);
+			this.log.warn('Error during update detection for %s: %O', file.src, err);
 			return null;
 		}
 	};
@@ -3468,7 +3468,7 @@ export class FilesManager implements IFilesManager {
 				this.log.debug('checkLastModified: No update needed for file: %s', file.src);
 			}
 		} catch (err) {
-			this.log.debug('[files] version check error: %O, file: %O', err, file);
+			this.log.warn('[files] version check error: %O, file: %O', err, file);
 		}
 
 		return [];
@@ -3854,7 +3854,7 @@ export class FilesManager implements IFilesManager {
 
 			return highestIndex;
 		} catch (error) {
-			this.log.debug('[files] error finding report index: %O', error);
+			this.log.warn('[files] error finding report index: %O', error);
 			return -1; // Safe fallback to start from 0
 		}
 	};
@@ -3881,7 +3881,7 @@ export class FilesManager implements IFilesManager {
 					);
 				}
 			} catch (err) {
-				this.log.debug('[files] widget extract error: %O, widget: %O', err, widgets[i]);
+				this.log.error('[files] widget extract error: %O, widget: %O', err, widgets[i]);
 			}
 		}
 	};
@@ -4054,7 +4054,7 @@ export class FilesManager implements IFilesManager {
 			return parsed || {};
 		} catch (err) {
 			// Handle corrupted file gracefully - storage is optimization, not critical
-			this.log.debug('Error reading storage info from %s, returning empty: %O', infoPath, err);
+			this.log.warn('Error reading storage info from %s, returning empty: %O', infoPath, err);
 			return {};
 		}
 	};
@@ -4078,7 +4078,7 @@ export class FilesManager implements IFilesManager {
 			this.log.debug('Saved storage info to %s with %d entries', infoPath, Object.keys(info).length);
 		} catch (err) {
 			// Log but don't fail - storage is optimization, not critical
-			this.log.debug('Failed to save storage info to %s: %O', storageFolder, err);
+			this.log.error('Failed to save storage info to %s: %O', storageFolder, err);
 		}
 	};
 
@@ -4120,7 +4120,7 @@ export class FilesManager implements IFilesManager {
 							entryToDelete.storagePath,
 						);
 					} catch (err) {
-						this.log.debug('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
+						this.log.warn('Failed to delete oldest storage file: %s, error: %O', entryToDelete.storagePath, err);
 					}
 				} else {
 					this.log.debug(
@@ -4134,7 +4134,7 @@ export class FilesManager implements IFilesManager {
 				this.log.debug('Storage space OK: %d/%d files in %s', entries.length, STORAGE_MAX_FILES, storageFolder);
 			}
 		} catch (err) {
-			this.log.debug('Error ensuring storage space for %s: %O', storageFolder, err);
+			this.log.error('Error ensuring storage space for %s: %O', storageFolder, err);
 			// Continue anyway - we'll just overwrite if needed
 		}
 	};
@@ -4164,7 +4164,7 @@ export class FilesManager implements IFilesManager {
 
 			// Check if file exists
 			if (!fileStats) {
-				this.log.debug('File not found or inaccessible, cannot preserve: %s', filePath);
+				this.log.warn('File not found or inaccessible, cannot preserve: %s', filePath);
 				return false;
 			}
 
@@ -4231,7 +4231,7 @@ export class FilesManager implements IFilesManager {
 			this.log.debug('Successfully preserved file to storage: %s', storagePath);
 			return true;
 		} catch (err) {
-			this.log.debug('Failed to preserve file to storage: %s, error: %O', filePath, err);
+			this.log.warn('Failed to preserve file to storage: %s, error: %O', filePath, err);
 			return false;
 		}
 	};
@@ -4298,7 +4298,7 @@ export class FilesManager implements IFilesManager {
 					return matchedEntry.storagePath;
 				} else {
 					// File in metadata but not on disk - clean up metadata
-					this.log.debug('Storage info references missing file, cleaning up: %s', matchedEntry.storagePath);
+					this.log.warn('Storage info references missing file, cleaning up: %s', matchedEntry.storagePath);
 					delete storageInfo[contentValueNoQuery];
 					await this.saveStorageInfo(storageFolder, storageInfo);
 				}
@@ -4307,7 +4307,7 @@ export class FilesManager implements IFilesManager {
 			this.log.debug('Content not found in storage: %s', contentValue);
 			return null;
 		} catch (err) {
-			this.log.debug('Error checking storage for content %s: %O', contentValue, err);
+			this.log.warn('Error checking storage for content %s: %O', contentValue, err);
 			return null; // On error, proceed with download
 		}
 	};
@@ -4332,7 +4332,7 @@ export class FilesManager implements IFilesManager {
 
 			// Check if file exists
 			if (!fileStats) {
-				this.log.debug('Storage file not found or inaccessible: %s', storagePath);
+				this.log.warn('Storage file not found or inaccessible: %s', storagePath);
 				return null;
 			}
 
@@ -4340,7 +4340,7 @@ export class FilesManager implements IFilesManager {
 			// (Updated 2026-04-19: was previously a deliberate non-check; now we enforce the
 			// MINIMAL_STORAGE_FREE_SPACE floor uniformly across every consume path.)
 			if (!(await this.hasFloorRoomForCopy(storagePath))) {
-				this.log.debug('Skipping restore-from-storage for %s - would breach minimum free space floor', storagePath);
+				this.log.warn('Skipping restore-from-storage for %s - would breach minimum free space floor', storagePath);
 				return null;
 			}
 
@@ -4375,7 +4375,7 @@ export class FilesManager implements IFilesManager {
 			await this.trackSpaceConsumed(fullTargetPath);
 			return fullTargetPath; // Return the temp path for tracking
 		} catch (err) {
-			this.log.debug('Failed to restore from storage: %s, error: %O', storagePath, err);
+			this.log.warn('Failed to restore from storage: %s, error: %O', storagePath, err);
 			return null; // Will trigger normal download
 		}
 	};

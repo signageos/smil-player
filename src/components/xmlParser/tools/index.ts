@@ -218,7 +218,7 @@ export function createXmlTools(log: Log) {
 		new JefNode(playableMedia.playlist).remove((node: { key: string; value: any }) => {
 			if (node.key === 'ticker') {
 				if (!node.value?.text?.some((text: any) => typeof text === 'string')) {
-					log.debug('[xml] invalid ticker: must have "text" array with at least one string');
+					log.warn('[xml] invalid ticker: must have "text" array with at least one string');
 					return node;
 				}
 			}

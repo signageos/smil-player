@@ -281,7 +281,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			this.log.debug('[processor] detected dynamic playlist: version=%s', version);
 			if (!dynamicPlaylistConfig?.data) {
-				this.log.debug('[processor] dynamic playlist config data is undefined, skipping');
+				this.log.warn('[processor] dynamic playlist config data is undefined, skipping');
 				return;
 			}
 
@@ -294,7 +294,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const { dynamicPlaylistId, dynamicMedia } = getDynamicPlaylistAndId(dynamicPlaylistConfig, this.smilObject);
 
 			if (!dynamicPlaylistId || !dynamicMedia) {
-				this.log.debug('[processor] dynamic playlist not found: data=%s', `${dynamicPlaylistConfig.data}`);
+				this.log.warn('[processor] dynamic playlist not found: data=%s', `${dynamicPlaylistConfig.data}`);
 				return;
 			}
 
@@ -356,11 +356,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					conditionalExpr,
 				);
 			} catch (err) {
-				this.log.debug('[processor] unexpected error during dynamic playlist trigger handling: %O', err);
+				this.log.error('[processor] unexpected error during dynamic playlist trigger handling: %O', err);
 				clearInterval(intervalId);
 			}
 		} catch (err) {
-			this.log.debug('[processor] unexpected error during dynamic playlist playback: %O', err);
+			this.log.error('[processor] unexpected error during dynamic playlist playback: %O', err);
 		}
 	};
 
@@ -635,7 +635,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.priority.stateManager.setPromiseFunction(parentRegionInfo.regionName, [playbackPromise]);
 			}
 		} catch (err) {
-			timedDebug.debug('[processor] unexpected error during html element playback: src=%s, err=%O', value.localFilePath, err);
+			timedDebug.error('[processor] unexpected error during html element playback: src=%s, err=%O', value.localFilePath, err);
 
 			await handlePriorityWhenDone();
 
@@ -1183,7 +1183,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						await handlePriorityWhenDone();
 					} catch (err) {
-						timedDebug.debug('[processor] unexpected error during video playback: src=%s, err=%O', video.localFilePath, err);
+						timedDebug.error('[processor] unexpected error during video playback: src=%s, err=%O', video.localFilePath, err);
 
 						// Coordinate finish synchronization even on error to maintain sync consistency
 						if (this.shouldCoordinateSync(video.syncIndex)) {
@@ -1224,7 +1224,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// give time to smil player to play video before massive wallclock processing
 			await sleep(1000);
 		} catch (err) {
-			timedDebug.debug('[processor] unexpected error during video prepare: src=%s, err=%O', video.localFilePath, err);
+			timedDebug.error('[processor] unexpected error during video prepare: src=%s, err=%O', video.localFilePath, err);
 			await handlePriorityWhenDone();
 			// no await to not to block playback when server takes too long to respond
 			this.files.sendMediaReport(
@@ -1302,12 +1302,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			try {
 				await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			} catch (stopErr) {
-				timedDebug.debug('[processor] retry path: stop failed: %O', stopErr);
+				timedDebug.warn('[processor] retry path: stop failed: %O', stopErr);
 			}
 			try {
 				await sosVideoObject.play(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			} catch (playErr) {
-				timedDebug.debug('[processor] retry path: play failed: %O', playErr);
+				timedDebug.error('[processor] retry path: play failed: %O', playErr);
 			}
 		}
 
@@ -1328,7 +1328,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			try {
 				await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			} catch (stopErr) {
-				timedDebug.debug('[processor] yield path: stop failed: %O', stopErr);
+				timedDebug.warn('[processor] yield path: stop failed: %O', stopErr);
 			}
 			return;
 		}
@@ -1383,7 +1383,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			await Promise.race(promiseRaceArray);
 		} catch (err) {
-			timedDebug.debug('[processor] unexpected error during video onceEnded: src=%s, err=%O', video.localFilePath, err);
+			timedDebug.error('[processor] unexpected error during video onceEnded: src=%s, err=%O', video.localFilePath, err);
 		}
 	};
 
@@ -1423,7 +1423,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			await Promise.race(promiseRaceArray);
 		} catch (err) {
-			timedDebug.debug('[processor] unexpected error during stream playback: src=%s, err=%O', stream.src, err);
+			timedDebug.error('[processor] unexpected error during stream playback: src=%s, err=%O', stream.src, err);
 		}
 	};
 
@@ -1577,7 +1577,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				timedDebug.debug('[processor-sync] preparation start coordination completed');
 			} catch (error) {
 				timedDebug.debug('[processor-sync] error in coordinatePrepareStart: %s', error);
-				this.log.debug('[processor-sync] coordinatePrepareStart failed: %O', error);
+				this.log.error('[processor-sync] coordinatePrepareStart failed: %O', error);
 				this.resetSyncState();
 			}
 		}
@@ -1610,7 +1610,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				timedDebug.debug('[processor] ticker element - no preparation needed');
 				break;
 			default:
-				timedDebug.debug('[processor] tag not supported: %s', removeDigits(key));
+				timedDebug.warn('[processor] tag not supported: %s', removeDigits(key));
 		}
 
 		// Coordinate preparation completion - master waits for ACKs, slaves wait for signal-ready
@@ -1627,7 +1627,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				timedDebug.debug('[processor-sync] preparation coordination completed');
 			} catch (error) {
 				timedDebug.debug('[processor-sync] error in coordinatePrepareComplete: %s', error);
-				this.log.debug('[processor-sync] coordinatePrepareComplete failed: %O', error);
+				this.log.error('[processor-sync] coordinatePrepareComplete failed: %O', error);
 				this.resetSyncState();
 			}
 		}
@@ -1747,7 +1747,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// 	await this.playAudio(value.localFilePath);
 			// 	break;
 			default:
-				timedDebug.debug('[processor] unsupported element type: %s', key);
+				timedDebug.warn('[processor] unsupported element type: %s', key);
 		}
 	};
 
@@ -2349,7 +2349,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			this.log.debug('[processor] intro video onceEnded resolved: src=%s', video.localFilePath);
 		} catch (err) {
-			this.log.debug('[processor] error during intro video playback: src=%s', video.localFilePath);
+			this.log.error('[processor] error during intro video playback: src=%s', video.localFilePath);
 		}
 	};
 
@@ -2456,7 +2456,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					this.smilObject,
 					allMedia,
 				)
-				.catch((err) => this.log.debug('Prefetch ahead check failed for %s: %O', candidate.media.src, err));
+				.catch((err) => this.log.warn('Prefetch ahead check failed for %s: %O', candidate.media.src, err));
 
 			// Stop once a playable element has been prefetched. If this slot was skipContent
 			// (a 404 we just re-checked), keep cascading to also prefetch the next playable.
@@ -2580,7 +2580,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Pre-play content check when checkAheadCount is not set (no lookahead).
 		// When checkAheadCount is set, prefetchAheadElements already checked this element.
 		if (!this.smilObject.checkAheadCount && await this.runPrePlayCheck(value, key, debugId)) {
-			this.log.debug(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
+			this.log.warn(`[${debugId}] Element skipped by pre-play check (content unavailable): %s`, (value as any).src);
 			return true;
 		}
 
@@ -2631,7 +2631,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		try {
 			await sosVideoObject.stop(staleUrl, params[1], params[2], params[3], params[4]);
 		} catch (err) {
-			this.log.debug(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
+			this.log.warn(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
 		}
 
 		params[0] = createVersionedUrl(params[0], version, null, false, true);
@@ -2691,7 +2691,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor-sync] play start coordination completed');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinatePlayStart: %s', error);
-			this.log.debug('[processor-sync] coordinatePlayStart failed: %O', error);
+			this.log.error('[processor-sync] coordinatePlayStart failed: %O', error);
 			this.resetSyncState();
 		}
 
@@ -2707,7 +2707,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor-sync] play coordination completed, starting synchronized playback');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinatePlayComplete: %s', error);
-			this.log.debug('[processor-sync] coordinatePlayComplete failed: %O', error);
+			this.log.error('[processor-sync] coordinatePlayComplete failed: %O', error);
 			this.resetSyncState();
 		}
 
@@ -2742,7 +2742,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor-sync] finish start coordination completed');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinateFinishStart: %s', error);
-			this.log.debug('[processor-sync] coordinateFinishStart failed: %O', error);
+			this.log.error('[processor-sync] coordinateFinishStart failed: %O', error);
 			this.resetSyncState();
 		}
 
@@ -2758,7 +2758,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor-sync] finish coordination completed, all devices synchronized');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinateFinishComplete: %s', error);
-			this.log.debug('[processor-sync] coordinateFinishComplete failed: %O', error);
+			this.log.error('[processor-sync] coordinateFinishComplete failed: %O', error);
 			this.resetSyncState();
 		}
 
@@ -2834,7 +2834,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.log.debug('[processor-sync] no syncGroupName defined, skipping sync setup');
 			}
 		} catch (error) {
-			this.log.debug('[processor-sync] sync setup failed: %O', error);
+			this.log.error('[processor-sync] sync setup failed: %O', error);
 		}
 	}
 
@@ -2848,7 +2848,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				await sleep(2000);
 			}
 		} catch (err) {
-			this.log.debug('[processor] unexpected error during playlist processing: %O', err);
+			this.log.error('[processor] unexpected error during playlist processing: %O', err);
 			await sleep(SMILScheduleEnum.defaultAwait);
 		}
 	}
