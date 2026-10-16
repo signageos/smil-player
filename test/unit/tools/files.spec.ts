@@ -14,6 +14,7 @@ import {
 	getPath,
 	hasMalformedStem,
 	getProtocol,
+	getUrlWithoutQueryParams,
 	getSmilVersionUrl,
 	isCustomEndpointEventAllowed,
 	isLocalFileWidget,
@@ -204,6 +205,34 @@ describe('Files tools component', () => {
 			it(`should return '${protocols[i]}' for '${url}'`, () => {
 				expect(getProtocol(url)).to.be.equal(protocols[i]);
 			});
+		});
+	});
+
+	describe('getUrlWithoutQueryParams', () => {
+		it('strips query and keeps non-URL values distinct', () => {
+			expect(getUrlWithoutQueryParams('https://a.com/x/img.jpg?__smil_version=1_0')).to.equal('https://a.com/x/img.jpg');
+			expect(getUrlWithoutQueryParams('Fri, 20 Jun 2025 08:42:26 GMT')).to.equal('Fri, 20 Jun 2025 08:42:26 GMT');
+		});
+
+		it('keeps URL normalization on browsers with a working URL constructor', () => {
+			expect(getUrlWithoutQueryParams('HTTPS://A.com:443/x/img.jpg?v=1#f')).to.equal('https://a.com/x/img.jpg');
+		});
+
+		// Tizen 2.4: URL is a non-throwing object, `new URL(x)` yields {} for any input
+		it('does not collapse values when the URL constructor is broken', () => {
+			const g = global as any;
+			const original = g.URL;
+			g.URL = function () {
+				return;
+			};
+			try {
+				expect(getUrlWithoutQueryParams('Fri, 20 Jun 2025 08:42:26 GMT')).to.not.equal(
+					getUrlWithoutQueryParams('Mon, 05 Oct 2020 07:30:15 GMT'),
+				);
+				expect(getUrlWithoutQueryParams('https://a.com/x/img.jpg?v=1')).to.equal('https://a.com/x/img.jpg');
+			} finally {
+				g.URL = original;
+			}
 		});
 	});
 

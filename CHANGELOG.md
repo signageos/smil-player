@@ -40,6 +40,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) a
 
 ### Fixed
 
+- Media was never downloaded on Tizen 2.4 since 4.0.0 when another file of the same type (e.g. the intro image) was
+  already stored — the element was skipped or showed that other file's content, and an image playlist stayed on its
+  intro image. Devices already affected need their applet storage wiped once after the update
 - Player did not start on Chrome 38 devices (webOS 3.x and older) since 4.0.0 — the screen stayed blank with
   `TypeError: undefined is not a function` in the log
 - Updated media was not downloaded when its Last-Modified date (or Location URL) matched a file that had been removed

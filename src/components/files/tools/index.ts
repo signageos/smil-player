@@ -67,11 +67,15 @@ export function getUrlWithoutQueryParams(url: string | number | null | undefined
 	}
 	try {
 		const parsedUrl = new URL(url);
-		return `${parsedUrl.origin}${parsedUrl.pathname}`;
+		// Tizen 2.4: `new URL` never throws and returns undefined origin/pathname for any input,
+		// which would collapse every value (e.g. all Last-Modified dates) into one key
+		if (typeof parsedUrl.origin === 'string' && typeof parsedUrl.pathname === 'string') {
+			return `${parsedUrl.origin}${parsedUrl.pathname}`;
+		}
 	} catch {
-		// If URL parsing fails, try simple split (handles relative URLs)
-		return url.split('?')[0];
+		// not a valid URL (e.g. Last-Modified date) - fall through to simple split
 	}
+	return url.split('?')[0];
 }
 
 export function createDownloadPath(sourceUrl: string): string {
