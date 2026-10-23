@@ -59,6 +59,7 @@ test.describe('customEndpointReporting.smil test', () => {
 		expect(vp.playbackSuccess).toBe(true);
 		expect(vp.status).toBe(200);
 		expect(vp).toHaveProperty('time');
+		expect(vp).toHaveProperty('recordedAt');
 		expect(vp.url).toContain('landscape1.mp4');
 		expect(vp.tags.slice(0, 2)).toEqual(['tag1', 'tag2']);
 

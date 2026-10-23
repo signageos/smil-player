@@ -363,6 +363,7 @@ export function createCustomEndpointMessagePayload(
 		...(message.tags ? { tags: removeLastArrayItem(message.tags) } : {}),
 		status: statusCode ?? 200,
 		time: Math.floor(Date.now() / 1000),
+		recordedAt: new Date().toISOString(),
 		url: locationUrl || '',
 	};
 }

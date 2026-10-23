@@ -52,6 +52,8 @@ export type SmilFileReport = {
 export interface CustomEndpointReport extends IRecordItemOptions {
 	status: number;
 	time: number;
+	/** ISO-8601 copy of `time`; pre-4.0 receivers validate on this field. */
+	recordedAt: string;
 	url: string;
 	isOfflineReport?: boolean;
 }

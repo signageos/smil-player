@@ -634,6 +634,13 @@ describe('Files tools component', () => {
 			expect(result.name).to.be.equal('testMedia');
 		});
 
+		// Pre-4.0 receivers (e.g. signagelab) validate on the ISO `recordedAt` field; keep it next to `time`.
+		it('should keep the legacy recordedAt ISO timestamp', () => {
+			const result = createCustomEndpointMessagePayload({ name: 'testMedia', playbackSuccess: true });
+			expect(result.recordedAt).to.be.a('string');
+			expect(new Date(result.recordedAt).toISOString()).to.be.equal(result.recordedAt);
+		});
+
 		it('should remove last item from tags', () => {
 			const message = { name: 'testMedia', tags: ['tag1', 'tag2', 'toRemove'] };
 			const result = createCustomEndpointMessagePayload(message);
@@ -758,7 +765,9 @@ describe('Files tools component', () => {
 				const payload = build(name);
 				expect(Object.keys(payload).sort()).to.be.eql(Object.keys(reference).sort());
 				expect(payload.name).to.be.eql(name);
-				expect({ ...payload, name: 'media-download', time: reference.time }).to.be.eql(reference);
+				expect({ ...payload, name: 'media-download', time: reference.time, recordedAt: reference.recordedAt }).to.be.eql(
+					reference,
+				);
 			}
 		});
 	});
