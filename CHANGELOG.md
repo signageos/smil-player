@@ -10,6 +10,10 @@ Entries should be short and human-readable; for longer entries, use an indented 
 
 ## [Unreleased]
 
+### Fixed
+
+- (public) Custom endpoint reports carry the `recordedAt` ISO-8601 timestamp again (alongside `time`), so endpoints that validated on the pre-4.0 field accept 4.x reports instead of rejecting them with 4xx and leaving them in the offline retry queue
+
 ## [4.0.1] - 2026-10-22
 
 ### Added
