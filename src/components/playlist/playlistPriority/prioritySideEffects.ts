@@ -1,14 +1,12 @@
+import { Log } from '../../../logger';
 import { cloneDeep } from 'lodash';
-import Debug from 'debug';
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
 import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion, VideoPreparing } from '../../../models/playlistModels';
 import { Synchronization } from '../../../models/syncModels';
 import { ISos } from '../../../models/sosModels';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
-import { cancelDynamicPlaylistMaster } from '../tools/dynamicTools';
+import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
-
-const debug = Debug('@signageos/smil-player:prioritySideEffects');
 
 /**
  * Interface for side effects performed during priority operations.
@@ -28,6 +26,8 @@ export interface IPrioritySideEffects {
  * Concrete implementation that delegates to the real DOM and SOS APIs.
  */
 export class PrioritySideEffects implements IPrioritySideEffects {
+	private readonly sync: SyncTools;
+
 	constructor(
 		private sos: ISos,
 		private currentlyPlaying: CurrentlyPlaying,
@@ -35,7 +35,10 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		private synchronization: Synchronization,
 		private videoPreparing: VideoPreparing,
 		private cancelAllInRegionFn: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
-	) {}
+		protected readonly log: Log,
+	) {
+		this.sync = createSyncTools(log);
+	}
 
 	public hideTransitionElement(regionName: string): void {
 		const nextElementHtml = document.getElementById(this.currentlyPlaying[regionName].nextElement.id!);
@@ -51,7 +54,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 			regionInfo.height,
 		);
 		this.videoPreparing.fullScreenTrigger = cloneDeep(video);
-		debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
+		this.log.debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
 	}
 
 	public async cancelDynamicPlaylist(
@@ -59,7 +62,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		_value: SMILMedia,
 		dynamicValue: string,
 	): Promise<void> {
-		await cancelDynamicPlaylistMaster(
+		await this.sync.cancelDynamicPlaylistMaster(
 			triggers,
 			this.sos,
 			this.currentlyPlaying,

@@ -1,10 +1,8 @@
+import { Log } from '../../../logger';
 import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
 import { MergedDownloadList, MediaInfoObject } from '../../../models/filesModels';
 import { FetchStrategy } from '../fetchingStrategies/fetchingStrategies';
-import Debug from 'debug';
-
-const debug = Debug('@signageos/smil-player:resourceChecker');
 
 export type UpdateDetection = {
 	file: MergedDownloadList;
@@ -38,20 +36,21 @@ export class ResourceChecker implements IResourceChecker {
 		private shouldSync: boolean,
 		private playlistNonSyncStopFunction: () => void,
 		private restartPlaylist: () => void,
+		protected readonly log: Log,
 	) {
 		this.groupResourcesByInterval();
 	}
 
 	public start() {
 		if (this.isRunning) {
-			debug('[files] resource checker already running, skipping start');
+			this.log.debug('[files] resource checker already running, skipping start');
 			return;
 		}
 
 		this.isRunning = true;
 		this.clearAllTimers();
 
-		debug('[files] resource checker grouped resources: groups=%d', this.groupedResources.size);
+		this.log.debug('[files] resource checker grouped resources: groups=%d', this.groupedResources.size);
 
 		for (const [interval, resourceGroup] of this.groupedResources.entries()) {
 			const scheduleNext = (): NodeJS.Timeout => {
@@ -62,7 +61,7 @@ export class ResourceChecker implements IResourceChecker {
 
 					try {
 						// Start batch collection before checking resources
-						debug('[files] starting batch collection for resource group: interval=%d', interval);
+						this.log.debug('[files] starting batch collection for resource group: interval=%d', interval);
 						this.filesManager.startBatch();
 
 						// Phase 1: Detection - collect all update detections
@@ -77,7 +76,7 @@ export class ResourceChecker implements IResourceChecker {
 
 							if (resource.detectFunction) {
 								try {
-									debug('[files] phase 1: detecting updates: url=%s', resource.url);
+									this.log.debug('[files] phase 1: detecting updates: url=%s', resource.url);
 									const detection = await resource.detectFunction();
 									if (detection) {
 										// Add to detected values to prevent duplicates
@@ -85,7 +84,7 @@ export class ResourceChecker implements IResourceChecker {
 										detections.push(detection);
 									}
 								} catch (error) {
-									debug('[files] error detecting update: url=%s, error=%O', resource.url, error);
+									this.log.warn('[files] error detecting update: url=%s, error=%O', resource.url, error);
 								}
 							} else {
 								// Resources without detectFunction (like SMIL files) - process later
@@ -97,7 +96,7 @@ export class ResourceChecker implements IResourceChecker {
 						const newContentDetections = detections.filter((d) => d.needsDownload);
 						const movedContentDetections = detections.filter((d) => !d.needsDownload);
 
-						debug(
+						this.log.debug(
 							'[files] phase 2: new content detections=%d, moved content detections=%d',
 							newContentDetections.length,
 							movedContentDetections.length,
@@ -111,20 +110,20 @@ export class ResourceChecker implements IResourceChecker {
 						// Phase 3: Batch process new content downloads
 						if (newContentDetections.length > 0) {
 							try {
-								debug('[files] phase 3: batch downloading new content files=%d', newContentDetections.length);
+								this.log.debug('[files] phase 3: batch downloading new content files=%d', newContentDetections.length);
 								await this.filesManager.processNewContentUpdates(newContentDetections, allFilesList);
 							} catch (error) {
-								debug('[files] error processing new content updates: error=%O', error);
+								this.log.error('[files] error processing new content updates: error=%O', error);
 							}
 						}
 
 						// Phase 4: Batch process moved content (copy only, no download)
 						if (movedContentDetections.length > 0) {
 							try {
-								debug('[files] phase 4: batch processing moved content files=%d', movedContentDetections.length);
+								this.log.debug('[files] phase 4: batch processing moved content files=%d', movedContentDetections.length);
 								await this.filesManager.processNewContentUpdates(movedContentDetections, allFilesList);
 							} catch (error) {
-								debug('[files] error processing moved content updates: error=%O', error);
+								this.log.error('[files] error processing moved content updates: error=%O', error);
 							}
 						}
 
@@ -133,24 +132,24 @@ export class ResourceChecker implements IResourceChecker {
 							if (!this.isRunning) {
 								break;
 							}
-							debug('[files] checking resource (legacy): url=%s, interval=%d', resource.url, interval);
+							this.log.debug('[files] checking resource (legacy): url=%s, interval=%d', resource.url, interval);
 
 							try {
 								const response = await resource.checkFunction();
 								await resource.actionOnSuccess(response, async () => this.stop());
 							} catch (error) {
-								debug('[files] resource check error: url=%s, error=%O', resource.url, error);
+								this.log.warn('[files] resource check error: url=%s, error=%O', resource.url, error);
 							}
 						}
 
 						// Phase 6: Commit batch after all resources in this interval group have been checked
-						debug('[files] committing batch updates for resource group: interval=%d', interval);
+						this.log.debug('[files] committing batch updates for resource group: interval=%d', interval);
 						// Extract media objects from resources in this interval group for commitBatch
 						const filesList = resourceGroup
 							.filter((r) => r.mediaObject)
 							.map((r) => r.mediaObject!);
 						await this.filesManager.commitBatch(filesList);
-						debug('[files] batch committed successfully: interval=%d', interval);
+						this.log.debug('[files] batch committed successfully: interval=%d', interval);
 					} finally {
 						if (this.isRunning) {
 							scheduleNext();
@@ -169,12 +168,12 @@ export class ResourceChecker implements IResourceChecker {
 			scheduleNext();
 		}
 
-		debug('[files] resource checker started');
+		this.log.debug('[files] resource checker started');
 	}
 
 	public async stop() {
 		if (!this.isRunning) {
-			debug('[files] resource checker not running, skipping stop');
+			this.log.debug('[files] resource checker not running, skipping stop');
 			return;
 		}
 
@@ -187,15 +186,15 @@ export class ResourceChecker implements IResourceChecker {
 			try {
 				this.isRunning = false;
 
-				debug('[files] resource checker stopped');
+				this.log.debug('[files] resource checker stopped');
 
 				if (this.shouldSync) {
-					debug('[files] updating content: sync=on');
+					this.log.debug('[files] updating content: sync=on');
 					// await this.playlistSyncStopFunction();
 					this.playlistNonSyncStopFunction();
 					this.restartPlaylist();
 				} else {
-					debug('[files] updating content: sync=off');
+					this.log.debug('[files] updating content: sync=off');
 					this.playlistNonSyncStopFunction();
 					this.restartPlaylist();
 				}
@@ -203,9 +202,9 @@ export class ResourceChecker implements IResourceChecker {
 				// Cleanup all resources
 				this.groupedResources.clear();
 				this.clearAllTimers();
-				debug('[files] resource checker cleaned up');
+				this.log.debug('[files] resource checker cleaned up');
 			} catch (error) {
-				debug('[files] resource checker stop error: %O', error);
+				this.log.warn('[files] resource checker stop error: %O', error);
 				throw error;
 			} finally {
 				this.stopPromise = null;

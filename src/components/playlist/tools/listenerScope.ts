@@ -13,9 +13,7 @@
  * listeners through `add()`, and calls `removeAll()` whenever its setup phase
  * is about to re-run (so the next setup starts from a clean slate).
  */
-import Debug from 'debug';
-
-const debug = Debug('@signageos/smil-player:listenerScope');
+import { Log } from '../../../logger';
 
 export interface ListenerEntry {
 	target: EventTarget;
@@ -26,6 +24,8 @@ export interface ListenerEntry {
 
 export class ListenerScope {
 	private entries: ListenerEntry[] = [];
+
+	constructor(protected readonly log: Log) {}
 
 	public add<E extends Event = Event>(
 		target: EventTarget,
@@ -51,7 +51,7 @@ export class ListenerScope {
 				// cross-origin iframe whose contentWindow is no longer
 				// reachable. removeEventListener on a no-op pair never throws
 				// per spec; this catch covers only those pathological cases.
-				debug('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
+				this.log.warn('[listenerScope] removeEventListener threw on cleanup: type=%s, error=%O', e.type, err);
 			}
 		}
 		this.entries.length = 0;

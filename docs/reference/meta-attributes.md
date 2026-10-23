@@ -262,8 +262,9 @@ Used in: [Transitions](../guides/layout-playlist/transitions.md)
 
 **Type:** `log` boolean · `type` comma-separated list (`manual`, `standard`) · `endpoint` string (URL) · **Default:** `log` off · `type` `standard` when omitted · `endpoint` unset · **Applies to:** `<meta log>`
 
-When a custom endpoint is specified, the SMIL player sends all reports to this endpoint, where you can process
-them according to your needs. Reports are sent as POST requests with the body specified as an array of reports.
+When a custom endpoint is specified, the SMIL player sends all reports (or only those listed in the
+[`events`](#events) allowlist, when set) to this endpoint, where you can process them according to your needs.
+Reports are sent as POST requests with the body specified as an array of reports.
 
 To enable logging, you must specify a `<meta>` tag with a log value in the SMIL header.
 
@@ -285,9 +286,39 @@ Alternatively, the endpoint can be set device-side with the `reportUrl` applet c
 overrides the `endpoint` from the SMIL `<meta>`, force-enables reporting, and *adds* the proof-of-play type to
 whatever types the SMIL configures. See [Applet Configuration Reference](./applet-config.md#reporturl).
 
-> Note: `log="false"` disables the standard and native proof-of-play transports, but custom-endpoint POSTs are
-> controlled by the presence of the `endpoint` (or `reportUrl` config) — remove the endpoint if you want them to
-> stop.
+> Note: `log="false"` disables all transports, including custom-endpoint POSTs — it is a real off switch even
+> when `type` and `endpoint` are configured. (The device-side `reportUrl` config still force-enables reporting.)
+> One exception: the SMIL file's own `playlist-download` report at boot is sent before the SMIL is parsed, so it
+> is not affected by any `<meta log>` settings — it only fires when the `reportUrl` config is set.
+
+Used in: [Setting Up Reporting](../guides/reporting/setup.md)
+
+### events
+
+**Type:** comma-separated list · **Default:** unset (default event set) · **Applies to:** `<meta log>`
+
+Allowlist of custom-endpoint event names to send. When set, **only** the listed events are POSTed to the
+`endpoint` (or saved to the offline log for later upload) — all other events are dropped. When absent or empty,
+the default set applies: `media-download`, `media-playback`, `playlist-download`, `playlist-playback`.
+
+```xml
+<meta log="true" type="manual" endpoint="https://example.com/reports" events="media-playback,media-copied"/>
+```
+
+Valid names are the default four plus the opt-in content-lifecycle events `media-copied`, `media-moved`,
+`media-restored`, `media-deleted` and `media-skipped` (see
+[Custom endpoint payloads](./reporting-payloads.md#custom-endpoint-payloads)). Unknown names are ignored, and a
+list containing only unknown names falls back to the default set.
+
+The allowlist applies to the custom-endpoint transport only — standard and native proof-of-play reporting are
+unaffected. It survives the `reportUrl` config merge, and reports already saved offline are always uploaded
+regardless of the current allowlist.
+
+> Note: `media-moved` fires once per actual URL-mapping change. On CDNs that rotate signed query parameters,
+> the resolved URL genuinely changes on every update check, so `media-moved` will fire once per check interval
+> per file — consider this before enabling it against such a CDN. Similarly, `media-skipped` fires on **every**
+> skipped playback pass: a gate that stays closed produces a steady stream of reports (one per gate check),
+> so make sure your report endpoint is sized for that before enabling it.
 
 Used in: [Setting Up Reporting](../guides/reporting/setup.md)
 

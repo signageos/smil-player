@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PlaylistPriority } from '../../../src/components/playlist/playlistPriority/playlistPriority';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -34,7 +35,7 @@ describe('PlaylistPriority', () => {
 		state = {};
 		promiseAwaiting = {};
 		cancelFunction = [false];
-		stateManager = new PriorityStateManager(state, promiseAwaiting);
+		stateManager = new PriorityStateManager(state, promiseAwaiting, noopLog);
 		sideEffects = makeMockSideEffects();
 		const conflictResolver = new PriorityConflictResolver(
 			stateManager,
@@ -42,10 +43,12 @@ describe('PlaylistPriority', () => {
 			{ syncingInAction: false },
 			() => cancelFunction[cancelFunction.length - 1],
 			() => undefined,
+			noopLog,
 		);
 		priority = new PlaylistPriority(
 			makeOptions({ cancelFunction, currentlyPlayingPriority: state, promiseAwaiting }),
 			undefined,
+			noopLog,
 			{ stateManager, sideEffects, conflictResolver },
 		);
 		mockTriggers = { dynamicPlaylist: {} };
@@ -198,6 +201,104 @@ describe('PlaylistPriority', () => {
 
 			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 1, mockTriggers);
 			expect(cancelCalled).to.equal(false);
+		});
+	});
+
+	describe('handlePriorityWhenDone — successor hold between repeatCount passes', () => {
+		const finishedPlayer = () => ({
+			contentPause: 0,
+			stop: false,
+			endTime: 1,
+			playing: true,
+			timesPlayed: 0,
+			playingCompletionDeferred: undefined,
+		});
+
+		function seedCampaign(successorRegistered: boolean, controlledPlaylists: number[] = [], endTime: number = 1) {
+			const media = makeMedia('campaign.jpg');
+			state.main = [
+				makeRegion({
+					media,
+					isFirstInPlaylist: media,
+					priority: makePriorityObject({ priorityLevel: 1 }),
+					controlledPlaylists,
+					player: { ...finishedPlayer(), successorRegistered, endTime },
+				}),
+			];
+			stateManager.setPlaying('main', 0);
+			stateManager.ensurePromiseAwaiting('main', 1);
+			stateManager.updatePriorityTracking('main', 1, 1);
+			return media;
+		}
+
+		it('keeps the slot and the level claim when the next pass already re-registered it', async () => {
+			const media = seedCampaign(true);
+			// endTime=1 (repeatCount 1) + isLast → this pass is "finished"
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			expect(state.main[0].player.playing).to.equal(true);
+			expect(state.main[0].player.timesPlayed).to.equal(0);
+			expect(state.main[0].player.successorRegistered).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(1);
+		});
+
+		it('releases the slot and the level claim when no successor registered (last pass)', async () => {
+			const media = seedCampaign(false);
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
+		});
+
+		it('releases despite a successor when the version expired (SMIL update path)', async () => {
+			const media = seedCampaign(true);
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 2, mockTriggers);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
+		});
+
+		it('keeps pause victims paused while holding for the successor (no wallclock stamp needed)', async () => {
+			state.main = [];
+			const media = seedCampaign(true, [1]);
+			state.main.push(
+				makeRegion({
+					media: makeMedia('lower.mp4'),
+					parent: 'seq-lower',
+					player: {
+						contentPause: PAUSE_CONTENT_VALUE,
+						stop: false,
+						endTime: 1,
+						playing: false,
+						timesPlayed: 0,
+						playingCompletionDeferred: undefined,
+					},
+				}),
+			);
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			expect(state.main[1].player.contentPause).to.equal(PAUSE_CONTENT_VALUE);
+			expect(state.main[0].controlledPlaylists).to.deep.equal([1]);
+		});
+
+		it('releases despite a successor when the wallclock window has closed (endTimeExpired)', async () => {
+			state.main = [];
+			const media = seedCampaign(true, [1], Date.now() - 1_000);
+			state.main.push(
+				makeRegion({
+					media: makeMedia('lower.mp4'),
+					parent: 'seq-lower',
+					player: {
+						contentPause: PAUSE_CONTENT_VALUE,
+						stop: false,
+						endTime: 1,
+						playing: false,
+						timesPlayed: 0,
+						playingCompletionDeferred: undefined,
+					},
+				}),
+			);
+			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
+			expect(state.main[1].player.contentPause).to.equal(0);
+			expect(state.main[0].controlledPlaylists).to.deep.equal([]);
 		});
 	});
 

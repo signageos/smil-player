@@ -1,4 +1,4 @@
-import { logDebug } from '../tools/generalTools';
+import { Log } from '../../../logger';
 import {
 	Synchronization,
 	SyncElementState,
@@ -64,6 +64,8 @@ interface SyncCoordinationState {
 class AckTracker {
 	private activeRounds: Map<string, AckRound> = new Map<string, AckRound>();
 
+	constructor(private readonly log: Log) {}
+
 	/**
 	 * Start tracking acknowledgments for a specific operation
 	 * @param key Unique identifier for this ACK round (e.g., "region1-5-prepared")
@@ -80,11 +82,11 @@ class AckTracker {
 		timeoutMs: number = SYNC_TIMEOUTS.ackTimeout,
 		expectedPriorityLevel?: number,
 	): Promise<boolean> {
-		logDebug(undefined, 'Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
+		this.log.debug('Starting ACK tracking for %s, expecting %d ACKs, timeout %dms', key, expectedCount, timeoutMs);
 
 		// If no slaves to wait for, return immediately
 		if (expectedCount === 0) {
-			logDebug(undefined, 'No ACKs expected for %s, continuing', key);
+			this.log.debug('No ACKs expected for %s, continuing', key);
 			return true;
 		}
 
@@ -101,7 +103,7 @@ class AckTracker {
 
 		// Check for already stored ACKs before setting up listener
 		// We now store only the latest ACK per type/region
-		logDebug(undefined, 'Checking for stored ACKs for %s', key);
+		this.log.debug('Checking for stored ACKs for %s', key);
 		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName);
 		if (storedAck && storedAck.syncIndex === syncIndex) {
 			// Validate priority if both are defined
@@ -109,13 +111,18 @@ class AckTracker {
 				storedAck.priorityLevel !== undefined &&
 				storedAck.priorityLevel !== expectedPriorityLevel) {
 				// Stale ACK from different priority context - discard
-				logDebug(undefined, 'Discarding stale ACK for %s with priority %d (expected %d)', key, storedAck.priorityLevel, expectedPriorityLevel);
+				this.log.debug(
+					'Discarding stale ACK for %s with priority %d (expected %d)',
+					key,
+					storedAck.priorityLevel,
+					expectedPriorityLevel,
+				);
 				syncGroup.clearSyncCoordinationMessage(ackType, regionName);
 				// Don't record this ACK, continue to listener
 			} else {
 				// Priority matches or not checking - accept the ACK
 				const age = Date.now() - storedAck.timestamp;
-				logDebug(undefined, 'Found stored ACK for %s, age=%dms', key, age);
+				this.log.debug('Found stored ACK for %s, age=%dms', key, age);
 				this.recordAck(key);
 
 				// Clear consumed message immediately
@@ -123,7 +130,7 @@ class AckTracker {
 
 				// Check if this completes all ACKs
 				if (round.isComplete()) {
-					logDebug(undefined, 'All ACKs already received from storage for %s', key);
+					this.log.debug('All ACKs already received from storage for %s', key);
 					this.cleanupRound(key);
 					return true;
 				}
@@ -152,8 +159,7 @@ class AckTracker {
 					if (resolved) {
 						return;
 					}
-					logDebug(
-						undefined,
+					this.log.debug(
 						'ACK timeout for %s - received %d of %d ACKs. Continuing without slow devices.',
 						key,
 						round.receivedCount,
@@ -186,11 +192,16 @@ class AckTracker {
 								message.priorityLevel !== undefined &&
 								message.priorityLevel !== expectedPriorityLevel) {
 								// Wrong priority - ignore this ACK
-								logDebug(undefined, 'Ignoring ACK for %s with priority %d (expected %d)', key, message.priorityLevel, expectedPriorityLevel);
+								this.log.debug(
+									'Ignoring ACK for %s with priority %d (expected %d)',
+									key,
+									message.priorityLevel,
+									expectedPriorityLevel,
+								);
 								return; // Don't record, keep waiting
 							}
 
-							logDebug(undefined, 'Received ACK for %s', key);
+							this.log.debug('Received ACK for %s', key);
 							this.recordAck(key);
 
 							// Clear consumed message
@@ -198,7 +209,7 @@ class AckTracker {
 
 							// Check if all ACKs received
 							if (round.isComplete()) {
-								logDebug(undefined, 'All ACKs received for %s', key);
+								this.log.debug('All ACKs received for %s', key);
 								cleanup();
 								resolve(true);
 							}
@@ -225,17 +236,17 @@ class AckTracker {
 	public adjustExpectedCount(key: string, newExpectedCount: number): void {
 		const round = this.activeRounds.get(key);
 		if (!round) {
-			logDebug(undefined, 'Cannot adjust count for unknown round: %s', key);
+			this.log.warn('Cannot adjust count for unknown round: %s', key);
 			return;
 		}
 
 		const oldCount = round.expectedCount;
 		round.expectedCount = newExpectedCount;
-		logDebug(undefined, 'Adjusted expected ACKs for %s from %d to %d', key, oldCount, newExpectedCount);
+		this.log.debug('Adjusted expected ACKs for %s from %d to %d', key, oldCount, newExpectedCount);
 
 		// Check if we've now received all ACKs
 		if (round.isComplete()) {
-			logDebug(undefined, 'All ACKs now received after adjustment for %s', key);
+			this.log.debug('All ACKs now received after adjustment for %s', key);
 			round.resolve(true);
 		}
 	}
@@ -247,15 +258,15 @@ class AckTracker {
 	public recordAck(key: string): void {
 		const round = this.activeRounds.get(key);
 		if (!round) {
-			logDebug(undefined, 'Received ACK for unknown round: %s', key);
+			this.log.debug('Received ACK for unknown round: %s', key);
 			return;
 		}
 
 		round.addAck();
-		logDebug(undefined, 'Recorded ACK for %s - %d of %d received', key, round.receivedCount, round.expectedCount);
+		this.log.debug('Recorded ACK for %s - %d of %d received', key, round.receivedCount, round.expectedCount);
 
 		if (round.isComplete()) {
-			logDebug(undefined, 'All ACKs received for %s', key);
+			this.log.debug('All ACKs received for %s', key);
 			round.resolve(true);
 		}
 	}
@@ -301,7 +312,7 @@ class AckRound {
 }
 
 export class SMILElementController {
-	private ackTracker: AckTracker = new AckTracker();
+	private ackTracker: AckTracker = new AckTracker(this.log);
 
 	// State tracking for sync coordination
 	private syncState: SyncCoordinationState = {
@@ -330,7 +341,7 @@ export class SMILElementController {
 	/** When each region escalated — only newer coordination messages prove the master is back */
 	private freeRunSince: { [regionName: string]: number } = {};
 
-	constructor(private synchronization: Synchronization) {}
+	constructor(private synchronization: Synchronization, protected readonly log: Log) {}
 
 	/**
 	 * Coordinate the start of element preparation
@@ -433,17 +444,22 @@ export class SMILElementController {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 
 		if (!syncGroup) {
-			logDebug(timedDebug, 'No sync group for %s start: region=%s', phase, regionName);
+			(timedDebug ?? this.log).debug('No sync group for %s start: region=%s', phase, regionName);
 			return ProcessAction.CONTINUE;
 		}
 
 		const isMaster = await syncGroup.isMaster();
 		if (isMaster) {
 			await this.broadcastSyncMessage(config.commandType, regionName, syncIndex, syncGroup, priorityLevel);
-			logDebug(timedDebug, 'Master sent %s for region=%s, syncIndex=%d', config.commandType, regionName, syncIndex);
+			(timedDebug ?? this.log).debug('Master sent %s for region=%s, syncIndex=%d', config.commandType, regionName, syncIndex);
 			return ProcessAction.CONTINUE;
 		} else {
-			logDebug(timedDebug, 'Slave waiting for %s from master for region=%s, syncIndex=%d', config.commandType, regionName, syncIndex);
+			(timedDebug ?? this.log).debug(
+				'Slave waiting for %s from master for region=%s, syncIndex=%d',
+				config.commandType,
+				regionName,
+				syncIndex,
+			);
 
 			const action = await this.waitForCommandAndCheckSync(
 				config.commandType,
@@ -456,8 +472,7 @@ export class SMILElementController {
 			);
 
 			if (action === ProcessAction.CONTINUE) {
-				logDebug(
-					timedDebug,
+				(timedDebug ?? this.log).debug(
 					'Slave received %s, starting %s coordination for region=%s, syncIndex=%d',
 					config.commandType,
 					phase,
@@ -465,7 +480,12 @@ export class SMILElementController {
 					syncIndex,
 				);
 			} else if (action === ProcessAction.RESYNC) {
-				logDebug(timedDebug, 'Slave detected resync needed during %s start for region=%s, syncIndex=%d', phase, regionName, syncIndex);
+				(timedDebug ?? this.log).debug(
+					'Slave detected resync needed during %s start for region=%s, syncIndex=%d',
+					phase,
+					regionName,
+					syncIndex,
+				);
 			}
 
 			return action;
@@ -491,7 +511,7 @@ export class SMILElementController {
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 
 		if (!syncGroup) {
-			logDebug(timedDebug, 'No sync group for %s complete: region=%s', phase, regionName);
+			(timedDebug ?? this.log).debug('No sync group for %s complete: region=%s', phase, regionName);
 			return;
 		}
 
@@ -529,7 +549,7 @@ export class SMILElementController {
 
 		const syncGroup = getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 		if (!syncGroup) {
-			logDebug(undefined, 'No sync group available for playMode sync, region: %s', regionName);
+			this.log.debug('No sync group available for playMode sync, region: %s', regionName);
 			return currentPreviousIndex;
 		}
 
@@ -542,7 +562,7 @@ export class SMILElementController {
 			// not syncIndex. Clear stale ACKs from previous rounds since the key never changes.
 			syncGroup.clearSyncCoordinationMessage(config.ackType, syncParentId);
 			await this.broadcastSyncMessage(config.commandType, syncParentId, 0, syncGroup, undefined, currentPreviousIndex);
-			logDebug(undefined, 'Master sent cmd-playMode for syncParent=%s, previousIndex=%d', syncParentId, currentPreviousIndex);
+			this.log.debug('Master sent cmd-playMode for syncParent=%s, previousIndex=%d', syncParentId, currentPreviousIndex);
 			await this.handleMasterPhaseComplete('playMode', config, syncParentId, 0, syncGroup);
 			return currentPreviousIndex;
 		}
@@ -550,7 +570,7 @@ export class SMILElementController {
 		// During active resync, skip waiting to avoid 10s timeout — the cmd-playMode
 		// for this element has likely already fired while we were catching up
 		if (this.synchronization.syncingInAction) {
-			logDebug(undefined, 'Slave in active resync, skipping playMode coordination for %s', syncParentId);
+			this.log.debug('Slave in active resync, skipping playMode coordination for %s', syncParentId);
 			// Send ACK so master doesn't wait 1s for us
 			await this.broadcastSyncMessage(config.ackType, syncParentId, 0, syncGroup);
 			return randomPlaylist[localParentId]?.previousIndex ?? 0;
@@ -560,7 +580,7 @@ export class SMILElementController {
 		const receivedIndex = await this.waitForPlayModeCommand(syncParentId, syncGroup, regionName);
 
 		if (receivedIndex === undefined) {
-			logDebug(undefined, 'Slave timeout waiting for cmd-playMode for %s, using local index', syncParentId);
+			this.log.warn('Slave timeout waiting for cmd-playMode for %s, using local index', syncParentId);
 			return randomPlaylist[localParentId]?.previousIndex ?? 0;
 		}
 
@@ -568,7 +588,7 @@ export class SMILElementController {
 			randomPlaylist[localParentId] = { previousIndex: 0 };
 		}
 		randomPlaylist[localParentId].previousIndex = receivedIndex;
-		logDebug(undefined, 'Slave overrode previousIndex to %d for syncParent=%s', receivedIndex, syncParentId);
+		this.log.debug('Slave overrode previousIndex to %d for syncParent=%s', receivedIndex, syncParentId);
 
 		await this.handleSlavePhaseComplete('playMode', config, syncParentId, 0, syncGroup);
 		return receivedIndex;
@@ -682,7 +702,7 @@ export class SMILElementController {
 			this.synchronization.maxSyncIndexPerRegion?.[regionName],
 		);
 		if (result !== nextIndex) {
-			logDebug(undefined, 'Wrapping resync target from %d to %d', nextIndex, result);
+			this.log.debug('Wrapping resync target from %d to %d', nextIndex, result);
 		}
 		return result;
 	}
@@ -748,7 +768,7 @@ export class SMILElementController {
 		if (messagePriority === undefined) {
 			if (storedPriority !== undefined) {
 				// Was in priority context, now leaving - clear stored priority and resync state
-				logDebug(undefined, 'Leaving priority context (was %d) - clearing resync state', storedPriority);
+				this.log.debug('Leaving priority context (was %d) - clearing resync state', storedPriority);
 				this.syncState.priorityLevel.delete(regionName);
 				this.clearResyncState();
 			}
@@ -759,7 +779,7 @@ export class SMILElementController {
 		// Case 2: Transitioning FROM non-priority TO priority (storedPriority is undefined)
 		if (storedPriority === undefined) {
 			// Entering priority context - clear any stale resync state from previous context
-			logDebug(undefined, 'Entering priority context (now %d) - clearing resync state', messagePriority);
+			this.log.debug('Entering priority context (now %d) - clearing resync state', messagePriority);
 			this.clearResyncState();
 			this.syncState.priorityLevel.set(regionName, messagePriority);
 			return;
@@ -767,7 +787,7 @@ export class SMILElementController {
 
 		// Case 3: Priority changed between different defined values
 		if (storedPriority !== messagePriority) {
-			logDebug(undefined, 'Priority changed from %d to %d - clearing resync state', storedPriority, messagePriority);
+			this.log.debug('Priority changed from %d to %d - clearing resync state', storedPriority, messagePriority);
 			this.clearResyncState();
 		}
 
@@ -802,8 +822,7 @@ export class SMILElementController {
 		syncIndex: number,
 		regionName: string,
 	): ProcessActionType {
-		logDebug(
-			undefined,
+		this.log.debug(
 			'Processing broadcast: state=%s, syncIndex=%d, timestamp=%d for region=%s (waiting for state=%s, syncIndex=%d)',
 			value.state, value.syncIndex, value.timestamp, regionName, expectedState, syncIndex,
 		);
@@ -823,7 +842,7 @@ export class SMILElementController {
 			this.applyProcessMutations(result.mutations);
 		}
 
-		logDebug(undefined, 'processElementState result: %s for region=%s, syncIndex=%d', result.action, regionName, syncIndex);
+		this.log.debug('processElementState result: %s for region=%s, syncIndex=%d', result.action, regionName, syncIndex);
 		return result.action;
 	}
 
@@ -879,12 +898,18 @@ export class SMILElementController {
 		// Use provided sync group or get it
 		const group = syncGroup || getSyncGroup(`${this.synchronization.syncGroupName}-${regionName}`);
 		if (!group) {
-			logDebug(undefined, 'No sync group to broadcast to for region: %s', regionName);
+			this.log.debug('No sync group to broadcast to for region: %s', regionName);
 			return;
 		}
 
 		await group.broadcastValue('sync-coordination', message);
-		logDebug(undefined, 'Broadcasted sync message: type=%s, region=%s, syncIndex=%d, priorityBounds=%s', type, regionName, syncIndex, bounds ? `[${bounds.min}-${bounds.max}]` : 'none');
+		this.log.debug(
+			'Broadcasted sync message: type=%s, region=%s, syncIndex=%d, priorityBounds=%s',
+			type,
+			regionName,
+			syncIndex,
+			bounds ? `[${bounds.min}-${bounds.max}]` : 'none',
+		);
 	}
 
 	// ==================== waitForCommandAndCheckSync helpers ====================
@@ -910,8 +935,7 @@ export class SMILElementController {
 			if (expectedPriorityLevel !== undefined &&
 				storedMsg.priorityLevel !== undefined &&
 				storedMsg.priorityLevel !== expectedPriorityLevel) {
-				logDebug(
-					timedDebug,
+				(timedDebug ?? this.log).debug(
 					'Expected priority %d differs from stored message priority %d - clearing resync state (backup)',
 					expectedPriorityLevel,
 					storedMsg.priorityLevel,
@@ -921,7 +945,7 @@ export class SMILElementController {
 
 				// Clear the stale message - it's from a different priority context
 				syncGroup.clearSyncCoordinationMessage(commandType, regionName);
-				logDebug(timedDebug, 'Cleared stale %s message from priority %d context', commandType, storedMsg.priorityLevel);
+				(timedDebug ?? this.log).debug('Cleared stale %s message from priority %d context', commandType, storedMsg.priorityLevel);
 			}
 		}
 	}
@@ -938,7 +962,12 @@ export class SMILElementController {
 		const resyncTarget = this.getResyncTargetForState(expectedState);
 		const skip = decisions.shouldSkipForResync(syncIndex, this.synchronization.syncingInAction, resyncTarget);
 		if (skip) {
-			logDebug(timedDebug, 'Skipping wait during resync: at syncIndex=%d, target=%d for %s', syncIndex, resyncTarget, expectedState);
+			(timedDebug ?? this.log).debug(
+				'Skipping wait during resync: at syncIndex=%d, target=%d for %s',
+				syncIndex,
+				resyncTarget,
+				expectedState,
+			);
 		}
 		return skip;
 	}
@@ -959,8 +988,7 @@ export class SMILElementController {
 		const currentStoredMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 		if (currentStoredMsg) {
 			const age = Date.now() - currentStoredMsg.timestamp;
-			logDebug(
-				timedDebug,
+			(timedDebug ?? this.log).debug(
 				'Found stored %s for region=%s, storedIndex=%d, expectedIndex=%d, age=%dms',
 				commandType,
 				regionName,
@@ -1007,8 +1035,7 @@ export class SMILElementController {
 			const crossCheckMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName);
 			if (crossCheckMsg && crossCheckMsg.priorityLevel !== undefined
 				&& this.hasPriorityChanged(regionName, crossCheckMsg.priorityLevel, expectedPriorityLevel)) {
-				logDebug(
-					timedDebug,
+				(timedDebug ?? this.log).debug(
 					'Cross-check: master cmd-prepare has priority %s while waiting for %s with priority %s - exiting wait',
 					crossCheckMsg.priorityLevel,
 					commandType,
@@ -1047,8 +1074,7 @@ export class SMILElementController {
 			&& message.regionName === regionName
 			&& message.priorityLevel !== undefined
 			&& this.hasPriorityChanged(regionName, message.priorityLevel, expectedPriorityLevel)) {
-			logDebug(
-				timedDebug,
+			(timedDebug ?? this.log).debug(
 				'Live cross-check: cmd-prepare priority %s while waiting for %s priority %s - exiting wait',
 				message.priorityLevel,
 				commandType,
@@ -1076,8 +1102,7 @@ export class SMILElementController {
 		if (expectedPriorityLevel !== undefined &&
 			message.priorityLevel !== undefined &&
 			message.priorityLevel !== expectedPriorityLevel) {
-			logDebug(
-				timedDebug,
+			(timedDebug ?? this.log).debug(
 				'Expected priority %d differs from message priority %d - clearing resync state (listener backup)',
 				expectedPriorityLevel,
 				message.priorityLevel,
@@ -1109,7 +1134,7 @@ export class SMILElementController {
 				this.synchronization.resyncTargets!.play = newTarget;
 			}
 
-			logDebug(timedDebug, 'Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
+			(timedDebug ?? this.log).debug('Master passed resync target - updating target from %d to %d', syncIndex, newTarget);
 			return { action: ProcessAction.RESYNC, ackIndex: message.syncIndex, ackState: expectedState };
 		}
 
@@ -1129,21 +1154,21 @@ export class SMILElementController {
 		switch (action) {
 			case ProcessAction.CONTINUE:
 				// Exact match - we got our command
-				logDebug(timedDebug, `Received ${commandType} for region=${regionName}, syncIndex=${syncIndex}`);
+				(timedDebug ?? this.log).debug(`Received ${commandType} for region=${regionName}, syncIndex=${syncIndex}`);
 				return { action: ProcessAction.CONTINUE };
 
 			case ProcessAction.RESYNC:
 				// We're behind - resync flags already set by processElementState
-				logDebug(timedDebug, 'Detected resync needed while waiting for %s', commandType);
+				(timedDebug ?? this.log).debug('Detected resync needed while waiting for %s', commandType);
 				return { action: ProcessAction.RESYNC, ackIndex: message.syncIndex, ackState: expectedState };
 
 			case ProcessAction.WAIT:
 				// We're ahead - need to send ACK for master's position but keep waiting
-				logDebug(timedDebug, 'Slave ahead at %d, master at %d - sending ACK and waiting', syncIndex, message.syncIndex);
+				(timedDebug ?? this.log).debug('Slave ahead at %d, master at %d - sending ACK and waiting', syncIndex, message.syncIndex);
 				return { action: ProcessAction.WAIT, ackIndex: message.syncIndex, ackState: expectedState };
 
 			default:
-				logDebug(timedDebug, 'Unexpected action from processElementState: %s', action);
+				(timedDebug ?? this.log).warn('Unexpected action from processElementState: %s', action);
 				return null;
 		}
 	}
@@ -1181,14 +1206,18 @@ export class SMILElementController {
 				this.synchronization.syncingInAction && resyncTargetCheck !== undefined && syncIndex === resyncTargetCheck;
 
 			if (isAtResyncTarget) {
-				logDebug(timedDebug, 'At resync target %d for %s - waiting for master with 10 minute timeout', syncIndex, expectedState);
+				(timedDebug ?? this.log).debug(
+					'At resync target %d for %s - waiting for master with 10 minute timeout',
+					syncIndex,
+					expectedState,
+				);
 				// Set 10 minute timeout to prevent indefinite waiting
 				timeoutId = setTimeout(() => {
 					if (resolved) {
 						return;
 					}
 					const timeoutMsg = `Timeout waiting for ${commandType} at resync target=${syncIndex}, region=${regionName} after 10 minutes`;
-					logDebug(timedDebug, timeoutMsg);
+					(timedDebug ?? this.log).warn(timeoutMsg);
 					cleanup();
 					resolve(ProcessAction.CONTINUE);
 				},                     SYNC_TIMEOUTS.resyncTargetTimeout);
@@ -1200,8 +1229,7 @@ export class SMILElementController {
 						return;
 					}
 					if (this.recordStarvationTimeout(regionName)) {
-						logDebug(
-							timedDebug,
+						(timedDebug ?? this.log).debug(
 							'Escalating region=%s to standalone free-run after %d consecutive %dms cmd-wait starvations',
 							regionName,
 							STARVATION_ESCALATION_LIMIT,
@@ -1212,7 +1240,7 @@ export class SMILElementController {
 						resolve(ProcessAction.CONTINUE);
 						return;
 					}
-					logDebug(timedDebug, 'Timeout waiting for %s at syncIndex=%d - triggering resync', commandType, syncIndex);
+					(timedDebug ?? this.log).warn('Timeout waiting for %s at syncIndex=%d - triggering resync', commandType, syncIndex);
 					this.synchronization.syncingInAction = true;
 
 					// Use range-aware computation + wraparound for timeout recovery
@@ -1235,8 +1263,7 @@ export class SMILElementController {
 
 				if (isMaster) {
 					// This device became master while waiting
-					logDebug(
-						timedDebug,
+					(timedDebug ?? this.log).debug(
 						'Slave became master while waiting for %s at syncIndex=%d, region=%s',
 						commandType,
 						syncIndex,
@@ -1307,8 +1334,7 @@ export class SMILElementController {
 		// don't enter any wait or resync loop — play this element solo. Sync auto-resumes
 		// the moment a structurally compatible broadcast arrives.
 		if (!this.isBroadcastAligned(commandType, regionName, syncGroup)) {
-			logDebug(
-				timedDebug,
+			(timedDebug ?? this.log).debug(
 				'Peer broadcast cross-version for region=%s (%s) — playing solo, skipping sync wait',
 				regionName,
 				commandType,
@@ -1324,10 +1350,10 @@ export class SMILElementController {
 		if (this.freeRunRegions[regionName]) {
 			const stored = syncGroup.getSyncCoordinationMessage(commandType, regionName);
 			if (stored && stored.timestamp > (this.freeRunSince[regionName] ?? 0)) {
-				logDebug(timedDebug, 'Free-run region=%s got fresh %s — resuming sync coordination', regionName, commandType);
+				(timedDebug ?? this.log).debug('Free-run region=%s got fresh %s — resuming sync coordination', regionName, commandType);
 				this.noteCommandActivity(regionName);
 			} else {
-				logDebug(timedDebug, 'Region=%s in standalone free-run — playing solo', regionName);
+				(timedDebug ?? this.log).debug('Region=%s in standalone free-run — playing solo', regionName);
 				return ProcessAction.CONTINUE;
 			}
 		}
@@ -1342,8 +1368,7 @@ export class SMILElementController {
 
 		// Log current positions for debugging
 		const positions = this.getPositions(regionName, expectedState, syncGroup);
-		logDebug(
-			timedDebug,
+		(timedDebug ?? this.log).debug(
 			'Current sync positions for %s %s: slave=%d, master=%d',
 			regionName,
 			expectedState,
@@ -1384,7 +1409,7 @@ export class SMILElementController {
 			this.syncState.pendingAcks.add(ackKey);
 
 			await this.broadcastSyncMessage(ackType, regionName, syncIndex, syncGroup);
-			logDebug(undefined, 'Sent ACK for master position %d while slave at different position', syncIndex);
+			this.log.debug('Sent ACK for master position %d while slave at different position', syncIndex);
 
 			// Clean up after a delay
 			setTimeout(() => {
@@ -1405,13 +1430,13 @@ export class SMILElementController {
 
 		if (state === 'prepared') {
 			this.syncState.slavePosition.prepare.set(regionName, syncIndex);
-			logDebug(undefined, 'Updated slave prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
+			this.log.debug('Updated slave prepare position: region=%s, syncIndex=%d', regionName, syncIndex);
 		} else if (state === 'playing') {
 			this.syncState.slavePosition.play.set(regionName, syncIndex);
-			logDebug(undefined, 'Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
+			this.log.debug('Updated slave play position: region=%s, syncIndex=%d', regionName, syncIndex);
 		} else if (state === 'finished') {
 			this.syncState.slavePosition.finish.set(regionName, syncIndex);
-			logDebug(undefined, 'Updated slave finish position: region=%s, syncIndex=%d', regionName, syncIndex);
+			this.log.debug('Updated slave finish position: region=%s, syncIndex=%d', regionName, syncIndex);
 		}
 
 		// Track the slave's actual processed syncIndex range for correct resync wrapping
@@ -1436,8 +1461,7 @@ export class SMILElementController {
 				const storedPrepare = group.getSyncCoordinationMessage('cmd-prepare', regionName);
 				if (storedPrepare && storedPrepare.syncIndex !== syncIndex) {
 					group.clearSyncCoordinationMessage('cmd-prepare', regionName);
-					logDebug(
-						undefined,
+					this.log.debug(
 						'Cleared stale cmd-prepare on cycle wrap: region=%s, storedIndex=%d, newCycleIndex=%d',
 						regionName,
 						storedPrepare.syncIndex,
@@ -1503,13 +1527,13 @@ export class SMILElementController {
 
 		if (expectedAcks > 0) {
 			const ackKey = `${regionName}-${syncIndex}-${config.ackType}`;
-			logDebug(timedDebug, 'Master waiting for %d %s ACKs for %s', expectedAcks, phase, ackKey);
+			(timedDebug ?? this.log).debug('Master waiting for %d %s ACKs for %s', expectedAcks, phase, ackKey);
 
 			const acksReceived = await this.ackTracker.waitForAcks(ackKey, expectedAcks, syncGroup, SYNC_TIMEOUTS.ackTimeout, priorityLevel);
 			const ackResultMessage = acksReceived
 				? 'Master received all %s ACKs for %s'
 				: 'Master timeout waiting for %s ACKs for %s';
-			logDebug(timedDebug, ackResultMessage, phase, ackKey);
+			(timedDebug ?? this.log).debug(ackResultMessage, phase, ackKey);
 		}
 
 		await this.broadcastSyncMessage(config.signalType, regionName, syncIndex, syncGroup, priorityLevel);
@@ -1532,8 +1556,7 @@ export class SMILElementController {
 		// would muddy master's waitForAcks counting; waiting for signal-ready would time
 		// out on a signal that never arrives in matching form.
 		if (!this.isBroadcastAligned(config.commandType, regionName, syncGroup)) {
-			logDebug(
-				timedDebug,
+			(timedDebug ?? this.log).debug(
 				'Peer broadcast cross-version for region=%s (%s complete) — skipping ACK and signal-ready wait',
 				regionName,
 				phase,
@@ -1551,17 +1574,27 @@ export class SMILElementController {
 
 		// Normal flow - send ACK for current position
 		await this.broadcastSyncMessage(config.ackType, regionName, syncIndex, syncGroup, priorityLevel);
-		logDebug(timedDebug, 'Slave sent %s for region=%s, syncIndex=%d', config.ackType, regionName, syncIndex);
+		(timedDebug ?? this.log).debug('Slave sent %s for region=%s, syncIndex=%d', config.ackType, regionName, syncIndex);
 
 		// Wait for signal-ready from master
-		logDebug(timedDebug, 'Slave waiting for %s from master for region=%s, syncIndex=%d', config.signalType, regionName, syncIndex);
+		(timedDebug ?? this.log).debug(
+			'Slave waiting for %s from master for region=%s, syncIndex=%d',
+			config.signalType,
+			regionName,
+			syncIndex,
+		);
 
 		const receivedSignal = await this.waitForSignalReady(regionName, syncIndex, syncGroup, config.signalType, timedDebug, priorityLevel);
 
 		if (!receivedSignal) {
 			await this.handleSignalReadyTimeout(phase, config, regionName, syncIndex, syncGroup, timedDebug);
 		} else {
-			logDebug(timedDebug, 'Slave received %s, continuing for region=%s, syncIndex=%d', config.signalType, regionName, syncIndex);
+			(timedDebug ?? this.log).debug(
+				'Slave received %s, continuing for region=%s, syncIndex=%d',
+				config.signalType,
+				regionName,
+				syncIndex,
+			);
 		}
 	}
 
@@ -1579,10 +1612,15 @@ export class SMILElementController {
 
 		if (masterPos > 0) {
 			await this.sendAckForPosition(regionName, masterPos, config.state, syncGroup);
-			logDebug(timedDebug, 'Slave in resync mode - sent %s for master position=%d instead of %d', config.ackType, masterPos, syncIndex);
+			(timedDebug ?? this.log).debug(
+				'Slave in resync mode - sent %s for master position=%d instead of %d',
+				config.ackType,
+				masterPos,
+				syncIndex,
+			);
 		} else {
 			await this.broadcastSyncMessage(config.ackType, regionName, syncIndex, syncGroup);
-			logDebug(timedDebug, 'Slave in resync but no master position known - sent normal %s', config.ackType);
+			(timedDebug ?? this.log).debug('Slave in resync but no master position known - sent normal %s', config.ackType);
 		}
 	}
 
@@ -1598,11 +1636,16 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): Promise<void> {
 		if (phase === 'playMode') {
-			logDebug(timedDebug, 'Signal-ready timeout for playMode phase - no resync needed');
+			(timedDebug ?? this.log).warn('Signal-ready timeout for playMode phase - no resync needed');
 			return;
 		}
 
-		logDebug(timedDebug, '%s timeout for region=%s, syncIndex=%d - triggering resync', config.signalType, regionName, syncIndex);
+		(timedDebug ?? this.log).debug(
+			'%s timeout for region=%s, syncIndex=%d - triggering resync',
+			config.signalType,
+			regionName,
+			syncIndex,
+		);
 		this.synchronization.syncingInAction = true;
 
 		const masterPos = this.getPositions(regionName, config.state, syncGroup).master;
@@ -1615,7 +1658,7 @@ export class SMILElementController {
 				regionName,
 			);
 			this.synchronization.resyncTargets[config.resyncField] = nextTarget;
-			logDebug(timedDebug, 'Timeout recovery: setting %s resync target to %d (master at %d)', phase, nextTarget, masterPos);
+			(timedDebug ?? this.log).warn('Timeout recovery: setting %s resync target to %d (master at %d)', phase, nextTarget, masterPos);
 		}
 	}
 
@@ -1640,13 +1683,23 @@ export class SMILElementController {
 				storedMsg.priorityLevel !== undefined &&
 				storedMsg.priorityLevel !== expectedPriorityLevel) {
 				// Stale signal from different priority context - discard and wait for new one
-				logDebug(timedDebug, 'Discarding stale %s with priority %d (expected %d)', signalType, storedMsg.priorityLevel, expectedPriorityLevel);
+				(timedDebug ?? this.log).debug(
+					'Discarding stale %s with priority %d (expected %d)',
+					signalType,
+					storedMsg.priorityLevel,
+					expectedPriorityLevel,
+				);
 				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 				// Fall through to active listener to wait for correct signal
 			} else {
 				// Priority matches or not checking - accept the signal
 				const age = Date.now() - storedMsg.timestamp;
-				logDebug(timedDebug, `Found stored ${signalType} for region=%s, syncIndex=%d, age=%dms`, regionName, syncIndex, age);
+				(timedDebug ?? this.log).debug(
+					`Found stored ${signalType} for region=%s, syncIndex=%d, age=%dms`,
+					regionName,
+					syncIndex,
+					age,
+				);
 				// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
 				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 				return true; // Continue immediately - signal received
@@ -1675,7 +1728,7 @@ export class SMILElementController {
 					return;
 				}
 				const timeoutMsg = `Timeout waiting for ${signalType} from master for region=${regionName}, syncIndex=${syncIndex}`;
-				logDebug(timedDebug, timeoutMsg);
+				(timedDebug ?? this.log).warn(timeoutMsg);
 				cleanup();
 				resolve(false);
 			},                     SYNC_TIMEOUTS.signalReadyTimeout);
@@ -1699,11 +1752,16 @@ export class SMILElementController {
 							message.priorityLevel !== undefined &&
 							message.priorityLevel !== expectedPriorityLevel) {
 							// Wrong priority - keep waiting for correct signal
-							logDebug(timedDebug, 'Ignoring %s with priority %d (expected %d)', signalType, message.priorityLevel, expectedPriorityLevel);
+							(timedDebug ?? this.log).debug(
+								'Ignoring %s with priority %d (expected %d)',
+								signalType,
+								message.priorityLevel,
+								expectedPriorityLevel,
+							);
 							return; // Don't resolve, keep waiting
 						}
 
-						logDebug(timedDebug, `Received ${signalType} for region=${regionName}, syncIndex=${syncIndex}`);
+						(timedDebug ?? this.log).debug(`Received ${signalType} for region=${regionName}, syncIndex=${syncIndex}`);
 						// Clear consumed message
 						syncGroup.clearSyncCoordinationMessage(signalType, regionName);
 						cleanup();
@@ -1730,8 +1788,7 @@ export class SMILElementController {
 			// older than the latest cmd-play is from a previous cycle.
 			const latestCmdPlay = syncGroup.getSyncCoordinationMessage('cmd-play', regionName);
 			if (latestCmdPlay && stored.timestamp < latestCmdPlay.timestamp) {
-				logDebug(
-					undefined,
+				this.log.debug(
 					'Discarding stale cmd-playMode for %s: message timestamp %d < latest cmd-play timestamp %d',
 					parentId,
 					stored.timestamp,
@@ -1740,7 +1797,7 @@ export class SMILElementController {
 				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
 				// Fall through to wait for fresh message via listener
 			} else {
-				logDebug(undefined, 'Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
+				this.log.debug('Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
 				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
 				return stored.previousIndex;
 			}
@@ -1761,7 +1818,7 @@ export class SMILElementController {
 
 			timeoutId = setTimeout(() => {
 				if (resolved) { return; }
-				logDebug(undefined, 'Timeout waiting for cmd-playMode for %s', parentId);
+				this.log.warn('Timeout waiting for cmd-playMode for %s', parentId);
 				cleanup();
 				resolve(undefined);
 			},                     SYNC_TIMEOUTS.playModeCmdTimeout);
@@ -1769,7 +1826,7 @@ export class SMILElementController {
 			unsubscribeMasterChange = syncGroup.onMasterChange((isMaster: boolean) => {
 				if (resolved) { return; }
 				if (isMaster) {
-					logDebug(undefined, 'Slave became master while waiting for cmd-playMode');
+					this.log.debug('Slave became master while waiting for cmd-playMode');
 					cleanup();
 					resolve(undefined);
 				}
@@ -1780,7 +1837,7 @@ export class SMILElementController {
 				if (key === 'sync-coordination' && value) {
 					const msg = value as SyncMessage;
 					if (msg.type === 'cmd-playMode' && msg.regionName === parentId && msg.previousIndex !== undefined) {
-						logDebug(undefined, 'Received cmd-playMode for %s, previousIndex=%d', parentId, msg.previousIndex);
+						this.log.debug('Received cmd-playMode for %s, previousIndex=%d', parentId, msg.previousIndex);
 						syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
 						cleanup();
 						resolve(msg.previousIndex);

@@ -17,37 +17,30 @@ import {
 	findFirstMediaDescendant,
 	generateBackupImagePlaylist,
 	generateElementId,
-	generateParentId,
 	getConfigBoolean,
 	getConfigString,
 	getDefaultVideoParams,
-	getIndexOfPlayingMedia,
 	getLastArrayItem,
 	getNextElementToPlay,
-	getRegionInfo,
 	getStringToIntDefault,
-	orderJsonObject,
 	pickRandomOne,
-	processRandomPlayMode,
 	shuffleObject,
 	removeDigits,
 	removeLastArrayItem,
-	removeNestedProperties,
 	removeWhitespace,
 	sleep,
 } from '../../../src/components/playlist/tools/generalTools';
+import { createPlaylistTools } from '../../../src/components/playlist/tools/playlistTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
-import {
-	areAllWallclocksPermanentlyExpired,
-	setDefaultAwait,
-	setElementDuration,
-	findDuration,
-} from '../../../src/components/playlist/tools/scheduleTools';
+import { createScheduleTools, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
+import { noopLog } from '../../../src/logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 import { CurrentlyPlayingRegion } from '../../../src/models/playlistModels';
 import { RegionsObject } from '../../../src/models/xmlJsonModels';
 
 const expect = chai.expect;
+const { areAllWallclocksPermanentlyExpired, setDefaultAwait, setElementDuration } = createScheduleTools(noopLog);
+const { generateParentId, getIndexOfPlayingMedia, getRegionInfo, processRandomPlayMode } = createPlaylistTools(noopLog);
 
 describe('Playlist tools component', () => {
 	describe('Playlist tools component getIndexOfPlayingMedia tests', () => {
@@ -151,23 +144,22 @@ describe('Playlist tools component', () => {
 	});
 
 	describe('Playlist tools component generateParentId tests', () => {
-		const testTagNames = ['seq', 'par', 'priorityClass', 'excl', 'Something'];
+		it('returns `tagName-md5` format and is deterministic', () => {
+			const value: any = { repeatCount: '1', video: { src: 'https://cdn/a.mp4', region: 'main' } };
+			const first = generateParentId('seq', value);
+			expect(first).to.match(/^seq-[0-9a-f]{32}$/);
+			expect(generateParentId('seq', value)).to.be.equal(first);
+		});
 
-		const testObjects = [{ test: 13 }, { testing: 13 }, { test: 15 }, { test: 'asdadww' }, { test: true }];
-
-		const parentIds = [
-			'seq-50af0f3e4b3e765352ec6cba149db5f7',
-			'par-7e12fe876abb29990a9195aeeeb846c6',
-			'priorityClass-102bbcdc5b67ed8dc19af2bb0bb7b9ce',
-			'excl-0b3510264759cb397ccca49b226355f8',
-			'Something-2dc079c76f9e9d96e381878e30045dfd',
-		];
-
-		testTagNames.forEach((tagName, i) => {
-			it(`should return '${parentIds[i]}' for tag '${tagName}'`, () => {
-				let response = generateParentId(tagName, testObjects[i] as PlaylistElement);
-				expect(response).to.be.equal(parentIds[i]);
-			});
+		it('pins the exact hash for a realistic element (hash-input tripwire)', () => {
+			// The pin catches ANY unintended change to the hash inputs (allow-list
+			// membership, projection shape, hasher config) in review.
+			const value: any = {
+				repeatCount: 'indefinite',
+				video: { src: 'https://cdn/spot.mp4', region: 'main', soundLevel: '0%' },
+				img2: { src: 'https://cdn/banner.jpg', dur: '5s', region: 'main', fit: 'fill' },
+			};
+			expect(generateParentId('seq', value)).to.be.equal('seq-29a2f914eabdd69a122410bf6a8d937f');
 		});
 
 		describe('stability under runtime playback mutations', () => {
@@ -190,6 +182,18 @@ describe('Playlist tools component', () => {
 				expect(generateParentId('seq', seq)).to.be.equal(pristine);
 			});
 
+			it('popName mutation from the report senders does not change the hash', () => {
+				// sendMediaReport/sendDownloadReport/sendOptInEventReport write the event
+				// name into value.popName on the live parsed element (and media-skipped can
+				// flip it back and forth on a flapping playCheckUrl gate).
+				const seq: any = makeGallerySeq();
+				const pristine = generateParentId('seq', seq);
+				seq.video3.popName = 'media-skipped';
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+				seq.video3.popName = 'media-playback';
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
+
 			it('video playing/localFilePath/id mutations do not change the hash', () => {
 				const seq: any = makeGallerySeq();
 				const pristine = generateParentId('seq', seq);
@@ -197,6 +201,100 @@ describe('Playlist tools component', () => {
 				seq.video3.localFilePath = '/local/m1.mp4';
 				seq.img4.id = 'img-x';
 				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
+
+			it('skipContentMark mutation from the fetch strategies does not change the hash', () => {
+				// executeHeadRequest marks a 404'd/unreachable element with the
+				// skipContentMark runtime flag and clears it on recovery; neither
+				// transition may change element identity mid-playback.
+				const seq: any = makeGallerySeq();
+				const pristine = generateParentId('seq', seq);
+				seq.img4.skipContentMark = true;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+				delete seq.img4.skipContentMark;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
+
+			it('useInReportUrl/useInReportUrlStale refresh mutations do not change the hash', () => {
+				// filesManager marks stale report URLs and playlistProcessor refreshes
+				// them mid-playback (signed CDN URL rotation) — the third proven drift
+				// class; useInReportUrl is declarative AND runtime-mutated so it must
+				// stay out of the hash entirely.
+				const seq: any = makeGallerySeq();
+				const pristine = generateParentId('seq', seq);
+				seq.video3.useInReportUrlStale = true;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+				seq.video3.useInReportUrl = 'https://cdn/m1.mp4?token=refreshed';
+				delete seq.video3.useInReportUrlStale;
+				expect(generateParentId('seq', seq)).to.be.equal(pristine);
+			});
+
+			it('runtime mutations deeper than depth 2 do not change the hash', () => {
+				// The old inspect() pipeline truncated at depth 2, which accidentally
+				// hid deep mutations; the allow-list must hide them by construction
+				// at ANY depth, not by truncation.
+				const wrapper: any = { repeatCount: 'indefinite', seq7: makeGallerySeq() };
+				const pristine = generateParentId('par', wrapper);
+				wrapper.seq7.video3.popName = 'media-playback';
+				wrapper.seq7.img4.wasUpdated = true;
+				expect(generateParentId('par', wrapper)).to.be.equal(pristine);
+			});
+		});
+
+		describe('discrimination (distinct content must hash distinct)', () => {
+			const makeCampaignSeq = (src: string, expr?: string) => {
+				const video: any = { src, region: 'main', soundLevel: '0%' };
+				if (expr) {
+					video.expr = expr;
+				}
+				return { repeatCount: 'indefinite', video };
+			};
+
+			it('subtrees differing only below depth 2 hash differently', () => {
+				// Old pipeline: util.inspect depth-2 rendered deep subtrees as
+				// '[Object]' → distinct campaigns collided into one priority entry.
+				const deepA: any = { seq: { par: { video: { src: 'https://cdn/a.mp4', region: 'main' } } } };
+				const deepB: any = { seq: { par: { video: { src: 'https://cdn/b.mp4', region: 'main' } } } };
+				expect(generateParentId('seq', deepA)).to.not.be.equal(generateParentId('seq', deepB));
+			});
+
+			it('elements differing only by expr hash differently', () => {
+				// Dayparted campaigns differ ONLY by expr — expr must stay hashed.
+				const morning = makeCampaignSeq('https://cdn/spot.mp4', 'adapi-compare(adapi-hour(), 12)&lt;0');
+				const evening = makeCampaignSeq('https://cdn/spot.mp4', 'adapi-compare(adapi-hour(), 12)&gt;=0');
+				expect(generateParentId('seq', morning)).to.not.be.equal(generateParentId('seq', evening));
+			});
+
+			it('sibling order discriminates (xml2js sibling arrays)', () => {
+				const a = { src: 'https://cdn/a.jpg', dur: '5s', region: 'main' };
+				const b = { src: 'https://cdn/b.jpg', dur: '5s', region: 'main' };
+				const orderAB: any = { repeatCount: '1', img: [a, b] };
+				const orderBA: any = { repeatCount: '1', img: [b, a] };
+				expect(generateParentId('seq', orderAB)).to.not.be.equal(generateParentId('seq', orderBA));
+			});
+
+			it('structurally identical twins hash equal', () => {
+				const twinA: any = { repeatCount: '1', video: { src: 'https://cdn/a.mp4', region: 'main' } };
+				const twinB: any = { repeatCount: '1', video: { src: 'https://cdn/a.mp4', region: 'main' } };
+				expect(generateParentId('seq', twinA)).to.be.equal(generateParentId('seq', twinB));
+			});
+
+			it('param children discriminate (cacheControl)', () => {
+				const cached: any = { img: { src: 'https://cdn/a.jpg', region: 'main', param: { name: 'cacheControl', value: 'onlyIfCached' } } };
+				const auto: any = { img: { src: 'https://cdn/a.jpg', region: 'main', param: { name: 'cacheControl', value: 'auto' } } };
+				expect(generateParentId('seq', cached)).to.not.be.equal(generateParentId('seq', auto));
+			});
+
+			it('emitDynamic data discriminates', () => {
+				const dynA: any = { emitDynamic: { data: 'dynamic_A', begin: 'dynamic_A' } };
+				const dynB: any = { emitDynamic: { data: 'dynamic_B', begin: 'dynamic_B' } };
+				expect(generateParentId('par', dynA)).to.not.be.equal(generateParentId('par', dynB));
+			});
+
+			it('priorityClass rule attrs discriminate', () => {
+				const pauses: any = { priorityClass: { peer: 'pause', lower: 'defer', seq: { video: { src: 'https://cdn/a.mp4' } } } };
+				const stops: any = { priorityClass: { peer: 'stop', lower: 'defer', seq: { video: { src: 'https://cdn/a.mp4' } } } };
+				expect(generateParentId('excl', pauses)).to.not.be.equal(generateParentId('excl', stops));
 			});
 		});
 	});
@@ -664,40 +762,6 @@ describe('Playlist tools component', () => {
 		it('should return correct default video params', () => {
 			const result = getDefaultVideoParams();
 			expect(result).to.eql(['', 0, 0, 0, 0, 'RTP']);
-		});
-	});
-
-	describe('orderJsonObject', () => {
-		it('should sort object keys alphabetically', () => {
-			const result = orderJsonObject({ c: 3, a: 1, b: 2 });
-			expect(Object.keys(result)).to.eql(['a', 'b', 'c']);
-		});
-
-		it('should preserve values', () => {
-			const result = orderJsonObject({ z: 'last', a: 'first' });
-			expect(result.a).to.be.equal('first');
-			expect(result.z).to.be.equal('last');
-		});
-	});
-
-	describe('removeNestedProperties', () => {
-		it('should remove specified properties from object', () => {
-			const obj = { keep: 'yes', remove: 'no', also: 'keep' } as unknown as PlaylistElement;
-			removeNestedProperties(obj, ['remove']);
-			expect(obj).to.not.have.property('remove');
-			expect(obj).to.have.property('keep');
-		});
-
-		it('should remove nested properties', () => {
-			const obj = {
-				seq: {
-					keep: 'yes',
-					player: 'remove',
-				},
-			} as unknown as PlaylistElement;
-			removeNestedProperties(obj, ['player']);
-			expect((obj as any).seq).to.not.have.property('player');
-			expect((obj as any).seq).to.have.property('keep');
 		});
 	});
 

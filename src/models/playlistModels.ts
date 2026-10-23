@@ -44,6 +44,8 @@ export type BackupPlaylist = {
 export type PlaylistElement = {
 	playMode?: string;
 	expr?: string;
+	// runtime unavailable-content flag set by the fetch strategies — see UpdateChecks.skipContentMark
+	skipContentMark?: boolean;
 	begin?: string;
 	end?: string;
 	repeatCount?: number | string;
@@ -80,6 +82,15 @@ export type CurrentlyPlayingRegion = {
 		playing: boolean;
 		timesPlayed: number;
 		playingCompletionDeferred?: Deferred<void>;
+		/**
+		 * One-shot: the SAME playlist re-registered this slot (exact/parent match in
+		 * registerOrUpdate) while it was playing — i.e. the next repeatCount pass has
+		 * claimed it during the current pass (traverser lookahead). Consumed by
+		 * markFinished (hold the slot instead of releasing it between passes) and
+		 * cleared when the successor reaches "ready to play", so a slot's own
+		 * registration is never mistaken for a successor when it finishes.
+		 */
+		successorRegistered?: boolean;
 	};
 	parent: string;
 	behaviour: PriorityBehaviour;

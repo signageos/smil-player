@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { PlaylistTraverser } from '../../../src/components/playlist/playlistProcessor/playlistTraverser';
@@ -90,6 +91,7 @@ function createMockControl(overrides: Record<string, any> = {}): any {
 
 function createMockEngine(overrides?: { config?: Record<string, any>; actions?: Record<string, any>; control?: Record<string, any> }): any {
 	return {
+		log: noopLog,
 		config: createMockConfig(overrides?.config),
 		actions: createMockActions(overrides?.actions),
 		control: createMockControl(overrides?.control),

@@ -1,25 +1,23 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace indent  tab indentation expected align   arguments are not aligned*/
+import { Log } from '../../../logger';
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import { PlaylistElement } from '../../../models/playlistModels';
 import { SMILMedia } from '../../../models/mediaModels';
 import { RandomPlaylist } from '../../../models/playlistModels';
 import {
-	debug,
 	findFirstMediaDescendant,
-	generateParentId,
 	getLastArrayItem,
-	processRandomPlayMode,
 	removeDigits,
 } from '../tools/generalTools';
-import { isConditionalExpExpired } from '../tools/conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { ExprTag } from '../../../enums/conditionalEnums';
-import { areAllWallclocksPermanentlyExpired, setDefaultAwait } from '../tools/scheduleTools';
+import { createScheduleTools, ScheduleTools } from '../tools/scheduleTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { createPriorityObject } from '../tools/priorityTools';
 import { PriorityObject } from '../../../models/priorityModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { parseSmilSchedule } from '../tools/wallclockTools';
+import { createWallclockTools, WallclockTools } from '../tools/wallclockTools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
@@ -111,7 +109,7 @@ export interface ITraverserControl {
 	readonly dynamicPlaylist: DynamicPlaylistEndless;
 
 	sleep(ms: number): Promise<void>;
-	waitTimeoutOrFileUpdate(timeout: number): Promise<boolean>;
+	waitTimeoutOrFileUpdate(timeout: number, version: number): Promise<boolean>;
 	runEndlessLoop(
 		fn: Function,
 		version: number,
@@ -130,6 +128,7 @@ export interface ITraverserControl {
  * In tests, use createMockEngine() helpers.
  */
 export interface IPlaylistEngine {
+	log: Log;
 	config: ITraverserConfig;
 	actions: ITraverserActions;
 	control: ITraverserControl;
@@ -141,11 +140,19 @@ export interface IPlaylistEngine {
  * actual media playback to the engine.
  */
 export class PlaylistTraverser {
+	protected readonly log: Log;
 	private config: ITraverserConfig;
 	private actions: ITraverserActions;
 	private control: ITraverserControl;
+	private readonly wallclock: WallclockTools;
+	private readonly schedule: ScheduleTools;
+	private readonly tools: PlaylistTools;
 
 	constructor(engine: IPlaylistEngine) {
+		this.log = engine.log;
+		this.wallclock = createWallclockTools(this.log);
+		this.schedule = createScheduleTools(this.log);
+		this.tools = createPlaylistTools(this.log);
 		this.config = engine.config;
 		this.actions = engine.actions;
 		this.control = engine.control;
@@ -179,12 +186,12 @@ export class PlaylistTraverser {
 			const currentEntryIdx = ++entryIdx;
 			// skips processing attributes of elements like repeatCount or wallclock
 			if (!isObject(loopValue)) {
-				debug('[traverser] skipping non-object entry: key=%s', key);
+				this.log.debug('[traverser] skipping non-object entry: key=%s', key);
 				continue;
 			}
 
 			let value: PlaylistElement | PlaylistElement[] | SMILMedia = loopValue;
-			debug(
+			this.log.debug(
 				'[traverser] processing element: key=%s, parent=%s, endTime=%s, version=%s',
 				key,
 				parent,
@@ -194,7 +201,7 @@ export class PlaylistTraverser {
 			// dont play intro in the actual playlist
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				if (isNil((value as SMILMedia).regionInfo)) {
-					debug('[traverser] skipping element with no regionInfo: key=%s', key);
+					this.log.warn('[traverser] skipping element with no regionInfo: key=%s', key);
 					continue;
 				}
 
@@ -212,10 +219,10 @@ export class PlaylistTraverser {
 				// would permanently disable the element. The still-404 case is released by
 				// releaseSlot in playElement, so this does not reintroduce the phantom blocker.
 				if (
-					isConditionalExpExpired(value as SMILMedia, this.config.playerName, this.config.playerId) &&
+					this.schedule.shouldSkipElement(value as SMILMedia, this.config.playerName, this.config.playerId) &&
 					!this.actions.isSkipContentRecheckable(value as SMILMedia)
 				) {
-					debug('[traverser] media conditional false, skipping: key=%s, expr=%s', key, (value as SMILMedia).expr!);
+					this.log.debug('[traverser] media conditional false, skipping: key=%s, expr=%s', key, (value as SMILMedia).expr!);
 					// A skipped slot is processed instantly, but it must not break the checkAheadCount
 					// lookahead chain: the element checkAheadCount positions after this one is only
 					// HEAD-checked from THIS iteration's prefetch. Skipping straight to `continue` (as
@@ -272,7 +279,7 @@ export class PlaylistTraverser {
 
 					if (result === 'RETRY') {
 						retryCount++;
-						debug('[traverser] retrying element: attempt=%d/%d, key=%s', retryCount, MAX_RETRIES, key);
+						this.log.warn('[traverser] retrying element: attempt=%d/%d, key=%s', retryCount, MAX_RETRIES, key);
 						// Small delay before retry to allow higher-priority element to proceed
 						await this.control.sleep(100);
 					} else {
@@ -286,7 +293,7 @@ export class PlaylistTraverser {
 				}
 
 				if (retryCount >= MAX_RETRIES) {
-					debug('[traverser] max retries reached: key=%s', key);
+					this.log.debug('[traverser] max retries reached: key=%s', key);
 				}
 
 				processedAnyContent = true;
@@ -359,7 +366,7 @@ export class PlaylistTraverser {
 			}
 
 			if (removeDigits(key) === 'par') {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				if (Array.isArray(value)) {
 					// In priority context, peer <par> siblings must run concurrently so the
 					// priority system can detect conflicts and apply peer rules (defer/pause/stop).
@@ -369,7 +376,7 @@ export class PlaylistTraverser {
 					if (parent.startsWith('seq') && !hasPriority) {
 						let anySeqSiblingActive = false;
 						for (const elem of value) {
-							if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+							if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 								continue;
 							}
 
@@ -377,7 +384,7 @@ export class PlaylistTraverser {
 							let timeToEnd = elem.repeatCount ? parseInt(elem.repeatCount as string) : 0;
 
 							if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
-								const schedule = parseSmilSchedule(elem.begin!, elem.end);
+								const schedule = this.wallclock.parseSmilSchedule(elem.begin!, elem.end);
 								if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
 									continue;
 								}
@@ -406,7 +413,7 @@ export class PlaylistTraverser {
 
 					let anyActive = false;
 					for (const elem of value) {
-						if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
+						if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
 							continue;
 						}
 
@@ -416,13 +423,13 @@ export class PlaylistTraverser {
 
 						// Per-element parent ID so handlePriorityInfoObject creates separate
 						// tracking entries and handlePriorityBeforePlay detects peer conflicts
-						const elemParent = hasPriority ? generateParentId(key, elem) : newParent;
+						const elemParent = hasPriority ? this.tools.generateParentId(key, elem) : newParent;
 
 						let elemTimeToStart = -1;
 						let elemTimeToEnd = endTime;
 
 						if (elem.hasOwnProperty('begin') && elem.begin?.indexOf('wallclock') > -1) {
-							const schedule = parseSmilSchedule(elem.begin!, elem.end);
+							const schedule = this.wallclock.parseSmilSchedule(elem.begin!, elem.end);
 							if (schedule.timeToEnd === SMILScheduleEnum.neverPlay) {
 								continue;
 							}
@@ -477,9 +484,9 @@ export class PlaylistTraverser {
 				}
 
 				if (value.hasOwnProperty('begin') && value.begin!.indexOf('wallclock') > -1) {
-					const { timeToStart, timeToEnd } = parseSmilSchedule(value.begin!, value.end);
+					const { timeToStart, timeToEnd } = this.wallclock.parseSmilSchedule(value.begin!, value.end);
 					if (timeToEnd === SMILScheduleEnum.neverPlay) {
-						debug('[traverser-par] wallclock permanently expired, skipping: begin=%s, end=%s', value.begin, value.end);
+						this.log.debug('[traverser-par] wallclock permanently expired, skipping: begin=%s, end=%s', value.begin, value.end);
 						processedAnyContent = true;
 						continue;
 					}
@@ -488,10 +495,10 @@ export class PlaylistTraverser {
 
 					if (timeToEnd < Date.now()) {
 						if (
-							setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
+							this.schedule.setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
 							SMILScheduleEnum.defaultAwait
 						) {
-							debug('[traverser-par] no active wallclock, setting default await');
+							this.log.debug('[traverser-par] no active wallclock, setting default await');
 							await this.control.sleep(SMILScheduleEnum.defaultAwait);
 						}
 						continue;
@@ -610,17 +617,17 @@ export class PlaylistTraverser {
 			}
 
 			if (removeDigits(key) === 'seq') {
-				let newParent = generateParentId('seq', value);
+				let newParent = this.tools.generateParentId('seq', value);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
 				let arrayIndex = 0;
 				for (let valueElement of value) {
-					debug('[traverser-seq] processing seq element');
+					this.log.debug('[traverser-seq] processing seq element');
 
 					if (valueElement.playMode) {
-						const playModeParentId = generateParentId('seq', valueElement);
-						debug('[traverser-seq] processing random play mode: parent=%s', playModeParentId);
+						const playModeParentId = this.tools.generateParentId('seq', valueElement);
+						this.log.debug('[traverser-seq] processing random play mode: parent=%s', playModeParentId);
 
 						// Coordinate playMode=one index BEFORE element selection.
 						// Walks into nested structure-tag children so the nested-seq shape
@@ -650,32 +657,32 @@ export class PlaylistTraverser {
 							}
 						}
 
-						valueElement = processRandomPlayMode(
+						valueElement = this.tools.processRandomPlayMode(
 							valueElement,
 							this.control.randomPlaylist,
 							playModeParentId,
 						);
 					}
 
-					// debug('processing seq element: %O', valueElement);
+					// this.log.debug('processing seq element: %O', valueElement);
 					if (valueElement.hasOwnProperty(ExprTag)) {
 						conditionalExpr = valueElement[ExprTag];
 					}
 
 					if (valueElement.hasOwnProperty('begin') && valueElement.begin.indexOf('wallclock') > -1) {
-						const { timeToStart, timeToEnd } = parseSmilSchedule(valueElement.begin, valueElement.end);
+						const { timeToStart, timeToEnd } = this.wallclock.parseSmilSchedule(valueElement.begin, valueElement.end);
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (
 							arrayIndex === value?.length - 1 &&
-							setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait &&
-							!areAllWallclocksPermanentlyExpired(value)
+							this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait &&
+							!this.schedule.areAllWallclocksPermanentlyExpired(value)
 						) {
-							debug('[traverser-seq] no active wallclock, setting default await');
+							this.log.debug('[traverser-seq] no active wallclock, setting default await');
 							await this.control.sleep(SMILScheduleEnum.defaultAwait);
 						}
 
 						if (timeToEnd === SMILScheduleEnum.neverPlay) {
-							debug('[traverser-seq] wallclock permanently expired, skipping: begin=%s, end=%s', valueElement.begin, valueElement.end);
+							this.log.debug('[traverser-seq] wallclock permanently expired, skipping: begin=%s, end=%s', valueElement.begin, valueElement.end);
 							processedAnyContent = true;
 							arrayIndex += 1;
 							continue;
@@ -875,13 +882,13 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
-				debug('[traverser-priority] conditional false, skipping: expr=%s', elem[ExprTag]!);
+			if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+				this.log.debug('[traverser-priority] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
-					setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
+					this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
 				) {
-					debug('[traverser-priority] no active conditional, setting default await');
+					this.log.debug('[traverser-priority] no active conditional, setting default await');
 					await this.control.sleep(SMILScheduleEnum.defaultAwait);
 				}
 				arrayIndex -= 1;
@@ -918,13 +925,13 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (isConditionalExpExpired(elem, this.config.playerName, this.config.playerId)) {
-				debug('[traverser-excl] conditional false, skipping: expr=%s', elem[ExprTag]!);
+			if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+				this.log.debug('[traverser-excl] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
-					setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
+					this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
 				) {
-					debug('[traverser-excl] no active conditional, setting default await');
+					this.log.debug('[traverser-excl] no active conditional, setting default await');
 					await this.control.sleep(SMILScheduleEnum.defaultAwait);
 				}
 				arrayIndex -= 1;
@@ -953,7 +960,7 @@ export class PlaylistTraverser {
 	): Promise<void> => {
 		return (async () => {
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			await this.processPlaylist(value, version, parent, timeToEnd, priorityObject, conditionalExpr);
@@ -969,16 +976,16 @@ export class PlaylistTraverser {
 		conditionalExpr: string = '',
 		activeWindowEnd: number = -1,
 	): Promise<void> => {
-		debug('[traverser] processing definite repeat');
+		this.log.debug('[traverser] processing definite repeat');
 		const repeatCount: number = Number.isNaN(parseInt(value.repeatCount as string))
 			? 1
 			: parseInt(value.repeatCount as string);
 
 		let counter = 0;
 		return (async () => {
-			let newParent = generateParentId(parent, value);
+			let newParent = this.tools.generateParentId(parent, value);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			// Wallclock-windowed content is starting: record the window end on the
@@ -988,7 +995,7 @@ export class PlaylistTraverser {
 			// replays this seq immediately, so releasing a paused lower class
 			// between passes lets it race the replay (flicker + sync stalls).
 			if (activeWindowEnd > Date.now() && priorityObject?.priorityLevel !== undefined) {
-				debug(
+				this.log.debug(
 					'[traverser] stamping active priority window: level=%d, end=%d',
 					priorityObject.priorityLevel,
 					activeWindowEnd,
@@ -1000,7 +1007,7 @@ export class PlaylistTraverser {
 				counter += 1;
 			}
 			if (counter >= repeatCount) {
-				debug('[traverser] repeat count exhausted: played=%d/%d, version=%d', counter, repeatCount, version);
+				this.log.debug('[traverser] repeat count exhausted: played=%d/%d, version=%d', counter, repeatCount, version);
 			}
 		})();
 	};
@@ -1016,14 +1023,14 @@ export class PlaylistTraverser {
 		timeToStart: number = -1,
 	): Promise<void> => {
 		return (async () => {
-			debug('[traverser] processing indefinite repeat: endTime=%s', endTime);
+			this.log.debug('[traverser] processing indefinite repeat: endTime=%s', endTime);
 			// if smil file was updated during the timeout wait, cancel that timeout and reload smil again
-			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart))) {
+			if (timeToStart > 0 && (await this.control.waitTimeoutOrFileUpdate(timeToStart, version))) {
 				return;
 			}
 			// when endTime is not set, play indefinitely
 			if (endTime === 0) {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				let dynamicPlaylistId = undefined;
 				if (value.hasOwnProperty('begin') && value.begin?.startsWith(SMILDynamicEnum.dynamicFormat)) {
 					dynamicPlaylistId = value.begin;
@@ -1045,13 +1052,13 @@ export class PlaylistTraverser {
 				}
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000 && version >= this.control.getPlaylistVersion()) {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				if (key.startsWith('seq')) {
 					newParent = parent.replace('par', 'seq');
 				}
 				await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 			} else {
-				let newParent = generateParentId(key, value);
+				let newParent = this.tools.generateParentId(key, value);
 				while (Date.now() <= endTime && version >= this.control.getPlaylistVersion()) {
 					await this.processPlaylist(value, version, newParent, endTime, priorityObject, conditionalExpr);
 					// force stop because new version of smil file was detected
@@ -1072,17 +1079,17 @@ export class PlaylistTraverser {
 		arrayIndex: number = -1,
 		length: number = -1,
 	): Promise<boolean> => {
-		if (!isConditionalExpExpired(value, this.config.playerName, this.config.playerId)) {
+		if (!this.schedule.shouldSkipElement(value, this.config.playerName, this.config.playerId)) {
 			return false;
 		}
-		debug('[traverser-conditional] conditional false, skipping: expr=%s', value[ExprTag]!);
+		this.log.debug('[traverser-conditional] conditional false, skipping: expr=%s', value[ExprTag]!);
 		const isLastOrSingle = arrayIndex === -1 || arrayIndex === length - 1;
 		if (
 			isLastOrSingle &&
-			setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
+			this.schedule.setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
 				SMILScheduleEnum.defaultAwait
 		) {
-			debug('[traverser-conditional] no active conditional, setting default await');
+			this.log.debug('[traverser-conditional] no active conditional, setting default await');
 			await this.control.sleep(SMILScheduleEnum.defaultAwait);
 		}
 		return true;

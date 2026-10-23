@@ -1,32 +1,33 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
-import Debug from 'debug';
 import { PlaylistOptions } from '../../../models/playlistModels';
 import { ISos } from '../../../models/sosModels';
 import { IPlaylistPriority } from './IPlaylistPriority';
 import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { IPrioritySideEffects, PrioritySideEffects } from './prioritySideEffects';
 import {
+	createPriorityDecisionEngine,
 	isEndTimeExpired,
-	isPlaylistFinished,
 	isRepeatCountExpired,
+	PriorityDecisionEngine,
 } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
 import { PriorityConflictResolver } from './priorityConflictResolver';
-
-const debug = Debug('@signageos/smil-player:playlistPriority');
 
 export class PlaylistPriority implements IPlaylistPriority {
 	public readonly stateManager: PriorityStateManager;
 	private _sideEffects: IPrioritySideEffects;
 	private conflictResolver: PriorityConflictResolver;
 	private cancelFunction: boolean[];
+	private readonly engine: PriorityDecisionEngine;
 
 	constructor(
 		options: PlaylistOptions,
-		sos?: ISos,
+		sos: ISos | undefined,
+		private readonly log: Log,
 		deps?: {
 			stateManager?: PriorityStateManager;
 			sideEffects?: IPrioritySideEffects;
@@ -34,9 +35,11 @@ export class PlaylistPriority implements IPlaylistPriority {
 		},
 	) {
 		this.cancelFunction = options.cancelFunction;
+		this.engine = createPriorityDecisionEngine(log);
 		this.stateManager = deps?.stateManager ?? new PriorityStateManager(
 			options.currentlyPlayingPriority,
 			options.promiseAwaiting,
+			log.child('priorityStateManager'),
 		);
 		this._sideEffects = deps?.sideEffects ?? new PrioritySideEffects(
 			sos!,
@@ -45,6 +48,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			options.synchronization,
 			options.videoPreparing,
 			(regionName, filter) => this.stateManager.cancelAllInRegion(regionName, filter),
+			log.child('prioritySideEffects'),
 		);
 		this.conflictResolver = deps?.conflictResolver ?? new PriorityConflictResolver(
 			this.stateManager,
@@ -52,6 +56,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			options.synchronization,
 			() => this.getCancelFunction(),
 			(regionName) => options.currentlyPlaying[regionName]?.src,
+			log.child('priorityConflictResolver'),
 		);
 	}
 
@@ -76,7 +81,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 			priorityObject,
 			version,
 		);
-		debug(
+		this.log.debug(
 			'[priority] registered element: region=%s, currentIndex=%d, previousIndex=%d',
 			priorityRegionName,
 			currentIndex,
@@ -84,7 +89,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		);
 
 		if (this.stateManager.hasConflict(priorityRegionName, currentIndex, previousPlayingIndex)) {
-			debug(
+			this.log.debug(
 				'[priority] detected conflict: region=%s, src=%s',
 				priorityRegionName,
 				this.stateManager.getEntry(priorityRegionName, currentIndex).media.src,
@@ -116,7 +121,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		triggers: PlaylistTriggers,
 	): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
-		debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+		this.log.debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
 		if (isNil(value.triggerValue) && endTime !== 0 && value.src === currentIndexPriority.isFirstInPlaylist.src) {
 			this.stateManager.incrementTimesPlayed(priorityRegionName, currentIndex);
@@ -127,7 +132,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		const smilFileUpdated = this.getCancelFunction();
 		const expiredVersion = version < currentVersion;
 
-		debug(
+		this.log.debug(
 			'[priority-done] checking unlock conditions for region: %s, endTimeExpired=%s, repeatCountExpired=%s, isLastElement=%s, smilFileUpdated=%s, expiredVersion=%s',
 			priorityRegionName,
 			endTimeExpired,
@@ -137,15 +142,36 @@ export class PlaylistPriority implements IPlaylistPriority {
 			expiredVersion,
 		);
 
-		if (isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
-			debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+		if (this.engine.isPlaylistFinished({ endTimeExpired, repeatCountExpired, isLast, smilFileUpdated, expiredVersion })) {
+			this.log.debug('[priority-done] playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
-			const { pausedIndexes } = this.stateManager.markFinished(priorityRegionName, currentIndex);
+			// The next repeatCount pass of THIS playlist has already re-registered the slot
+			// (traverser lookahead). Releasing now would let a deferred / coordination-gated
+			// lower-priority waiter through in the ~70 ms before the successor re-claims it —
+			// the waiter is woken synchronously by the release and always wins that race.
+			// Hold instead: keep playing=true, keep the level's tracking claim, keep pause
+			// victims. External unlocks (SMIL update, version change, window end) always
+			// release, and a pass with no successor (the last one) releases as before.
+			const holdForSuccessor =
+				!smilFileUpdated &&
+				!expiredVersion &&
+				!endTimeExpired &&
+				this.stateManager.hasSuccessor(priorityRegionName, currentIndex);
+
+			const { pausedIndexes } = this.stateManager.markFinished(
+				priorityRegionName,
+				currentIndex,
+				holdForSuccessor,
+			);
 
 			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
-			if (priorityLevel !== undefined) {
+			if (priorityLevel !== undefined && !holdForSuccessor) {
 				this.stateManager.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
-				debug('[priority-done] cleaned up priority tracking for completed priority %s in region %s', priorityLevel, priorityRegionName);
+				this.log.debug(
+					'[priority-done] cleaned up priority tracking for completed priority %s in region %s',
+					priorityLevel,
+					priorityRegionName,
+				);
 			}
 
 			// A repeatCount pass of a wallclock-windowed campaign finished, but the
@@ -160,24 +186,29 @@ export class PlaylistPriority implements IPlaylistPriority {
 				(currentIndexPriority.priority?.activeWindowEnd ?? 0) > Date.now();
 
 			if (pausedIndexes.length > 0) {
-				if (windowStillOpen) {
-					debug(
-						'[priority-done] holding paused playlist: region=%s, active window open until %d',
+				if (windowStillOpen || holdForSuccessor) {
+					this.log.debug(
+						'[priority-done] holding paused playlist: region=%s, windowStillOpen=%s, holdForSuccessor=%s',
 						priorityRegionName,
-						currentIndexPriority.priority!.activeWindowEnd,
+						windowStillOpen,
+						holdForSuccessor,
 					);
 				} else {
-					debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);
+					this.log.debug('[priority-done] unpaused controlled playlist: region=%s', priorityRegionName);
 					this.stateManager.unpauseAllControlled(priorityRegionName, currentIndex);
 				}
 			}
 
 			if (currentIndexPriority.media.dynamicValue && currentIndexPriority.priority.priorityLevel !== 1000) {
-				debug('[priority-done] dynamic playlist finished: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
+				this.log.debug(
+					'[priority-done] dynamic playlist finished: region=%s, src=%s',
+					priorityRegionName,
+					currentIndexPriority.media.src,
+				);
 				await this._sideEffects.cancelDynamicPlaylist(triggers, value, value.dynamicValue!);
 			}
 		} else {
-			debug(
+			this.log.debug(
 				'[priority-done] not finished: region=%s, isLast=%s, endTimeExpired=%s, repeatCountExpired=%s',
 				priorityRegionName,
 				isLast,

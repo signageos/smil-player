@@ -183,6 +183,31 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 				`wallclock(${formatDate(moment().add(60, 'seconds'))})`,
 			);
 			break;
+		case SMILUrls.priorityBootInsideWindow.split('/').pop():
+			// Campaign window already open at boot (begin in the past), closes 80s after the SMIL
+			// fetch so the test can also prove the lower class resumes once the window ends.
+			parsedFileString = parsedFileString.replace(
+				/BOOT_IN_BEGIN/g,
+				`wallclock(${formatDate(moment().subtract(60, 'seconds'))})`,
+			);
+			parsedFileString = parsedFileString.replace(
+				/BOOT_IN_END/g,
+				`wallclock(${formatDate(moment().add(80, 'seconds'))})`,
+			);
+			break;
+		case 'customerReproDelayed.smil':
+		case SMILUrls.prioritySingleCampaign.split('/').pop():
+			// Customer repro: SINGLE video in higher priorityClass, wallclock window
+			// active for the whole observation (10 minutes). Expected: video loops.
+			parsedFileString = parsedFileString.replace(
+				/SINGLE_CAMP_BEGIN/g,
+				`wallclock(${formatDate(moment().add(parseInt(process.env.CAMP_DELAY_S || '45', 10), 'seconds'))})`,
+			);
+			parsedFileString = parsedFileString.replace(
+				/SINGLE_CAMP_END/g,
+				`wallclock(${formatDate(moment().add(10, 'minute'))})`,
+			);
+			break;
 		case SMILUrls.priorityPeerDefer.split('/').pop():
 			// Peer A active for 30s, Peer B active for 60s. Both start at +0s.
 			// A is first in XML → plays first. B defers (peer="defer") until A's wallclock ends.
@@ -275,6 +300,18 @@ export function fillWallclock(fileString: string, fileName: string, requestCount
 				`${formatTime(moment().add(30, 'seconds'))}`,
 			);
 			break;
+		case SMILUrls.priorityFutureViaRefresh.split('/').pop():
+		case SMILUrls.priorityNowViaRefresh.split('/').pop(): {
+			// Campaign delivered THROUGH a refresh (render shape of a scheduling backend).
+			// Phase 1 (requestCount=1): non-repeating window fully in the past → neverPlay → base loop only.
+			// Phase 2 (requestCount>1): window re-rendered from "now" — begin = now (control) or now+40s (future).
+			const future = fileName === SMILUrls.priorityFutureViaRefresh.split('/').pop();
+			const begin = requestCount <= 1 ? moment().subtract(2, 'hours') : moment().add(future ? 40 : -1, 'seconds');
+			const end = requestCount <= 1 ? moment().subtract(1, 'hours') : moment().add(150, 'seconds');
+			parsedFileString = parsedFileString.replace('VIA_REFRESH_BEGIN', `wallclock(${formatDate(begin)})`);
+			parsedFileString = parsedFileString.replace('VIA_REFRESH_END', `wallclock(${formatDate(end)})`);
+			break;
+		}
 		case SMILUrls.prioritySmilUpdate.split('/').pop():
 			// Phase 1 (requestCount=1): P_high active for 60s, P_low deferred.
 			// Phase 2+ (requestCount>1): P_high active for 15s then expires → P_low plays.

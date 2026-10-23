@@ -1,14 +1,35 @@
 import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
-import {
-	setDefaultAwaitWallclock,
-	setDefaultAwaitConditional,
-	setElementDuration,
-} from '../../../src/components/playlist/tools/scheduleTools';
+import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
+import { Log, noopLog } from '../../../src/logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 
 const expect = chai.expect;
+const { setDefaultAwait, setDefaultAwaitWallclock, setDefaultAwaitConditional, setElementDuration } =
+	createScheduleTools(noopLog);
+
+describe('createScheduleTools', () => {
+	it('two instances log to their own Log', () => {
+		const seen: string[] = [];
+		const mk = (ns: string) =>
+			new Log(
+				{
+					write: (e) => {
+						seen.push(e.namespace);
+					},
+				},
+				ns,
+			);
+		const a = createScheduleTools(mk('a'));
+		const b = createScheduleTools(mk('b'));
+		a.setElementDuration('indefinite');
+		b.setElementDuration('indefinite');
+		expect(seen).to.include('a');
+		expect(seen).to.include('b');
+		expect(seen.filter((n) => n === 'a').length).to.equal(seen.filter((n) => n === 'b').length);
+	});
+});
 
 describe('scheduleTools direct function tests', () => {
 	afterEach(() => {
@@ -159,5 +180,19 @@ describe('scheduleTools direct function tests', () => {
 			// duration, so this degrades gracefully rather than throwing.
 			expect(setElementDuration('-5s')).to.equal(5000);
 		});
+	});
+});
+
+describe('setDefaultAwait with skipContentMark runtime flag', () => {
+	// A skip-marked element must never count as a playable candidate — without
+	// this, a marked element with no begin/expr would return playImmediately
+	// from the no-begin-no-expr early exit and regress seq scheduling.
+
+	it('marked element without begin/expr is not a playable candidate', () => {
+		expect(setDefaultAwait([{ skipContentMark: true } as any])).to.equal(SMILScheduleEnum.defaultAwait);
+	});
+
+	it('unmarked sibling after a marked element keeps the array playable', () => {
+		expect(setDefaultAwait([{ skipContentMark: true } as any, {}])).to.equal(SMILScheduleEnum.playImmediately);
 	});
 });

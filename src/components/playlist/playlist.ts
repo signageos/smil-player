@@ -1,3 +1,4 @@
+import { Log } from '../../logger';
 import { initSyncObject } from './tools/syncTools';
 import { PlaylistProcessor } from './playlistProcessor/playlistProcessor';
 import { ISos } from '../../models/sosModels';
@@ -18,8 +19,8 @@ export class SmilPlayerPlaylist {
 		randomPlaylist: {},
 	};
 
-	constructor(sos: ISos, files: FilesManager) {
-		this.processor = new PlaylistProcessor(sos, files, this.options);
-		this.dataPrepare = new PlaylistDataPrepare(sos, files, this.options);
+	constructor(sos: ISos, files: FilesManager, log: Log) {
+		this.processor = new PlaylistProcessor(sos, files, this.options, log.child('playlistProcessor'));
+		this.dataPrepare = new PlaylistDataPrepare(sos, files, this.options, log.child('playlistDataPrepare'));
 	}
 }

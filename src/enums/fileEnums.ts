@@ -36,6 +36,26 @@ export enum smilLogging {
 	proofOfPlayPrefix = 'pop',
 }
 
+// Custom-endpoint report event names sent when no `events` allowlist is configured
+// in <meta log>. Matches the player's historical behavior exactly.
+export const DEFAULT_CUSTOM_ENDPOINT_EVENTS = [
+	'media-download',
+	'media-playback',
+	'playlist-download',
+	'playlist-playback',
+];
+// Opt-in event names: never sent unless explicitly listed in the `events` allowlist.
+export type OptInReportEvent = 'media-copied' | 'media-moved' | 'media-restored' | 'media-deleted' | 'media-skipped';
+const OPT_IN_CUSTOM_ENDPOINT_EVENTS: OptInReportEvent[] = [
+	'media-copied',
+	'media-moved',
+	'media-restored',
+	'media-deleted',
+	'media-skipped',
+];
+// All valid names for the `events` allowlist.
+export const CUSTOM_ENDPOINT_EVENTS = [...DEFAULT_CUSTOM_ENDPOINT_EVENTS, ...OPT_IN_CUSTOM_ENDPOINT_EVENTS];
+
 export const WidgetExtensions = ['.ipk', '.apk', '.wgt', '.zip'];
 export const WidgetFullPath = 'internal/smil/widgets/';
 export const CUSTOM_ENDPOINT_REPORT_FILE_LIMIT = 100;

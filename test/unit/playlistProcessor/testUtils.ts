@@ -104,6 +104,7 @@ export function createDefaultOptions(): PlaylistOptions {
 export function createMockFiles(): any {
 	return {
 		sendMediaReport: stub().resolves(undefined),
+		sendOptInEventReport: stub().resolves(undefined),
 		currentFilesSetup: stub().resolves(undefined),
 	};
 }
@@ -132,6 +133,19 @@ export class TestablePlaylistProcessor extends PlaylistProcessor {
 		timedDebug?: TimedDebugger,
 	) => void = this.setCurrentlyPlaying;
 	public exposedGetCancelFunction: () => boolean = this.getCancelFunction;
+	public exposedWaitTimeoutOrFileUpdate: (timeout: number, version: number) => Promise<boolean> =
+		this.waitTimeoutOrFileUpdate;
+	public exposedHandleVideoPlay: (
+		video: SMILVideo,
+		params: any,
+		sosVideoObject: any,
+		currentRegionInfo: any,
+		parentRegionInfo: any,
+		version: number,
+		arrayIndex: number,
+		currentIndex: number,
+		timedDebug: TimedDebugger,
+	) => Promise<void> = this.handleVideoPlay;
 
 	public getCurrentlyPlaying() {
 		return this.currentlyPlaying;

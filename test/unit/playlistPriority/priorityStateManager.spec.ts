@@ -1,3 +1,4 @@
+import { noopLog } from '../../../src/logger';
 import * as chai from 'chai';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
 import { CurrentlyPlayingPriority, PromiseAwaiting } from '../../../src/models/playlistModels';
@@ -14,7 +15,7 @@ describe('PriorityStateManager', () => {
 	beforeEach(() => {
 		state = {};
 		promiseAwaiting = {};
-		mgr = new PriorityStateManager(state, promiseAwaiting);
+		mgr = new PriorityStateManager(state, promiseAwaiting, noopLog);
 	});
 
 	describe('ensureRegion', () => {
@@ -649,6 +650,99 @@ describe('PriorityStateManager', () => {
 			// Both should resolve — unordered always resolves, ordered resolves as only one
 			expect(resolvedOrdered).to.equal(true);
 			expect(resolvedUnordered).to.equal(true);
+		});
+	});
+
+	describe('successor hold (inter-pass release)', () => {
+		const playing = {
+			contentPause: 0,
+			stop: false,
+			endTime: 1,
+			playing: true,
+			timesPlayed: 1,
+			playingCompletionDeferred: undefined,
+		};
+
+		it('registerOrUpdate marks the slot as re-claimed when the same playlist re-registers a PLAYING slot', () => {
+			const media = makeMedia('img.jpg');
+			state.main = [makeRegion({ media, parent: 'seq-A', version: 1, player: { ...playing } })];
+			// exact match: next repeatCount pass of the same single-element seq
+			mgr.registerOrUpdate('main', media, 'seq-A', 1, makePriorityObject(), 1);
+			expect(state.main[0].player.successorRegistered).to.equal(true);
+			expect(state.main[0].player.playing).to.equal(true);
+		});
+
+		it('registerOrUpdate marks re-claim on parent match (seq advance) while slot is playing', () => {
+			state.main = [
+				makeRegion({
+					media: makeMedia('v1.mp4'),
+					parent: 'seq-A',
+					version: 1,
+					player: { ...playing },
+				}),
+			];
+			mgr.registerOrUpdate('main', makeMedia('v2.mp4'), 'seq-A', 1, makePriorityObject(), 1);
+			expect(state.main[0].player.successorRegistered).to.equal(true);
+		});
+
+		it('registerOrUpdate does NOT mark a re-claim when the slot was not playing', () => {
+			const media = makeMedia('img.jpg');
+			state.main = [makeRegion({ media, parent: 'seq-A', version: 1 })];
+			mgr.registerOrUpdate('main', media, 'seq-A', 1, makePriorityObject(), 1);
+			expect(mgr.hasSuccessor('main', 0)).to.equal(false);
+		});
+
+		it('clearSuccessor drops the flag', () => {
+			state.main = [makeRegion({ player: { ...playing, successorRegistered: true } })];
+			mgr.clearSuccessor('main', 0);
+			expect(mgr.hasSuccessor('main', 0)).to.equal(false);
+		});
+
+		it('markFinished(keepPlaying=true) resets timesPlayed and the flag but keeps the slot playing', () => {
+			state.main = [
+				makeRegion({
+					player: { ...playing, successorRegistered: true },
+					controlledPlaylists: [1],
+				}),
+			];
+			mgr.setPlaying('main', 0);
+			const deferred = state.main[0].player.playingCompletionDeferred!;
+			const result = mgr.markFinished('main', 0, true);
+			expect(result.pausedIndexes).to.deep.equal([1]);
+			expect(state.main[0].player.playing).to.equal(true);
+			expect(state.main[0].player.timesPlayed).to.equal(0);
+			expect(state.main[0].player.successorRegistered).to.equal(false);
+			expect(deferred.isSettled).to.equal(false);
+		});
+
+		it('markFinished() default still releases the slot and clears the flag', () => {
+			state.main = [makeRegion({ player: { ...playing, successorRegistered: true } })];
+			mgr.setPlaying('main', 0);
+			mgr.markFinished('main', 0);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(state.main[0].player.successorRegistered).to.equal(false);
+		});
+
+		it('releaseSlot also drops the level coordination claim', () => {
+			state.main = [
+				makeRegion({
+					version: 1,
+					priority: makePriorityObject({ priorityLevel: 1 }),
+					player: { ...playing },
+				}),
+			];
+			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.updatePriorityTracking('main', 1, 1);
+			mgr.releaseSlot('main', 0);
+			expect(state.main[0].player.playing).to.equal(false);
+			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
+		});
+
+		it('releaseSlot drops a pending successor claim so the predecessor does not hold forever', () => {
+			state.main = [makeRegion({ player: { ...playing, successorRegistered: true } })];
+			mgr.releaseSlot('main', 0);
+			expect(mgr.hasSuccessor('main', 0)).to.equal(false);
+			expect(state.main[0].player.playing).to.equal(false);
 		});
 	});
 

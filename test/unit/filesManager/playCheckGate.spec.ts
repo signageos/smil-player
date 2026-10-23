@@ -9,6 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
+import { noopLog } from '../../../src/logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { ISos } from '../../../src/models/sosModels';
@@ -32,7 +33,7 @@ function makeSmilObject(skipPlaybackOnHttpStatus: number[] | undefined): SMILFil
 
 /** FilesManager with its private XHR primitive stubbed; records calls. */
 function makeFilesManager(xhr: { status?: number; reject?: boolean }) {
-	const fm = new FilesManager({} as unknown as ISos);
+	const fm = new FilesManager({} as unknown as ISos, noopLog);
 	const calls: any[][] = [];
 	(fm as any).makeXhrRequest = async (...args: any[]) => {
 		calls.push(args);

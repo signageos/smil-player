@@ -32,27 +32,69 @@ export enum SMILEnums {
 	lastModified = 'last-modified',
 }
 
-export const parentGenerationRemove = [
-	'promiseFunction',
-	'media',
-	'playing',
-	'player',
-	'lastModified',
-	'isFirstInPlaylist',
-	'syncIndex',
-	'timeoutReference',
-	'parent',
-	'syncGroupName',
-	'transitionInfo',
-	'localFilePath',
-	'regionInfo',
-	'fullVideoDuration',
-	'id',
-	// runtime flag written onto the parsed tree by handleHtmlElementPrepare during
-	// first playback; without stripping it the parent hash drifts between traversal
-	// passes and the element registers as a phantom peer of its own seq-mates
-	'wasUpdated',
+// Parent-ID hashing is ALLOW-LIST based: only the declarative SMIL attributes below
+// reach the hash, so runtime writes onto the parsed tree are invisible by construction
+// (the old deny-list drifted 4× in production: wasUpdated, popName, useInReportUrlStale,
+// expr='skipContent'). A new declarative attribute that must discriminate elements has
+// to be added here; leaving it out makes elements differing only by it share one
+// priority-tracking entry (soft collision — elements merge, never drift).
+// Excluded on purpose (declarative BUT runtime-mutated): popName (report senders),
+// useInReportUrl/useInReportUrlStale (signed-URL refresh).
+export const parentGenerationAllow = [
+	// structure / scheduling
+	'repeatCount',
+	'begin',
+	'end',
+	'expr',
+	'playMode',
+	'data',
+	// priorityClass rules
+	'lower',
+	'peer',
+	'higher',
+	'pauseDisplay',
+	// media declarative attributes
+	'src',
+	'dur',
+	'region',
+	'fit',
+	'soundLevel',
+	'isStream',
+	'protocol',
+	'preload',
+	'z-index',
+	'param',
+	// trigger/dynamic values (prepare-time, idempotent writes)
+	'triggerValue',
+	'dynamicValue',
+	// proof-of-play declarative attributes
+	'popCustomId',
+	'popType',
+	'popTags',
+	'popFileName',
+	'reportMode',
+	// content-update / playability-gate attributes
+	'updateCheckUrl',
+	'updateCheckInterval',
+	'allowLocalFallback',
+	'playCheckUrl',
+	'playCheckSkipOnError',
+	// ticker declarative attributes
+	'text',
+	'fontName',
+	'fontSize',
+	'fontColor',
+	'backgroundColor',
+	'linearGradient',
+	'linearGradientAngle',
+	'velocity',
+	'indentation',
 ];
+
+// Structure/media tag keys the parent-ID projection recurses into (xml2js appends
+// digits to duplicate sibling tags: seq3, img4, ...).
+export const parentGenerationRecurseTagsRegex =
+	/^(?:seq|par|excl|exl|priorityClass|video|img|ref|audio|ticker|prefetch|emitDynamic|EXPERIMENTAL_emitDynamic)\d*$/;
 
 export const randomPlaylistPlayableTagsRegex = /^img|^video|^ref|^ticker|^par|^seq|^exl|^priorityClass/;
 

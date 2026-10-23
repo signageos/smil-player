@@ -1,0 +1,47 @@
+<smil>
+  <head>
+    <meta http-equiv="Refresh" content="300" onlySmilUpdate="true"/>
+    <meta defaultRepeatCount="indefinite"/>
+    <layout>
+      <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+      <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1" backgroundColor="#000000"/>
+    </layout>
+  </head>
+  <body>
+    <par>
+      <seq end="__prefetchEnd.endEvent">
+        <seq repeatCount="indefinite">
+          <img src="http://localhost:3000/assets/landscape1.jpg" dur="5s" fit="fill"/>
+        </seq>
+      </seq>
+      <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+        <!-- Customer shape (Cinestar GalleryModule). The campaign window is ALREADY OPEN when the
+             player boots (BOOT_IN_BEGIN = now-60s), so the campaign registers its slot BEFORE the
+             lower class does. Pre-fix the lower class is then defer-held instead of pause-held and
+             sneaks in between every repeatCount="1" pass of the campaign (spec, mechanism 1). -->
+        <excl>
+          <par>
+            <seq repeatCount="indefinite">
+              <priorityClass>
+                <seq repeatCount="indefinite">
+                  <seq repeatCount="1" begin="BOOT_IN_BEGIN" end="BOOT_IN_END">
+                    <img src="https://demo.signageos.io/smil/zones/files/img_1.jpg" dur="10s" fit="fill" region="main"/>
+                  </seq>
+                </seq>
+              </priorityClass>
+              <priorityClass higher="pause" pauseDisplay="hide">
+                <seq repeatCount="indefinite">
+                  <seq repeatCount="1">
+                    <video src="https://static.signageos.io/assets/video-test-1_e07fc21a7a72e3d33478243bd75d7743.mp4" region="main"/>
+                    <video src="https://static.signageos.io/assets/video-test-2_e2ffa51f6a4473b815f39e7fb39239da.mp4" region="main"/>
+                    <img src="https://demo.signageos.io/smil/zones/files/img_2.jpg" dur="5s" fit="fill" region="main"/>
+                  </seq>
+                </seq>
+              </priorityClass>
+            </seq>
+          </par>
+        </excl>
+      </par>
+    </par>
+  </body>
+</smil>

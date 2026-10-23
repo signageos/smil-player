@@ -1,31 +1,34 @@
+import { Log } from '../../../logger';
+
 /**
- * TimedDebugger - A debug logger that tracks timing information
- * Used to identify where time is spent during element playback
- * This is for debugging purposes only and has no functional impact
+ * Per-element step timer. Wraps the owner's Log and prefixes each line with the delta since the
+ * previous line and the total since construction. Only used along the playElement call chain.
  */
 export class TimedDebugger {
-	private startTime: number;
+	private readonly startTime: number;
 	private lastLogTime: number;
-	private debugId: string;
-	private debugFn: any;
 
-	constructor(debugId: string, debugFn: any) {
-		this.debugId = debugId;
-		this.debugFn = debugFn;
+	constructor(private readonly debugId: string, private readonly log: Log) {
 		this.startTime = Date.now();
 		this.lastLogTime = this.startTime;
 	}
 
-	/**
-	 * Log a message with timing information
-	 * Shows time elapsed since last log and total time since start
-	 */
-	public log(message: string, ...args: any[]) {
-		const now = Date.now();
-		const totalElapsed = now - this.startTime;
-		const deltaFromLast = now - this.lastLogTime;
+	public debug(message: string, ...args: unknown[]): void {
+		this.log.debug(this.stamp(message), ...args);
+	}
 
-		this.debugFn(`[${this.debugId}_${now} +${deltaFromLast}ms total:${totalElapsed}ms] ${message}`, ...args);
+	public warn(message: string, ...args: unknown[]): void {
+		this.log.warn(this.stamp(message), ...args);
+	}
+
+	public error(message: string, ...args: unknown[]): void {
+		this.log.error(this.stamp(message), ...args);
+	}
+
+	private stamp(message: string): string {
+		const now = Date.now();
+		const prefix = `[${this.debugId}_${now} +${now - this.lastLogTime}ms total:${now - this.startTime}ms] ${message}`;
 		this.lastLogTime = now;
+		return prefix;
 	}
 }

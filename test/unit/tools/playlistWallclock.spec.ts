@@ -2,10 +2,12 @@ import * as chai from 'chai';
 import moment from 'moment';
 import MockDate from 'mockdate';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
-import { parseSmilSchedule } from '../../../src/components/playlist/tools/wallclockTools';
+import { createWallclockTools } from '../../../src/components/playlist/tools/wallclockTools';
+import { noopLog } from '../../../src/logger';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 
 const expect = chai.expect;
+const { parseSmilSchedule } = createWallclockTools(noopLog);
 
 const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60 * MS_PER_SECOND;

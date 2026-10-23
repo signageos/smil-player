@@ -1,0 +1,25 @@
+<smil>
+    <head>
+        <meta http-equiv="Refresh" content="90"/>
+        <!-- Phase 1 of the media-deleted spec: downloads TWO images. The spec then
+             reloads with reportEventsDeletedAfter.smil (only landscape1), and boot
+             cleanup must delete landscape2's file and report media-deleted. -->
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-deleted"/>
+        <layout>
+            <root-layout width="1080" height="1920"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par repeatCount="indefinite">
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape1.jpg"
+                     region="main" fit="fill"/>
+                <img dur="3s"
+                     src="http://localhost:3000/assets/landscape2.jpg"
+                     region="main" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

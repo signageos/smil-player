@@ -144,6 +144,54 @@ export const GENERATED = {
 		{ key: "landscape1_db878799.mp4", srcContains: "landscape1_db878799.mp4", layer: 'page', expectedSec: 0 },
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
 	],
+	"customerRepro": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5, minOccurrences: 0 },
+		{ key: "cmsykmalm0_53c43973.mp4", srcContains: "cmsykmalm0_53c43973.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmq52avgg0_6d5ff914.jpeg", srcContains: "cmq52avgg0_6d5ff914.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmron6b9t0_5a0896e4.jpeg", srcContains: "cmron6b9t0_5a0896e4.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmqez6j7t0_8b321bb9.mp4", srcContains: "cmqez6j7t0_8b321bb9.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmrtb1xx30_3b0c80b5.mp4", srcContains: "cmrtb1xx30_3b0c80b5.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4xyh020_0709714b.mp4", srcContains: "cmr4xyh020_0709714b.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms39amue0_615d82e0.mp4", srcContains: "cms39amue0_615d82e0.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms4cqhfe0_f7751773.mp4", srcContains: "cms4cqhfe0_f7751773.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsg336nz0_a6e914ae.mp4", srcContains: "cmsg336nz0_a6e914ae.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsh9rzxi0_f6ee8a86.mp4", srcContains: "cmsh9rzxi0_f6ee8a86.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmryxwrz50_ac4db283.jpeg", srcContains: "cmryxwrz50_ac4db283.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmsg33kbq0_e8a1a147.mp4", srcContains: "cmsg33kbq0_e8a1a147.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4y63uf0_9431f3df.mp4", srcContains: "cmr4y63uf0_9431f3df.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"customerReproDelayed": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5, minOccurrences: 0 },
+		{ key: "cmsykmalm0_53c43973.mp4", srcContains: "cmsykmalm0_53c43973.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmq52avgg0_6d5ff914.jpeg", srcContains: "cmq52avgg0_6d5ff914.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmron6b9t0_5a0896e4.jpeg", srcContains: "cmron6b9t0_5a0896e4.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmqez6j7t0_8b321bb9.mp4", srcContains: "cmqez6j7t0_8b321bb9.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmrtb1xx30_3b0c80b5.mp4", srcContains: "cmrtb1xx30_3b0c80b5.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4xyh020_0709714b.mp4", srcContains: "cmr4xyh020_0709714b.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms39amue0_615d82e0.mp4", srcContains: "cms39amue0_615d82e0.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms4cqhfe0_f7751773.mp4", srcContains: "cms4cqhfe0_f7751773.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsg336nz0_a6e914ae.mp4", srcContains: "cmsg336nz0_a6e914ae.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsh9rzxi0_f6ee8a86.mp4", srcContains: "cmsh9rzxi0_f6ee8a86.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmryxwrz50_ac4db283.jpeg", srcContains: "cmryxwrz50_ac4db283.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmsg33kbq0_e8a1a147.mp4", srcContains: "cmsg33kbq0_e8a1a147.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4y63uf0_9431f3df.mp4", srcContains: "cmr4y63uf0_9431f3df.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"customerReproSync": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5, minOccurrences: 0 },
+		{ key: "cmsykmalm0_53c43973.mp4", srcContains: "cmsykmalm0_53c43973.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmq52avgg0_6d5ff914.jpeg", srcContains: "cmq52avgg0_6d5ff914.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmron6b9t0_5a0896e4.jpeg", srcContains: "cmron6b9t0_5a0896e4.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmqez6j7t0_8b321bb9.mp4", srcContains: "cmqez6j7t0_8b321bb9.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmrtb1xx30_3b0c80b5.mp4", srcContains: "cmrtb1xx30_3b0c80b5.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4xyh020_0709714b.mp4", srcContains: "cmr4xyh020_0709714b.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms39amue0_615d82e0.mp4", srcContains: "cms39amue0_615d82e0.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cms4cqhfe0_f7751773.mp4", srcContains: "cms4cqhfe0_f7751773.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsg336nz0_a6e914ae.mp4", srcContains: "cmsg336nz0_a6e914ae.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmsh9rzxi0_f6ee8a86.mp4", srcContains: "cmsh9rzxi0_f6ee8a86.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmryxwrz50_ac4db283.jpeg", srcContains: "cmryxwrz50_ac4db283.jpeg", layer: 'frame', expectedSec: 10 },
+		{ key: "cmsg33kbq0_e8a1a147.mp4", srcContains: "cmsg33kbq0_e8a1a147.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "cmr4y63uf0_9431f3df.mp4", srcContains: "cmr4y63uf0_9431f3df.mp4", layer: 'page', expectedSec: 0 },
+	],
 	"cycleWrapBoundary": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 4 },
@@ -301,6 +349,13 @@ export const GENERATED = {
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 6 },
 		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 6 },
 	],
+	"priorityBootInsideWindow": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 5, minOccurrences: 0 },
+		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 10 },
+		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 5 },
+	],
 	"priorityConditionalPhantom": [
 		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
@@ -339,6 +394,12 @@ export const GENERATED = {
 		{ key: "video-test_ab41ed40.mp4", srcContains: "video-test_ab41ed40.mp4", layer: 'page', expectedSec: 0 },
 		{ key: "video-test_cff4478e.mp4", srcContains: "video-test_cff4478e.mp4", layer: 'page', expectedSec: 0 },
 	],
+	"priorityFutureViaRefresh": [
+		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
+	],
 	"priorityLowerPause": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
 		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
@@ -359,6 +420,12 @@ export const GENERATED = {
 		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_3_4ac1868a.jpg", srcContains: "img_3_4ac1868a.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
+	],
+	"priorityNowViaRefresh": [
+		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
 	],
 	"priorityOscillation": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
@@ -409,6 +476,13 @@ export const GENERATED = {
 		{ key: "img_1_aba14e1e.jpg", srcContains: "img_1_aba14e1e.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_3_4ac1868a.jpg", srcContains: "img_3_4ac1868a.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"prioritySingleCampaign": [
+		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "video-test_465b7757.mp4", srcContains: "video-test_465b7757.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 10 },
+		{ key: "img_3_4ac1868a.jpg", srcContains: "img_3_4ac1868a.jpg", layer: 'frame', expectedSec: 10 },
 		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
 	],
 	"prioritySmilUpdate": [
@@ -469,9 +543,35 @@ export const GENERATED = {
 		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
 	],
+	"reportEventsCopied": [
+		{ key: "slot-one_92035227", srcContains: "slot-one_92035227", layer: 'frame', expectedSec: 3 },
+		{ key: "slot-two_f3ebd659", srcContains: "slot-two_f3ebd659", layer: 'frame', expectedSec: 3 },
+	],
+	"reportEventsDeleted": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 3 },
+	],
+	"reportEventsDeletedAfter": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
+	],
+	"reportEventsFilter": [
+		{ key: "landscape1_db878799.mp4", srcContains: "landscape1_db878799.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
+	],
+	"reportEventsMoved": [
+		{ key: "slot-one_85b354a6", srcContains: "slot-one_85b354a6", layer: 'frame', expectedSec: 3 },
+	],
+	"reportEventsSkipped": [
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 3 },
+	],
 	"reportFileLimitRollover": [
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 2 },
 		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 2 },
+	],
+	"reportLogDisabled": [
+		{ key: "landscape1_db878799.mp4", srcContains: "landscape1_db878799.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
 	],
 	"reportModeBatch": [
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
@@ -503,6 +603,9 @@ export const GENERATED = {
 	"standardReporting": [
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },
 		{ key: "landscape2_afe802b4.jpg", srcContains: "landscape2_afe802b4.jpg", layer: 'frame', expectedSec: 3 },
+	],
+	"storageRestore": [
+		{ key: "slot_b9b40ee7", srcContains: "slot_b9b40ee7", layer: 'frame', expectedSec: 3 },
 	],
 	"threeLevelPriorityTransition": [
 		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },

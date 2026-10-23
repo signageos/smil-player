@@ -1,0 +1,24 @@
+<smil>
+    <head>
+        <!-- Storage-cache harness: the slot 204+redirects to a versioned content path
+             (see /storage-cache in localServer). POST /storage-cache/set/2 replaces the
+             slot's content: the player must preserve the v1 file to smil/storage before
+             downloading v2. POST /storage-cache/set/1 must then restore v1 from storage
+             (media-restored) instead of downloading it again. -->
+        <meta http-equiv="refresh" content="10" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-restored"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <img dur="3s"
+                     src="http://localhost:3000/storage-cache/slot"
+                     region="main" fit="fill"/>
+            </seq>
+        </par>
+    </body>
+</smil>

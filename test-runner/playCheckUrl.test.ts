@@ -285,27 +285,19 @@ test.describe('playCheckUrl playability gate', () => {
 		await page.request.post(`${testServerBaseUrl}/gate/reset`);
 	});
 
-	// KNOWN PLAYER GAP documented by this test (see also the unit-level phantom-slot guard
-	// in test/unit/playlistProcessor/playlistProcessor.spec.ts, which owns the releaseSlot
-	// invariant deterministically): the gate runs inside playElement, AFTER priorityBehaviour
-	// resolved the conflict — so a gate-skipped pass of a higher-priority element still
-	// performs a real takeover (handleStopBehaviour sets player.stop on the lower element)
-	// before releasing the slot. The lower loop then SKIPs its stopped elements
-	// pre-registration ("playlist stopped by higher priority"), so the resetStop recovery
-	// inside priorityBehaviour never runs while the gated higher keeps contending. Observed
-	// consequences (verified interactively, including a 60s no-recovery window):
-	//   - the lower playlist paints at most its first element, then the region freezes on
-	//     the last painted content until the gate reopens;
-	//   - which content that is depends on the boot interleaving (whichever class registers
-	//     first) — one branch of the race paints NOTHING before the takeover, leaving the
-	//     region black from boot.
-	// Unlike media-level expr (pre-checked in the traverser BEFORE priority registration),
-	// moving the gate pre-registration would break the "both checks" contract (update
-	// machinery must run even for gate-skipped passes). Until the player closes this gap,
-	// this e2e asserts only interleaving-independent behavior: gate-open plays the higher
-	// element, gate-closed keeps re-checking per pass, and the region never blanks once
-	// content has painted. If the player ever resumes stopped lower playlists, strengthen
-	// this to assert the lower rotation (image2 + image3) while the gate is closed.
+	// DECIDED SEMANTICS (2026-08-31): the gate has NO influence on the priority flow. A gated
+	// element contends for its region like any playable element (higher="stop" takes over the
+	// lower class before the gate answer arrives), and a gate-closed pass does not yield the
+	// region back — it keeps showing the last painted content until the gate reopens. Putting
+	// a possibly-gated element into an active priorityClass and expecting lower-priority
+	// fallback rotation is a playlist authoring error, not a player bug — see
+	// docs/guides/content-management/playability-gate.md "Priority interplay" (use wallclock
+	// windows, or gate all peers consistently). The unit-level phantom-slot guard in
+	// test/unit/playlistProcessor/playlistProcessor.spec.ts owns the releaseSlot invariant
+	// (no deadlock; higher element recovers on reopen). This e2e pins the decided behavior:
+	// gate-open plays the higher element, gate-closed keeps re-checking per pass with no
+	// persistent skip state, the region never blanks once painted, and the lower class does
+	// NOT resume while the closed-gated higher class holds the region.
 	test('priority interplay: gated higher element plays when open, re-checks per pass when closed, region never blanks', async ({
 		context,
 		page,
@@ -334,7 +326,13 @@ test.describe('playCheckUrl playability gate', () => {
 
 		const closedSeen = await collectVisibleImages(page, NOT_SEEN_WINDOW_MS);
 		console.log(`[priority, gate closed] visible images: ${[...closedSeen].join(', ')}`);
-		expect(closedSeen.size).toBeGreaterThanOrEqual(1);
+		// Region keeps showing the frozen higher element; the lower class must NOT resume —
+		// the gate has no influence on the priority flow (decided semantics, see above).
+		expect(closedSeen.has('image1.png'), 'region keeps showing the last painted content').toBe(true);
+		expect(
+			closedSeen.has('image2.png') || closedSeen.has('image3.png'),
+			'lower class must not resume while the gated higher class holds the region',
+		).toBe(false);
 
 		const closedHeads = await gateHeadCount(page, testServerBaseUrl, 'image1');
 		console.log(`[priority, gate closed] image1 gate checks over ${NOT_SEEN_WINDOW_MS}ms: ${closedHeads}`);

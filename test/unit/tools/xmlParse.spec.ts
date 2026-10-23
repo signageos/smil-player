@@ -1,7 +1,14 @@
+import { noopLog } from '../../../src/logger';
 import { promises as fsPromise } from 'fs';
 import * as path from 'path';
 import { XmlParser } from '../../../src/components/xmlParser/xmlParser';
-import { parseNestedRegions, containsElement, extractRegionInfo, extractTransitionsInfo, mergeLoggerWithConfigReportUrl } from '../../../src/components/xmlParser/tools';
+import {
+	createXmlTools,
+	containsElement,
+	extractRegionInfo,
+	extractTransitionsInfo,
+	mergeLoggerWithConfigReportUrl,
+} from '../../../src/components/xmlParser/tools';
 import { smilLogging } from '../../../src/enums/fileEnums';
 import { mockSMILFileParsed234 } from '../../mocks/playlistMock/mock234';
 import { mockSMILFileParsed99 } from '../../mocks/playlistMock/mock99';
@@ -13,7 +20,8 @@ import { triggerRfid } from '../../mocks/playlistMock/mockTriggerRfId';
 import * as chai from 'chai';
 
 const expect = chai.expect;
-const xmlParser = new XmlParser();
+const { parseNestedRegions } = createXmlTools(noopLog);
+const xmlParser = new XmlParser(noopLog);
 const FIXTURES = path.join(__dirname, '../../mocks/xmlParserMock');
 
 describe('XmlParse tools component', () => {
@@ -118,6 +126,30 @@ describe('XmlParse tools component', () => {
 			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/triggers.smil', 'utf8');
 			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
 			expect(smilObject.logger.reportFileLimit).to.be.eql(100);
+		});
+
+		it('Should parse events allowlist from meta tag, trimming and dropping unknown names', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/reportEvents.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.events).to.be.eql(['media-playback', 'media-copied']);
+		});
+
+		it('Should accept the opt-in media-deleted and media-skipped event names', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/reportEventsOptIn.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.events).to.be.eql(['media-deleted', 'media-skipped', 'media-moved']);
+		});
+
+		it('Should leave events undefined when the attribute is absent', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/reportFileLimit.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.events).to.be.eql(undefined);
+		});
+
+		it('Should treat an empty events attribute as absent', async () => {
+			const xmlFile: string = await fsPromise.readFile('test/mocks/xmlParserMock/reportEventsEmpty.smil', 'utf8');
+			const smilObject: any = await xmlParser.processSmilXml(xmlFile);
+			expect(smilObject.logger.events).to.be.eql(undefined);
 		});
 
 		it('Should parse skipPlaybackOnHttpStatus from meta tag independently of skipContentOnHttpStatus', async () => {
@@ -475,6 +507,19 @@ describe('XmlParse tools component', () => {
 					configReportUrl,
 				);
 				expect(merged.type).to.be.eql([smilLogging.proofOfPlay]);
+			});
+
+			it('Should keep the meta events allowlist when merging with config reportUrl', () => {
+				const merged = mergeLoggerWithConfigReportUrl(
+					{
+						enabled: true,
+						type: [smilLogging.proofOfPlay],
+						reportFileLimit: 100,
+						events: ['media-playback', 'media-copied'],
+					},
+					configReportUrl,
+				);
+				expect(merged.events).to.be.eql(['media-playback', 'media-copied']);
 			});
 		});
 	});

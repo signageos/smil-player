@@ -1,3 +1,4 @@
+import { Log } from '../../../logger';
 import { isNil, cloneDeep } from 'lodash';
 import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting, PromiseAwaitingEntry } from '../../../models/playlistModels';
 import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../enums/priorityEnums';
@@ -5,11 +6,8 @@ import { PriorityObject } from '../../../models/priorityModels';
 import { SMILMedia } from '../../../models/mediaModels';
 import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete } from '../tools/deferredTools';
 import { Deferred } from '../tools/Deferred';
-import { getIndexOfPlayingMedia } from '../tools/generalTools';
-import { findMatchingEntryIndex } from './priorityDecisionEngine';
-import Debug from 'debug';
-
-const debug = Debug('@signageos/smil-player:priorityStateManager');
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
+import { createPriorityDecisionEngine, PriorityDecisionEngine } from './priorityDecisionEngine';
 
 interface RegionWaiter {
 	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
@@ -23,12 +21,18 @@ interface RegionWaiter {
  * Takes the same object references as PlaylistCommon, so all consumers see changes immediately.
  */
 export class PriorityStateManager {
+	private readonly tools: PlaylistTools;
+	private readonly engine: PriorityDecisionEngine;
 	private regionWaiters: Map<string, Set<RegionWaiter>> = new Map<string, Set<RegionWaiter>>();
 
 	constructor(
 		private state: CurrentlyPlayingPriority,
 		private promiseAwaiting: PromiseAwaiting,
-	) {}
+		protected readonly log: Log,
+	) {
+		this.tools = createPlaylistTools(log);
+		this.engine = createPriorityDecisionEngine(log);
+	}
 
 	// --- Reactive waiting ---
 
@@ -60,7 +64,7 @@ export class PriorityStateManager {
 	}
 
 	public getPlayingIndex(regionName: string): number {
-		return getIndexOfPlayingMedia(this.state[regionName]);
+		return this.tools.getIndexOfPlayingMedia(this.state[regionName]);
 	}
 
 	public getRegionLength(regionName: string): number {
@@ -137,14 +141,14 @@ export class PriorityStateManager {
 			skipLoop = true;
 		}
 
-		let previousPlayingIndex = getIndexOfPlayingMedia(this.state[regionName]);
+		let previousPlayingIndex = this.tools.getIndexOfPlayingMedia(this.state[regionName]);
 		previousPlayingIndex = previousPlayingIndex > -1 ? previousPlayingIndex : 0;
 
 		let currentIndex = 0;
 
 		if (!skipLoop) {
 			const entries = this.state[regionName];
-			const { matchIndex, matchType } = findMatchingEntryIndex(entries, value, parent, version);
+			const { matchIndex, matchType } = this.engine.findMatchingEntryIndex(entries, value, parent, version);
 
 			if (matchType === 'exact') {
 				// Same element re-registering (cycling): preserve play/pause state
@@ -157,6 +161,8 @@ export class PriorityStateManager {
 				infoObject.player.timesPlayed = elem.player.timesPlayed;
 				infoObject.player.playingCompletionDeferred = elem.player.playingCompletionDeferred;
 				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
+				// Next pass of the same playlist claiming a slot that is still on screen.
+				infoObject.player.successorRegistered = elem.player.playing;
 				entries[matchIndex] = infoObject;
 				currentIndex = matchIndex;
 			} else if (matchType === 'parent') {
@@ -192,6 +198,8 @@ export class PriorityStateManager {
 				infoObject.player.timesPlayed = elem.player.timesPlayed;
 				infoObject.controlledPlaylists = elem.controlledPlaylists;
 				infoObject.isFirstInPlaylist = elem.isFirstInPlaylist;
+				// Seq advancing while the previous element is still on screen.
+				infoObject.player.successorRegistered = elem.player.playing;
 				entries[matchIndex] = infoObject;
 				currentIndex = matchIndex;
 			} else {
@@ -208,7 +216,7 @@ export class PriorityStateManager {
 
 	public setPlaying(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setPlaying: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] setPlaying: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = true;
 		ensurePlayingDeferred(entry.player);
 		this.notifyWaiters(regionName);
@@ -216,7 +224,7 @@ export class PriorityStateManager {
 
 	public setStopped(regionName: string, index: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setStopped: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] setStopped: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.stop = true;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -226,7 +234,13 @@ export class PriorityStateManager {
 
 	public setPaused(regionName: string, index: number, controllerIndex: number): void {
 		const entry = this.state[regionName][index];
-		debug('[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d', regionName, index, entry.media.src, controllerIndex);
+		this.log.debug(
+			'[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d',
+			regionName,
+			index,
+			entry.media.src,
+			controllerIndex,
+		);
 		entry.player.contentPause = PAUSE_CONTENT_VALUE;
 		entry.player.playing = false;
 		resolvePlayingDeferred(entry.player);
@@ -262,9 +276,16 @@ export class PriorityStateManager {
 		if (!entry) {
 			return;
 		}
-		debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
+		this.log.debug('[priority-state] releaseSlot: region=%s, index=%d, src=%s', regionName, index, entry.media.src);
 		entry.player.playing = false;
+		// A bailing successor is no successor: let the predecessor's finish release normally.
+		entry.player.successorRegistered = false;
 		resolvePlayingDeferred(entry.player);
+		// A bailing element must also drop the level's coordination claim, otherwise a
+		// lower-priority element parked on `tracked <= myPriority` waits until the next
+		// successful pass of this level (or the window end). Harmless when this level
+		// does not hold the claim.
+		this.cleanupPriorityTracking(regionName, entry.version, entry.priority?.priorityLevel);
 		this.notifyWaiters(regionName);
 	}
 
@@ -284,6 +305,19 @@ export class PriorityStateManager {
 		this.notifyWaiters(regionName);
 	}
 
+	/** True when the same playlist re-registered this slot while it was playing (next pass claimed it). */
+	public hasSuccessor(regionName: string, index: number): boolean {
+		return !!this.state[regionName]?.[index]?.player.successorRegistered;
+	}
+
+	/** The element at `index` now owns the slot; its own registration is not a successor claim. */
+	public clearSuccessor(regionName: string, index: number): void {
+		const entry = this.state[regionName]?.[index];
+		if (entry) {
+			entry.player.successorRegistered = false;
+		}
+	}
+
 	/**
 	 * Un-pauses a previously paused playlist entry.
 	 */
@@ -295,23 +329,30 @@ export class PriorityStateManager {
 	}
 
 	/**
-	 * Marks a playlist as finished: resets timesPlayed, sets playing=false, resolves deferred.
-	 * Returns the indexes of playlists this entry is holding paused (copy — release
-	 * them via unpauseAllControlled, which also clears the tracking list).
+	 * Marks a pass of a playlist as finished: resets timesPlayed and consumes the successor flag.
+	 * With `keepPlaying=false` (default) it also releases the slot (playing=false, resolves the
+	 * deferred). With `keepPlaying=true` the slot stays claimed — used between repeatCount passes
+	 * when the next pass has already re-registered it, so no lower-priority waiter can slip in.
+	 * Returns the indexes of playlists this entry is holding paused (copy — release them via
+	 * unpauseAllControlled, which also clears the tracking list).
 	 */
-	public markFinished(regionName: string, index: number): { pausedIndexes: number[] } {
+	public markFinished(regionName: string, index: number, keepPlaying: boolean = false): { pausedIndexes: number[] } {
 		const entry = this.state[regionName][index];
 		const pausedIndexes = [...entry.controlledPlaylists];
-		debug(
-			'[priority-state] markFinished: region=%s, index=%d, src=%s, pausedVictims=%d',
+		this.log.debug(
+			'[priority-state] markFinished: region=%s, index=%d, src=%s, pausedVictims=%d, keepPlaying=%s',
 			regionName,
 			index,
 			entry.media.src,
 			pausedIndexes.length,
+			keepPlaying,
 		);
 		entry.player.timesPlayed = 0;
-		entry.player.playing = false;
-		resolvePlayingDeferred(entry.player);
+		entry.player.successorRegistered = false;
+		if (!keepPlaying) {
+			entry.player.playing = false;
+			resolvePlayingDeferred(entry.player);
+		}
 		this.notifyWaiters(regionName);
 		return { pausedIndexes };
 	}
@@ -330,7 +371,7 @@ export class PriorityStateManager {
 		const victims = controller.controlledPlaylists.splice(0);
 		for (const victimIndex of victims) {
 			if (this.state[regionName][victimIndex]) {
-				debug(
+				this.log.debug(
 					'[priority-state] unpauseAllControlled: region=%s, controller=%d, victim=%d',
 					regionName,
 					controllerIndex,
@@ -476,7 +517,7 @@ export class PriorityStateManager {
 					const entryIndex = priorityRegion.indexOf(entry);
 					const released = this.unpauseAllControlled(regionName, entryIndex);
 					if (released.length > 0) {
-						debug(
+						this.log.debug(
 							'[priority-state] cleanupExpiredPriority: unpaused controlled playlists: region=%s, victims=%s',
 							regionName,
 							released.join(','),
@@ -534,7 +575,7 @@ export class PriorityStateManager {
 			try {
 				satisfied = !!entries && waiter.predicate(entries);
 			} catch (err) {
-				debug('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
+				this.log.error('[priority-state] waiter predicate error: region=%s, resolving waiter: %O', regionName, err);
 				waiter.deferred.resolve();
 				waiters.delete(waiter);
 				continue;

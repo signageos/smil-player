@@ -1,33 +1,27 @@
 /* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
-import unset = require('lodash/unset');
 import isObject = require('lodash/isObject');
 import cloneDeep = require('lodash/cloneDeep');
-import { inspect } from 'util';
 import moment from 'moment';
-import {
-	BackupPlaylist,
-	CurrentlyPlayingRegion,
-	PlaylistElement,
-	RandomPlaylist,
-} from '../../../models/playlistModels';
+import { BackupPlaylist, RandomPlaylist } from '../../../models/playlistModels';
 import { getFileName } from '../../files/tools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { DeviceModels } from '../../../enums/deviceEnums';
-import Debug from 'debug';
-import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
-import { TimedDebugger } from '../playlistProcessor/TimedDebugger';
+import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { parentGenerationRemove, randomPlaylistPlayableTagsRegex, SMILEnums } from '../../../enums/generalEnums';
-import { parseNestedRegions } from '../../xmlParser/tools';
+import {
+	parentGenerationAllow,
+	parentGenerationRecurseTagsRegex,
+	randomPlaylistPlayableTagsRegex,
+	SMILEnums,
+} from '../../../enums/generalEnums';
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
 import omit from 'lodash/omit';
 
 const hasher = require('node-object-hash');
 
-export const debug = Debug('@signageos/smil-player:playlistProcessor');
 export const hashSortCoerce = hasher({ alg: 'md5' });
 
 export function generateElementId(filepath: string, regionName: string, key: string): string {
@@ -147,30 +141,6 @@ export function fixVideoDimension(regionInfo: RegionAttributes): RegionAttribute
 	return resultObject;
 }
 
-export function getRegionInfo(regionObject: RegionsObject, regionName: string): RegionAttributes {
-	let regionInfo = <RegionAttributes>get(regionObject.region, regionName, regionObject.rootLayout);
-	// unify regionName for further uses in code ( xml:id -> regionName )
-	if (regionInfo.hasOwnProperty(XmlTags.regionNameAlias)) {
-		regionInfo.regionName = <string>regionInfo[XmlTags.regionNameAlias];
-		delete regionInfo[XmlTags.regionNameAlias];
-	}
-
-	regionInfo = fixVideoDimension(regionInfo);
-	// fix nested regions and its values for dynamic use
-	if (regionInfo.hasOwnProperty(SMILEnums.region)) {
-		regionInfo = parseNestedRegions(regionInfo);
-	}
-	debug('[general] getting region info: region=%s', regionName);
-	regionInfo = {
-		...regionInfo,
-		...(!isNil(regionInfo.top) && { top: parseInt(String(regionInfo.top)) }),
-		...(!isNil(regionInfo.left) && { left: parseInt(String(regionInfo.left)) }),
-		width: parseInt(String(regionInfo.width)),
-		height: parseInt(String(regionInfo.height)),
-	};
-	return regionInfo;
-}
-
 /**
  * extracts additional css tag which are stored directly in video, image etc.. and not in regionInfo
  * @param value - represents SMIL media file object
@@ -207,29 +177,46 @@ export function computeSyncIndex(
 	return regionSyncIndex;
 }
 
-// seq-6a985ce1ebe94055895763ce85e1dcaf93cd9620
-export function generateParentId(tagName: string, value: PlaylistElement): string {
-	try {
-		let clone = cloneDeep(value);
-		clone = orderJsonObject(clone);
-		removeNestedProperties(clone, parentGenerationRemove);
-		const parent = `${tagName}-${hashSortCoerce.hash(inspect(clone))}`;
-		return parent;
-	} catch (err) {
-		debug('[general] error during parent generation: %O', err);
-		return `${tagName}-undefined`;
+// Deep verbatim copy of an allow-listed attribute's value; arrays become
+// index-keyed objects so sibling order stays encoded in the hashed keys
+// (node-object-hash sorts arrays, which would erase order).
+function projectValueDeep(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		const out: { [index: string]: unknown } = {};
+		value.forEach((item, index) => (out[index] = projectValueDeep(item)));
+		return out;
 	}
+	if (isObject(value)) {
+		const out: { [key: string]: unknown } = {};
+		for (let [key, item] of Object.entries(value)) {
+			out[key] = projectValueDeep(item);
+		}
+		return out;
+	}
+	return value;
 }
 
-export function removeNestedProperties(object: PlaylistElement, propertiesArray: string[]): void {
-	for (let [objKey, objValue] of Object.entries(object)) {
-		if (propertiesArray.includes(objKey)) {
-			unset(object, objKey);
-		}
-		if (isObject(objValue)) {
-			removeNestedProperties(objValue, propertiesArray);
-		}
+// Projects a parsed playlist subtree down to its declarative identity: structure/media
+// tags are recursed, allow-listed attributes are copied, everything else — including
+// every runtime write playback makes onto the live tree — is invisible by construction.
+export function projectForParentGeneration(value: unknown): unknown {
+	if (Array.isArray(value)) {
+		const out: { [index: string]: unknown } = {};
+		value.forEach((item, index) => (out[index] = projectForParentGeneration(item)));
+		return out;
 	}
+	if (isObject(value)) {
+		const out: { [key: string]: unknown } = {};
+		for (let [key, item] of Object.entries(value)) {
+			if (parentGenerationRecurseTagsRegex.test(key)) {
+				out[key] = projectForParentGeneration(item);
+			} else if (parentGenerationAllow.includes(key)) {
+				out[key] = projectValueDeep(item);
+			}
+		}
+		return out;
+	}
+	return value;
 }
 
 export function generateBackupImagePlaylist(imageUrl: string, repeatCount: string): BackupPlaylist {
@@ -259,17 +246,6 @@ export function getDefaultRegion() {
 
 export function getDefaultVideoParams(): VideoParams {
 	return ['', 0, 0, 0, 0, 'RTP'];
-}
-
-export function getIndexOfPlayingMedia(currentlyPlaying: CurrentlyPlayingRegion[]): number {
-	debug('[general] getting index of playing priority: %O', currentlyPlaying);
-	// no element was played before ( trigger/dynamic playlist case )
-	if (isNil(currentlyPlaying)) {
-		return 0;
-	}
-	return currentlyPlaying.findIndex((element) => {
-		return element.player?.playing === true;
-	});
 }
 
 export function generateCurrentDate(utc: boolean) {
@@ -329,15 +305,6 @@ export async function promiseWithTimeout<T>(
 	} finally {
 		clearTimeout(timeoutId!);
 	}
-}
-
-export function orderJsonObject(jsonObject: { [key in string]: unknown }): { [key in string]: unknown } {
-	return Object.keys(jsonObject)
-		.sort()
-		.reduce((obj: { [objKey in string]: unknown }, key) => {
-			obj[key] = jsonObject[key];
-			return obj;
-		},      {});
 }
 
 export function shuffleObject(playlist: { [key in string]: unknown }): { [key in string]: unknown } {
@@ -475,24 +442,6 @@ export function computePlayModeSyncRanges(
 	return ranges;
 }
 
-export function processRandomPlayMode(
-	playlist: { [key in string]: string },
-	randomPlaylistInfo: RandomPlaylist,
-	parent: string,
-) {
-	switch (playlist.playMode.toLowerCase()) {
-		case 'random':
-			return shuffleObject(playlist);
-		case 'random_one':
-			return pickRandomOne(playlist);
-		case 'one':
-			return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
-		default:
-			debug('[general] no valid playMode, returning original: playMode=%s', playlist.playmode);
-			return playlist;
-	}
-}
-
 /**
  * Extracts a string value from config, returning undefined if not a string
  */
@@ -526,24 +475,6 @@ export function getConfigBoolean(
 		return value.toLowerCase() === 'true';
 	}
 	return defaultValue;
-}
-
-/**
- * Get ISO timestamp for debug logs
- */
-function getTimestamp(): string {
-	return new Date().toISOString();
-}
-
-/**
- * Helper to log debug messages, using TimedDebugger if available
- */
-export function logDebug(timedDebug: TimedDebugger | undefined, message: string, ...args: any[]): void {
-	if (timedDebug) {
-		timedDebug.log(message, ...args);
-	} else {
-		debug('[%s] ' + message, getTimestamp(), ...args);
-	}
 }
 
 /**

@@ -1,12 +1,13 @@
 import * as chai from 'chai';
 import moment from 'moment';
 import MockDate from 'mockdate';
-import { checkConditionalExprSafe, isConditionalExpExpired } from '../../../src/components/playlist/tools/conditionalTools';
-import { setDefaultAwaitConditional } from '../../../src/components/playlist/tools/scheduleTools';
+import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
+import { noopLog } from '../../../src/logger';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import { ExprTag } from '../../../src/enums/conditionalEnums';
 
 const expect = chai.expect;
+const { checkConditionalExprSafe, shouldSkipElement, setDefaultAwaitConditional } = createScheduleTools(noopLog);
 
 describe('Playlist tools checkConditionalExprSafe', () => {
 	beforeEach(() => {
@@ -459,38 +460,38 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		});
 	});
 
-	describe('isConditionalExpExpired', () => {
+	describe('shouldSkipElement', () => {
 		it('should return false for element without expr tag', () => {
 			const element = { src: 'video.mp4' } as any;
-			expect(isConditionalExpExpired(element)).to.be.equal(false);
+			expect(shouldSkipElement(element)).to.be.equal(false);
 		});
 
 		it('should return false for element with valid (active) expr', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
 			} as any;
-			expect(isConditionalExpExpired(element)).to.be.equal(false);
+			expect(shouldSkipElement(element)).to.be.equal(false);
 		});
 
 		it('should return true for element with expired expr', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
 			} as any;
-			expect(isConditionalExpExpired(element)).to.be.equal(true);
+			expect(shouldSkipElement(element)).to.be.equal(true);
 		});
 
 		it('should handle playerName matching', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(smil-playerName(), 'TestPlayer')",
 			} as any;
-			expect(isConditionalExpExpired(element, 'TestPlayer')).to.be.equal(false);
-			expect(isConditionalExpExpired(element, 'OtherPlayer')).to.be.equal(true);
+			expect(shouldSkipElement(element, 'TestPlayer')).to.be.equal(false);
+			expect(shouldSkipElement(element, 'OtherPlayer')).to.be.equal(true);
 		});
 
 		it('should handle array input (delegates to setDefaultAwait)', () => {
 			// Array with element that has no begin and no expr → playImmediately → not expired
 			const elements = [{ repeatCount: '1', video: [] }] as any[];
-			expect(isConditionalExpExpired(elements)).to.be.equal(false);
+			expect(shouldSkipElement(elements)).to.be.equal(false);
 		});
 
 		it('should return true for array where all elements have future wallclock', () => {
@@ -502,7 +503,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 					video: [],
 				},
 			] as any[];
-			expect(isConditionalExpExpired(elements)).to.be.equal(true);
+			expect(shouldSkipElement(elements)).to.be.equal(true);
 		});
 	});
 
@@ -623,5 +624,28 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			const expr = "[adapi-compare(smil-playerName(),'match')=0 OR adapi-compare(smil-playerName(),'wrong')=0]";
 			expect(checkConditionalExprSafe(expr, 'match', '')).to.equal(true);
 		});
+	});
+});
+
+describe('shouldSkipElement with skipContentMark runtime flag', () => {
+	// The fetch strategies mark unavailable content with a dedicated runtime
+	// flag instead of overwriting media.expr (which destroyed declarative
+	// dayparts and drifted the parent hash). A marked element must be treated
+	// as expired by every conditional evaluation entry point.
+
+	it('marked element with no expr is expired', () => {
+		expect(shouldSkipElement({ skipContentMark: true } as any)).to.equal(true);
+	});
+
+	it('marked element with a passing declarative expr is still expired', () => {
+		const element: any = {
+			expr: "adapi-compare(smil-playerName(),'match')",
+			skipContentMark: true,
+		};
+		expect(shouldSkipElement(element, 'match', '')).to.equal(true);
+	});
+
+	it('unmarked element with no expr is not expired', () => {
+		expect(shouldSkipElement({} as any)).to.equal(false);
 	});
 });

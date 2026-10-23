@@ -1,4 +1,4 @@
-import { debug } from './generalTools';
+import { Log } from '../../../logger';
 import { SMILTicker } from '../../../models/mediaModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
@@ -62,59 +62,64 @@ function linkFontFamily(fontFamily: string) {
 	}
 }
 
-export function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttributes, key: string): string {
-	const elementId = `ticker-${ticker.regionInfo.regionName}-${key}`;
-	debug('[ticker] creating element: id=%s', elementId);
-	if (document.getElementById(elementId)) {
-		debug('[ticker] reusing existing element: id=%s', elementId);
-		return elementId;
-	}
-
-	const element: HTMLElement = document.createElement(HtmlEnum.div);
-	element.id = elementId;
-
-	Object.keys(regionInfo).forEach((attr: string) => {
-		if (XmlTags.cssElementsPosition.includes(attr)) {
-			element.style[attr as keyof CssElementsPosition] = `${regionInfo[attr]}px`;
+export function createTickerTools(log: Log) {
+	function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttributes, key: string): string {
+		const elementId = `ticker-${ticker.regionInfo.regionName}-${key}`;
+		log.debug('[ticker] creating element: id=%s', elementId);
+		if (document.getElementById(elementId)) {
+			log.debug('[ticker] reusing existing element: id=%s', elementId);
+			return elementId;
 		}
-		if (XmlTags.cssElements.includes(attr)) {
-			element.style[attr as keyof CssElementsPosition] = regionInfo[attr];
+
+		const element: HTMLElement = document.createElement(HtmlEnum.div);
+		element.id = elementId;
+
+		Object.keys(regionInfo).forEach((attr: string) => {
+			if (XmlTags.cssElementsPosition.includes(attr)) {
+				element.style[attr as keyof CssElementsPosition] = `${regionInfo[attr]}px`;
+			}
+			if (XmlTags.cssElements.includes(attr)) {
+				element.style[attr as keyof CssElementsPosition] = regionInfo[attr];
+			}
+		});
+
+		if (typeof ticker.linearGradient === 'string') {
+			const linearGradientAngle = Number.parseInt(String(ticker.linearGradientAngle));
+			const linearGradientDeg = Number.isInteger(linearGradientAngle) ? linearGradientAngle : 0;
+			element.style.backgroundImage = `linear-gradient(${linearGradientDeg}deg, ${ticker.linearGradient})`;
+		} else if (typeof ticker.backgroundColor === 'string') {
+			element.style.backgroundColor = ticker.backgroundColor;
 		}
-	});
 
-	if (typeof ticker.linearGradient === 'string') {
-		const linearGradientAngle = Number.parseInt(String(ticker.linearGradientAngle));
-		const linearGradientDeg = Number.isInteger(linearGradientAngle) ? linearGradientAngle : 0;
-		element.style.backgroundImage = `linear-gradient(${linearGradientDeg}deg, ${ticker.linearGradient})`;
-	} else if (typeof ticker.backgroundColor === 'string') {
-		element.style.backgroundColor = ticker.backgroundColor;
-	}
-
-	if (typeof ticker.fontColor === 'string') {
-		element.style.color = ticker.fontColor;
-	}
-	if (typeof ticker.fontName === 'string') {
-		const fontName = ticker.fontName.includes('-') ? ticker.fontName.split('-')[0] : ticker.fontName;
-		linkFontFamily(fontName);
-		element.style.fontFamily = fontName;
-		if (ticker.fontName.endsWith('Bold')) {
-			element.style.fontWeight = 'bold';
+		if (typeof ticker.fontColor === 'string') {
+			element.style.color = ticker.fontColor;
 		}
+		if (typeof ticker.fontName === 'string') {
+			const fontName = ticker.fontName.includes('-') ? ticker.fontName.split('-')[0] : ticker.fontName;
+			linkFontFamily(fontName);
+			element.style.fontFamily = fontName;
+			if (ticker.fontName.endsWith('Bold')) {
+				element.style.fontWeight = 'bold';
+			}
+		}
+		element.style.position = 'absolute';
+		element.style.overflow = 'hidden';
+		element.style.whiteSpace = 'nowrap';
+		element.style.borderWidth = '0px';
+
+		element.style.visibility = 'hidden';
+		document.body.appendChild(element);
+
+		const fontSize = `${resolveTickerFontSize(ticker.fontSize, element.clientHeight)}px`;
+		element.style.lineHeight = fontSize;
+		element.style.fontSize = fontSize;
+
+		return element.id;
 	}
-	element.style.position = 'absolute';
-	element.style.overflow = 'hidden';
-	element.style.whiteSpace = 'nowrap';
-	element.style.borderWidth = '0px';
 
-	element.style.visibility = 'hidden';
-	document.body.appendChild(element);
-
-	const fontSize = `${resolveTickerFontSize(ticker.fontSize, element.clientHeight)}px`;
-	element.style.lineHeight = fontSize;
-	element.style.fontSize = fontSize;
-
-	return element.id;
+	return { createTickerElement };
 }
+export type TickerTools = ReturnType<typeof createTickerTools>;
 
 type TextChild = { element: HTMLSpanElement; left: number; width: number };
 

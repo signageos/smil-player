@@ -1,32 +1,38 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
+import { Log } from '../../../logger';
 import { PlaylistElement, PlaylistOptions } from '../../../models/playlistModels';
 import { TriggerList } from '../../../models/triggerModels';
 import { SMILFileObject } from '../../../models/filesModels';
 import { IVideoFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { SMILTriggersEnum } from '../../../enums/triggerEnums';
 import { XmlTags } from '../../../enums/xmlEnums';
-import { computePlayModeSyncRanges, computeSyncIndex, extractAdditionalInfo, getRegionInfo, removeDigits } from '../tools/generalTools';
+import { computePlayModeSyncRanges, computeSyncIndex, extractAdditionalInfo, removeDigits } from '../tools/generalTools';
+import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { FileStructure } from '../../../enums/fileEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { convertRelativePathToAbsolute, getProtocol } from '../../files/tools';
-import { createTickerElement } from '../tools/tickerTools';
-import { createDomElement } from '../tools/htmlTools';
+import { createTickerTools, TickerTools } from '../tools/tickerTools';
+import { createHtmlTools, HtmlTools } from '../tools/htmlTools';
 import { isNil, isObject } from 'lodash';
 import { ISos } from '../../../models/sosModels';
 import { FilesManager } from '../../files/filesManager';
-import Debug from 'debug';
 import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 
-const debug = Debug('@signageos/smil-player:playlistDataPrepare');
-
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
-	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions) {
-		super(sos, files, options);
+	private readonly html: HtmlTools;
+	private readonly ticker: TickerTools;
+	private readonly tools: PlaylistTools;
+
+	constructor(sos: ISos, files: FilesManager, options: PlaylistOptions, log: Log) {
+		super(sos, files, options, log);
+		this.html = createHtmlTools(log);
+		this.ticker = createTickerTools(log);
+		this.tools = createPlaylistTools(log);
 	}
 
 	/**
@@ -80,7 +86,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 			let value: PlaylistElement | PlaylistElement[] = loopValue;
 
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
-				debug('[prepare] processing %s element', key);
+				this.log.debug('[prepare] processing %s element', key);
 				if (!Array.isArray(value)) {
 					value = [value];
 				}
@@ -105,11 +111,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						htmlElement = HtmlEnum.ticker;
 						break;
 					default:
-						debug('[prepare] unsupported element type: %s', key);
+						this.log.warn('[prepare] unsupported element type: %s', key);
 				}
 
 				for (const elem of value) {
-					elem.regionInfo = getRegionInfo(smilObject, elem.region);
+					elem.regionInfo = this.tools.getRegionInfo(smilObject, elem.region);
 					extractAdditionalInfo(elem);
 					// relative path for triggers has to be fixed here, because trigger media objects are not included in parallel download
 					// there are two ways of computing sync index, more at jsdoc for computeSyncIndex
@@ -165,7 +171,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						if (!isNil(smilObject.transition[transitionId])) {
 							elem.transitionInfo = smilObject.transition[transitionId];
 						} else {
-							debug(
+							this.log.debug(
 								'[prepare] no matching transition: type=%s',
 								transitionId,
 							);
@@ -174,13 +180,13 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-						elem.id = createDomElement(elem, htmlElement, key, isSpecial);
+						elem.id = this.html.createDomElement(elem, htmlElement, key, isSpecial);
 					}
 
 					if (key.startsWith(HtmlEnum.ticker)) {
-						elem.id = createTickerElement(elem, elem.regionInfo, key);
+						elem.id = this.ticker.createTickerElement(elem, elem.regionInfo, key);
 					}
-					debug('[prepare] element info extracted: src=%s', elem.src);
+					this.log.debug('[prepare] element info extracted: src=%s', elem.src);
 				}
 				// reset widget expression for next elements
 				widgetRootFile = '';
@@ -201,7 +207,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						this.synchronization.playModeSyncRanges[region] = [];
 					}
 					this.synchronization.playModeSyncRanges[region].push(range);
-					debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', region, range.start, range.end);
+					this.log.debug('[prepare] stored playMode range: region=%s, range=[%d, %d]', region, range.start, range.end);
 				}
 			}
 		}
@@ -226,19 +232,19 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, smilUrl, true);
-		debug('[prepare] all triggers extracted');
+		this.log.debug('[prepare] all triggers extracted');
 
 		await this.getAllInfo(smilObject.dynamic, smilObject, smilUrl, true);
-		debug('[prepare] all dynamic playlists extracted');
+		this.log.debug('[prepare] all dynamic playlists extracted');
 
 		// extracts region info for all medias in playlist
 		await this.getAllInfo(smilObject.playlist, smilObject, smilUrl);
-		debug('[prepare] all elements extracted');
+		this.log.debug('[prepare] all elements extracted');
 
 		// Set max sync indices for each region in synchronization object
 		if (this.synchronization && Object.keys(this.globalRegionSyncIndex).length > 0) {
 			this.synchronization.maxSyncIndexPerRegion = { ...this.globalRegionSyncIndex };
-			debug('[prepare] set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
+			this.log.debug('[prepare] set maxSyncIndexPerRegion: %O', this.synchronization.maxSyncIndexPerRegion);
 		}
 	};
 }
