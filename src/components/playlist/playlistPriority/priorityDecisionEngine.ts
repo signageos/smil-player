@@ -200,6 +200,11 @@ export function isEndTimeExpired(endTime: number): boolean {
 	return endTime <= Date.now() && endTime > ENDTIME_REPEAT_THRESHOLD;
 }
 
+type IsRepeatCountExpiredOptions = {
+	timesPlayed: number;
+	endTime: number;
+};
+
 /**
  * Checks if the repeat count has been exceeded.
  * Returns false if endTime is 0 (indefinite) — indefinite playlists are never
@@ -208,14 +213,14 @@ export function isEndTimeExpired(endTime: number): boolean {
  * guard, causing indefinite playlists to cycle playing=false→true every iteration,
  * which unnecessarily resolved deferreds and unpaused controlled playlists.
  */
-type IsRepeatCountExpiredOptions = {
-	timesPlayed: number;
-	endTime: number;
-};
-
 export function isRepeatCountExpired({ timesPlayed, endTime }: IsRepeatCountExpiredOptions): boolean {
 	return timesPlayed >= endTime && endTime !== 0;
 }
+
+type IsMediaMatchOptions = {
+	a: SMILMedia;
+	b: SMILMedia;
+};
 
 /**
  * Finds the index of an existing entry in the tracking array that matches the given info.
@@ -229,11 +234,6 @@ export function isRepeatCountExpired({ timesPlayed, endTime }: IsRepeatCountExpi
  * Uses targeted field comparison instead of deep equality — the match is for
  * identity (is this the same element?), not change detection.
  */
-type IsMediaMatchOptions = {
-	a: SMILMedia;
-	b: SMILMedia;
-};
-
 export function isMediaMatch({ a, b }: IsMediaMatchOptions): boolean {
 	return a.src === b.src
 		&& a.regionInfo?.regionName === b.regionInfo?.regionName

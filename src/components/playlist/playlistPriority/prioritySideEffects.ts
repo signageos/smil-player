@@ -8,7 +8,7 @@ import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
 
-export type CancelDynamicPlaylistOptions = {
+type CancelDynamicPlaylistOptions = {
 	triggers: PlaylistTriggers;
 	value: SMILMedia;
 	dynamicValue: string;
