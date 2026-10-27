@@ -1,15 +1,15 @@
 import { Logger, LogLevel } from './types';
 
-/**
- * Player-internal logging façade. Holds a namespace and a pointer to the single injected Logger.
- * child() returns a new Log with a longer namespace and the SAME Logger.
- */
 type EmitOptions = {
 	level: LogLevel;
 	message: string;
 	args: unknown[];
 };
 
+/**
+ * Player-internal logging façade. Holds a namespace and a pointer to the single injected Logger.
+ * child() returns a new Log with a longer namespace and the SAME Logger.
+ */
 export class Log {
 	constructor(private readonly logger: Logger, public readonly namespace: string) {}
 

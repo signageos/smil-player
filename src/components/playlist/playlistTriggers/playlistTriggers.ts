@@ -66,7 +66,7 @@ type ProcessTriggerDurationOptions = {
 	priorityObject?: PriorityObject;
 };
 
-export type HandleDynamicPlaylistOptions = {
+type HandleDynamicPlaylistOptions = {
 	dynamicPlaylistId: string;
 	dynamicPlaylistConfig: DynamicPlaylist;
 	dynamicMedia: DynamicPlaylistObject;
@@ -1039,11 +1039,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.log.debug('[trigger-rfid] tag event: tag=%s, action=%s, sensor=%s', tag, action, sensor.id);
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		// check if some conditions equals emitted parameters
-		if (this.areTriggerConditionsMet({
+		const conditionsMet = this.areTriggerConditionsMet({
 			conditions: triggerInfo.condition,
 			logicCondition: triggerInfo.stringCondition,
 			action,
-		})) {
+		});
+		if (conditionsMet) {
 			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
 			await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			return;
