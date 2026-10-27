@@ -28,4 +28,6 @@ export interface LogEntry {
  */
 export interface Logger {
 	write(entry: LogEntry): void;
+	/** Release timers and listeners. Called when a config change replaces this logger with another. */
+	stop?(): void;
 }

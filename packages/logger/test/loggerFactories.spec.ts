@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { ConsoleLogger, loggerFactories } from '../loggers';
+import { loggerFactories } from '../loggers';
 import { RemoteLogger } from '../loggers/remoteLogger';
 import { LoggerHost } from '../loggers';
 
@@ -37,11 +37,8 @@ describe('loggerFactories.remote', () => {
 		created.push(logger as RemoteLogger);
 	});
 
-	it('falls back to the console logger when loggerUrl is missing', () => {
-		expect(loggerFactories.remote(fakeSos({}))).to.be.instanceOf(ConsoleLogger);
-	});
-
-	it('falls back to the console logger when loggerUrl is empty', () => {
-		expect(loggerFactories.remote(fakeSos({ loggerUrl: '' }))).to.be.instanceOf(ConsoleLogger);
+	it('returns undefined when loggerUrl is missing or empty so createLogger substitutes console once', () => {
+		expect(loggerFactories.remote(fakeSos({}))).to.equal(undefined);
+		expect(loggerFactories.remote(fakeSos({ loggerUrl: '' }))).to.equal(undefined);
 	});
 });

@@ -85,6 +85,63 @@ describe('createLogger', () => {
 		expect(b.seen).to.deep.equal(['1', '2', '3', '4']);
 	});
 
+	it('fans out to every logger in a comma-separated list, building each once', () => {
+		config.logger = 'console, other';
+		const logger = createLogger(sos, factories);
+		logger.write(entry('1'));
+		logger.write(entry('2'));
+		expect(a.seen).to.deep.equal(['1', '2']);
+		expect(b.seen).to.deep.equal(['1', '2']);
+		expect(constructed).to.deep.equal(['console', 'other']);
+	});
+
+	it('accepts an array, drops unknown and duplicate names, falls back to console when none is known', () => {
+		(config as Record<string, unknown>).logger = ['other', 'nope', 'other'];
+		createLogger(sos, factories).write(entry('x'));
+		expect(b.seen).to.deep.equal(['x']);
+		expect(constructed).to.deep.equal(['other']);
+		config.logger = 'nope,,';
+		createLogger(sos, factories).write(entry('y'));
+		expect(a.seen).to.deep.equal(['y']);
+	});
+
+	it('substitutes console once for a factory that returns undefined, never printing twice', () => {
+		factories.incomplete = () => undefined;
+		config.logger = 'console,incomplete';
+		createLogger(sos, factories).write(entry('x'));
+		expect(a.seen).to.deep.equal(['x']);
+		expect(constructed).to.deep.equal(['console']);
+		config.logger = 'incomplete,other';
+		createLogger(sos, factories).write(entry('y'));
+		expect(a.seen).to.deep.equal(['x', 'y']);
+		expect(b.seen).to.deep.equal(['y']);
+	});
+
+	it('keeps writing to the other loggers when one throws', () => {
+		factories.boom = () => ({
+			write: () => {
+				throw new Error('boom');
+			},
+		});
+		config.logger = 'boom,other';
+		createLogger(sos, factories).write(entry('x'));
+		expect(b.seen).to.deep.equal(['x']);
+	});
+
+	it('stops replaced loggers when the selection changes', () => {
+		const stopped: string[] = [];
+		factories.other = () => ({ write: b.logger.write, stop: () => stopped.push('other') });
+		config.logger = 'other';
+		const logger = createLogger(sos, factories);
+		logger.write(entry('1'));
+		logger.write(entry('2'));
+		expect(stopped).to.deep.equal([]);
+		config.logger = 'console';
+		logger.write(entry('3'));
+		expect(stopped).to.deep.equal(['other']);
+		expect(a.seen).to.deep.equal(['3']);
+	});
+
 	it('does not construct any logger until the first write', () => {
 		createLogger(sos, factories);
 		expect(constructed).to.deep.equal([]);

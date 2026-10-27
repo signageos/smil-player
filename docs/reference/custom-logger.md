@@ -23,6 +23,7 @@ interface LogEntry {
 
 interface Logger {
 	write(entry: LogEntry): void;
+	stop?(): void;       // optional: release timers/listeners when a config change replaces this logger
 }
 ```
 
@@ -45,7 +46,8 @@ Two ways, in order of preference:
 
 1. **Register it and select it by config.** Add a factory to `loggerFactories` in `packages/logger/loggers/index.ts`, then set the
    `logger` applet config key to its name. Devices switch without a rebuild; the name is re-read on every log line, so
-   a config change takes effect immediately. Unknown names fall back to `console`.
+   a config change takes effect immediately. Several names separated by commas (`console,html`) write to every
+   listed logger. Unknown names are ignored; when none is known it falls back to `console`.
 
    ```ts
    // packages/logger/loggers/index.ts
@@ -56,7 +58,8 @@ Two ways, in order of preference:
    ```
 
    Per-logger settings come from `sos.config` too (for example a `loggerUrl` key for a remote logger); the factory
-   receives `sos` for exactly this purpose.
+   receives `sos` for exactly this purpose. Return `undefined` when that config is incomplete: the line then goes to
+   `console` instead, and only once even if `console` is listed as well.
 
 2. **Hard-wire it** when you build a dedicated bundle and want no config dependency:
 
@@ -96,7 +99,8 @@ export class HtmlLogger implements Logger {
 `loggerUrl`. It is for devices where nobody can open a developer console.
 
 - Sends every level. Nothing is sent while `debugEnabled` is off, so the stream is switched on and off from
-  config without a redeploy. The console prints nothing while `remote` is selected; set `logger=console` to get it back.
+  config without a redeploy. The console prints nothing while only `remote` is selected; set `logger=console,remote` to
+  get both.
 - Lines are rendered with `formatMessage` at write time, buffered (cap 1000, oldest dropped) and POSTed every
   5 seconds and on `pagehide`. A failed POST is dropped, there is no retry.
 - One request at a time: while a POST is pending, ticks keep buffering instead of opening more connections to a
