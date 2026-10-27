@@ -30,12 +30,12 @@ module.exports = (_env, argv) => {
 				{
 					test: /\.tsx?$/,
 					loader: 'awesome-typescript-loader',
-					include: path.resolve(__dirname, 'src'),
+					include: [path.resolve(__dirname, 'src'), path.resolve(__dirname, 'packages')],
 					options: {
 						useCache: true,
 						cacheDirectory: 'cache/awesome-typescript',
 						forceIsolatedModules: true,
-						reportFiles: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}'],
+						reportFiles: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}', 'packages/**/*.ts'],
 					},
 				},
 				{

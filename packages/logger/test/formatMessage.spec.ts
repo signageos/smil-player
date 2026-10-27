@@ -1,5 +1,5 @@
 import * as chai from 'chai';
-import { formatMessage } from '../../../src/logger/formatMessage';
+import { formatMessage } from '../formatMessage';
 
 const expect = chai.expect;
 

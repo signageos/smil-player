@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { PlaylistCommon } from '../../../src/components/playlist/playlistCommon/playlistCommon';
 import { WaitStatus, PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';

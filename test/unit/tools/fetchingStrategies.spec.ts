@@ -5,7 +5,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).window = dom.window;
 }
 import { createFetchingStrategies } from '../../../src/components/files/fetchingStrategies/fetchingStrategies';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { SMILEnums } from '../../../src/enums/generalEnums';
 import { MergedDownloadList } from '../../../src/models/filesModels';
 

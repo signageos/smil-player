@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon */
-import { Log } from '../../logger';
+import { Log } from '@signageos/smil-logger';
 import * as xml2js from 'xml2js';
 import { createXmlTools, extractRegionInfo, extractTransitionsInfo, XmlTools } from './tools';
 import { XmlTags } from '../../enums/xmlEnums';

@@ -1,5 +1,5 @@
 import { CustomEndpointReport } from '../../../models/reportingModels';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 export function createOfflineReportTools(log: Log) {
 	/**

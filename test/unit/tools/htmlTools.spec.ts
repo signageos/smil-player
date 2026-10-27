@@ -4,7 +4,7 @@ import {
 	createHtmlTools,
 	extractAttributesByPrefix,
 } from '../../../src/components/playlist/tools/htmlTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 
 const expect = chai.expect;
 

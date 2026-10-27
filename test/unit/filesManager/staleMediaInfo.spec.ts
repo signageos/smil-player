@@ -9,7 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';

@@ -1,8 +1,8 @@
 import * as chai from 'chai';
 import Debug from 'debug';
 import * as util from 'util';
-import { ConsoleLogger } from '../../../src/loggers/consoleLogger';
-import { LogEntry } from '../../../src/logger/types';
+import { ConsoleLogger } from '../loggers/consoleLogger';
+import { LogEntry } from '../types';
 
 const expect = chai.expect;
 

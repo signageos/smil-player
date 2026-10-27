@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { EventEmitter } from 'events';
 import { ISos } from '../../../models/sosModels';
 import { IMasterStatusProvider } from './IMasterStatusProvider';

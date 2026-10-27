@@ -13,7 +13,7 @@ import {
 	ObsoleteConditionalExprPrefix,
 	BinaryOperatorChar,
 } from '../../../enums/conditionalEnums';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { generateCurrentDate } from './generalTools';
 import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';

@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace indent  tab indentation expected align   arguments are not aligned*/
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import isNil = require('lodash/isNil');
 import isObject = require('lodash/isObject');
 import { PlaylistElement } from '../../../models/playlistModels';

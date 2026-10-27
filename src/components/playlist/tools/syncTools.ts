@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';

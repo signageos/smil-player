@@ -5,7 +5,7 @@ import {
 	isRepeatCountExpired,
 	isMediaMatch,
 } from '../../../src/components/playlist/playlistPriority/priorityDecisionEngine';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
 import { SMILMedia } from '../../../src/models/mediaModels';
 import { makePriorityObject, makeRegion } from './testHelpers';

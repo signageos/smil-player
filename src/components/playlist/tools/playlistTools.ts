@@ -1,7 +1,7 @@
 /* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { CurrentlyPlayingRegion, PlaylistElement, RandomPlaylist } from '../../../models/playlistModels';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';

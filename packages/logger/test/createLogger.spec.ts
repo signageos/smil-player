@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { createLogger, LoggerFactory } from '../../../src/loggers';
-import { LogEntry, Logger } from '../../../src/logger';
-import { ISos } from '../../../src/models/sosModels';
+import { createLogger, LoggerFactory } from '../loggers';
+import { LogEntry, Logger } from '../index';
+import { LoggerHost } from '../loggers';
 
 const entry = (message: string): LogEntry => ({ level: 'debug', namespace: 'ns', message, args: [], timestamp: 1 });
 
@@ -19,7 +19,7 @@ function recorder(): { logger: Logger; seen: string[] } {
 
 describe('createLogger', () => {
 	let config: Record<string, string | number | boolean>;
-	let sos: ISos;
+	let sos: LoggerHost;
 	let a: ReturnType<typeof recorder>;
 	let b: ReturnType<typeof recorder>;
 	let constructed: string[];
@@ -27,7 +27,7 @@ describe('createLogger', () => {
 
 	beforeEach(() => {
 		config = {};
-		sos = { config } as unknown as ISos;
+		sos = { config } as unknown as LoggerHost;
 		a = recorder();
 		b = recorder();
 		constructed = [];

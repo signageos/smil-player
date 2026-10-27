@@ -1,6 +1,6 @@
 import * as chai from 'chai';
-import { Log, noopLog, noopLogger } from '../../../src/logger/log';
-import { LogEntry, Logger } from '../../../src/logger/types';
+import { Log, noopLog, noopLogger } from '../log';
+import { LogEntry, Logger } from '../types';
 
 const expect = chai.expect;
 

@@ -35,9 +35,11 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "test/**/*.ts",
-    "libs/chrome/chrome-plugin.d.ts"
+    "libs/chrome/chrome-plugin.d.ts",
+    "packages/**/*.ts"
   ],
   "exclude": [
-    "src/webWorker.ts"
+    "src/webWorker.ts",
+    "**/node_modules"
   ]
 }

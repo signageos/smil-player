@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { removeDigits } from '../tools/generalTools';

@@ -4,10 +4,12 @@
     "functions": 35,
     "branches": 31,
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "packages/*/**/*.ts"
     ],
     "exclude": [
-        "src/testing/*.ts"
+        "src/testing/*.ts",
+        "packages/*/test/**"
     ],
     "all": true,
     "extension": [

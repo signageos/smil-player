@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 // @ts-ignore no ts declaration
 import { JefNode } from 'json-easy-filter';
 import isNil from 'lodash/isNil';

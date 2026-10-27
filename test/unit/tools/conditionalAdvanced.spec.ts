@@ -3,7 +3,7 @@ import moment from 'moment';
 import MockDate from 'mockdate';
 
 import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 
 const expect = chai.expect;
 const { checkConditionalExprSafe } = createScheduleTools(noopLog);

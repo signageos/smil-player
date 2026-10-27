@@ -1,5 +1,5 @@
 import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion } from '../../../models/playlistModels';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import set = require('lodash/set');
 import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';

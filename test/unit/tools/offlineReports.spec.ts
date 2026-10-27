@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import { createOfflineReportTools } from '../../../src/components/files/tools/offlineReports';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 
 const expect = chai.expect;
 const { parseOfflineReportLines } = createOfflineReportTools(noopLog);

@@ -1,7 +1,7 @@
 import * as chai from 'chai';
-import { ConsoleLogger, loggerFactories } from '../../../src/loggers';
-import { RemoteLogger } from '../../../src/loggers/remoteLogger';
-import { ISos } from '../../../src/models/sosModels';
+import { ConsoleLogger, loggerFactories } from '../loggers';
+import { RemoteLogger } from '../loggers/remoteLogger';
+import { LoggerHost } from '../loggers';
 
 const expect = chai.expect;
 
@@ -12,11 +12,11 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).window = dom.window;
 }
 
-function fakeSos(config: Record<string, string | number | boolean>): ISos {
+function fakeSos(config: Record<string, string | number | boolean>): LoggerHost {
 	return {
 		config,
 		management: { getSerialNumber: () => Promise.resolve('SN-1') },
-	} as unknown as ISos;
+	} as unknown as LoggerHost;
 }
 
 describe('loggerFactories.remote', () => {

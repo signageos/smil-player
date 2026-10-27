@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { SmilScheduleObject } from '../../../models/scheduleModels';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 export function createWallclockTools(log: Log) {
 	/**

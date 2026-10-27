@@ -9,7 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { SMILElementController } from '../../../src/components/playlist/playlistProcessor/SMILElementController';
 import { Synchronization } from '../../../src/models/syncModels';

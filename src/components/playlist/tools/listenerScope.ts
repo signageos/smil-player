@@ -13,7 +13,7 @@
  * listeners through `add()`, and calls `removeAll()` whenever its setup phase
  * is about to re-run (so the next setup starts from a clean slate).
  */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 export interface ListenerEntry {
 	target: EventTarget;

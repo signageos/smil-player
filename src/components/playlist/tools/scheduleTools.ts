@@ -7,7 +7,7 @@ import { PlaylistElement } from '../../../models/playlistModels';
 import { createConditionalFns } from './conditionalTools';
 import { SMILScheduleEnum } from '../../../enums/scheduleEnums';
 import { createWallclockTools } from './wallclockTools';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { removeDigits } from './generalTools';
 
 export function createScheduleTools(log: Log) {

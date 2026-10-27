@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { PlaylistTraverser } from '../../../src/components/playlist/playlistProcessor/playlistTraverser';

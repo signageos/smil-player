@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { ENDTIME_REPEAT_THRESHOLD, PriorityRule } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';

@@ -2,7 +2,7 @@ import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
-import { Log, noopLog } from '../../../src/logger';
+import { Log, noopLog } from '@signageos/smil-logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 
 const expect = chai.expect;

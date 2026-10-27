@@ -1,6 +1,6 @@
 import { MergedDownloadList } from '../../../models/filesModels';
 import { createDownloadPath } from '../tools';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { DEFAULT_LAST_MODIFIED } from '../../../enums/fileEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { UpdateCheckResult } from '../IFilesManager';

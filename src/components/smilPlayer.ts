@@ -1,4 +1,4 @@
-import { Log, Logger } from '../logger';
+import { Log, Logger } from '@signageos/smil-logger';
 import { IStorageUnit } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import { defaults as config } from '../../config/parameters';
 import { ISos } from '../models/sosModels';

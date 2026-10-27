@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';

@@ -40,7 +40,7 @@
     "@mdx-js/mdx",
     "cross-env",
     "glob",
-    "@babel/core"
+    "@babel/core",
+    "@signageos/smil-*"
   ]
 }
-

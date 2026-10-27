@@ -2,7 +2,7 @@ import * as chai from 'chai';
 import moment from 'moment';
 import MockDate from 'mockdate';
 import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 import { ExprTag } from '../../../src/enums/conditionalEnums';
 

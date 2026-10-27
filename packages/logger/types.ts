@@ -24,7 +24,7 @@ export interface LogEntry {
  *   logger cannot stop playback, but nobody is told about them.
  * - The player emits every line at every level; filtering by level or namespace is the logger's job.
  * - A logger may use browser APIs, bundled packages and the sos object passed in from index.ts, but
- *   must not import from src/components or src/models.
+ *   must not import from the player (`src/`).
  */
 export interface Logger {
 	write(entry: LogEntry): void;

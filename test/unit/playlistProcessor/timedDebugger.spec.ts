@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Log, LogEntry, Logger } from '../../../src/logger';
+import { Log, LogEntry, Logger } from '@signageos/smil-logger';
 import { TimedDebugger } from '../../../src/components/playlist/playlistProcessor/TimedDebugger';
 
 describe('TimedDebugger', () => {

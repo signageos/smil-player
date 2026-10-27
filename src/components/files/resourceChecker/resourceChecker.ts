@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { IResourceChecker } from './IResourceChecker';
 import { IFilesManager } from '../IFilesManager';
 import { MergedDownloadList, MediaInfoObject } from '../../../models/filesModels';

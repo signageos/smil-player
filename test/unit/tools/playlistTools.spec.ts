@@ -33,7 +33,7 @@ import {
 import { createPlaylistTools } from '../../../src/components/playlist/tools/playlistTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
 import { createScheduleTools, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 import { CurrentlyPlayingRegion } from '../../../src/models/playlistModels';
 import { RegionsObject } from '../../../src/models/xmlJsonModels';

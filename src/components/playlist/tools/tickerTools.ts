@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILTicker } from '../../../models/mediaModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';

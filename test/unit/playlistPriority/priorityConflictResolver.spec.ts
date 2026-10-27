@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { PriorityConflictResolver } from '../../../src/components/playlist/playlistPriority/priorityConflictResolver';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';

@@ -1,14 +1,19 @@
-import { ISos } from '../models/sosModels';
-import { LogEntry, Logger } from '../logger';
+import { LogEntry, Logger } from '../index';
 import { ConsoleLogger } from './consoleLogger';
 import { RemoteLogger } from './remoteLogger';
 
 export { ConsoleLogger } from './consoleLogger';
 export { RemoteLogger } from './remoteLogger';
 
-export type LoggerFactory = (sos: ISos) => Logger;
+/** The slice of the player's `sos` object the loggers read. Declared here so the package needs nothing from the player. */
+export type LoggerHost = {
+	readonly config: { readonly logger?: unknown; readonly loggerUrl?: unknown; readonly debugEnabled?: unknown };
+	readonly management: { getSerialNumber(): Promise<string> };
+};
 
-const isDebugEnabled = (sos: ISos) => () => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true';
+export type LoggerFactory = (sos: LoggerHost) => Logger;
+
+const isDebugEnabled = (sos: LoggerHost) => () => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true';
 
 const consoleFactory: LoggerFactory = (sos) => new ConsoleLogger(isDebugEnabled(sos));
 
@@ -31,7 +36,7 @@ export const DEFAULT_LOGGER_NAME = 'console';
  * Unknown or missing names fall back to 'console'. Config is the ONLY switch; localStorage.debug is never read
  * (old deployments wrote it whenever debugEnabled was on and relied on Debug.disable() at boot to wipe it).
  */
-export function createLogger(sos: ISos, factories: Record<string, LoggerFactory> = loggerFactories): Logger {
+export function createLogger(sos: LoggerHost, factories: Record<string, LoggerFactory> = loggerFactories): Logger {
 	let current: { key: string; logger: Logger } | undefined;
 	return {
 		write(entry: LogEntry): void {

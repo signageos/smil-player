@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { cloneDeep } from 'lodash';
 import { SMILMedia, SMILVideo } from '../../../models/mediaModels';
 import { CurrentlyPlaying, CurrentlyPlayingPriority, CurrentlyPlayingRegion, VideoPreparing } from '../../../models/playlistModels';

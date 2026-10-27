@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 /**
  * Per-element step timer. Wraps the owner's Log and prefixes each line with the delta since the

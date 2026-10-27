@@ -1,6 +1,6 @@
 import * as chai from 'chai';
-import { LogEntry } from '../../../src/logger/types';
-import { RemoteLogger } from '../../../src/loggers/remoteLogger';
+import { LogEntry } from '../types';
+import { RemoteLogger } from '../loggers/remoteLogger';
 
 const expect = chai.expect;
 
