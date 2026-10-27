@@ -63,43 +63,62 @@ export function isTriggerCancelled(
 	return !triggersEndless[triggerValue]?.play;
 }
 
+type IsDynamicPlaylistCancelledOptions = {
+	dynamicValue: string | undefined;
+	dynamicPlaylist: Record<string, { play: boolean }>;
+	elementSrc: string;
+	currentlyPlayingSrc: string | undefined;
+};
+
 /**
  * Checks whether a dynamic playlist was cancelled prematurely
  * (play flag false AND the element is not what's currently playing).
  */
-export function isDynamicPlaylistCancelled(
-	dynamicValue: string | undefined,
-	dynamicPlaylist: Record<string, { play: boolean }>,
-	elementSrc: string,
-	currentlyPlayingSrc: string | undefined,
-): boolean {
+export function isDynamicPlaylistCancelled({
+	dynamicValue,
+	dynamicPlaylist,
+	elementSrc,
+	currentlyPlayingSrc,
+}: IsDynamicPlaylistCancelledOptions): boolean {
 	if (!dynamicValue) {
 		return false;
 	}
 	return !dynamicPlaylist[dynamicValue]?.play && elementSrc !== currentlyPlayingSrc;
 }
 
+type ShouldCancelForVersionUpdateOptions = {
+	checkFilesLoop: boolean;
+	incomingVersion: number;
+	currentPlaylistVersion: number;
+};
+
 /**
  * Determines whether a version update should trigger playlist cancellation.
  * Returns true when a newer version arrives and the file check loop hasn't started yet.
  */
-export function shouldCancelForVersionUpdate(
-	checkFilesLoop: boolean,
-	incomingVersion: number,
-	currentPlaylistVersion: number,
-): boolean {
+export function shouldCancelForVersionUpdate({
+	checkFilesLoop,
+	incomingVersion,
+	currentPlaylistVersion,
+}: ShouldCancelForVersionUpdateOptions): boolean {
 	return !checkFilesLoop && incomingVersion > currentPlaylistVersion;
 }
+
+type ShouldCancelParentRegionOptions = {
+	parentRegionName: string;
+	elementRegionName: string;
+	parentRegionPlaying: boolean;
+};
 
 /**
  * Determines whether media in a parent region should be cancelled.
  * This happens when the current element's region differs from its parent region
  * and the parent region is still actively playing (trigger/sub-region case).
  */
-export function shouldCancelParentRegion(
-	parentRegionName: string,
-	elementRegionName: string,
-	parentRegionPlaying: boolean,
-): boolean {
+export function shouldCancelParentRegion({
+	parentRegionName,
+	elementRegionName,
+	parentRegionPlaying,
+}: ShouldCancelParentRegionOptions): boolean {
 	return parentRegionName !== elementRegionName && parentRegionPlaying;
 }

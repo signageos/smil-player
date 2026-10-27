@@ -185,7 +185,7 @@ export class SmilPlayer implements ISmilPlayer {
 		const backupPlaylist = generateBackupImagePlaylist({ imageUrl: backupImageUrl, repeatCount: '1' });
 		const regionInfo = <SMILFileObject> getDefaultRegion();
 
-		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, smilUrl);
+		await this.dataPrepare.getAllInfo({ playlist: backupPlaylist, smilObject: regionInfo, smilUrl });
 		if (isNil(this.sos.config.backupImageUrl)) {
 			backupPlaylist.seq.img.localFilePath = backupImageUrl;
 		}

@@ -1127,8 +1127,8 @@ describe('PlaylistTraverser', () => {
 			await traverser.processPlaylist(playlist, 0, 'par', 0);
 
 			expect(engine.actions.coordinatePlayModeSync.calls.length).to.equal(1);
-			// First arg is regionName
-			expect(engine.actions.coordinatePlayModeSync.calls[0][0]).to.equal('main');
+			// Options object carries regionName
+			expect(engine.actions.coordinatePlayModeSync.calls[0][0].regionName).to.equal('main');
 		});
 
 		it('should NOT call coordinatePlayModeSync for playMode=random without sync', async () => {

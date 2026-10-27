@@ -51,7 +51,7 @@ function callIsBroadcastAligned(
 	regionName: string,
 	syncGroup: any,
 ): boolean {
-	return (controller as any).isBroadcastAligned(commandType, regionName, syncGroup);
+	return (controller as any).isBroadcastAligned({ commandType, regionName, syncGroup });
 }
 
 describe('SMILElementController.isBroadcastAligned', () => {

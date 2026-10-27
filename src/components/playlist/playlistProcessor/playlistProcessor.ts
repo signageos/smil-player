@@ -387,7 +387,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	 */
 	protected processVersionUpdate = async (version: number): Promise<boolean> => {
 		// Check if this is a version update: checkFilesLoop is false (update pending) and version is newer
-		if (shouldCancelForVersionUpdate(this.getCheckFilesLoop(), version, this.getPlaylistVersion())) {
+		if (shouldCancelForVersionUpdate({
+			checkFilesLoop: this.getCheckFilesLoop(),
+			incomingVersion: version,
+			currentPlaylistVersion: this.getPlaylistVersion(),
+		})) {
 			this.log.debug(
 				'[processor] processing version update: version=%s, playlistVersion=%s',
 				version,
@@ -948,12 +952,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			return WaitStatus.SKIP;
 		}
 
-		if (isDynamicPlaylistCancelled(
-			media.dynamicValue,
-			this.triggers.dynamicPlaylist,
-			media.src,
-			this.currentlyPlaying[regionInfo.regionName]?.src,
-		)) {
+		if (isDynamicPlaylistCancelled({
+			dynamicValue: media.dynamicValue,
+			dynamicPlaylist: this.triggers.dynamicPlaylist,
+			elementSrc: media.src,
+			currentlyPlayingSrc: this.currentlyPlaying[regionInfo.regionName]?.src,
+		})) {
 			this.priority.stateManager.cancelAllInRegion(parentRegionName, (e) => !!e.media.dynamicValue);
 			set(this.currentlyPlaying, `${regionInfo.regionName}.playing`, false);
 			timedDebug.debug('[processor] dynamic playlist was cancelled prematurely: dynamicValue=%s', media.dynamicValue);
@@ -1462,7 +1466,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		promiseRaceArray.push(
-			waitForSuccessOrFailEvents(this.smilEventEmitter, stream, StreamEnums.disconnectedEvent, StreamEnums.errorEvent, this.log),
+			waitForSuccessOrFailEvents({
+				eventEmitter: this.smilEventEmitter,
+				stream,
+				successEvent: StreamEnums.disconnectedEvent,
+				failEvent: StreamEnums.errorEvent,
+				log: this.log,
+			}),
 		);
 
 		try {
@@ -1595,12 +1605,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const priorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.debug('[processor-sync] coordinating preparation start');
 			try {
-				const action = await this.elementController.coordinatePrepareStart(
-					currentRegionInfo.regionName,
-					value.syncIndex,
+				const action = await this.elementController.coordinatePrepareStart({
+					regionName: currentRegionInfo.regionName,
+					syncIndex: value.syncIndex,
 					timedDebug,
 					priorityLevel,
-				);
+				});
 
 				if (action === ProcessAction.RESYNC) {
 					timedDebug.debug('[processor-sync] resync needed, skipping element preparation: region=%s, index=%d',
@@ -1666,12 +1676,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			const preparePriorityLevel = this.getSyncPriorityLevel(currentRegionInfo.regionName, currentIndex);
 			timedDebug.debug('[processor-sync] coordinating preparation completion');
 			try {
-				await this.elementController.coordinatePrepareComplete(
-					currentRegionInfo.regionName,
-					value.syncIndex,
+				await this.elementController.coordinatePrepareComplete({
+					regionName: currentRegionInfo.regionName,
+					syncIndex: value.syncIndex,
 					timedDebug,
-					preparePriorityLevel,
-				);
+					priorityLevel: preparePriorityLevel,
+				});
 				timedDebug.debug('[processor-sync] preparation coordination completed');
 			} catch (error) {
 				timedDebug.debug('[processor-sync] error in coordinatePrepareComplete: %s', error);
@@ -1964,8 +1974,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				playElement: self.playElement,
 				priorityBehaviour: (options) => self.priority.priorityBehaviour(options),
 				storePriorityBounds: self.storePriorityBounds,
-				coordinatePlayModeSync: (regionName, syncParentId, playModeParentId, previousIndex, randomPlaylist) =>
-					self.elementController.coordinatePlayModeSync(regionName, syncParentId, playModeParentId, previousIndex, randomPlaylist),
+				coordinatePlayModeSync: (options) => self.elementController.coordinatePlayModeSync(options),
 				processDynamicPlaylist: self.processDynamicPlaylist,
 				prefetchAheadElements: (entries, currentIndex, version, prefetchedUrls) =>
 					self.prefetchAheadElements(entries, currentIndex, version, prefetchedUrls),
@@ -2092,7 +2101,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// newer playlist starts its playback, cancel older one
 		// NOTE: This is a fallback path - version updates are now primarily handled in processVersionUpdate()
 		// called from shouldWaitAndContinue() BEFORE waiting for old promises
-		if (shouldCancelForVersionUpdate(this.getCheckFilesLoop(), version, this.getPlaylistVersion())) {
+		if (shouldCancelForVersionUpdate({
+			checkFilesLoop: this.getCheckFilesLoop(),
+			incomingVersion: version,
+			currentPlaylistVersion: this.getPlaylistVersion(),
+		})) {
 			timedDebug.debug(
 				'[processor] cancelling older playlist (fallback): version=%s, playlistVersion=%s',
 				version,
@@ -2110,11 +2123,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		}
 
 		// cancel if video is not same as previous one played in the parent region ( triggers case )
-		if (shouldCancelParentRegion(
-			parentRegion.regionName,
-			regionInfo.regionName,
-			!!this.currentlyPlaying[parentRegion.regionName]?.playing,
-		)) {
+		if (shouldCancelParentRegion({
+			parentRegionName: parentRegion.regionName,
+			elementRegionName: regionInfo.regionName,
+			parentRegionPlaying: !!this.currentlyPlaying[parentRegion.regionName]?.playing,
+		})) {
 			timedDebug.debug(
 				'[processor] cancelling media in parent region: current=%s, new=%s',
 				this.currentlyPlaying[regionInfo.regionName].src,
@@ -2734,12 +2747,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Coordinate play start - master sends cmd-play, slaves wait for it
 		timedDebug.debug('[processor-sync] coordinating play start');
 		try {
-			const action = await this.elementController.coordinatePlayStart(
+			const action = await this.elementController.coordinatePlayStart({
 				regionName,
 				syncIndex,
 				timedDebug,
 				priorityLevel,
-			);
+			});
 
 			if (action === ProcessAction.RESYNC) {
 				timedDebug.debug('[processor-sync] resync needed, skipping play coordination');
@@ -2756,12 +2769,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Coordinate play complete - master waits for ACKs, slaves wait for signal-ready
 		timedDebug.debug('[processor-sync] coordinating play completion');
 		try {
-			await this.elementController.coordinatePlayComplete(
+			await this.elementController.coordinatePlayComplete({
 				regionName,
 				syncIndex,
 				timedDebug,
 				priorityLevel,
-			);
+			});
 			timedDebug.debug('[processor-sync] play coordination completed, starting synchronized playback');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinatePlayComplete: %s', error);
@@ -2785,12 +2798,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Coordinate finish start - master sends cmd-finish, slaves wait for it
 		timedDebug.debug('[processor-sync] coordinating finish start');
 		try {
-			const action = await this.elementController.coordinateFinishStart(
+			const action = await this.elementController.coordinateFinishStart({
 				regionName,
 				syncIndex,
 				timedDebug,
 				priorityLevel,
-			);
+			});
 
 			if (action === ProcessAction.RESYNC) {
 				timedDebug.debug('[processor-sync] resync needed, skipping finish coordination');
@@ -2807,12 +2820,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Coordinate finish complete - master waits for ACKs, slaves wait for signal-ready
 		timedDebug.debug('[processor-sync] coordinating finish completion');
 		try {
-			await this.elementController.coordinateFinishComplete(
+			await this.elementController.coordinateFinishComplete({
 				regionName,
 				syncIndex,
 				timedDebug,
 				priorityLevel,
-			);
+			});
 			timedDebug.debug('[processor-sync] finish coordination completed, all devices synchronized');
 		} catch (error) {
 			timedDebug.debug('[processor-sync] error in coordinateFinishComplete: %s', error);

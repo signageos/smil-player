@@ -23,6 +23,7 @@ import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { PriorityBehaviourOptions } from '../playlistPriority/playlistPriority';
 import { CleanupExpiredPriorityOptions } from '../playlistPriority/priorityStateManager';
+import { CoordinatePlayModeSyncOptions } from './SMILElementController';
 
 /**
  * Readonly configuration data needed by the traverser.
@@ -58,13 +59,7 @@ export interface ITraverserActions {
 
 	storePriorityBounds(elem: PlaylistElement, priorityLevel: number): void;
 
-	coordinatePlayModeSync(
-		regionName: string,
-		syncParentId: string,
-		playModeParentId: string,
-		previousIndex: number,
-		randomPlaylist: RandomPlaylist,
-	): Promise<number>;
+	coordinatePlayModeSync(options: CoordinatePlayModeSyncOptions): Promise<number>;
 
 	processDynamicPlaylist(
 		dynamicPlaylistConfig: DynamicPlaylist,
@@ -659,13 +654,13 @@ export class PlaylistTraverser {
 								// devices due to runtime mutations.
 								const syncParentId = `seq-playMode-${firstMedia.regionName}-${firstMedia.syncIndex}`;
 
-								const syncedIndex = await this.actions.coordinatePlayModeSync(
-									firstMedia.regionName,
+								const syncedIndex = await this.actions.coordinatePlayModeSync({
+									regionName: firstMedia.regionName,
 									syncParentId,
-									playModeParentId,
-									this.control.randomPlaylist[playModeParentId].previousIndex,
-									this.control.randomPlaylist,
-								);
+									localParentId: playModeParentId,
+									currentPreviousIndex: this.control.randomPlaylist[playModeParentId].previousIndex,
+									randomPlaylist: this.control.randomPlaylist,
+								});
 								this.control.randomPlaylist[playModeParentId].previousIndex = syncedIndex;
 							}
 						}

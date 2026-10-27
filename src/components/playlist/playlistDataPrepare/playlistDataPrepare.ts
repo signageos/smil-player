@@ -21,6 +21,15 @@ import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 
+export type GetAllInfoOptions = {
+	playlist: PlaylistElement | PlaylistElement[] | TriggerList;
+	smilObject: SMILFileObject;
+	smilUrl: string;
+	isSpecial?: boolean;
+	specialName?: string;
+	underPlayModeParent?: boolean;
+};
+
 export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistDataPrepare {
 	private globalRegionSyncIndex: { [key: string]: number } = {};
 
@@ -43,14 +52,14 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * @param isSpecial - boolean value determining if function is processing trigger playlist, dynamic playlist or ordinary playlist
 	 * @param specialName - name of the trigger or dynamic element
 	 */
-	public getAllInfo = async (
-		playlist: PlaylistElement | PlaylistElement[] | TriggerList,
-		smilObject: SMILFileObject,
-		smilUrl: string,
-		isSpecial: boolean = false,
-		specialName: string = '',
-		underPlayModeParent: boolean = false,
-	): Promise<void> => {
+	public getAllInfo = async ({
+		playlist,
+		smilObject,
+		smilUrl,
+		isSpecial = false,
+		specialName = '',
+		underPlayModeParent = false,
+	}: GetAllInfoOptions): Promise<void> => {
 		let widgetRootFile: string = '';
 		let fileStructure: string = '';
 		let htmlElement: string = '';
@@ -191,7 +200,14 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 				// reset widget expression for next elements
 				widgetRootFile = '';
 			} else {
-				await this.getAllInfo(value, smilObject, smilUrl, isSpecial, specialName, childUnderPlayMode);
+				await this.getAllInfo({
+					playlist: value,
+					smilObject,
+					smilUrl,
+					isSpecial,
+					specialName,
+					underPlayModeParent: childUnderPlayMode,
+				});
 			}
 		}
 
@@ -231,14 +247,14 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 		await this.files.currentFilesSetup({ widgets: smilObject.ref, smilObject, smilUrl });
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
-		await this.getAllInfo(smilObject.triggers, smilObject, smilUrl, true);
+		await this.getAllInfo({ playlist: smilObject.triggers, smilObject, smilUrl, isSpecial: true });
 		this.log.debug('[prepare] all triggers extracted');
 
-		await this.getAllInfo(smilObject.dynamic, smilObject, smilUrl, true);
+		await this.getAllInfo({ playlist: smilObject.dynamic, smilObject, smilUrl, isSpecial: true });
 		this.log.debug('[prepare] all dynamic playlists extracted');
 
 		// extracts region info for all medias in playlist
-		await this.getAllInfo(smilObject.playlist, smilObject, smilUrl);
+		await this.getAllInfo({ playlist: smilObject.playlist, smilObject, smilUrl });
 		this.log.debug('[prepare] all elements extracted');
 
 		// Set max sync indices for each region in synchronization object

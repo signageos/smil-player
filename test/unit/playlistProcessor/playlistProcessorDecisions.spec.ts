@@ -120,51 +120,99 @@ describe('playlistProcessorDecisions', () => {
 
 	describe('isDynamicPlaylistCancelled', () => {
 		it('should return false when dynamicValue is undefined', () => {
-			expect(isDynamicPlaylistCancelled(undefined, {}, 'a.mp4', 'b.mp4')).to.equal(false);
+			expect(isDynamicPlaylistCancelled({
+				dynamicValue: undefined,
+				dynamicPlaylist: {},
+				elementSrc: 'a.mp4',
+				currentlyPlayingSrc: 'b.mp4',
+			})).to.equal(false);
 		});
 
 		it('should return false when dynamic playlist is still playing', () => {
-			expect(isDynamicPlaylistCancelled('dyn1', { dyn1: { play: true } }, 'a.mp4', 'b.mp4')).to.equal(false);
+			expect(isDynamicPlaylistCancelled({
+				dynamicValue: 'dyn1',
+				dynamicPlaylist: { dyn1: { play: true } },
+				elementSrc: 'a.mp4',
+				currentlyPlayingSrc: 'b.mp4',
+			})).to.equal(false);
 		});
 
 		it('should return true when dynamic playlist is cancelled and src differs', () => {
-			expect(isDynamicPlaylistCancelled('dyn1', { dyn1: { play: false } }, 'a.mp4', 'b.mp4')).to.equal(true);
+			expect(isDynamicPlaylistCancelled({
+				dynamicValue: 'dyn1',
+				dynamicPlaylist: { dyn1: { play: false } },
+				elementSrc: 'a.mp4',
+				currentlyPlayingSrc: 'b.mp4',
+			})).to.equal(true);
 		});
 
 		it('should return false when dynamic playlist is cancelled but src matches (currently playing)', () => {
-			expect(isDynamicPlaylistCancelled('dyn1', { dyn1: { play: false } }, 'a.mp4', 'a.mp4')).to.equal(false);
+			expect(isDynamicPlaylistCancelled({
+				dynamicValue: 'dyn1',
+				dynamicPlaylist: { dyn1: { play: false } },
+				elementSrc: 'a.mp4',
+				currentlyPlayingSrc: 'a.mp4',
+			})).to.equal(false);
 		});
 	});
 
 	describe('shouldCancelForVersionUpdate', () => {
 		it('should return true when newer version arrives and loop not started', () => {
-			expect(shouldCancelForVersionUpdate(false, 2, 1)).to.equal(true);
+			expect(shouldCancelForVersionUpdate({
+				checkFilesLoop: false,
+				incomingVersion: 2,
+				currentPlaylistVersion: 1,
+			})).to.equal(true);
 		});
 
 		it('should return false when check files loop already running', () => {
-			expect(shouldCancelForVersionUpdate(true, 2, 1)).to.equal(false);
+			expect(shouldCancelForVersionUpdate({
+				checkFilesLoop: true,
+				incomingVersion: 2,
+				currentPlaylistVersion: 1,
+			})).to.equal(false);
 		});
 
 		it('should return false when incoming version is not newer', () => {
-			expect(shouldCancelForVersionUpdate(false, 1, 1)).to.equal(false);
+			expect(shouldCancelForVersionUpdate({
+				checkFilesLoop: false,
+				incomingVersion: 1,
+				currentPlaylistVersion: 1,
+			})).to.equal(false);
 		});
 
 		it('should return false when incoming version is older', () => {
-			expect(shouldCancelForVersionUpdate(false, 1, 2)).to.equal(false);
+			expect(shouldCancelForVersionUpdate({
+				checkFilesLoop: false,
+				incomingVersion: 1,
+				currentPlaylistVersion: 2,
+			})).to.equal(false);
 		});
 	});
 
 	describe('shouldCancelParentRegion', () => {
 		it('should return true when parent differs from element and parent is playing', () => {
-			expect(shouldCancelParentRegion('fullScreen', 'video', true)).to.equal(true);
+			expect(shouldCancelParentRegion({
+				parentRegionName: 'fullScreen',
+				elementRegionName: 'video',
+				parentRegionPlaying: true,
+			})).to.equal(true);
 		});
 
 		it('should return false when parent is same as element region', () => {
-			expect(shouldCancelParentRegion('video', 'video', true)).to.equal(false);
+			expect(shouldCancelParentRegion({
+				parentRegionName: 'video',
+				elementRegionName: 'video',
+				parentRegionPlaying: true,
+			})).to.equal(false);
 		});
 
 		it('should return false when parent is not playing', () => {
-			expect(shouldCancelParentRegion('fullScreen', 'video', false)).to.equal(false);
+			expect(shouldCancelParentRegion({
+				parentRegionName: 'fullScreen',
+				elementRegionName: 'video',
+				parentRegionPlaying: false,
+			})).to.equal(false);
 		});
 	});
 });
