@@ -268,11 +268,11 @@ export class FilesManager implements IFilesManager {
 				this.log.debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
 					await this.sendCustomEndpointReport(
-						createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
+						createCustomEndpointMessagePayload({ message: createPoPMessagePayload({ value }), locationUrl: urlForReport, statusCode }),
 					);
 				}
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value));
+				await this.sendPoPReport(createPoPMessagePayload({ value }));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -280,11 +280,7 @@ export class FilesManager implements IFilesManager {
 			await this.sendReport({
 				type: 'SMIL.FileDownloaded',
 				itemType: fileType,
-				source: createSourceReportObject(
-					localFilePath,
-					urlForReport,
-					this.internalStorageUnit.type,
-				),
+				source: createSourceReportObject({ localFilePath, fileSrc: urlForReport, type: this.internalStorageUnit.type }),
 				startedAt: taskStartDate,
 				succeededAt: isSuccess ? moment().toDate() : null,
 				failedAt: isSuccess ? null : moment().toDate(),
@@ -313,11 +309,11 @@ export class FilesManager implements IFilesManager {
 			if (this.smilLogging.endpoint) {
 				this.log.debug('[files] custom endpoint report enabled: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
-					const payload = createCustomEndpointMessagePayload(
-						createPoPMessagePayload(value),
-						value.useInReportUrl,
+					const payload = createCustomEndpointMessagePayload({
+						message: createPoPMessagePayload({ value }),
+						locationUrl: value.useInReportUrl,
 						statusCode,
-					);
+					});
 					if (value.reportMode === 'batch') {
 						this.log.debug('[files] report mode is batch, saving to offline storage');
 						await this.saveCustomEndpointInfo(payload, 'batch');
@@ -326,7 +322,7 @@ export class FilesManager implements IFilesManager {
 					}
 				}
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value));
+				await this.sendPoPReport(createPoPMessagePayload({ value }));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -334,7 +330,7 @@ export class FilesManager implements IFilesManager {
 			await this.sendReport({
 				type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 				itemType: itemType,
-				source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
+				source: 'src' in value ? createSourceReportObject({ localFilePath: value.localFilePath, fileSrc: value.src }) : ({} as any),
 				startedAt: taskStartDate,
 				endedAt: isSuccess ? moment().toDate() : null,
 				failedAt: isSuccess ? null : moment().toDate(),
@@ -361,7 +357,7 @@ export class FilesManager implements IFilesManager {
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
 			await this.sendReport({
 				type: 'SMIL.PlaybackStarted',
-				source: createSourceReportObject(localFilePath, src),
+				source: createSourceReportObject({ localFilePath, fileSrc: src }),
 				succeededAt: isNil(errMessage) ? moment().toDate() : null,
 				failedAt: isNil(errMessage) ? null : moment().toDate(),
 				errorMessage: errMessage,
@@ -392,7 +388,11 @@ export class FilesManager implements IFilesManager {
 		value.popName = eventName;
 		try {
 			await this.sendCustomEndpointReport(
-				createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl || value.src, 200),
+				createCustomEndpointMessagePayload({
+					message: createPoPMessagePayload({ value }),
+					locationUrl: reportUrl || value.src,
+					statusCode: 200,
+				}),
 			);
 		} catch (err) {
 			// Every call site is fire-and-forget; never let a failed report (or a
@@ -459,7 +459,7 @@ export class FilesManager implements IFilesManager {
 			return { shouldUpdate: false, statusCode };
 		}
 
-		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
+		if (!(await this.fileExists(createLocalFilePath({ localFilePath, src: media.src })))) {
 			this.log.debug('[files] file not in local storage, downloading: %s', media.src);
 			return {
 				shouldUpdate: true,
@@ -572,7 +572,7 @@ export class FilesManager implements IFilesManager {
 		await this.sos.fileSystem.writeFile(
 			{
 				storageUnit: this.internalStorageUnit,
-				filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				filePath: createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 			},
 			JSON.stringify(mediaInfoObject),
 		);
@@ -669,7 +669,7 @@ export class FilesManager implements IFilesManager {
 					}
 
 					// check for local urls to files (media/file.mp4)
-					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+					file.src = convertRelativePathToAbsolute({ src: file.src, smilFileUrl: this.smilFileUrl });
 
 					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
 					// This avoids duplicate HEAD requests while Phase 3b.5 still checks storage/existing content
@@ -779,8 +779,8 @@ export class FilesManager implements IFilesManager {
 				// updateValue is the resolved URL (Location header) for the location strategy.
 				// When the SMIL src has no extension (e.g. ".../content"), borrow it from the
 				// resolved URL so the on-disk filename carries the extension.
-				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src, String(updateValue));
-				const actualDownloadPath = createLocalFilePath(downloadPath, file.src, String(updateValue));
+				const fullLocalFilePath = createLocalFilePath({ localFilePath, src: file.src, fallbackUrlForExt: String(updateValue) });
+				const actualDownloadPath = createLocalFilePath({ localFilePath: downloadPath, src: file.src, fallbackUrlForExt: String(updateValue) });
 
 				// Determine download URL
 				let downloadUrl: string;
@@ -1438,7 +1438,7 @@ export class FilesManager implements IFilesManager {
 					}
 
 					// check for local urls to files (media/file.mp4)
-					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+					file.src = convertRelativePathToAbsolute({ src: file.src, smilFileUrl: this.smilFileUrl });
 
 					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
 					// This avoids duplicate HEAD requests
@@ -1609,7 +1609,7 @@ export class FilesManager implements IFilesManager {
 		// Update mediaInfoObject with successful downloads
 		filesToUpdate.forEach((value, fileName) => {
 			this.log.debug('[files] updating mediaInfo: file=%s', fileName);
-			updateJsonObject(mediaInfoObject, fileName, value);
+			updateJsonObject({ jsonObject: mediaInfoObject, attr: fileName, value });
 		});
 
 		// Save/update mediaInfoObject to persistent storage
@@ -1832,7 +1832,7 @@ export class FilesManager implements IFilesManager {
 	public getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
 		if (
 			!(await this.fileExists(
-				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 			))
 		) {
 			this.log.debug('[files] mediaInfo not found, creating new');
@@ -1841,7 +1841,7 @@ export class FilesManager implements IFilesManager {
 
 		const response = await this.sos.fileSystem.readFile({
 			storageUnit: this.internalStorageUnit,
-			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+			filePath: createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 		});
 		try {
 			return JSON.parse(response);
@@ -2211,12 +2211,17 @@ export class FilesManager implements IFilesManager {
 		try {
 			const gateUrl = createDownloadPath(media.playCheckUrl);
 			const authHeaders = window.getAuthHeaders?.(gateUrl);
-			const response = await this.makeXhrRequest('GET', gateUrl, smilObject.refresh.timeOut, authHeaders);
-			const shouldSkip = shouldGateSkipForStatus(
-				response.status,
-				smilObject.skipPlaybackOnHttpStatus,
-				media.playCheckSkipOnError === true,
-			);
+			const response = await this.makeXhrRequest({
+				method: 'GET',
+				url: gateUrl,
+				timeout: smilObject.refresh.timeOut,
+				authHeaders,
+			});
+			const shouldSkip = shouldGateSkipForStatus({
+				status: response.status,
+				skipPlaybackHttpStatusCodes: smilObject.skipPlaybackOnHttpStatus,
+				skipOnError: media.playCheckSkipOnError === true,
+			});
 			this.log.debug(
 				'playCheckGate: url=%s, status=%d, skipPlayback=%s',
 				media.playCheckUrl,
@@ -3649,12 +3654,17 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	private async makeXhrRequest(
-		method: string,
-		downloadUrl: string,
-		timeout: number,
-		authHeaders?: Record<string, string>,
-	): Promise<Response> {
+	private async makeXhrRequest({
+		method,
+		url: downloadUrl,
+		timeout,
+		authHeaders,
+	}: {
+		method: string;
+		url: string;
+		timeout: number;
+		authHeaders?: Record<string, string>;
+	}): Promise<Response> {
 		return new Promise<Response>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.open(method, downloadUrl, true);
@@ -3712,14 +3722,14 @@ export class FilesManager implements IFilesManager {
 
 			// parseOfflineReportLines tolerates and logs corrupted lines internally,
 			// returning only the salvageable reports.
-			const reports = this.offline.parseOfflineReportLines(fileContent, filePath);
+			const reports = this.offline.parseOfflineReportLines({ fileContent, filePath });
 
 			if (
-				shouldSkipActiveReportFile(
-					this.offlineReportsInfoObject[fileIndex],
-					reports.length,
-					this.smilLogging.reportFileLimit,
-				)
+				shouldSkipActiveReportFile({
+					trackedInfo: this.offlineReportsInfoObject[fileIndex],
+					reportCount: reports.length,
+					reportFileLimit: this.smilLogging.reportFileLimit,
+				})
 			) {
 				this.log.debug(
 					'[files] skipping active batch: fileIndex=%d, reports=%d/%d',

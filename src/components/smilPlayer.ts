@@ -111,13 +111,13 @@ export class SmilPlayer implements ISmilPlayer {
 		try {
 			if (
 				await this.files.fileExists(
-					createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+					createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 				)
 			) {
 				try {
 					const fileContent = JSON.parse(
 						await this.files.readFile(
-							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+							createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 						),
 					);
 
@@ -125,14 +125,14 @@ export class SmilPlayer implements ISmilPlayer {
 					if (!fileContent.hasOwnProperty(getFileName(smilUrl))) {
 						// delete mediaInfo file, so each smil has fresh start for lastModified tags for files
 						await this.files.deleteFile(
-							createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+							createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 						);
 					}
 				} catch (err) {
 					this.log.debug('[smil] malformed media info file: %s, deleting for fresh start', FileStructure.smilMediaInfoFileName);
 					// file is malformed, delete from internal storage
 					await this.files.deleteFile(
-						createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+						createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 					);
 				}
 			}

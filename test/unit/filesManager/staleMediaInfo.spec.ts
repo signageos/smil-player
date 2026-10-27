@@ -50,7 +50,7 @@ function makeFilesManager(files: Set<string>, mediaInfo: Record<string, string>)
 		},
 	} as unknown as ISos;
 	const fm = new FilesManager(sos, noopLog);
-	(fm as any).makeXhrRequest = async (_method: string, url: string) => ({
+	(fm as any).makeXhrRequest = async ({ url }: { url: string }) => ({
 		status: 200,
 		url,
 		headers: { get: (name: string) => (name === 'last-modified' ? LAST_MODIFIED : null) },

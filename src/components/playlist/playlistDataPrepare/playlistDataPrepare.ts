@@ -120,7 +120,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					// relative path for triggers has to be fixed here, because trigger media objects are not included in parallel download
 					// there are two ways of computing sync index, more at jsdoc for computeSyncIndex
 					if (isSpecial) {
-						elem.src = convertRelativePathToAbsolute(elem.src, smilUrl);
+						elem.src = convertRelativePathToAbsolute({ src: elem.src, smilFileUrl: smilUrl });
 
 						if (specialName.startsWith(SMILTriggersEnum.triggerFormat)) {
 							elem.triggerValue = specialName;

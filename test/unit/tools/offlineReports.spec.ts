@@ -16,7 +16,7 @@ const { parseOfflineReportLines } = createOfflineReportTools(noopLog);
 describe('parseOfflineReportLines', () => {
 	it('parses every line when all are valid JSON', () => {
 		const content = '{"event":"click","time":1}\n{"event":"view","time":2}';
-		const result = parseOfflineReportLines(content, 'reports.0.csv');
+		const result = parseOfflineReportLines({ fileContent: content, filePath: 'reports.0.csv' });
 		expect(result).to.have.length(2);
 		expect(result[0]).to.deep.equal({ event: 'click', time: 1 });
 		expect(result[1]).to.deep.equal({ event: 'view', time: 2 });
@@ -24,7 +24,7 @@ describe('parseOfflineReportLines', () => {
 
 	it('ignores empty lines (e.g. trailing newline)', () => {
 		const content = '{"event":"click"}\n\n{"event":"view"}\n';
-		const result = parseOfflineReportLines(content, 'reports.0.csv');
+		const result = parseOfflineReportLines({ fileContent: content, filePath: 'reports.0.csv' });
 		expect(result).to.have.length(2);
 	});
 
@@ -37,7 +37,7 @@ describe('parseOfflineReportLines', () => {
 			'{"event":"click","time":1}\n'
 			+ '{not valid json\n'
 			+ '{"event":"view","time":2}';
-		const result = parseOfflineReportLines(content, 'reports.0.csv');
+		const result = parseOfflineReportLines({ fileContent: content, filePath: 'reports.0.csv' });
 		expect(result).to.have.length(2);
 		expect((result[0] as any).event).to.equal('click');
 		expect((result[1] as any).event).to.equal('view');
@@ -45,12 +45,12 @@ describe('parseOfflineReportLines', () => {
 
 	it('returns empty array when every line is malformed', () => {
 		const content = 'not json\nalso not json';
-		const result = parseOfflineReportLines(content, 'reports.0.csv');
+		const result = parseOfflineReportLines({ fileContent: content, filePath: 'reports.0.csv' });
 		expect(result).to.eql([]);
 	});
 
 	it('returns empty array for empty file content', () => {
-		const result = parseOfflineReportLines('', 'reports.0.csv');
+		const result = parseOfflineReportLines({ fileContent: '', filePath: 'reports.0.csv' });
 		expect(result).to.eql([]);
 	});
 });

@@ -1844,7 +1844,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				// (location-header strategy) still resolves to the on-disk filename that
 				// inherited the extension from the Location URL.
 				!(await this.files.fileExists(
-					createLocalFilePath(FileStructure.videos, value.src, value.useInReportUrl),
+					createLocalFilePath({ localFilePath: FileStructure.videos, src: value.src, fallbackUrlForExt: value.useInReportUrl }),
 				)) &&
 				!value.isStream
 			) {
@@ -2650,7 +2650,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.log.warn(`[${debugId}] Stale video stop failed (non-fatal): %O`, err);
 		}
 
-		params[0] = createVersionedUrl(params[0], version, null, false, true);
+		params[0] = createVersionedUrl({ sourceUrl: params[0], playlistVersion: version, wasUpdated: true });
 		this.log.debug(`[${debugId}] ${reason} with versioned path: %s`, params[0]);
 		await sosVideoObject.prepare(...params);
 		this.lastPreparedVideoUrl[regionName] = params[0];
