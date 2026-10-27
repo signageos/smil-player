@@ -12,6 +12,17 @@ export interface ISyncGroup {
 	onValue(callback: (args: { key: string, value?: any }) => void): () => void;
 }
 
+type ElementStateOptions = {
+	regionName: string;
+	syncIndex: number;
+	state: string;
+};
+
+type SyncCoordinationOptions = {
+	type: string;
+	regionName: string;
+};
+
 export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	public readonly id: string;
 
@@ -86,13 +97,13 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	}
 
 	// Build composite key for elementState storage
-	public buildElementStateKey(regionName: string, syncIndex: number, state: string): string {
+	public buildElementStateKey({ regionName, syncIndex, state }: ElementStateOptions): string {
 		return `elementState-${regionName}-${syncIndex}-${state}`;
 	}
 
 	// Get specific elementState by exact match
-	public getElementState(regionName: string, syncIndex: number, state: string): any {
-		const key = this.buildElementStateKey(regionName, syncIndex, state);
+	public getElementState({ regionName, syncIndex, state }: ElementStateOptions): any {
+		const key = this.buildElementStateKey({ regionName, syncIndex, state });
 		return this.lastValues.get(key);
 	}
 
@@ -101,7 +112,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 		// Check all possible states for this syncIndex
 		const states = ['prepared', 'playing', 'finished'];
 		for (const state of states) {
-			const key = this.buildElementStateKey(regionName, syncIndex, state);
+			const key = this.buildElementStateKey({ regionName, syncIndex, state });
 			const value = this.lastValues.get(key);
 			if (value) {
 				this.log.debug(
@@ -118,27 +129,27 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 	}
 
 	// Clear specific elementState
-	public clearElementState(regionName: string, syncIndex: number, state: string): void {
-		const key = this.buildElementStateKey(regionName, syncIndex, state);
+	public clearElementState({ regionName, syncIndex, state }: ElementStateOptions): void {
+		const key = this.buildElementStateKey({ regionName, syncIndex, state });
 		this.lastValues.delete(key);
 		this.log.debug('[syncGroup] cleared elementState: group=%s, key=%s', this.groupName, key);
 	}
 
 	// Build composite key for sync-coordination storage
 	// Only uses type and regionName to store the latest message per type/region
-	public buildSyncCoordinationKey(type: string, regionName: string): string {
+	public buildSyncCoordinationKey({ type, regionName }: SyncCoordinationOptions): string {
 		return `sync-coord-${type}-${regionName}`;
 	}
 
 	// Get latest sync-coordination message for a type/region combination
-	public getSyncCoordinationMessage(type: string, regionName: string): any {
-		const key = this.buildSyncCoordinationKey(type, regionName);
+	public getSyncCoordinationMessage({ type, regionName }: SyncCoordinationOptions): any {
+		const key = this.buildSyncCoordinationKey({ type, regionName });
 		return this.lastValues.get(key);
 	}
 
 	// Clear sync-coordination message for a type/region combination
-	public clearSyncCoordinationMessage(type: string, regionName: string): void {
-		const key = this.buildSyncCoordinationKey(type, regionName);
+	public clearSyncCoordinationMessage({ type, regionName }: SyncCoordinationOptions): void {
+		const key = this.buildSyncCoordinationKey({ type, regionName });
 		this.lastValues.delete(key);
 		this.log.debug('[syncGroup] cleared sync-coordination: group=%s, key=%s', this.groupName, key);
 	}
@@ -181,7 +192,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 					);
 
 					// Build composite key for sync-coordination storage (type + region only)
-					const coordKey = this.buildSyncCoordinationKey(value.type, value.regionName);
+					const coordKey = this.buildSyncCoordinationKey({ type: value.type, regionName: value.regionName });
 
 					// No need to check for duplicates anymore - we want the latest message
 					// Store with composite key - this will overwrite any previous message of same type/region
@@ -203,7 +214,7 @@ export class SyncGroup implements ISyncGroup, IMasterStatusProvider {
 				// Handle elementState with composite keys
 				if (key === 'elementState' && value) {
 					// Build composite key for state-specific storage
-					const stateKey = this.buildElementStateKey(value.regionName, value.syncIndex, value.state);
+					const stateKey = this.buildElementStateKey({ regionName: value.regionName, syncIndex: value.syncIndex, state: value.state });
 
 					// Check for duplicates using composite key
 					const existing = this.lastValues.get(stateKey);

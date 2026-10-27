@@ -334,11 +334,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			if (dynamicPlaylistConfig.action === 'start' && dynamicPlaylistConfig.syncId) {
 				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
-				await this.sync.joinSyncGroup(
-					this.sos,
-					this.synchronization,
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-				);
+				await this.sync.joinSyncGroup({
+					sos: this.sos,
+					synchronization: this.synchronization,
+					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				});
 				this.log.debug(
 					'[trigger-dynamic] joined sync group: group=%s',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,

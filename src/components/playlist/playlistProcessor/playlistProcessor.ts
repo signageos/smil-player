@@ -312,27 +312,31 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			if (dynamicPlaylistConfig.syncId) {
 				const syncGroupName = `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`;
-				await this.sync.joinSyncGroup(this.sos, this.synchronization, syncGroupName);
+				await this.sync.joinSyncGroup({
+					sos: this.sos,
+					synchronization: this.synchronization,
+					groupName: syncGroupName,
+				});
 				this.log.debug(
 					'[processor] master dynamic playlist joining sync group: group=%s',
 					syncGroupName,
 				);
 			}
-			await this.sync.broadcastSyncValue(
-				this.sos,
+			await this.sync.broadcastSyncValue({
+				sos: this.sos,
 				dynamicPlaylistConfig,
-				`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-				'start',
-			);
+				groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+				action: 'start',
+			});
 
 			const intervalId = setInterval(async () => {
 				if (version >= this.getPlaylistVersion()) {
-					await this.sync.broadcastSyncValue(
-						this.sos,
+					await this.sync.broadcastSyncValue({
+						sos: this.sos,
 						dynamicPlaylistConfig,
-						`${this.synchronization.syncGroupName}-fullScreenTrigger`,
-						'start',
-					);
+						groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger`,
+						action: 'start',
+					});
 				} else {
 					clearInterval(intervalId);
 				}
@@ -898,19 +902,19 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				'[processor] dynamic playlist skipped, sync stopped: dynamicValue=%s',
 				media.dynamicValue,
 			);
-			await this.sync.cancelDynamicPlaylistMaster(
-				this.triggers,
-				this.sos,
-				this.currentlyPlaying,
-				this.synchronization,
-				this.currentlyPlayingPriority,
-				media.dynamicValue!,
-				(regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter),
+			await this.sync.cancelDynamicPlaylistMaster({
+				triggers: this.triggers,
+				sos: this.sos,
+				currentlyPlaying: this.currentlyPlaying,
+				synchronization: this.synchronization,
+				_currentlyPlayingPriority: this.currentlyPlayingPriority,
+				dynamicValue: media.dynamicValue!,
+				cancelAllInRegion: (regionName, filter) => this.priority.stateManager.cancelAllInRegion(regionName, filter),
 				// regionChangeDeferred is per-instance; the only waiter parks on the
 				// triggers instance (handleTriggers), so wake that one — same as
 				// prioritySideEffects does for the priority-side cancel path.
-				() => this.triggers.notifyRegionChange(),
-			);
+				notifyRegionChange: () => this.triggers.notifyRegionChange(),
+			});
 			// Clean up before skipping
 			if (priorityCoord) {
 				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
@@ -2835,10 +2839,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					await this.sync.connectSyncSafe(this.sos);
 				}
 
-				await this.sync.joinAllSyncGroupsOnSmilStart(this.sos, this.synchronization, this.smilObject);
+				await this.sync.joinAllSyncGroupsOnSmilStart({
+					sos: this.sos,
+					synchronization: this.synchronization,
+					smilObject: this.smilObject,
+				});
 
 				if (firstIteration && hasDynamicContent(this.smilObject)) {
-					await this.sync.broadcastEndActionToAllDynamics(this.sos, this.synchronization, this.smilObject);
+					await this.sync.broadcastEndActionToAllDynamics({
+						sos: this.sos,
+						synchronization: this.synchronization,
+						smilObject: this.smilObject,
+					});
 				}
 				// give some time for master selection
 				await sleep(500);

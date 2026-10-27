@@ -34,7 +34,7 @@ export function clearDynamicSyncCoordination(syncGroupName: string): void {
 	const group = getSyncGroup(`${syncGroupName}-${DYNAMIC_REGION_NAME}`);
 	if (!group) { return; }
 	for (const type of DYNAMIC_STALE_COORD_TYPES) {
-		group.clearSyncCoordinationMessage(type, DYNAMIC_REGION_NAME);
+		group.clearSyncCoordinationMessage({ type, regionName: DYNAMIC_REGION_NAME });
 	}
 }
 
@@ -44,22 +44,30 @@ export function clearDynamicSyncCoordination(syncGroupName: string): void {
  */
 export function createDynamicFns(
 	log: Log,
-	sync: { createSyncGroup: (sos: ISos, groupName: string, deviceId?: string) => Promise<SyncGroup> },
+	sync: { createSyncGroup: (options: { sos: ISos; groupName: string; deviceId?: string }) => Promise<SyncGroup> },
 ) {
-	async function joinSyncGroup(sos: ISos, synchronization: Synchronization, groupName: string) {
+	type JoinSyncGroupOptions = {
+		sos: ISos;
+		synchronization: Synchronization;
+		groupName: string;
+	};
+
+	async function joinSyncGroup({ sos, synchronization, groupName }: JoinSyncGroupOptions) {
 		// Route through the syncGroups registry in syncTools so a repeat call for
 		// a group we've already joined is a no-op. SocketSynchronizer's joinGroup
 		// has no JS-level idempotency, so a duplicate 'join_group' to the sync
 		// server is rejected as InternalSynchronizerError 51103.
-		await sync.createSyncGroup(sos, groupName, synchronization.syncDeviceId);
+		await sync.createSyncGroup({ sos, groupName, deviceId: synchronization.syncDeviceId });
 	}
 
-	async function broadcastSyncValue(
-		sos: ISos,
-		dynamicPlaylistConfig: Partial<DynamicPlaylist>,
-		groupName: string,
-		action: string,
-	) {
+	type BroadcastSyncValueOptions = {
+		sos: ISos;
+		dynamicPlaylistConfig: Partial<DynamicPlaylist>;
+		groupName: string;
+		action: string;
+	};
+
+	async function broadcastSyncValue({ sos, dynamicPlaylistConfig, groupName, action }: BroadcastSyncValueOptions) {
 		const requestUid = Math.random().toString(36).substr(2, 10);
 		log.debug(`sending udp request ${action} ${dynamicPlaylistConfig.data ?? 'unknown'} ${Date.now()} with requestUid ${requestUid}`);
 		await sos.sync.broadcastValue({
@@ -73,16 +81,26 @@ export function createDynamicFns(
 		});
 	}
 
-	async function cancelDynamicPlaylistMaster(
-		triggers: PlaylistTriggers,
-		sos: ISos,
-		currentlyPlaying: CurrentlyPlaying,
-		synchronization: Synchronization,
-		_currentlyPlayingPriority: CurrentlyPlayingPriority,
-		dynamicValue: string,
-		cancelAllInRegion: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
-		notifyRegionChange?: () => void,
-	) {
+	type CancelDynamicPlaylistMasterOptions = {
+		triggers: PlaylistTriggers;
+		sos: ISos;
+		currentlyPlaying: CurrentlyPlaying;
+		synchronization: Synchronization;
+		_currentlyPlayingPriority: CurrentlyPlayingPriority;
+		dynamicValue: string;
+		cancelAllInRegion: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void;
+		notifyRegionChange?: () => void;
+	};
+
+	async function cancelDynamicPlaylistMaster({
+		triggers,
+		sos,
+		currentlyPlaying,
+		synchronization,
+		dynamicValue,
+		cancelAllInRegion,
+		notifyRegionChange,
+	}: CancelDynamicPlaylistMasterOptions) {
 		const currentDynamicPlaylist = triggers?.dynamicPlaylist[dynamicValue];
 		if (!currentDynamicPlaylist) {
 			return;
@@ -93,12 +111,12 @@ export function createDynamicFns(
 			set(currentlyPlaying, `${regionName}.playing`, false);
 		}
 		if (currentDynamicPlaylist.dynamicConfig) {
-			await broadcastSyncValue(
+			await broadcastSyncValue({
 				sos,
-				currentDynamicPlaylist.dynamicConfig,
-				`${synchronization.syncGroupName}-fullScreenTrigger`,
-				'end',
-			);
+				dynamicPlaylistConfig: currentDynamicPlaylist.dynamicConfig,
+				groupName: `${synchronization.syncGroupName}-fullScreenTrigger`,
+				action: 'end',
+			});
 		}
 
 		cancelAllInRegion(regionName);

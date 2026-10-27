@@ -62,15 +62,15 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		_value: SMILMedia,
 		dynamicValue: string,
 	): Promise<void> {
-		await this.sync.cancelDynamicPlaylistMaster(
+		await this.sync.cancelDynamicPlaylistMaster({
 			triggers,
-			this.sos,
-			this.currentlyPlaying,
-			this.synchronization,
-			this.currentlyPlayingPriority,
+			sos: this.sos,
+			currentlyPlaying: this.currentlyPlaying,
+			synchronization: this.synchronization,
+			_currentlyPlayingPriority: this.currentlyPlayingPriority,
 			dynamicValue,
-			this.cancelAllInRegionFn,
-			() => triggers.notifyRegionChange(),
-		);
+			cancelAllInRegion: this.cancelAllInRegionFn,
+			notifyRegionChange: () => triggers.notifyRegionChange(),
+		});
 	}
 }

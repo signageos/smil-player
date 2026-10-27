@@ -30,7 +30,8 @@ function makeSynchronization(overrides: Partial<Synchronization> = {}): Synchron
 
 function makeSyncGroupMock(storedByKey: Record<string, SyncMessage | undefined>) {
 	return {
-		getSyncCoordinationMessage: (type: string, regionName: string) => storedByKey[`${type}|${regionName}`],
+		getSyncCoordinationMessage: ({ type, regionName }: { type: string; regionName: string }) =>
+			storedByKey[`${type}|${regionName}`],
 	} as any;
 }
 

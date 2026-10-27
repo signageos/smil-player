@@ -104,7 +104,7 @@ class AckTracker {
 		// Check for already stored ACKs before setting up listener
 		// We now store only the latest ACK per type/region
 		this.log.debug('Checking for stored ACKs for %s', key);
-		const storedAck = syncGroup.getSyncCoordinationMessage(ackType, regionName);
+		const storedAck = syncGroup.getSyncCoordinationMessage({ type: ackType, regionName });
 		if (storedAck && storedAck.syncIndex === syncIndex) {
 			// Validate priority if both are defined
 			if (expectedPriorityLevel !== undefined &&
@@ -117,7 +117,7 @@ class AckTracker {
 					storedAck.priorityLevel,
 					expectedPriorityLevel,
 				);
-				syncGroup.clearSyncCoordinationMessage(ackType, regionName);
+				syncGroup.clearSyncCoordinationMessage({ type: ackType, regionName });
 				// Don't record this ACK, continue to listener
 			} else {
 				// Priority matches or not checking - accept the ACK
@@ -126,7 +126,7 @@ class AckTracker {
 				this.recordAck(key);
 
 				// Clear consumed message immediately
-				syncGroup.clearSyncCoordinationMessage(ackType, regionName);
+				syncGroup.clearSyncCoordinationMessage({ type: ackType, regionName });
 
 				// Check if this completes all ACKs
 				if (round.isComplete()) {
@@ -205,7 +205,7 @@ class AckTracker {
 							this.recordAck(key);
 
 							// Clear consumed message
-							syncGroup.clearSyncCoordinationMessage(message.type, message.regionName);
+							syncGroup.clearSyncCoordinationMessage({ type: message.type, regionName: message.regionName });
 
 							// Check if all ACKs received
 							if (round.isComplete()) {
@@ -560,7 +560,7 @@ export class SMILElementController {
 			// Broadcast cmd-playMode with previousIndex, then wait for ACKs + signal-ready
 			// syncIndex is always 0 for playMode - element position is tracked via previousIndex,
 			// not syncIndex. Clear stale ACKs from previous rounds since the key never changes.
-			syncGroup.clearSyncCoordinationMessage(config.ackType, syncParentId);
+			syncGroup.clearSyncCoordinationMessage({ type: config.ackType, regionName: syncParentId });
 			await this.broadcastSyncMessage(config.commandType, syncParentId, 0, syncGroup, undefined, currentPreviousIndex);
 			this.log.debug('Master sent cmd-playMode for syncParent=%s, previousIndex=%d', syncParentId, currentPreviousIndex);
 			await this.handleMasterPhaseComplete('playMode', config, syncParentId, 0, syncGroup);
@@ -732,7 +732,7 @@ export class SMILElementController {
 	 * or syncIndex range the slave's playlist does not contain.
 	 */
 	private isBroadcastAligned(commandType: SyncCommandType, regionName: string, syncGroup: SyncGroup): boolean {
-		const stored = syncGroup.getSyncCoordinationMessage(commandType, regionName) as SyncMessage | undefined;
+		const stored = syncGroup.getSyncCoordinationMessage({ type: commandType, regionName }) as SyncMessage | undefined;
 		if (!stored) {
 			return true;
 		}
@@ -925,7 +925,7 @@ export class SMILElementController {
 		expectedPriorityLevel: number | undefined,
 		timedDebug?: TimedDebugger,
 	): void {
-		const storedMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+		const storedMsg = syncGroup.getSyncCoordinationMessage({ type: commandType, regionName });
 		if (storedMsg) {
 			// Primary: Check if message priority differs from last received priority
 			this.checkAndUpdatePriorityLevel(regionName, storedMsg.priorityLevel);
@@ -944,7 +944,7 @@ export class SMILElementController {
 				this.clearResyncState();
 
 				// Clear the stale message - it's from a different priority context
-				syncGroup.clearSyncCoordinationMessage(commandType, regionName);
+				syncGroup.clearSyncCoordinationMessage({ type: commandType, regionName });
 				(timedDebug ?? this.log).debug('Cleared stale %s message from priority %d context', commandType, storedMsg.priorityLevel);
 			}
 		}
@@ -985,7 +985,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): ProcessActionType | null {
 		// Re-fetch stored message (will be null if cleared by handleStoredMessagePriority due to priority mismatch)
-		const currentStoredMsg = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+		const currentStoredMsg = syncGroup.getSyncCoordinationMessage({ type: commandType, regionName });
 		if (currentStoredMsg) {
 			const age = Date.now() - currentStoredMsg.timestamp;
 			(timedDebug ?? this.log).debug(
@@ -1032,7 +1032,7 @@ export class SMILElementController {
 		timedDebug?: TimedDebugger,
 	): Promise<ProcessActionType | null> {
 		if (commandType !== 'cmd-prepare') {
-			const crossCheckMsg = syncGroup.getSyncCoordinationMessage('cmd-prepare', regionName);
+			const crossCheckMsg = syncGroup.getSyncCoordinationMessage({ type: 'cmd-prepare', regionName });
 			if (crossCheckMsg && crossCheckMsg.priorityLevel !== undefined
 				&& this.hasPriorityChanged(regionName, crossCheckMsg.priorityLevel, expectedPriorityLevel)) {
 				(timedDebug ?? this.log).debug(
@@ -1348,7 +1348,7 @@ export class SMILElementController {
 		// syncIndex per minute with a frozen screen. A coordination message newer
 		// than the escalation proves the master is alive — resume coordination.
 		if (this.freeRunRegions[regionName]) {
-			const stored = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+			const stored = syncGroup.getSyncCoordinationMessage({ type: commandType, regionName });
 			if (stored && stored.timestamp > (this.freeRunSince[regionName] ?? 0)) {
 				(timedDebug ?? this.log).debug('Free-run region=%s got fresh %s — resuming sync coordination', regionName, commandType);
 				this.noteCommandActivity(regionName);
@@ -1458,9 +1458,9 @@ export class SMILElementController {
 			if (group) {
 				// Selectively clear cmd-prepare: only if stale (syncIndex doesn't match new cycle start)
 				// This preserves a fresh cmd-prepare that arrived before the slave wrapped
-				const storedPrepare = group.getSyncCoordinationMessage('cmd-prepare', regionName);
+				const storedPrepare = group.getSyncCoordinationMessage({ type: 'cmd-prepare', regionName });
 				if (storedPrepare && storedPrepare.syncIndex !== syncIndex) {
-					group.clearSyncCoordinationMessage('cmd-prepare', regionName);
+					group.clearSyncCoordinationMessage({ type: 'cmd-prepare', regionName });
 					this.log.debug(
 						'Cleared stale cmd-prepare on cycle wrap: region=%s, storedIndex=%d, newCycleIndex=%d',
 						regionName,
@@ -1470,8 +1470,8 @@ export class SMILElementController {
 				}
 				// Always clear cmd-play and cmd-finish — at wrap time these are always stale
 				// (master sends play/finish only after slave ACKs prepare, which hasn't happened yet)
-				group.clearSyncCoordinationMessage('cmd-play', regionName);
-				group.clearSyncCoordinationMessage('cmd-finish', regionName);
+				group.clearSyncCoordinationMessage({ type: 'cmd-play', regionName });
+				group.clearSyncCoordinationMessage({ type: 'cmd-finish', regionName });
 			}
 		} else {
 			const currentMax = this.syncState.slaveMaxSyncIndex.get(regionName) ?? 0;
@@ -1501,7 +1501,7 @@ export class SMILElementController {
 		let masterPos = 0;
 		if (syncGroup) {
 			const commandType = state === 'prepared' ? 'cmd-prepare' : state === 'playing' ? 'cmd-play' : 'cmd-finish';
-			const latestCommand = syncGroup.getSyncCoordinationMessage(commandType, regionName);
+			const latestCommand = syncGroup.getSyncCoordinationMessage({ type: commandType, regionName });
 			if (latestCommand && latestCommand.syncIndex) {
 				masterPos = latestCommand.syncIndex;
 			}
@@ -1676,7 +1676,7 @@ export class SMILElementController {
 		expectedPriorityLevel?: number,
 	): Promise<boolean> {
 		// Check for stored message first
-		const storedMsg = syncGroup.getSyncCoordinationMessage(signalType, regionName);
+		const storedMsg = syncGroup.getSyncCoordinationMessage({ type: signalType, regionName });
 		if (storedMsg && storedMsg.syncIndex === syncIndex) {
 			// Validate priority if both are defined
 			if (expectedPriorityLevel !== undefined &&
@@ -1689,7 +1689,7 @@ export class SMILElementController {
 					storedMsg.priorityLevel,
 					expectedPriorityLevel,
 				);
-				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
+				syncGroup.clearSyncCoordinationMessage({ type: signalType, regionName });
 				// Fall through to active listener to wait for correct signal
 			} else {
 				// Priority matches or not checking - accept the signal
@@ -1701,7 +1701,7 @@ export class SMILElementController {
 					age,
 				);
 				// Clear signal-ready after consuming (unlike commands, we don't need to keep these)
-				syncGroup.clearSyncCoordinationMessage(signalType, regionName);
+				syncGroup.clearSyncCoordinationMessage({ type: signalType, regionName });
 				return true; // Continue immediately - signal received
 			}
 		}
@@ -1763,7 +1763,7 @@ export class SMILElementController {
 
 						(timedDebug ?? this.log).debug(`Received ${signalType} for region=${regionName}, syncIndex=${syncIndex}`);
 						// Clear consumed message
-						syncGroup.clearSyncCoordinationMessage(signalType, regionName);
+						syncGroup.clearSyncCoordinationMessage({ type: signalType, regionName });
 						cleanup();
 						resolve(true);
 					}
@@ -1781,12 +1781,12 @@ export class SMILElementController {
 		regionName: string,
 	): Promise<number | undefined> {
 		// Check stored message first
-		const stored = syncGroup.getSyncCoordinationMessage('cmd-playMode', parentId);
+		const stored = syncGroup.getSyncCoordinationMessage({ type: 'cmd-playMode', regionName: parentId });
 		if (stored && stored.previousIndex !== undefined) {
 			// Check if stored message is stale by comparing against latest cmd-play timestamp.
 			// Master sends cmd-play and cmd-playMode at the same time, so a cmd-playMode
 			// older than the latest cmd-play is from a previous cycle.
-			const latestCmdPlay = syncGroup.getSyncCoordinationMessage('cmd-play', regionName);
+			const latestCmdPlay = syncGroup.getSyncCoordinationMessage({ type: 'cmd-play', regionName });
 			if (latestCmdPlay && stored.timestamp < latestCmdPlay.timestamp) {
 				this.log.debug(
 					'Discarding stale cmd-playMode for %s: message timestamp %d < latest cmd-play timestamp %d',
@@ -1794,11 +1794,11 @@ export class SMILElementController {
 					stored.timestamp,
 					latestCmdPlay.timestamp,
 				);
-				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+				syncGroup.clearSyncCoordinationMessage({ type: 'cmd-playMode', regionName: parentId });
 				// Fall through to wait for fresh message via listener
 			} else {
 				this.log.debug('Found stored cmd-playMode for %s, previousIndex=%d', parentId, stored.previousIndex);
-				syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+				syncGroup.clearSyncCoordinationMessage({ type: 'cmd-playMode', regionName: parentId });
 				return stored.previousIndex;
 			}
 		}
@@ -1838,7 +1838,7 @@ export class SMILElementController {
 					const msg = value as SyncMessage;
 					if (msg.type === 'cmd-playMode' && msg.regionName === parentId && msg.previousIndex !== undefined) {
 						this.log.debug('Received cmd-playMode for %s, previousIndex=%d', parentId, msg.previousIndex);
-						syncGroup.clearSyncCoordinationMessage('cmd-playMode', parentId);
+						syncGroup.clearSyncCoordinationMessage({ type: 'cmd-playMode', regionName: parentId });
 						cleanup();
 						resolve(msg.previousIndex);
 					}
