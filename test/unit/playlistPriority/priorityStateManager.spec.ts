@@ -53,24 +53,31 @@ describe('PriorityStateManager', () => {
 				makeRegion({ version: 1 }),
 				makeRegion({ version: 1 }),
 			];
-			expect(mgr.hasConflict('main', 0, 1)).to.equal(true);
+			expect(mgr.hasConflict({ regionName: 'main', currentIndex: 0, previousIndex: 1 })).to.equal(true);
 		});
 
 		it('should return false when same index', () => {
 			state.main = [makeRegion(), makeRegion()];
-			expect(mgr.hasConflict('main', 0, 0)).to.equal(false);
+			expect(mgr.hasConflict({ regionName: 'main', currentIndex: 0, previousIndex: 0 })).to.equal(false);
 		});
 
 		it('should return false when only one entry', () => {
 			state.main = [makeRegion()];
-			expect(mgr.hasConflict('main', 0, 0)).to.equal(false);
+			expect(mgr.hasConflict({ regionName: 'main', currentIndex: 0, previousIndex: 0 })).to.equal(false);
 		});
 	});
 
 	describe('registerOrUpdate', () => {
 		it('should create first entry for new region', () => {
 			const media = makeMedia('video1.mp4');
-			const result = mgr.registerOrUpdate('main', media, 'par-111', 0, makePriorityObject(), 1);
+			const result = mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(result.currentIndex).to.equal(0);
 			expect(state.main).to.have.length(1);
 			expect(state.main[0].media).to.equal(media);
@@ -80,9 +87,23 @@ describe('PriorityStateManager', () => {
 		it('should update existing entry with same parent and version', () => {
 			const media1 = makeMedia('video1.mp4');
 			const media2 = makeMedia('video2.mp4');
-			mgr.registerOrUpdate('main', media1, 'par-111', 0, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media1,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			// Update with different media but same parent
-			const result = mgr.registerOrUpdate('main', media2, 'par-111', 0, makePriorityObject(), 1);
+			const result = mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media2,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(result.currentIndex).to.equal(0);
 			expect(state.main).to.have.length(1);
 			expect(state.main[0].media).to.equal(media2);
@@ -91,8 +112,22 @@ describe('PriorityStateManager', () => {
 		it('should add new entry for different parent', () => {
 			const media1 = makeMedia('video1.mp4');
 			const media2 = makeMedia('video2.mp4');
-			mgr.registerOrUpdate('main', media1, 'par-111', 0, makePriorityObject(), 1);
-			const result = mgr.registerOrUpdate('main', media2, 'par-222', 0, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media1,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
+			const result = mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media2,
+				parent: 'par-222',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(result.currentIndex).to.equal(1);
 			expect(state.main).to.have.length(2);
 		});
@@ -104,10 +139,24 @@ describe('PriorityStateManager', () => {
 			// and markFinished never releases the slot (player stuck on last element).
 			const m1 = makeMedia('m1.mp4');
 			const m3 = makeMedia('m3.mp4');
-			mgr.registerOrUpdate('main', m1, 'seq-111', 1, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: m1,
+				parent: 'seq-111',
+				endTime: 1,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			state.main[0].player.timesPlayed = 1;
 
-			const result = mgr.registerOrUpdate('main', m3, 'seq-111', 1, makePriorityObject(), 1);
+			const result = mgr.registerOrUpdate({
+				regionName: 'main',
+				value: m3,
+				parent: 'seq-111',
+				endTime: 1,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(result.currentIndex).to.equal(0);
 			expect(state.main[0].media).to.equal(m3);
 			expect(state.main[0].player.timesPlayed).to.equal(1);
@@ -115,12 +164,26 @@ describe('PriorityStateManager', () => {
 
 		it('should preserve behaviour and playing state from existing entry', () => {
 			const media = makeMedia('video1.mp4');
-			mgr.registerOrUpdate('main', media, 'par-111', 0, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			state.main[0].behaviour = PriorityBehaviour.pause;
 			state.main[0].player.playing = true;
 			state.main[0].player.timesPlayed = 5;
 
-			mgr.registerOrUpdate('main', media, 'par-111', 0, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media,
+				parent: 'par-111',
+				endTime: 0,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(state.main[0].behaviour).to.equal(PriorityBehaviour.pause);
 			expect(state.main[0].player.playing).to.equal(true);
 			expect(state.main[0].player.timesPlayed).to.equal(5);
@@ -156,7 +219,7 @@ describe('PriorityStateManager', () => {
 				makeRegion(),
 			];
 			mgr.setPlaying('main', 0);
-			mgr.setPaused('main', 0, 1);
+			mgr.setPaused({ regionName: 'main', index: 0, controllerIndex: 1 });
 			const entry = state.main[0];
 			expect(entry.player.contentPause).to.equal(PAUSE_CONTENT_VALUE);
 			expect(entry.player.playing).to.equal(false);
@@ -166,9 +229,9 @@ describe('PriorityStateManager', () => {
 
 		it('should accumulate multiple victims without duplicates', () => {
 			state.main = [makeRegion(), makeRegion(), makeRegion()];
-			mgr.setPaused('main', 0, 2);
-			mgr.setPaused('main', 1, 2);
-			mgr.setPaused('main', 0, 2);
+			mgr.setPaused({ regionName: 'main', index: 0, controllerIndex: 2 });
+			mgr.setPaused({ regionName: 'main', index: 1, controllerIndex: 2 });
+			mgr.setPaused({ regionName: 'main', index: 0, controllerIndex: 2 });
 			expect(state.main[2].controlledPlaylists).to.deep.equal([0, 1]);
 		});
 	});
@@ -210,7 +273,7 @@ describe('PriorityStateManager', () => {
 				controlledPlaylists: [1],
 			})];
 			mgr.setPlaying('main', 0);
-			const result = mgr.markFinished('main', 0);
+			const result = mgr.markFinished({ regionName: 'main', index: 0 });
 			expect(state.main[0].player.timesPlayed).to.equal(0);
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(result.pausedIndexes).to.deep.equal([1]);
@@ -218,7 +281,7 @@ describe('PriorityStateManager', () => {
 
 		it('should return empty pausedIndexes when not controlling anything', () => {
 			state.main = [makeRegion()];
-			const result = mgr.markFinished('main', 0);
+			const result = mgr.markFinished({ regionName: 'main', index: 0 });
 			expect(result.pausedIndexes).to.deep.equal([]);
 		});
 	});
@@ -226,8 +289,8 @@ describe('PriorityStateManager', () => {
 	describe('unpauseAllControlled', () => {
 		it('should release every paused victim and clear the tracking list', () => {
 			state.main = [makeRegion(), makeRegion(), makeRegion()];
-			mgr.setPaused('main', 0, 2);
-			mgr.setPaused('main', 1, 2);
+			mgr.setPaused({ regionName: 'main', index: 0, controllerIndex: 2 });
+			mgr.setPaused({ regionName: 'main', index: 1, controllerIndex: 2 });
 			const released = mgr.unpauseAllControlled('main', 2);
 			expect(released).to.deep.equal([0, 1]);
 			expect(state.main[0].player.contentPause).to.equal(0);
@@ -282,7 +345,7 @@ describe('PriorityStateManager', () => {
 			expect(resolved).to.equal(false);
 
 			// Resolve deferred
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 
 			await waitPromise;
 			expect(resolved).to.equal(true);
@@ -291,7 +354,7 @@ describe('PriorityStateManager', () => {
 
 	describe('ensurePromiseAwaiting', () => {
 		it('should create promiseAwaiting entry with correct fields', () => {
-			const entry = mgr.ensurePromiseAwaiting('main', 1, 'trigger1');
+			const entry = mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1, triggerValue: 'trigger1' });
 			expect(entry.promiseFunction).to.be.an('array').with.length(0);
 			expect(entry.version).to.equal(1);
 			expect(entry.highestProcessingPriority).to.equal(-1);
@@ -299,16 +362,16 @@ describe('PriorityStateManager', () => {
 		});
 
 		it('should return existing entry without overwriting', () => {
-			const entry1 = mgr.ensurePromiseAwaiting('main', 1, 'trigger1');
+			const entry1 = mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1, triggerValue: 'trigger1' });
 			entry1.highestProcessingPriority = 5;
-			const entry2 = mgr.ensurePromiseAwaiting('main', 2, 'trigger2');
+			const entry2 = mgr.ensurePromiseAwaiting({ regionName: 'main', version: 2, triggerValue: 'trigger2' });
 			expect(entry2).to.equal(entry1);
 			expect(entry2.highestProcessingPriority).to.equal(5);
 		});
 
 		it('should fix missing promiseFunction on existing entry', () => {
 			promiseAwaiting.main = { version: 1 } as any;
-			const entry = mgr.ensurePromiseAwaiting('main', 1);
+			const entry = mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
 			expect(entry.promiseFunction).to.be.an('array').with.length(0);
 		});
 	});
@@ -319,7 +382,7 @@ describe('PriorityStateManager', () => {
 		});
 
 		it('should return existing entry', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
 			expect(mgr.getPromiseAwaiting('main')).to.not.equal(undefined);
 		});
 	});
@@ -345,7 +408,7 @@ describe('PriorityStateManager', () => {
 
 	describe('setPromiseFunction', () => {
 		it('should set promiseFunction for a region', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
 			const p = Promise.resolve();
 			mgr.setPromiseFunction('main', [p]);
 			expect(promiseAwaiting.main.promiseFunction).to.deep.equal([p]);
@@ -354,25 +417,25 @@ describe('PriorityStateManager', () => {
 
 	describe('updatePriorityTracking', () => {
 		it('should initialize tracking for new version', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
-			const result = mgr.updatePriorityTracking('main', 2, 5);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			const result = mgr.updatePriorityTracking({ regionName: 'main', version: 2, priority: 5 });
 			expect(promiseAwaiting.main.version).to.equal(2);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(5);
 			expect(result.currentHighest).to.equal(5);
 		});
 
 		it('should track highest priority for same version', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
-			mgr.updatePriorityTracking('main', 1, 3);
-			const result = mgr.updatePriorityTracking('main', 1, 7);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			mgr.updatePriorityTracking({ regionName: 'main', version: 1, priority: 3 });
+			const result = mgr.updatePriorityTracking({ regionName: 'main', version: 1, priority: 7 });
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(7);
 			expect(result.currentHighest).to.equal(7);
 		});
 
 		it('should not downgrade highest priority', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
-			mgr.updatePriorityTracking('main', 1, 7);
-			const result = mgr.updatePriorityTracking('main', 1, 3);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			mgr.updatePriorityTracking({ regionName: 'main', version: 1, priority: 7 });
+			const result = mgr.updatePriorityTracking({ regionName: 'main', version: 1, priority: 3 });
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(7);
 			expect(result.currentHighest).to.equal(7);
 		});
@@ -380,8 +443,8 @@ describe('PriorityStateManager', () => {
 
 	describe('setTriggerValue', () => {
 		it('should set triggerValue for a region', () => {
-			mgr.ensurePromiseAwaiting('main', 1);
-			mgr.setTriggerValue('main', 'myTrigger');
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			mgr.setTriggerValue({ regionName: 'main', triggerValue: 'myTrigger' });
 			expect(promiseAwaiting.main.triggerValue).to.equal('myTrigger');
 		});
 	});
@@ -389,24 +452,24 @@ describe('PriorityStateManager', () => {
 	describe('cleanupPriorityTracking', () => {
 		it('should reset highestProcessingPriority when it matches the given level', () => {
 			promiseAwaiting.main = { highestProcessingPriority: 2, version: 1 } as any;
-			mgr.cleanupPriorityTracking('main', 1, 2);
+			mgr.cleanupPriorityTracking({ regionName: 'main', version: 1, priorityLevel: 2 });
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
 		});
 
 		it('should not reset highestProcessingPriority when it does not match', () => {
 			promiseAwaiting.main = { highestProcessingPriority: 2, version: 1 } as any;
-			mgr.cleanupPriorityTracking('main', 1, 1);
+			mgr.cleanupPriorityTracking({ regionName: 'main', version: 1, priorityLevel: 1 });
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(2);
 		});
 
 		it('should update version if outdated', () => {
 			promiseAwaiting.main = { version: 1 } as any;
-			mgr.cleanupPriorityTracking('main', 3);
+			mgr.cleanupPriorityTracking({ regionName: 'main', version: 3 });
 			expect(promiseAwaiting.main.version).to.equal(3);
 		});
 
 		it('should not fail when region does not exist in promiseAwaiting', () => {
-			mgr.cleanupPriorityTracking('nonexistent', 1, 0);
+			mgr.cleanupPriorityTracking({ regionName: 'nonexistent', version: 1, priorityLevel: 0 });
 			// should not throw
 		});
 	});
@@ -427,7 +490,7 @@ describe('PriorityStateManager', () => {
 			mgr.setPlaying('main', 1);
 			promiseAwaiting.main = { highestProcessingPriority: 2, version: 1 } as any;
 
-			mgr.cleanupExpiredPriority(1, 2);
+			mgr.cleanupExpiredPriority({ version: 1, priorityLevel: 2 });
 
 			// Only priority level 2 should be stopped
 			expect(state.main[0].player.playing).to.equal(false);
@@ -463,7 +526,7 @@ describe('PriorityStateManager', () => {
 			];
 			mgr.setPlaying('main', 2);
 
-			mgr.cleanupExpiredPriority(1, 2);
+			mgr.cleanupExpiredPriority({ version: 1, priorityLevel: 2 });
 
 			expect(state.main[2].player.playing).to.equal(false);
 			expect(state.main[0].player.contentPause).to.equal(0);
@@ -489,7 +552,7 @@ describe('PriorityStateManager', () => {
 			];
 			mgr.setPlaying('main', 1);
 
-			mgr.cleanupExpiredPriority(1, 2);
+			mgr.cleanupExpiredPriority({ version: 1, priorityLevel: 2 });
 
 			expect(state.main[0].player.contentPause).to.equal(PAUSE_CONTENT_VALUE);
 			expect(state.main[1].controlledPlaylists).to.deep.equal([0]);
@@ -513,7 +576,7 @@ describe('PriorityStateManager', () => {
 			await new Promise((r) => setTimeout(r, 10));
 			expect(resolved).to.equal(false);
 
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 
 			await waitPromise;
 			expect(resolved).to.equal(true);
@@ -528,7 +591,7 @@ describe('PriorityStateManager', () => {
 			const p1 = mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolved1 = true; });
 			const p2 = mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolved2 = true; });
 
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 
 			await Promise.all([p1, p2]);
 			expect(resolved1).to.equal(true);
@@ -543,10 +606,18 @@ describe('PriorityStateManager', () => {
 
 			let resolvedHigh = false;
 			let resolvedLow = false;
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { resolvedHigh = true; });
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedLow = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 1,
+			}).then(() => { resolvedHigh = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 0,
+			}).then(() => { resolvedLow = true; });
 
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 
 			// Allow microtasks to process
 			await new Promise((r) => setTimeout(r, 10));
@@ -568,11 +639,19 @@ describe('PriorityStateManager', () => {
 
 			let resolvedP2 = false;
 			let resolvedP1 = false;
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { resolvedP2 = true; });
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedP1 = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 1,
+			}).then(() => { resolvedP2 = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 0,
+			}).then(() => { resolvedP1 = true; });
 
 			// P3 finishes → only P2 wakes
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			await new Promise((r) => setTimeout(r, 10));
 			expect(resolvedP2).to.equal(true);
 			expect(resolvedP1).to.equal(false);
@@ -597,7 +676,7 @@ describe('PriorityStateManager', () => {
 			}).then(() => { badWaiterResolved = true; });
 
 			// Trigger notification — the bad predicate should be caught and waiter resolved
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			await new Promise((r) => setTimeout(r, 10));
 			expect(badWaiterResolved).to.equal(true);
 		});
@@ -614,7 +693,7 @@ describe('PriorityStateManager', () => {
 			mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { goodWaiterResolved = true; });
 
 			// Trigger notification — the bad predicate should be caught, good waiter should resolve
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			await new Promise((r) => setTimeout(r, 10));
 			expect(goodWaiterResolved).to.equal(true);
 		});
@@ -628,9 +707,13 @@ describe('PriorityStateManager', () => {
 			// Bad unordered waiter — returns false on registration, throws on notification
 			mgr.waitUntil('main', () => { throwCount++; if (throwCount > 1) { throw new Error('boom'); } return false; });
 			// Good ordered waiter
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 1).then(() => { orderedResolved = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 1,
+			}).then(() => { orderedResolved = true; });
 
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			await new Promise((r) => setTimeout(r, 10));
 			expect(orderedResolved).to.equal(true);
 		});
@@ -641,10 +724,14 @@ describe('PriorityStateManager', () => {
 
 			let resolvedOrdered = false;
 			let resolvedUnordered = false;
-			mgr.waitForTurn('main', (e) => !e[0].player.playing, 0).then(() => { resolvedOrdered = true; });
+			mgr.waitForTurn({
+				regionName: 'main',
+				predicate: (e) => !e[0].player.playing,
+				priorityLevel: 0,
+			}).then(() => { resolvedOrdered = true; });
 			mgr.waitUntil('main', (e) => !e[0].player.playing).then(() => { resolvedUnordered = true; });
 
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			await new Promise((r) => setTimeout(r, 10));
 
 			// Both should resolve — unordered always resolves, ordered resolves as only one
@@ -667,7 +754,14 @@ describe('PriorityStateManager', () => {
 			const media = makeMedia('img.jpg');
 			state.main = [makeRegion({ media, parent: 'seq-A', version: 1, player: { ...playing } })];
 			// exact match: next repeatCount pass of the same single-element seq
-			mgr.registerOrUpdate('main', media, 'seq-A', 1, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media,
+				parent: 'seq-A',
+				endTime: 1,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(state.main[0].player.successorRegistered).to.equal(true);
 			expect(state.main[0].player.playing).to.equal(true);
 		});
@@ -681,14 +775,28 @@ describe('PriorityStateManager', () => {
 					player: { ...playing },
 				}),
 			];
-			mgr.registerOrUpdate('main', makeMedia('v2.mp4'), 'seq-A', 1, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: makeMedia('v2.mp4'),
+				parent: 'seq-A',
+				endTime: 1,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(state.main[0].player.successorRegistered).to.equal(true);
 		});
 
 		it('registerOrUpdate does NOT mark a re-claim when the slot was not playing', () => {
 			const media = makeMedia('img.jpg');
 			state.main = [makeRegion({ media, parent: 'seq-A', version: 1 })];
-			mgr.registerOrUpdate('main', media, 'seq-A', 1, makePriorityObject(), 1);
+			mgr.registerOrUpdate({
+				regionName: 'main',
+				value: media,
+				parent: 'seq-A',
+				endTime: 1,
+				priorityObject: makePriorityObject(),
+				version: 1,
+			});
 			expect(mgr.hasSuccessor('main', 0)).to.equal(false);
 		});
 
@@ -707,7 +815,7 @@ describe('PriorityStateManager', () => {
 			];
 			mgr.setPlaying('main', 0);
 			const deferred = state.main[0].player.playingCompletionDeferred!;
-			const result = mgr.markFinished('main', 0, true);
+			const result = mgr.markFinished({ regionName: 'main', index: 0, keepPlaying: true });
 			expect(result.pausedIndexes).to.deep.equal([1]);
 			expect(state.main[0].player.playing).to.equal(true);
 			expect(state.main[0].player.timesPlayed).to.equal(0);
@@ -718,7 +826,7 @@ describe('PriorityStateManager', () => {
 		it('markFinished() default still releases the slot and clears the flag', () => {
 			state.main = [makeRegion({ player: { ...playing, successorRegistered: true } })];
 			mgr.setPlaying('main', 0);
-			mgr.markFinished('main', 0);
+			mgr.markFinished({ regionName: 'main', index: 0 });
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(state.main[0].player.successorRegistered).to.equal(false);
 		});
@@ -731,8 +839,8 @@ describe('PriorityStateManager', () => {
 					player: { ...playing },
 				}),
 			];
-			mgr.ensurePromiseAwaiting('main', 1);
-			mgr.updatePriorityTracking('main', 1, 1);
+			mgr.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			mgr.updatePriorityTracking({ regionName: 'main', version: 1, priority: 1 });
 			mgr.releaseSlot('main', 0);
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);

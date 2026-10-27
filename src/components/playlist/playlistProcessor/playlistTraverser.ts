@@ -21,6 +21,8 @@ import { createWallclockTools, WallclockTools } from '../tools/wallclockTools';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 import { DynamicPlaylist } from '../../../models/dynamicModels';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
+import { PriorityBehaviourOptions } from '../playlistPriority/playlistPriority';
+import { CleanupExpiredPriorityOptions } from '../playlistPriority/priorityStateManager';
 
 /**
  * Readonly configuration data needed by the traverser.
@@ -51,12 +53,7 @@ export interface ITraverserActions {
 	): Promise<string | void>;
 
 	priorityBehaviour(
-		value: SMILMedia,
-		elementKey: string,
-		version: number,
-		parent: string,
-		endTime: number,
-		priorityObject: PriorityObject,
+		options: PriorityBehaviourOptions,
 	): Promise<{ currentIndex: number; previousPlayingIndex: number }>;
 
 	storePriorityBounds(elem: PlaylistElement, priorityLevel: number): void;
@@ -119,7 +116,7 @@ export interface ITraverserControl {
 	): Promise<void>;
 	getPlaylistVersion(): number;
 	getCancelFunction(): boolean;
-	cleanupExpiredPriority(version: number, priorityLevel: number): void;
+	cleanupExpiredPriority(options: CleanupExpiredPriorityOptions): void;
 }
 
 /**
@@ -260,14 +257,14 @@ export class PlaylistTraverser {
 
 				while (shouldRetry && retryCount < MAX_RETRIES) {
 					// Call priorityBehaviour inside the loop to re-evaluate on each retry
-					const { currentIndex, previousPlayingIndex } = await this.actions.priorityBehaviour(
-						value as SMILMedia,
-						key,
+					const { currentIndex, previousPlayingIndex } = await this.actions.priorityBehaviour({
+						value: value as SMILMedia,
+						elementKey: key,
 						version,
 						parent,
 						endTime,
 						priorityObject,
-					);
+					});
 
 					const result = await this.actions.playElement(
 						value as SMILMedia,
@@ -1088,7 +1085,7 @@ export class PlaylistTraverser {
 				// Clean up priority tracking after loop ends (e.g., all wallclock content expired)
 				// Without this, deferred lower-priority content waits forever for a playing state change
 				if (priorityObject?.priorityLevel !== undefined) {
-					this.control.cleanupExpiredPriority(version, priorityObject.priorityLevel);
+					this.control.cleanupExpiredPriority({ version, priorityLevel: priorityObject.priorityLevel });
 				}
 				// play N-times, is determined by higher level tag, because this one has repeatCount=indefinite
 			} else if (endTime > 0 && endTime <= 1000 && version >= this.control.getPlaylistVersion()) {

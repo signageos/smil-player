@@ -480,16 +480,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	): Promise<void> => {
 		const taskStartDate = moment().toDate();
 		const handlePriorityWhenDone = () =>
-			this.priority.handlePriorityWhenDone(
-				value as SMILMedia,
-				currentRegionInfo.regionName,
+			this.priority.handlePriorityWhenDone({
+				value: value as SMILMedia,
+				priorityRegionName: currentRegionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
-				this.playlistVersion,
-				this.triggers,
-			);
+				currentVersion: this.playlistVersion,
+				triggers: this.triggers,
+			});
 		try {
 			let element = <HTMLElement>document.getElementById(value.id!);
 
@@ -637,7 +637,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// next element waits for the dynamic to finish (mirrors the master-only
 			// path where no reassignment happens).
 			if (value.dynamicValue && currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-				this.priority.stateManager.ensurePromiseAwaiting(parentRegionInfo.regionName, version);
+				this.priority.stateManager.ensurePromiseAwaiting({ regionName: parentRegionInfo.regionName, version });
 				this.priority.stateManager.setPromiseFunction(parentRegionInfo.regionName, [playbackPromise]);
 			}
 		} catch (err) {
@@ -767,7 +767,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timedDebug: TimedDebugger,
 		priorityCoord?: { version: number; priority: number },
 	): Promise<WaitStatus> => {
-		this.priority.stateManager.ensurePromiseAwaiting(regionInfo.regionName, version, media.triggerValue);
+		this.priority.stateManager.ensurePromiseAwaiting({
+			regionName: regionInfo.regionName,
+			version,
+			triggerValue: media.triggerValue,
+		});
 
 		if (isNil(this.currentlyPlaying[regionInfo.regionName])) {
 			this.currentlyPlaying[regionInfo.regionName] = <PlayingInfo>{};
@@ -829,7 +833,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		if (priorityCoord) {
 			const myPriority = priorityCoord.priority;
 
-			const { currentHighest } = this.priority.stateManager.updatePriorityTracking(regionInfo.regionName, version, myPriority);
+			const { currentHighest } = this.priority.stateManager.updatePriorityTracking({
+				regionName: regionInfo.regionName,
+				version,
+				priority: myPriority,
+			});
 			timedDebug.debug(
 				'[processor] priority tracking updated: version=%s, priority=%s, currentHighest=%s',
 				version,
@@ -843,23 +851,23 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					'[processor] priority %s waiting for higher priority %s', myPriority, currentHighest,
 				);
 
-				await this.priority.stateManager.waitForTurn(
-					regionInfo.regionName,
-					() => {
+				await this.priority.stateManager.waitForTurn({
+					regionName: regionInfo.regionName,
+					predicate: () => {
 						const entry = this.priority.stateManager.getPromiseAwaiting(regionInfo.regionName);
 						const tracked = entry?.highestProcessingPriority ?? -1;
 						return tracked <= myPriority;
 					},
-					myPriority,
-				);
+					priorityLevel: myPriority,
+				});
 
 				// Check if cancelled while waiting
 				if (version < this.playlistVersion || this.getCancelFunction()) {
-					this.priority.stateManager.cleanupPriorityTracking(
-						regionInfo.regionName,
-						priorityCoord.version,
-						priorityCoord.priority,
-					);
+					this.priority.stateManager.cleanupPriorityTracking({
+						regionName: regionInfo.regionName,
+						version: priorityCoord.version,
+						priorityLevel: priorityCoord.priority,
+					});
 					return WaitStatus.SKIP;
 				}
 
@@ -915,7 +923,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			});
 			// Clean up before skipping
 			if (priorityCoord) {
-				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				this.priority.stateManager.cleanupPriorityTracking({
+					regionName: regionInfo.regionName,
+					version: priorityCoord.version,
+					priorityLevel: priorityCoord.priority,
+				});
 			}
 			return WaitStatus.SKIP;
 		}
@@ -927,7 +939,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor] trigger was cancelled prematurely: triggerValue=%s', media.triggerValue);
 			// Clean up before skipping
 			if (priorityCoord) {
-				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				this.priority.stateManager.cleanupPriorityTracking({
+					regionName: regionInfo.regionName,
+					version: priorityCoord.version,
+					priorityLevel: priorityCoord.priority,
+				});
 			}
 			return WaitStatus.SKIP;
 		}
@@ -943,7 +959,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor] dynamic playlist was cancelled prematurely: dynamicValue=%s', media.dynamicValue);
 			// Clean up before skipping
 			if (priorityCoord) {
-				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				this.priority.stateManager.cleanupPriorityTracking({
+					regionName: regionInfo.regionName,
+					version: priorityCoord.version,
+					priorityLevel: priorityCoord.priority,
+				});
 			}
 			return WaitStatus.SKIP;
 		}
@@ -963,7 +983,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				media.src,
 			);
 			if (priorityCoord) {
-				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				this.priority.stateManager.cleanupPriorityTracking({
+					regionName: regionInfo.regionName,
+					version: priorityCoord.version,
+					priorityLevel: priorityCoord.priority,
+				});
 			}
 			return WaitStatus.SKIP;
 		}
@@ -993,7 +1017,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			]);
 			if (this.getCancelFunction()) {
 				if (priorityCoord) {
-					this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+					this.priority.stateManager.cleanupPriorityTracking({
+						regionName: regionInfo.regionName,
+						version: priorityCoord.version,
+						priorityLevel: priorityCoord.priority,
+					});
 				}
 				return WaitStatus.SKIP;
 			}
@@ -1006,7 +1034,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					media.src,
 				);
 				if (priorityCoord) {
-					this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+					this.priority.stateManager.cleanupPriorityTracking({
+						regionName: regionInfo.regionName,
+						version: priorityCoord.version,
+						priorityLevel: priorityCoord.priority,
+					});
 				}
 				return WaitStatus.SKIP;
 			}
@@ -1019,19 +1051,23 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				regionInfo.regionName,
 				media.src,
 			);
-			await this.priority.handlePriorityWhenDone(
-				media as SMILMedia,
-				regionInfo.regionName,
+			await this.priority.handlePriorityWhenDone({
+				value: media as SMILMedia,
+				priorityRegionName: regionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
-				this.playlistVersion,
-				this.triggers,
-			);
+				currentVersion: this.playlistVersion,
+				triggers: this.triggers,
+			});
 			// Clean up before skipping
 			if (priorityCoord) {
-				this.priority.stateManager.cleanupPriorityTracking(regionInfo.regionName, priorityCoord.version, priorityCoord.priority);
+				this.priority.stateManager.cleanupPriorityTracking({
+					regionName: regionInfo.regionName,
+					version: priorityCoord.version,
+					priorityLevel: priorityCoord.priority,
+				});
 			}
 			return WaitStatus.SKIP;
 		}
@@ -1074,16 +1110,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) => {
 		const taskStartDate = moment().toDate();
 		const handlePriorityWhenDone = () =>
-			this.priority.handlePriorityWhenDone(
-				video as SMILMedia,
-				currentRegionInfo.regionName,
+			this.priority.handlePriorityWhenDone({
+				value: video as SMILMedia,
+				priorityRegionName: currentRegionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
-				this.playlistVersion,
-				this.triggers,
-			);
+				currentVersion: this.playlistVersion,
+				triggers: this.triggers,
+			});
 
 		try {
 			timedDebug.debug('[processor] playing video: src=%s, region=%s', video.localFilePath, currentRegionInfo.regionName);
@@ -1132,7 +1168,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						// create currentlyPlayingPriority for trigger nested region
 						if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-							this.priority.stateManager.aliasRegion(parentRegionInfo.regionName, currentRegionInfo.regionName);
+							this.priority.stateManager.aliasRegion({
+								fromRegion: parentRegionInfo.regionName,
+								toRegion: currentRegionInfo.regionName,
+							});
 						}
 
 						if (
@@ -1223,7 +1262,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			// next element waits for the dynamic to finish (mirrors the master-only
 			// path where no reassignment happens).
 			if (video.dynamicValue && currentRegionInfo.regionName !== parentRegionInfo.regionName) {
-				this.priority.stateManager.ensurePromiseAwaiting(parentRegionInfo.regionName, version);
+				this.priority.stateManager.ensurePromiseAwaiting({ regionName: parentRegionInfo.regionName, version });
 				this.priority.stateManager.setPromiseFunction(parentRegionInfo.regionName, [playbackPromise]);
 			}
 
@@ -1487,7 +1526,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 		if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
 			timedDebug.debug('[processor] region changed from %s to %s', parentRegionInfo.regionName, currentRegionInfo.regionName);
-			this.priority.stateManager.cloneRegion(parentRegionInfo.regionName, currentRegionInfo.regionName);
+			this.priority.stateManager.cloneRegion({
+				fromRegion: parentRegionInfo.regionName,
+				toRegion: currentRegionInfo.regionName,
+			});
 		}
 
 		const index = this.tools.getIndexOfPlayingMedia(this.currentlyPlayingPriority[currentRegionInfo.regionName]);
@@ -1517,11 +1559,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			]);
 			if (this.getCancelFunction()) {
 				if (priorityCoord) {
-					this.priority.stateManager.cleanupPriorityTracking(
-						currentRegionInfo.regionName,
-						priorityCoord.version,
-						priorityCoord.priority,
-					);
+					this.priority.stateManager.cleanupPriorityTracking({
+						regionName: currentRegionInfo.regionName,
+						version: priorityCoord.version,
+						priorityLevel: priorityCoord.priority,
+					});
 				}
 				return;
 			}
@@ -1533,11 +1575,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					value.src,
 				);
 				if (priorityCoord) {
-					this.priority.stateManager.cleanupPriorityTracking(
-						currentRegionInfo.regionName,
-						priorityCoord.version,
-						priorityCoord.priority,
-					);
+					this.priority.stateManager.cleanupPriorityTracking({
+						regionName: currentRegionInfo.regionName,
+						version: priorityCoord.version,
+						priorityLevel: priorityCoord.priority,
+					});
 				}
 				return;
 			}
@@ -1563,16 +1605,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				if (action === ProcessAction.RESYNC) {
 					timedDebug.debug('[processor-sync] resync needed, skipping element preparation: region=%s, index=%d',
 						currentRegionInfo.regionName, currentIndex);
-					await this.priority.handlePriorityWhenDone(
+					await this.priority.handlePriorityWhenDone({
 						value,
-						currentRegionInfo.regionName,
+						priorityRegionName: currentRegionInfo.regionName,
 						currentIndex,
 						endTime,
 						isLast,
 						version,
-						this.playlistVersion,
-						this.triggers,
-					);
+						currentVersion: this.playlistVersion,
+						triggers: this.triggers,
+					});
 					timedDebug.debug(
 						'[processor-sync] handlePriorityWhenDone completed for resync: region=%s',
 						currentRegionInfo.regionName,
@@ -1682,7 +1724,10 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			);
 		}
 		if (!isNil(value.triggerValue)) {
-			this.priority.stateManager.setTriggerValue(currentRegionInfo.regionName, value.triggerValue);
+			this.priority.stateManager.setTriggerValue({
+				regionName: currentRegionInfo.regionName,
+				triggerValue: value.triggerValue,
+			});
 		}
 
 		if (version < this.playlistVersion || (this.foundNewPlaylist && version <= this.playlistVersion)) {
@@ -1692,16 +1737,16 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.playlistVersion,
 				value.src,
 			);
-			await this.priority.handlePriorityWhenDone(
-				value as SMILMedia,
-				currentRegionInfo.regionName,
+			await this.priority.handlePriorityWhenDone({
+				value: value as SMILMedia,
+				priorityRegionName: currentRegionInfo.regionName,
 				currentIndex,
 				endTime,
 				isLast,
 				version,
-				this.playlistVersion,
-				this.triggers,
-			);
+				currentVersion: this.playlistVersion,
+				triggers: this.triggers,
+			});
 			return;
 		}
 
@@ -1917,8 +1962,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			},
 			actions: {
 				playElement: self.playElement,
-				priorityBehaviour: (value, elementKey, version, parent, endTime, priorityObject) =>
-					self.priority.priorityBehaviour(value, elementKey, version, parent, endTime, priorityObject),
+				priorityBehaviour: (options) => self.priority.priorityBehaviour(options),
 				storePriorityBounds: self.storePriorityBounds,
 				coordinatePlayModeSync: (regionName, syncParentId, playModeParentId, previousIndex, randomPlaylist) =>
 					self.elementController.coordinatePlayModeSync(regionName, syncParentId, playModeParentId, previousIndex, randomPlaylist),
@@ -1935,7 +1979,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				runEndlessLoop: self.runEndlessLoop,
 				getPlaylistVersion: self.getPlaylistVersion,
 				getCancelFunction: self.getCancelFunction,
-				cleanupExpiredPriority: (v: number, p: number) => self.priority.stateManager.cleanupExpiredPriority(v, p),
+				cleanupExpiredPriority: (options) => self.priority.stateManager.cleanupExpiredPriority(options),
 			},
 		};
 	}

@@ -13,10 +13,15 @@ export function createPriorityDecisionEngine(log: Log) {
 	 * "lower" means the incoming element has lower priority.
 	 * "peer" means they have the same priority level.
 	 */
-	function determinePriorityRelation(
-		incomingLevel: number,
-		existingLevel: number,
-	): PriorityRelation {
+	type DeterminePriorityRelationOptions = {
+		incomingLevel: number;
+		existingLevel: number;
+	};
+
+	function determinePriorityRelation({
+		incomingLevel,
+		existingLevel,
+	}: DeterminePriorityRelationOptions): PriorityRelation {
 		let relation: PriorityRelation;
 		if (existingLevel < incomingLevel) {
 			relation = 'higher';
@@ -132,7 +137,7 @@ export function createPriorityDecisionEngine(log: Log) {
 			log.debug('[priority-engine] stop waiting: endTime expired (endTime=%d)', params.endTime);
 			return false;
 		}
-		if (isRepeatCountExpired(params.timesPlayed, params.endTime)) {
+		if (isRepeatCountExpired({ timesPlayed: params.timesPlayed, endTime: params.endTime })) {
 			log.debug(
 				'[priority-engine] stop waiting: repeat count expired (played=%d, endTime=%d)',
 				params.timesPlayed,
@@ -143,17 +148,24 @@ export function createPriorityDecisionEngine(log: Log) {
 		return true;
 	}
 
-	function findMatchingEntryIndex(
-		entries: CurrentlyPlayingRegion[],
-		media: SMILMedia,
-		parent: string,
-		version: number,
-	): { matchIndex: number; matchType: 'exact' | 'parent' | 'none' } {
+	type FindMatchingEntryIndexOptions = {
+		entries: CurrentlyPlayingRegion[];
+		media: SMILMedia;
+		parent: string;
+		version: number;
+	};
+
+	function findMatchingEntryIndex({
+		entries,
+		media,
+		parent,
+		version,
+	}: FindMatchingEntryIndexOptions): { matchIndex: number; matchType: 'exact' | 'parent' | 'none' } {
 		let parentMatchIndex = -1;
 		for (let i = 0; i < entries.length; i++) {
 			const elem = entries[i];
 			if (elem.parent === parent && elem.version === version) {
-				if (isMediaMatch(elem.media, media)) {
+				if (isMediaMatch({ a: elem.media, b: media })) {
 					return { matchIndex: i, matchType: 'exact' };
 				}
 				if (parentMatchIndex === -1) {
@@ -196,7 +208,12 @@ export function isEndTimeExpired(endTime: number): boolean {
  * guard, causing indefinite playlists to cycle playing=false→true every iteration,
  * which unnecessarily resolved deferreds and unpaused controlled playlists.
  */
-export function isRepeatCountExpired(timesPlayed: number, endTime: number): boolean {
+type IsRepeatCountExpiredOptions = {
+	timesPlayed: number;
+	endTime: number;
+};
+
+export function isRepeatCountExpired({ timesPlayed, endTime }: IsRepeatCountExpiredOptions): boolean {
 	return timesPlayed >= endTime && endTime !== 0;
 }
 
@@ -212,7 +229,12 @@ export function isRepeatCountExpired(timesPlayed: number, endTime: number): bool
  * Uses targeted field comparison instead of deep equality — the match is for
  * identity (is this the same element?), not change detection.
  */
-export function isMediaMatch(a: SMILMedia, b: SMILMedia): boolean {
+type IsMediaMatchOptions = {
+	a: SMILMedia;
+	b: SMILMedia;
+};
+
+export function isMediaMatch({ a, b }: IsMediaMatchOptions): boolean {
 	return a.src === b.src
 		&& a.regionInfo?.regionName === b.regionInfo?.regionName
 		&& a.dynamicValue === b.dynamicValue

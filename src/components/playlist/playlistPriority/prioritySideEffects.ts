@@ -8,6 +8,12 @@ import { PlaylistTriggers } from '../playlistTriggers/playlistTriggers';
 import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { RegionAttributes } from '../../../models/xmlJsonModels';
 
+export type CancelDynamicPlaylistOptions = {
+	triggers: PlaylistTriggers;
+	value: SMILMedia;
+	dynamicValue: string;
+};
+
 /**
  * Interface for side effects performed during priority operations.
  * Abstracts DOM manipulation and SOS API calls for testability.
@@ -15,11 +21,7 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 export interface IPrioritySideEffects {
 	hideTransitionElement(regionName: string): void;
 	prepareVideo(video: SMILVideo, regionInfo: RegionAttributes): Promise<void>;
-	cancelDynamicPlaylist(
-		triggers: PlaylistTriggers,
-		value: SMILMedia,
-		dynamicValue: string,
-	): Promise<void>;
+	cancelDynamicPlaylist(options: CancelDynamicPlaylistOptions): Promise<void>;
 }
 
 /**
@@ -57,11 +59,7 @@ export class PrioritySideEffects implements IPrioritySideEffects {
 		this.log.debug('[priority-fx] prepared dynamic video for defer: src=%s', video.src);
 	}
 
-	public async cancelDynamicPlaylist(
-		triggers: PlaylistTriggers,
-		_value: SMILMedia,
-		dynamicValue: string,
-	): Promise<void> {
+	public async cancelDynamicPlaylist({ triggers, dynamicValue }: CancelDynamicPlaylistOptions): Promise<void> {
 		await this.sync.cancelDynamicPlaylistMaster({
 			triggers,
 			sos: this.sos,
