@@ -192,7 +192,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentDynamicPlaylist.dynamicRandom = dynamicRandom;
 		currentDynamicPlaylist.play = true;
 		this.log.debug('[trigger-dynamic] starting: id=%s', dynamicPlaylistId);
-		await this.processPlaylist(dynamicMedia, version, parent, endTime, priorityObject, conditionalExpr);
+		await this.processPlaylist({
+			playlist: dynamicMedia,
+			version,
+			parent,
+			endTime,
+			priorityObject,
+			conditionalExpr,
+		});
 		this.log.debug('[trigger-dynamic] finished: id=%s', dynamicPlaylistId);
 	};
 
@@ -906,13 +913,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		promises.push(
 			(async () => {
 				while (play) {
-					await this.processPlaylist(
-						triggerMedia,
-						SMILScheduleEnum.triggerPlaylistVersion,
-						'',
-						0,
+					await this.processPlaylist({
+						playlist: triggerMedia,
+						version: SMILScheduleEnum.triggerPlaylistVersion as number,
 						priorityObject,
-					);
+					});
 				}
 			})(),
 		);
@@ -957,7 +962,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentTrigger.triggerRandom = triggerRandom;
 		delete currentTrigger.regionInfo;
 
-		await this.processPlaylist(triggerMedia, SMILScheduleEnum.triggerPlaylistVersion, '', 0, priorityObject);
+		await this.processPlaylist({
+			playlist: triggerMedia,
+			version: SMILScheduleEnum.triggerPlaylistVersion as number,
+			priorityObject,
+		});
 
 		// Re-read from object — regionInfo was repopulated by handleTriggers() during processPlaylist
 		const regionInfo = this.triggersEndless[triggerInfo.trigger]?.regionInfo;

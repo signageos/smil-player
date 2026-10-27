@@ -26,6 +26,14 @@ import { IPlaylistCommon } from './IPlaylistCommon';
 import { DynamicPlaylistEndless } from '../../../models/dynamicModels';
 import { Deferred } from '../tools/Deferred';
 
+export type RunEndlessLoopOptions = {
+	fn: Function;
+	version?: number;
+	conditionalExpr?: string;
+	dynamicPlaylist?: DynamicPlaylistEndless;
+	dynamicPlaylistId?: string | undefined;
+};
+
 export class PlaylistCommon implements IPlaylistCommon {
 	protected sos: ISos;
 	protected files: FilesManager;
@@ -86,13 +94,13 @@ export class PlaylistCommon implements IPlaylistCommon {
 	 * @param dynamicPlaylist
 	 * @param dynamicPlaylistId
 	 */
-	protected runEndlessLoop = async (
-		fn: Function,
-		version: number = 0,
-		conditionalExpr: string = '',
-		dynamicPlaylist: DynamicPlaylistEndless = {},
-		dynamicPlaylistId: string | undefined = undefined,
-	) => {
+	protected runEndlessLoop = async ({
+		fn,
+		version = 0,
+		conditionalExpr = '',
+		dynamicPlaylist = {},
+		dynamicPlaylistId = undefined,
+	}: RunEndlessLoopOptions) => {
 		while (
 			!this.cancelFunction[version] &&
 			(conditionalExpr === '' || !this.schedule.shouldSkipElement({ element: { [ExprTag]: conditionalExpr } })) &&

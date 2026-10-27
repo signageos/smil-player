@@ -198,7 +198,10 @@ export class SmilPlayer implements ISmilPlayer {
 		// image never paints. checkBeforePlay/checkAheadCount are absent here, so every
 		// feature-gated branch on the backup path no-ops, exactly as intended.
 		this.processor.setSmilObject(regionInfo);
-		await this.processor.processPlaylist(backupPlaylist, SMILScheduleEnum.backupImagePlaylistVersion);
+		await this.processor.processPlaylist({
+			playlist: backupPlaylist,
+			version: SMILScheduleEnum.backupImagePlaylistVersion as number,
+		});
 	}
 
 	private main = async (
@@ -345,7 +348,7 @@ export class SmilPlayer implements ISmilPlayer {
 						false,
 						smilObject.refresh.fallbackToPreviousPlaylist,
 					);
-				await this.processor.processingLoop(smilFile, firstIteration, restart);
+				await this.processor.processingLoop({ smilFile, firstIteration, restart });
 			} catch (err) {
 				if (smilFileContent === '') {
 					this.log.error('[smil] SMIL download error: %O', err);
