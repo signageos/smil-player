@@ -180,7 +180,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 					// create placeholders in DOM for images and widgets to speedup playlist processing
 					if (key.startsWith(SMILEnums.img) || key.startsWith('ref')) {
-						elem.id = this.html.createDomElement(elem, htmlElement, key, isSpecial);
+						elem.id = this.html.createDomElement({ value: elem, htmlElement, key, isSpecial });
 					}
 
 					if (key.startsWith(HtmlEnum.ticker)) {
@@ -197,7 +197,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 
 		// Record per-region playMode ranges from the snapshot delta.
 		if (snapshotBefore && this.synchronization) {
-			const deltas = computePlayModeSyncRanges(snapshotBefore, this.globalRegionSyncIndex);
+			const deltas = computePlayModeSyncRanges({ before: snapshotBefore, after: this.globalRegionSyncIndex });
 			if (Object.keys(deltas).length > 0) {
 				if (!this.synchronization.playModeSyncRanges) {
 					this.synchronization.playModeSyncRanges = {};

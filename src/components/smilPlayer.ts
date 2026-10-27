@@ -184,7 +184,7 @@ export class SmilPlayer implements ISmilPlayer {
 			: orientedBackupImage;
 
 		this.log.debug('[smil] playing backup image');
-		const backupPlaylist = generateBackupImagePlaylist(backupImageUrl, '1');
+		const backupPlaylist = generateBackupImagePlaylist({ imageUrl: backupImageUrl, repeatCount: '1' });
 		const regionInfo = <SMILFileObject> getDefaultRegion();
 
 		await this.dataPrepare.getAllInfo(backupPlaylist, regionInfo, smilUrl);
@@ -213,7 +213,7 @@ export class SmilPlayer implements ISmilPlayer {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
-		config.videoOptions.background = getConfigBoolean(this.sos.config, 'videoBackground', false);
+		config.videoOptions.background = getConfigBoolean({ config: this.sos.config, key: 'videoBackground' });
 		const smilFile: SMILFile = {
 			src: smilUrl,
 		};

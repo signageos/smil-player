@@ -83,7 +83,7 @@ export function createPlaylistTools(log: Log) {
 			case 'random_one':
 				return pickRandomOne(playlist);
 			case 'one':
-				return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
+				return getNextElementToPlay({ playlist, randomPlaylistInfo, parent });
 			default:
 				log.debug('[general] no valid playMode, returning original: playMode=%s', playlist.playmode);
 				return playlist;

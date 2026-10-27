@@ -531,84 +531,84 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchWidgetTriggers = () => {
 		this.log.debug('[trigger-widget] watching widget triggers');
-		this.listenerScope.add(
-			window,
-			'sosEvent',
-			async (event: CustomEvent) => {
-				if (!event.detail || isObject(event.detail)) {
-					this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
-					return;
-				}
-
-				const triggerId =
-					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
-				// Widgets triggers do not have info specified in smil xml header, only in playlist
-				const triggerInfo = {
-					trigger: triggerId,
-				};
-
-				const triggerMedia = this.smilObject.triggers[triggerId];
-				this.log.debug('[trigger-widget] received widget event: trigger=%s', triggerId);
-
-				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
-
-				// Cross-trigger cancellation: check if another trigger's end matches this triggerId
-				const crossCancelKey = findTriggerToCancelByEndId({
-					triggers: this.smilObject.triggers,
-					triggersEndless: this.triggersEndless,
-					firingTriggerId: triggerId,
-				});
-				if (crossCancelKey) {
-					this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
-					const target = this.triggersEndless[crossCancelKey];
-					target.play = false;
-					target.cancelDeferred?.resolve();
-					if (target.regionInfo) {
-						await this.cancelPreviousMedia(target.regionInfo);
+		this.listenerScope.add({
+			target: window,
+			type: 'sosEvent',
+			listener: async (event: CustomEvent) => {
+					if (!event.detail || isObject(event.detail)) {
+						this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
+						return;
 					}
-				}
 
-				// Cancel-only trigger with no content — nothing more to do
-				if (isNil(triggerMedia)) {
-					return;
-				}
+					const triggerId =
+						this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
+					// Widgets triggers do not have info specified in smil xml header, only in playlist
+					const triggerInfo = {
+						trigger: triggerId,
+					};
 
-				// Already playing — handle end-condition toggle or skip
-				if (this.triggersEndless[triggerId]?.play) {
-					if (triggerMedia.seq?.end === triggerId) {
-						this.log.debug(
-							'[trigger-widget] cancelling via end-condition toggle: trigger=%s, region=%s',
-							triggerId,
-							this.triggersEndless[triggerId]?.regionInfo?.regionName,
-						);
-						const currentTrigger = this.triggersEndless[triggerId];
-						currentTrigger.play = false;
-						currentTrigger.cancelDeferred?.resolve();
-						if (currentTrigger.regionInfo) {
-							this.log.debug(
-								'[trigger-widget] stopping media in region: region=%s, trigger=%s',
-								currentTrigger.regionInfo.regionName,
-								triggerId,
-							);
-							await this.cancelPreviousMedia(currentTrigger.regionInfo);
+					const triggerMedia = this.smilObject.triggers[triggerId];
+					this.log.debug('[trigger-widget] received widget event: trigger=%s', triggerId);
+
+					set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
+
+					// Cross-trigger cancellation: check if another trigger's end matches this triggerId
+					const crossCancelKey = findTriggerToCancelByEndId({
+						triggers: this.smilObject.triggers,
+						triggersEndless: this.triggersEndless,
+						firingTriggerId: triggerId,
+					});
+					if (crossCancelKey) {
+						this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
+						const target = this.triggersEndless[crossCancelKey];
+						target.play = false;
+						target.cancelDeferred?.resolve();
+						if (target.regionInfo) {
+							await this.cancelPreviousMedia(target.regionInfo);
 						}
-					} else {
-						this.log.debug('[trigger-widget] already playing, skipping: trigger=%s', triggerId);
 					}
-					return;
-				}
 
-				const stringDuration = findDuration(triggerMedia);
-				if (!isNil(stringDuration)) {
-					this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
-					await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
-					return;
-				}
-				this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
-				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+					// Cancel-only trigger with no content — nothing more to do
+					if (isNil(triggerMedia)) {
+						return;
+					}
+
+					// Already playing — handle end-condition toggle or skip
+					if (this.triggersEndless[triggerId]?.play) {
+						if (triggerMedia.seq?.end === triggerId) {
+							this.log.debug(
+								'[trigger-widget] cancelling via end-condition toggle: trigger=%s, region=%s',
+								triggerId,
+								this.triggersEndless[triggerId]?.regionInfo?.regionName,
+							);
+							const currentTrigger = this.triggersEndless[triggerId];
+							currentTrigger.play = false;
+							currentTrigger.cancelDeferred?.resolve();
+							if (currentTrigger.regionInfo) {
+								this.log.debug(
+									'[trigger-widget] stopping media in region: region=%s, trigger=%s',
+									currentTrigger.regionInfo.regionName,
+									triggerId,
+								);
+								await this.cancelPreviousMedia(currentTrigger.regionInfo);
+							}
+						} else {
+							this.log.debug('[trigger-widget] already playing, skipping: trigger=%s', triggerId);
+						}
+						return;
+					}
+
+					const stringDuration = findDuration(triggerMedia);
+					if (!isNil(stringDuration)) {
+						this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
+						await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+						return;
+					}
+					this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
+					await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
 			},
-			false,
-		);
+			options: false,
+		});
 	};
 
 	private watchRfidAntena = async () => {
@@ -666,23 +666,39 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchOnTouchOnClick = () => {
 		try {
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.mouseEventType, async () => {
-				await this.processOnTouchOnClick();
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.mouseEventType as string,
+				listener: async () => {
+					await this.processOnTouchOnClick();
+				},
 			});
 
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.touchEventType, async () => {
-				await this.processOnTouchOnClick();
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.touchEventType as string,
+				listener: async () => {
+					await this.processOnTouchOnClick();
+				},
 			});
 		} catch (err) {
 			this.log.error('[trigger-mouse] failed to add event listener: error=%O', err);
 		}
 
-		this.listenerScope.add(document, SMILTriggersEnum.mouseEventType, async () => {
-			await this.processOnTouchOnClick();
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.mouseEventType as string,
+			listener: async () => {
+				await this.processOnTouchOnClick();
+			},
 		});
 
-		this.listenerScope.add(document, SMILTriggersEnum.touchEventType, async () => {
-			await this.processOnTouchOnClick();
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.touchEventType as string,
+			listener: async () => {
+				await this.processOnTouchOnClick();
+			},
 		});
 	};
 
@@ -733,7 +749,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 
 		if (!isNil(this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`]) && !isNil(triggerMedia)) {
-			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo, this.listenerScope);
+			addEventOnTriggerWidget({
+				elem: triggerMedia,
+				triggerEndless: this.triggersEndless,
+				triggerInfo,
+				scope: this.listenerScope,
+			});
 			const stringDuration = findDuration(triggerMedia);
 			this.log.debug('[trigger-mouse] starting: trigger=%s, duration=%s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
@@ -752,15 +773,23 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		};
 
 		try {
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
-				state = await this.processKeyDownEvent(event, state);
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.keyboardEventType as string,
+				listener: async (event: KeyboardEvent) => {
+					state = await this.processKeyDownEvent(event, state);
+				},
 			});
 		} catch (err) {
 			this.log.error('[trigger-keyboard] failed to add event listener: error=%O', err);
 		}
 
-		this.listenerScope.add(document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
-			state = await this.processKeyDownEvent(event, state);
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.keyboardEventType as string,
+			listener: async (event: KeyboardEvent) => {
+				state = await this.processKeyDownEvent(event, state);
+			},
 		});
 	};
 

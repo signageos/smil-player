@@ -22,17 +22,19 @@ export interface ListenerEntry {
 	options?: AddEventListenerOptions | boolean;
 }
 
+type ListenerScopeAddOptions<E extends Event> = {
+	target: EventTarget;
+	type: string;
+	listener: (event: E) => unknown;
+	options?: AddEventListenerOptions | boolean;
+};
+
 export class ListenerScope {
 	private entries: ListenerEntry[] = [];
 
 	constructor(protected readonly log: Log) {}
 
-	public add<E extends Event = Event>(
-		target: EventTarget,
-		type: string,
-		listener: (event: E) => unknown,
-		options?: AddEventListenerOptions | boolean,
-	): void {
+	public add<E extends Event = Event>({ target, type, listener, options }: ListenerScopeAddOptions<E>): void {
 		// One internal cast absorbs the contravariance between the
 		// narrower call-site event types (CustomEvent, KeyboardEvent, ...)
 		// and the base `EventListener` signature the DOM API expects.

@@ -43,7 +43,7 @@ describe('ListenerScope', () => {
 		const target = makeStubTarget();
 		const handler = () => {/* noop */};
 
-		scope.add(target as unknown as EventTarget, 'click', handler);
+		scope.add({ target: target as unknown as EventTarget, type: 'click', listener: handler });
 
 		expect(scope.size).to.equal(1);
 		expect(target.adds).to.have.length(1);
@@ -57,7 +57,7 @@ describe('ListenerScope', () => {
 		const handler = () => {/* noop */};
 		const opts = { capture: true };
 
-		scope.add(target as unknown as EventTarget, 'keydown', handler, opts);
+		scope.add({ target: target as unknown as EventTarget, type: 'keydown', listener: handler, options: opts });
 		scope.removeAll();
 
 		expect(target.removes).to.have.length(1);
@@ -70,7 +70,7 @@ describe('ListenerScope', () => {
 		const scope = new ListenerScope(noopLog);
 		const target = makeStubTarget();
 
-		scope.add(target as unknown as EventTarget, 'click', () => {/* noop */});
+		scope.add({ target: target as unknown as EventTarget, type: 'click', listener: () => {/* noop */} });
 		scope.removeAll();
 		expect(scope.size).to.equal(0);
 
@@ -88,7 +88,7 @@ describe('ListenerScope', () => {
 			},
 		};
 
-		scope.add(throwingTarget as unknown as EventTarget, 'click', () => {/* noop */});
+		scope.add({ target: throwingTarget as unknown as EventTarget, type: 'click', listener: () => {/* noop */} });
 
 		expect(() => scope.removeAll()).to.not.throw();
 		expect(scope.size).to.equal(0);
@@ -102,9 +102,9 @@ describe('ListenerScope', () => {
 		const hb1 = () => {/* noop */};
 		const hb2 = () => {/* noop */};
 
-		scope.add(a as unknown as EventTarget, 'click', ha);
-		scope.add(b as unknown as EventTarget, 'keydown', hb1);
-		scope.add(b as unknown as EventTarget, 'touchstart', hb2);
+		scope.add({ target: a as unknown as EventTarget, type: 'click', listener: ha });
+		scope.add({ target: b as unknown as EventTarget, type: 'keydown', listener: hb1 });
+		scope.add({ target: b as unknown as EventTarget, type: 'touchstart', listener: hb2 });
 
 		expect(scope.size).to.equal(3);
 

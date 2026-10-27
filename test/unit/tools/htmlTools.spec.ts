@@ -20,13 +20,13 @@ describe('htmlTools', () => {
 
 	describe('computeBillboardColumns', () => {
 		it('returns one column descriptor per requested column', () => {
-			expect(computeBillboardColumns(1920, 4)).to.have.lengthOf(4);
+			expect(computeBillboardColumns({ regionWidth: 1920, columnCount: 4 })).to.have.lengthOf(4);
 		});
 
 		it('computes strip width = regionWidth/columnCount + 2 and i·stripWidth offsets for a known input', () => {
 			// 1920 / 4 = 480px strip; +2px overlap hides the seams between strips; offset = i * 480.
 			// background-position uses -offset, margin-left uses +offset (same magnitude).
-			expect(computeBillboardColumns(1920, 4)).to.eql([
+			expect(computeBillboardColumns({ regionWidth: 1920, columnCount: 4 })).to.eql([
 				{ width: 482, offset: 0 },
 				{ width: 482, offset: 480 },
 				{ width: 482, offset: 960 },
@@ -36,7 +36,7 @@ describe('htmlTools', () => {
 
 		it('keeps fractional widths/offsets exact (no rounding) for a non-divisible region', () => {
 			const strip = 1000 / 3;
-			const columns = computeBillboardColumns(1000, 3);
+			const columns = computeBillboardColumns({ regionWidth: 1000, columnCount: 3 });
 			expect(columns).to.have.lengthOf(3);
 			columns.forEach((col, i) => {
 				expect(col.width).to.equal(strip + 2);

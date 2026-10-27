@@ -516,7 +516,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 						// widget detected with attribute preload set to false, reset before play
 						if (element.nodeName === 'IFRAME' && value.preload === false) {
-							let src = generateElementSrc(value.src, value.localFilePath, version);
+							let src = generateElementSrc({
+								elementSrc: value.src,
+								localFilePath: value.localFilePath,
+								playlistVersion: version,
+							});
 							element.setAttribute('src', src);
 							sosHtmlElement.src = src;
 						}
@@ -525,7 +529,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						if (hasTransition) {
 							transitionDuration = this.schedule.setElementDuration(value.transitionInfo!.dur);
 						}
-						this.html.changeZIndex(value, element, +1, false);
+						this.html.changeZIndex({ value, element, transitionConstant: +1, useValueZIndex: false });
 
 						if (
 							(this.currentlyPlaying[currentRegionInfo.regionName]?.media !== 'ticker' ||
@@ -590,7 +594,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							removeTransitionCss(element);
 						}
 
-						this.html.changeZIndex(value, element, -2);
+						this.html.changeZIndex({ value, element, transitionConstant: -2 });
 
 						timedDebug.debug('[processor] finished playing html element: src=%s', value.localFilePath);
 					} catch (err) {
@@ -1865,20 +1869,20 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 	) => {
 		timedDebug.debug('[processor] starting html element preparation: src=%s, id=%s', value.src, value.id);
 
-		this.html.changeZIndex(value, element, +1);
+		this.html.changeZIndex({ value, element, transitionConstant: +1 });
 		timedDebug.debug('[processor] changed z-index for element');
 
 		// value.wasUpdated is there for a case when file updates in localstorage under same url,
 		// player needs to regenerate src to update it in browser cache
 		const smilUrlVersion = getSmilVersionUrl(element.getAttribute('src'));
-		let src = generateElementSrc(
-			value.src,
-			value.localFilePath,
-			version,
+		let src = generateElementSrc({
+			elementSrc: value.src,
+			localFilePath: value.localFilePath,
+			playlistVersion: version,
 			smilUrlVersion,
 			isWidget,
-			value.wasUpdated,
-		);
+			wasUpdated: value.wasUpdated,
+		});
 		timedDebug.debug('[processor] generated source URL: %s', src);
 
 		if (value.transitionInfo?.type === 'billboard' && !element.style.backgroundImage) {
@@ -2210,12 +2214,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 							duration,
 							transitionDuration,
 						);
-						this.html.setTransitionCss(
+						this.html.setTransitionCss({
 							element,
-							elementHtml,
-							this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
+							htmlElement: elementHtml,
+							nextElementId: this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
 							transitionDuration,
-						);
+						});
 					}
 				}, duration - transitionDuration);
 			}
@@ -2254,12 +2258,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				this.currentlyPlaying[currentRegionInfo.regionName]?.nextElement?.type === 'html'
 			) {
 				transitionSet = true;
-				this.html.setTransitionCss(
+				this.html.setTransitionCss({
 					element,
-					elementHtml,
-					this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
+					htmlElement: elementHtml,
+					nextElementId: this.currentlyPlaying[currentRegionInfo.regionName].nextElement.id!,
 					transitionDuration,
-				);
+				});
 			}
 		}
 	};
@@ -2288,14 +2292,14 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		image.regionInfo = this.tools.getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		this.log.debug('[processor] setting up intro image: src=%s', image.src);
-		const element: HTMLElement = this.html.createHtmlElement(
-			image,
-			HtmlEnum.img,
-			image.localFilePath,
-			image.regionInfo,
+		const element: HTMLElement = this.html.createHtmlElement({
+			value: image,
+			htmlElement: HtmlEnum.img,
+			filepath: image.localFilePath,
+			regionInfo: image.regionInfo,
 			key,
-			image.src,
-		);
+			elementSrc: image.src,
+		});
 		image.id = element.id;
 		element.style.visibility = 'visible';
 		element.setAttribute('src', image.localFilePath);
