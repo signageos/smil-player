@@ -4,14 +4,14 @@ sidebar_position: 6
 # Custom logger
 
 The SMIL Player writes all diagnostic output through one injected logger. The contract lives in
-`src/logger/`; implementations live in `src/loggers/`, where the default `ConsoleLogger` prints to the
+`packages/logger/`; implementations live in `packages/logger/loggers/`, where the default `ConsoleLogger` prints to the
 browser console when `debugEnabled` is on. A `remote` logger that POSTs batches to a URL ships as well; see below.
 To send logs elsewhere, implement one method and register it.
 
 ## The contract
 
 ```ts
-import { Logger, LogEntry, formatMessage } from '../logger'; // from src/loggers/
+import { Logger, LogEntry, formatMessage } from '../index'; // from packages/logger/loggers/
 
 interface LogEntry {
 	level: 'debug' | 'info' | 'warn' | 'error';
@@ -43,12 +43,12 @@ Rules for `write`:
 
 Two ways, in order of preference:
 
-1. **Register it and select it by config.** Add a factory to `loggerFactories` in `src/loggers/index.ts`, then set the
+1. **Register it and select it by config.** Add a factory to `loggerFactories` in `packages/logger/loggers/index.ts`, then set the
    `logger` applet config key to its name. Devices switch without a rebuild; the name is re-read on every log line, so
    a config change takes effect immediately. Unknown names fall back to `console`.
 
    ```ts
-   // src/loggers/index.ts
+   // packages/logger/loggers/index.ts
    export const loggerFactories: Record<string, LoggerFactory> = {
    	console: (sos) => new ConsoleLogger(() => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true'),
    	html: () => new HtmlLogger(document.body),
@@ -92,7 +92,7 @@ export class HtmlLogger implements Logger {
 
 ## Shipped: `remote`
 
-`RemoteLogger` (`src/loggers/remoteLogger.ts`) is selected with the applet config `logger=remote` and needs
+`RemoteLogger` (`packages/logger/loggers/remoteLogger.ts`) is selected with the applet config `logger=remote` and needs
 `loggerUrl`. It is for devices where nobody can open a developer console.
 
 - Sends every level. Nothing is sent while `debugEnabled` is off, so the stream is switched on and off from

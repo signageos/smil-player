@@ -73,6 +73,13 @@ Constants and enums such as filepath or default wallclock values
 
 Typescript types and definitions used in application
 
+### packages/
+
+npm workspace packages, consumed from TypeScript source by the same webpack build (no per-package build or
+publishing). A module lives here when it has its own dependency or its own consumer, and it may not import
+from `src/` (`npm run lint:package-boundary`). `packages/logger` (`@signageos/smil-logger`) is the logging
+contract; `@signageos/smil-logger/loggers` holds the selectable implementations.
+
 ### SMIL/
 
 Folder with example SMIL files and its parsed versions in json. Json version is used further in application to download
