@@ -353,6 +353,7 @@ export class FilesManager implements IFilesManager {
 				name: 'playlist-playback',
 				status: isNil(errMessage) ? 200 : 902,
 				time: Math.floor(Date.now() / 1000),
+				recordedAt: new Date().toISOString(),
 				url: src,
 			});
 		}

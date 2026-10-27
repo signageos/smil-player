@@ -191,8 +191,9 @@ regardless of the current allowlist.
 
 ### Payload of messages
 
-All custom endpoint reports include a `status` field containing the HTTP status code and a `time` field with a Unix
-timestamp in **seconds**. The `url` field contains the content URL used for the report (the final URL after
+All custom endpoint reports include a `status` field containing the HTTP status code, a `time` field with a Unix
+timestamp in **seconds** and a `recordedAt` field with the same moment as an ISO-8601 string (kept for receivers
+written against pre-4.0 payloads, which carried only `recordedAt`). The `url` field contains the content URL used for the report (the final URL after
 redirects — see [Reported URL](#reported-url-useinreporturl) below). The `customId`, `type`, `fileName` and `tags`
 fields appear only when the corresponding `pop*` attribute is set on the element.
 
@@ -216,6 +217,7 @@ failures carry the HTTP error status of the failed request (or `502` when the do
   "fileName": "video.mp4",
   "status": 200,
   "time": 1732060768,
+  "recordedAt": "2024-11-19T23:59:28.000Z",
   "url": "https://cdn.example.com/video.mp4"
 }
 ```
@@ -232,7 +234,7 @@ element's source URL, and for a `media-deleted` fired by playlist cleanup it is 
 carries the content's source URL.
 
 ```json
-{ "name": "media-copied", "playbackSuccess": true, "status": 200, "time": 1732060768, "url": "https://cdn.example.com/video.mp4" }
+{ "name": "media-copied", "playbackSuccess": true, "status": 200, "time": 1732060768, "recordedAt": "2024-11-19T23:59:28.000Z", "url": "https://cdn.example.com/video.mp4" }
 ```
 
 #### Playback (`media-playback`)
@@ -251,6 +253,7 @@ carries the content's source URL.
   "fileName": "banner.jpg",
   "status": 200,
   "time": 1732060768,
+  "recordedAt": "2024-11-19T23:59:28.000Z",
   "url": "https://cdn.example.com/image.jpg"
 }
 ```
@@ -262,11 +265,11 @@ A failed playback has the same shape with `"status": 500`.
 The SMIL file itself produces two record types (minimal shape — the SMIL element carries no `pop*` attributes):
 
 ```json
-{ "name": "playlist-download", "playbackSuccess": true, "status": 200, "time": 1732060768, "url": "https://example.com/playlist.smil" }
+{ "name": "playlist-download", "playbackSuccess": true, "status": 200, "time": 1732060768, "recordedAt": "2024-11-19T23:59:28.000Z", "url": "https://example.com/playlist.smil" }
 ```
 
 ```json
-{ "name": "playlist-playback", "status": 200, "time": 1732060768, "url": "https://example.com/playlist.smil" }
+{ "name": "playlist-playback", "status": 200, "time": 1732060768, "recordedAt": "2024-11-19T23:59:28.000Z", "url": "https://example.com/playlist.smil" }
 ```
 
 `playlist-playback` is sent each time the player starts (or restarts) processing the playlist; a `status` of `902`
