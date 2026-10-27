@@ -23,6 +23,20 @@ import { PlaylistDataPrepare } from './playlist/playlistDataPrepare/playlistData
 import { ISmilPlayer } from './ISmilPlayer';
 import { createFetchingStrategies, FetchingStrategies } from './files/fetchingStrategies/fetchingStrategies';
 
+type MainOptions = {
+	internalStorageUnit: IStorageUnit;
+	smilUrl: string;
+	playIntro?: boolean;
+	firstIteration?: boolean;
+	ignoreInvalidSmil?: boolean;
+};
+
+type FallbackToPreviousPlaylistOptions = {
+	internalStorageUnit: IStorageUnit;
+	smilUrl: string;
+	interval: number;
+};
+
 export class SmilPlayer implements ISmilPlayer {
 	protected readonly log: Log;
 	private readonly html: HtmlTools;
@@ -94,7 +108,7 @@ export class SmilPlayer implements ISmilPlayer {
 			try {
 				const startVersion = this.processor.getPlaylistVersion();
 				this.log.debug('[smil] starting SMIL iteration: version=%s', startVersion);
-				await this.main(internalStorageUnit, smilUrl);
+				await this.main({ internalStorageUnit, smilUrl });
 				const finishVersion = this.processor.getPlaylistVersion();
 				if (startVersion < finishVersion) {
 					this.log.debug('[smil] playlist version updated: v%d -> v%d, restarting', startVersion, finishVersion);
@@ -204,13 +218,13 @@ export class SmilPlayer implements ISmilPlayer {
 		});
 	}
 
-	private main = async (
-		internalStorageUnit: IStorageUnit,
-		smilUrl: string,
-		playIntro: boolean = true,
-		firstIteration: boolean = true,
-		ignoreInvalidSmil: boolean = false,
-	) => {
+	private main = async ({
+		internalStorageUnit,
+		smilUrl,
+		playIntro = true,
+		firstIteration = true,
+		ignoreInvalidSmil = false,
+	}: MainOptions) => {
 		// allow endless functions to play endlessly
 		this.processor.disableLoop(false);
 		// set video background to timings value or false
@@ -341,13 +355,13 @@ export class SmilPlayer implements ISmilPlayer {
 
 				this.log.debug('[smil] starting playlist processing');
 				const restart = () =>
-					this.main(
+					this.main({
 						internalStorageUnit,
 						smilUrl,
-						false,
-						false,
-						smilObject.refresh.fallbackToPreviousPlaylist,
-					);
+						playIntro: false,
+						firstIteration: false,
+						ignoreInvalidSmil: smilObject.refresh.fallbackToPreviousPlaylist,
+					});
 				await this.processor.processingLoop({ smilFile, firstIteration, restart });
 			} catch (err) {
 				if (smilFileContent === '') {
@@ -368,11 +382,11 @@ export class SmilPlayer implements ISmilPlayer {
 						return smilUpdate.invalid;
 					}
 					this.log.warn('[smil] ignoring invalid SMIL: fallbackToPreviousPlaylist enabled');
-					return await this.fallbackToPreviousPlaylist(
+					return await this.fallbackToPreviousPlaylist({
 						internalStorageUnit,
 						smilUrl,
-						SMILEnums.defaultDownloadRetry * 1000,
-					);
+						interval: SMILEnums.defaultDownloadRetry * 1000,
+					});
 				}
 
 				await this.playBackupImage(smilUrl);
@@ -381,11 +395,11 @@ export class SmilPlayer implements ISmilPlayer {
 		}
 	}
 
-	private fallbackToPreviousPlaylist = async (
-		internalStorageUnit: IStorageUnit,
-		smilUrl: string,
-		interval: number,
-	): Promise<void> => {
+	private fallbackToPreviousPlaylist = async ({
+		internalStorageUnit,
+		smilUrl,
+		interval,
+	}: FallbackToPreviousPlaylistOptions): Promise<void> => {
 		if (this.isPollingForPlaylist) {
 			this.log.debug('[smil] skipping poll: another checker already active');
 			return;
@@ -396,7 +410,13 @@ export class SmilPlayer implements ISmilPlayer {
 		return new Promise<void>((resolve) => {
 			const intervalId = setInterval(
 				async () => {
-					const response = await this.main(internalStorageUnit, smilUrl, false, false, true);
+					const response = await this.main({
+						internalStorageUnit,
+						smilUrl,
+						playIntro: false,
+						firstIteration: false,
+						ignoreInvalidSmil: true,
+					});
 					if (response !== smilUpdate.invalid) {
 						this.log.debug('[smil] found valid SMIL file, exiting invalid smil polling loop');
 						this.isPollingForPlaylist = false;

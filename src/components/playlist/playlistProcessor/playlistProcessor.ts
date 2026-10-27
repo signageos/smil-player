@@ -476,7 +476,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.handlePlaylistLoop(version),
 
 			// Trigger watching process
-			this.triggers.watchTriggers(this.smilObject, this.getPlaylistVersion, this.getCheckFilesLoop),
+			this.triggers.watchTriggers({
+				smilObject: this.smilObject,
+				playlistVersion: this.getPlaylistVersion,
+				filesLoop: this.getCheckFilesLoop,
+			}),
 
 			// Custom endpoint reports processing
 			this.runEndlessLoop({
@@ -589,7 +593,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.triggers.dynamicPlaylist[dynamicPlaylistId].intervalId = intervalId;
 
 			try {
-				await this.triggers.handleDynamicPlaylist(
+				await this.triggers.handleDynamicPlaylist({
 					dynamicPlaylistId,
 					dynamicPlaylistConfig,
 					dynamicMedia,
@@ -598,7 +602,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 					endTime,
 					priorityObject,
 					conditionalExpr,
-				);
+				});
 			} catch (err) {
 				this.log.error('[processor] unexpected error during dynamic playlist trigger handling: %O', err);
 				clearInterval(intervalId);

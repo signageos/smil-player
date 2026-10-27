@@ -40,6 +40,49 @@ import { clearDynamicSyncCoordination } from '../tools/dynamicTools';
 import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { findTriggerToCancelByEndId } from '../tools/triggerTools';
 
+type AreTriggerConditionsMetOptions = {
+	conditions: ParsedTriggerCondition[];
+	logicCondition: string;
+	action: string;
+};
+
+type ProcessRfidAntennaOptions = {
+	smilObject: SMILFileObject;
+	sensor: ParsedSensor;
+	tag: number;
+	action: string;
+};
+
+type ProcessTriggerRepeatCountOptions = {
+	triggerInfo: { trigger: string };
+	triggerMedia: TriggerObject;
+	priorityObject?: PriorityObject;
+};
+
+type ProcessTriggerDurationOptions = {
+	triggerInfo: { trigger: string };
+	triggerMedia: TriggerObject;
+	stringDuration: string;
+	priorityObject?: PriorityObject;
+};
+
+export type HandleDynamicPlaylistOptions = {
+	dynamicPlaylistId: string;
+	dynamicPlaylistConfig: DynamicPlaylist;
+	dynamicMedia: DynamicPlaylistObject;
+	version: number;
+	parent?: string;
+	endTime?: number;
+	priorityObject?: PriorityObject;
+	conditionalExpr?: string;
+};
+
+export type WatchTriggersOptions = {
+	smilObject: SMILFileObject;
+	playlistVersion: () => number;
+	filesLoop: () => boolean;
+};
+
 export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTriggers {
 	public readonly triggersEndless: TriggerEndless = {};
 	public readonly dynamicPlaylist: DynamicPlaylistEndless = {};
@@ -72,11 +115,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.cancelAllInRegion = cancelAllInRegion;
 	}
 
-	public watchTriggers = async (
-		smilObject: SMILFileObject,
-		playlistVersion: () => number,
-		filesLoop: () => boolean,
-	) => {
+	public watchTriggers = async ({ smilObject, playlistVersion, filesLoop }: WatchTriggersOptions) => {
 		// Detach every listener registered on a previous invocation before
 		// re-running setup. Without this, each playlist-loop iteration
 		// would stack a fresh layer of handlers on document / window /
@@ -162,16 +201,16 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		return regionInfo;
 	};
 
-	public handleDynamicPlaylist = async (
-		dynamicPlaylistId: string,
-		dynamicPlaylistConfig: DynamicPlaylist,
-		dynamicMedia: DynamicPlaylistObject,
-		version: number,
-		parent: string = '',
-		endTime: number = 0,
-		priorityObject: PriorityObject = {} as PriorityObject,
-		conditionalExpr: string = '',
-	) => {
+	public handleDynamicPlaylist = async ({
+		dynamicPlaylistId,
+		dynamicPlaylistConfig,
+		dynamicMedia,
+		version,
+		parent = '',
+		endTime = 0,
+		priorityObject = {} as PriorityObject,
+		conditionalExpr = '',
+	}: HandleDynamicPlaylistOptions) => {
 		this.dynamicPlaylist[dynamicPlaylistId].latestEventFired = Date.now();
 		this.dynamicPlaylist[dynamicPlaylistId].syncId = dynamicPlaylistConfig.syncId;
 		this.dynamicPlaylist[dynamicPlaylistId].dynamicConfig = dynamicPlaylistConfig;
@@ -354,15 +393,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const version = filesLoop() ? playlistVersion() : playlistVersion() + 1;
 
-			await this.handleDynamicPlaylist(
+			await this.handleDynamicPlaylist({
 				dynamicPlaylistId,
 				dynamicPlaylistConfig,
 				dynamicMedia,
 				version,
-				'',
-				0,
 				priorityObject,
-			);
+			});
 		});
 	};
 
@@ -502,9 +539,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					const triggerMedia = this.smilObject.triggers[triggerInfo.trigger];
 					const stringDuration = findDuration(triggerMedia);
 					if (!isNil(stringDuration)) {
-						await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration!);
+						await this.processTriggerDuration({
+							triggerInfo,
+							triggerMedia,
+							stringDuration: stringDuration!,
+						});
 					} else {
-						await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+						await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 					}
 				} else {
 					this.log.debug('[trigger-sync] failover trigger already playing, skipping');
@@ -608,11 +649,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					const stringDuration = findDuration(triggerMedia);
 					if (!isNil(stringDuration)) {
 						this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
-						await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+						await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 						return;
 					}
 					this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
-					await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+					await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			},
 			options: false,
 		});
@@ -653,7 +694,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PICKED, async (tag: number) => {
 					try {
-						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PICKED);
+						await this.processRfidAntenna({
+							smilObject: this.smilObject,
+							sensor,
+							tag,
+							action: RfidAntennaEvent.PICKED,
+						});
 					} catch (err) {
 						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=picked', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
@@ -661,7 +707,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				});
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PLACED, async (tag: number) => {
 					try {
-						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PLACED);
+						await this.processRfidAntenna({
+							smilObject: this.smilObject,
+							sensor,
+							tag,
+							action: RfidAntennaEvent.PLACED,
+						});
 					} catch (err) {
 						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=placed', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
@@ -765,11 +816,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			const stringDuration = findDuration(triggerMedia);
 			this.log.debug('[trigger-mouse] starting: trigger=%s, duration=%s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
-				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 				return;
 			}
 
-			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+			await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 		}
 	};
 
@@ -869,9 +920,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const stringDuration = findDuration(triggerMedia);
 			if (!isNil(stringDuration)) {
-				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 			} else {
-				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+				await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			}
 		}
 
@@ -891,12 +942,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		return state;
 	};
 
-	private processTriggerDuration = async (
-		triggerInfo: { trigger: string },
-		triggerMedia: TriggerObject,
-		stringDuration: string,
-		priorityObject: PriorityObject = {} as PriorityObject,
-	) => {
+	private processTriggerDuration = async ({
+		triggerInfo,
+		triggerMedia,
+		stringDuration,
+		priorityObject = {} as PriorityObject,
+	}: ProcessTriggerDurationOptions) => {
 		const durationMillis = this.schedule.setElementDuration(stringDuration);
 		const triggerRandom = getRandomInt(100000);
 		const currentTrigger = this.triggersEndless[triggerInfo.trigger];
@@ -949,11 +1000,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 	};
 
-	private processTriggerRepeatCount = async (
-		triggerInfo: { trigger: string },
-		triggerMedia: TriggerObject,
-		priorityObject: PriorityObject = {} as PriorityObject,
-	) => {
+	private processTriggerRepeatCount = async ({
+		triggerInfo,
+		triggerMedia,
+		priorityObject = {} as PriorityObject,
+	}: ProcessTriggerRepeatCountOptions) => {
 		const triggerRandom = getRandomInt(100000);
 		const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 
@@ -984,18 +1035,17 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 	};
 
-	private processRfidAntenna = async (
-		smilObject: SMILFileObject,
-		sensor: ParsedSensor,
-		tag: number,
-		action: string,
-	) => {
+	private processRfidAntenna = async ({ smilObject, sensor, tag, action }: ProcessRfidAntennaOptions) => {
 		this.log.debug('[trigger-rfid] tag event: tag=%s, action=%s, sensor=%s', tag, action, sensor.id);
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		// check if some conditions equals emitted parameters
-		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
+		if (this.areTriggerConditionsMet({
+			conditions: triggerInfo.condition,
+			logicCondition: triggerInfo.stringCondition,
+			action,
+		})) {
 			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
-			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+			await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			return;
 		}
 
@@ -1013,11 +1063,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.log.debug('[trigger-rfid] no matching condition: trigger=%s, action=%s', triggerInfo.trigger, action);
 	};
 
-	private areTriggerConditionsMet(
-		conditions: ParsedTriggerCondition[],
-		logicCondition: string,
-		action: string,
-	): boolean {
+	private areTriggerConditionsMet({ conditions, logicCondition, action }: AreTriggerConditionsMetOptions): boolean {
 		this.log.debug('[trigger] evaluating conditions: operator=%s, action=%s, count=%d', logicCondition, action, conditions.length);
 		switch (logicCondition) {
 			case BinaryOperatorChar.or:

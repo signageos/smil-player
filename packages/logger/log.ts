@@ -4,30 +4,36 @@ import { Logger, LogLevel } from './types';
  * Player-internal logging façade. Holds a namespace and a pointer to the single injected Logger.
  * child() returns a new Log with a longer namespace and the SAME Logger.
  */
+type EmitOptions = {
+	level: LogLevel;
+	message: string;
+	args: unknown[];
+};
+
 export class Log {
 	constructor(private readonly logger: Logger, public readonly namespace: string) {}
 
 	public debug(message: string, ...args: unknown[]): void {
-		this.emit('debug', message, args);
+		this.emit({ level: 'debug', message, args });
 	}
 
 	public info(message: string, ...args: unknown[]): void {
-		this.emit('info', message, args);
+		this.emit({ level: 'info', message, args });
 	}
 
 	public warn(message: string, ...args: unknown[]): void {
-		this.emit('warn', message, args);
+		this.emit({ level: 'warn', message, args });
 	}
 
 	public error(message: string, ...args: unknown[]): void {
-		this.emit('error', message, args);
+		this.emit({ level: 'error', message, args });
 	}
 
 	public child(suffix: string): Log {
 		return new Log(this.logger, `${this.namespace}:${suffix}`);
 	}
 
-	private emit(level: LogLevel, message: string, args: unknown[]): void {
+	private emit({ level, message, args }: EmitOptions): void {
 		try {
 			this.logger.write({ level, namespace: this.namespace, message, args, timestamp: Date.now() });
 		} catch (_e) {
