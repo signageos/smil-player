@@ -65,7 +65,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 	it('downloads a new file whose Last-Modified only matches an entry with no file on disk', async () => {
 		const { fm } = makeFilesManager(new Set(), { [getFileName(OLD_SRC)]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection).to.not.equal(null);
 		expect(detection.needsDownload).to.equal(true);
@@ -75,7 +82,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 		const files = new Set([`${FileStructure.videos}/${getFileName(OLD_SRC)}`]);
 		const { fm } = makeFilesManager(files, { [getFileName(OLD_SRC)]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection).to.not.equal(null);
 		expect(detection.needsDownload).to.equal(false);
@@ -86,7 +100,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 		const files = new Set([`${FileStructure.rootFolder}/${smilKey}`]);
 		const { fm } = makeFilesManager(files, { [smilKey]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection.needsDownload).to.equal(true);
 	});

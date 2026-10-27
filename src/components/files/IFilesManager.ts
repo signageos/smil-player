@@ -1,19 +1,27 @@
-import { ItemType, MediaItemType, Report } from '../../models/reportingModels';
+import { Report } from '../../models/reportingModels';
 import { IFile } from '@signageos/front-applet/es6/FrontApplet/FileSystem/types';
 import {
 	SMILAudio,
 	SMILImage,
-	SMILMediaNoVideo,
 	SMILTicker,
 	SMILVideo,
 	SMILWidget,
-	SosHtmlElement,
 } from '../../models/mediaModels';
-import { MediaInfoObject, MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
+import { MergedDownloadList, SMILFile, SMILFileObject } from '../../models/filesModels';
 import { SmilLogger } from '../../models/xmlJsonModels';
-import { OptInReportEvent } from '../../enums/fileEnums';
 import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './fetchingStrategies/fetchingStrategies';
+import {
+	CurrentFilesSetupOptions,
+	GetFileDetailsOptions,
+	ParallelDownloadAllFilesOptions,
+	PrePlayCheckOptions,
+	SendDownloadReportOptions,
+	SendMediaReportOptions,
+	SendOptInEventReportOptions,
+	SendSmiFileReportOptions,
+	ShouldUpdateLocalFileOptions,
+} from './filesManager';
 
 export type { FetchStrategy };
 
@@ -39,57 +47,19 @@ export interface IFilesManager {
 	setSmiLogging: (smilLogging: SmilLogger) => void;
 	sendReport: (message: Report) => Promise<void>;
 	sendGeneralErrorReport: (message: string) => Promise<void>;
-	sendDownloadReport: (
-		fileType: ItemType,
-		localFilePath: string,
-		value: MergedDownloadList,
-		taskStartDate: Date,
-		statusCode?: number,
-		reportUrl?: string,
-	) => Promise<void>;
-	sendMediaReport: (
-		value: SMILVideo | SMILMediaNoVideo | SosHtmlElement,
-		taskStartDate: Date,
-		itemType: MediaItemType,
-		isMediaSynced: boolean,
-		statusCode?: number,
-	) => Promise<void>;
-	sendSmiFileReport: (localFilePath: string, src: string, errMessage: string | null) => Promise<void>;
-	sendOptInEventReport: (
-		eventName: OptInReportEvent,
-		value: MergedDownloadList,
-		reportUrl?: string,
-	) => Promise<void>;
-	currentFilesSetup: (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => Promise<void>;
-	getFileDetails: (
-		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		fileStructure: string,
-		suffix?: string,
-	) => Promise<IFile | null>;
-	shouldUpdateLocalFile: (
-		localFilePath: string,
-		media: MergedDownloadList,
-		mediaInfoObject: MediaInfoObject,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[],
-		updateContentHttpStatusCodes: number[],
-		fetchStrategy: FetchStrategy,
-	) => Promise<UpdateCheckResult>;
+	sendDownloadReport: (options: SendDownloadReportOptions) => Promise<void>;
+	sendMediaReport: (options: SendMediaReportOptions) => Promise<void>;
+	sendSmiFileReport: (options: SendSmiFileReportOptions) => Promise<void>;
+	sendOptInEventReport: (options: SendOptInEventReportOptions) => Promise<void>;
+	currentFilesSetup: (options: CurrentFilesSetupOptions) => Promise<void>;
+	getFileDetails: (options: GetFileDetailsOptions) => Promise<IFile | null>;
+	shouldUpdateLocalFile: (options: ShouldUpdateLocalFileOptions) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;
 	deleteFile: (filePath: string) => Promise<void>;
 	readFile: (filePath: string) => Promise<string>;
 	fileExists: (filePath: string) => Promise<boolean>;
 	parallelDownloadAllFiles: (
-		filesList: MergedDownloadList[],
-		localFilePath: string,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[],
-		updateContentHttpStatusCodes: number[],
-		fetchStrategy: FetchStrategy,
-		forceDownload?: boolean,
-		latestRemoteValue?: number | string,
-		allFilesList?: MergedDownloadList[],
-		externalPendingUpdates?: Map<string, string | number>,
+		options: ParallelDownloadAllFilesOptions,
 	) => Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }>;
 	createFileStructure: () => Promise<void>;
 	prepareDownloadMediaSetup: (smilObject: SMILFileObject) => Promise<void>;
@@ -101,12 +71,7 @@ export interface IFilesManager {
 	// Batch download optimization methods
 	processNewContentUpdates: (detections: UpdateDetection[], allFilesList?: MergedDownloadList[]) => Promise<ProcessedFileUpdate[]>;
 	handleMovedContent: (detection: UpdateDetection) => Promise<void>;
-	prePlayCheck: (
-		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		mediaFolder: string,
-		smilObject: SMILFileObject,
-		allMediaList: MergedDownloadList[],
-	) => Promise<void>;
+	prePlayCheck: (options: PrePlayCheckOptions) => Promise<void>;
 	// playCheckUrl playability gate: true = skip playback this pass (never touches downloads/expr).
 	// SMILTicker is a first-class member (tickers route through playElement like other media),
 	// not just structurally assignable.

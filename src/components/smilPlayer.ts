@@ -153,14 +153,12 @@ export class SmilPlayer implements ISmilPlayer {
 
 		try {
 			// default timeout because at this stage, we dont have info about custom one
-			const result = await this.files.parallelDownloadAllFiles(
-				[backupImageObject],
-				FileStructure.images,
-				SMILScheduleEnum.fileCheckTimeout,
-				[],
-				[],
-				this.strategies.getStrategy(SMILEnums.lastModified),
-			);
+			const result = await this.files.parallelDownloadAllFiles({
+				filesList: [backupImageObject],
+				localFilePath: FileStructure.images,
+				timeOut: SMILScheduleEnum.fileCheckTimeout as number,
+				fetchStrategy: this.strategies.getStrategy(SMILEnums.lastModified),
+			});
 
 			await Promise.all(result.promises);
 
@@ -244,15 +242,12 @@ export class SmilPlayer implements ISmilPlayer {
 			try {
 				// Try to download SMIL file - if fails, continue with cached version from local storage
 				try {
-					const result = await this.files.parallelDownloadAllFiles(
-						[smilFile],
-						FileStructure.rootFolder,
-						SMILScheduleEnum.fileCheckTimeout,
-						[],
-						[],
-						this.strategies.getStrategy(SMILEnums.lastModified),
-						false,
-					);
+					const result = await this.files.parallelDownloadAllFiles({
+						filesList: [smilFile],
+						localFilePath: FileStructure.rootFolder,
+						timeOut: SMILScheduleEnum.fileCheckTimeout as number,
+						fetchStrategy: this.strategies.getStrategy(SMILEnums.lastModified),
+					});
 					await Promise.all(result.promises);
 
 					// Get the mediaInfoObject for this file
@@ -295,10 +290,10 @@ export class SmilPlayer implements ISmilPlayer {
 					);
 				}
 
-				await this.files.sendSmiFileReport(
-					`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
-					smilFile.src,
-				);
+				await this.files.sendSmiFileReport({
+					localFilePath: `${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
+					src: smilFile.src,
+				});
 
 				setTransitionsDefinition(smilObject);
 
@@ -356,11 +351,11 @@ export class SmilPlayer implements ISmilPlayer {
 					this.log.error('[smil] SMIL download error: %O', err);
 				} else {
 					this.log.error('[smil] XML parse error: %O', err);
-					await this.files.sendSmiFileReport(
-						`${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
-						smilFile.src,
-						err.message,
-					);
+					await this.files.sendSmiFileReport({
+						localFilePath: `${FileStructure.rootFolder}/${getFileName(smilFile.src)}`,
+						src: smilFile.src,
+						errMessage: err.message,
+					});
 				}
 
 				if (ignoreInvalidSmil) {

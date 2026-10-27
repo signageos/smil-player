@@ -140,11 +140,11 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 						elem.syncIndex = this.globalRegionSyncIndex[elem.regionInfo.regionName];
 					}
 
-					const mediaFile = (await this.files.getFileDetails(
-						elem,
+					const mediaFile = (await this.files.getFileDetails({
+						media: elem,
 						fileStructure,
-						widgetRootFile,
-					)) as IVideoFile;
+						suffix: widgetRootFile,
+					})) as IVideoFile;
 					// in case of web page as widget, leave localFilePath blank
 					elem.localFilePath = mediaFile ? mediaFile.localUri : '';
 
@@ -228,7 +228,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 			this.synchronization.playModeSyncRanges = {};
 		}
 
-		await this.files.currentFilesSetup(smilObject.ref, smilObject, smilUrl);
+		await this.files.currentFilesSetup({ widgets: smilObject.ref, smilObject, smilUrl });
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo(smilObject.triggers, smilObject, smilUrl, true);

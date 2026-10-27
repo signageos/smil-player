@@ -176,14 +176,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			}
 		}
 
-		const result = await this.files.parallelDownloadAllFiles(
-			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
-			fileStructure,
-			this.smilObject.refresh.timeOut,
-			[],
-			[],
-			this.strategies.getStrategy(SMILEnums.lastModified),
-		);
+		const result = await this.files.parallelDownloadAllFiles({
+			filesList: [this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
+			localFilePath: fileStructure,
+			timeOut: this.smilObject.refresh.timeOut,
+			fetchStrategy: this.strategies.getStrategy(SMILEnums.lastModified),
+		});
 		downloadPromises = downloadPromises.concat(result.promises);
 
 		// Get the mediaInfoObject for this file
@@ -622,13 +620,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						await handlePriorityWhenDone();
 
 						// no await to not to block playback when server takes too long to respond
-						this.files.sendMediaReport(
+						this.files.sendMediaReport({
 							value,
 							taskStartDate,
-							value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
-							!!value.syncIndex && this.synchronization.shouldSync,
-							500,
-						);
+							itemType: value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+							isMediaSynced: !!value.syncIndex && this.synchronization.shouldSync,
+							statusCode: 500,
+						});
 					}
 				})();
 			this.priority.stateManager.setPromiseFunction(currentRegionInfo.regionName, [playbackPromise]);
@@ -648,13 +646,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			await handlePriorityWhenDone();
 
 			// no await to not to block playback when server takes too long to respond
-			this.files.sendMediaReport(
+			this.files.sendMediaReport({
 				value,
 				taskStartDate,
-				value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
-				!!value.syncIndex && this.synchronization.shouldSync,
-				500,
-			);
+				itemType: value.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+				isMediaSynced: !!value.syncIndex && this.synchronization.shouldSync,
+				statusCode: 500,
+			});
 		}
 	};
 
@@ -704,12 +702,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timedDebug.debug('[processor] element playing finished: id=%s, src=%s', element.id, element.src);
 
 		// no await to not to block playback when server takes too long to respond
-		this.files.sendMediaReport(
-			element,
+		this.files.sendMediaReport({
+			value: element,
 			taskStartDate,
-			tag === 'ticker' ? 'ticker' : element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
-			!!element.syncIndex && this.synchronization.shouldSync,
-		);
+			itemType: tag === 'ticker' ? 'ticker' : element.localFilePath.indexOf('widgets') > -1 ? 'ref' : 'image',
+			isMediaSynced: !!element.syncIndex && this.synchronization.shouldSync,
+		});
 	};
 
 	/**
@@ -1125,12 +1123,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						timedDebug.debug('[processor] playing video finished: src=%s, version=%s', video.localFilePath, version);
 
 						// no await to not to block playback when server takes too long to respond
-						this.files.sendMediaReport(
-							video,
+						this.files.sendMediaReport({
+							value: video,
 							taskStartDate,
-							'video',
-							!!video.syncIndex && this.synchronization.shouldSync,
-						);
+							itemType: 'video',
+							isMediaSynced: !!video.syncIndex && this.synchronization.shouldSync,
+						});
 
 						// create currentlyPlayingPriority for trigger nested region
 						if (currentRegionInfo.regionName !== parentRegionInfo.regionName) {
@@ -1207,13 +1205,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 						await handlePriorityWhenDone();
 
 						// no await to not to block playback when server takes too long to respond
-						this.files.sendMediaReport(
-							video,
+						this.files.sendMediaReport({
+							value: video,
 							taskStartDate,
-							'video',
-							!!video.syncIndex && this.synchronization.shouldSync,
-							500,
-						);
+							itemType: 'video',
+							isMediaSynced: !!video.syncIndex && this.synchronization.shouldSync,
+							statusCode: 500,
+						});
 					}
 					timedDebug.debug('[processor] finished playing video element: src=%s', video.localFilePath);
 				})();
@@ -1235,13 +1233,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.error('[processor] unexpected error during video prepare: src=%s, err=%O', video.localFilePath, err);
 			await handlePriorityWhenDone();
 			// no await to not to block playback when server takes too long to respond
-			this.files.sendMediaReport(
-				video,
+			this.files.sendMediaReport({
+				value: video,
 				taskStartDate,
-				'video',
-				!!video.syncIndex && this.synchronization.shouldSync,
-				500,
-			);
+				itemType: 'video',
+				isMediaSynced: !!video.syncIndex && this.synchronization.shouldSync,
+				statusCode: 500,
+			});
 		}
 	};
 
@@ -1300,13 +1298,13 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			timedDebug.debug('[processor] video play returned: src=%s', video.localFilePath);
 		} catch (err) {
 			// no await to not to block playback when server takes too long to respond
-			this.files.sendMediaReport(
-				video,
-				moment().toDate(),
-				'video',
-				!!video.syncIndex && this.synchronization.shouldSync,
-				500,
-			);
+			this.files.sendMediaReport({
+				value: video,
+				taskStartDate: moment().toDate(),
+				itemType: 'video',
+				isMediaSynced: !!video.syncIndex && this.synchronization.shouldSync,
+				statusCode: 500,
+			});
 			try {
 				await sosVideoObject.stop(videoPath, regionLeft, regionTop, regionWidth, regionHeight);
 			} catch (stopErr) {
@@ -2274,7 +2272,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private setupIntroVideo = async (video: SMILVideo, region: RegionsObject) => {
 		const currentVideoDetails =
-			await this.files.getFileDetails(video, FileStructure.videos)
+			await this.files.getFileDetails({ media: video, fileStructure: FileStructure.videos })
 
 		video.regionInfo = this.tools.getRegionInfo(region, video.region);
 		video.localFilePath = currentVideoDetails ? currentVideoDetails.localUri : '';
@@ -2292,7 +2290,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 	private setupIntroImage = async (image: SMILImage, region: RegionsObject, key: string): Promise<HTMLElement> => {
 		const currentImageDetails =
-			await this.files.getFileDetails(image, FileStructure.images);
+			await this.files.getFileDetails({ media: image, fileStructure: FileStructure.images });
 		image.regionInfo = this.tools.getRegionInfo(region, image.region);
 		image.localFilePath = currentImageDetails ? currentImageDetails.localUri : '';
 		this.log.debug('[processor] setting up intro image: src=%s', image.src);
@@ -2458,12 +2456,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			this.log.debug('Prefetch ahead: checking %s (%d ahead)', candidate.media.src, offset);
 			this.files
-				.prePlayCheck(
-					candidate.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-					filePath,
-					this.smilObject,
-					allMedia,
-				)
+				.prePlayCheck({
+					media: candidate.media as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+					mediaFolder: filePath,
+					smilObject: this.smilObject,
+					allMediaList: allMedia,
+				})
 				.catch((err) => this.log.warn('Prefetch ahead check failed for %s: %O', candidate.media.src, err));
 
 			// Stop once a playable element has been prefetched. If this slot was skipContent
@@ -2494,12 +2492,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		const filePath = getFileStructureForMediaType(mediaType);
 		if (filePath) {
 			this.log.debug(`[${debugId}] Pre-play check for: %s`, value.src);
-			await this.files.prePlayCheck(
-				value as SMILVideo | SMILImage | SMILWidget | SMILAudio,
-				filePath,
-				this.smilObject,
-				this.getAllMediaList(),
-			);
+			await this.files.prePlayCheck({
+				media: value as SMILVideo | SMILImage | SMILWidget | SMILAudio,
+				mediaFolder: filePath,
+				smilObject: this.smilObject,
+				allMediaList: this.getAllMediaList(),
+			});
 			this.log.debug(`[${debugId}] Pre-play check complete for: %s, localFilePath: %s`, value.src, value.localFilePath);
 		}
 
@@ -2618,7 +2616,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			if (await this.files.playCheckGate(value, this.smilObject)) {
 				this.log.debug(`[${debugId}] Element gated by playCheckUrl, skipping this pass: %s`, value.src);
 				// no await to not to block playback when server takes too long to respond
-				this.files.sendOptInEventReport('media-skipped', value);
+				this.files.sendOptInEventReport({ eventName: 'media-skipped', value });
 				await sleep(100);
 				return true;
 			}
