@@ -20,9 +20,9 @@ export interface IPlaylistProcessor {
 	processPlaylist: (
 		playlist: PlaylistElement | PlaylistElement[],
 		version: number,
-		parent: string,
-		endTime: number,
-		priorityObject: PriorityObject,
-		conditionalExpr: string,
+		parent?: string,
+		endTime?: number,
+		priorityObject?: PriorityObject,
+		conditionalExpr?: string,
 	) => Promise<string | void>;
 }

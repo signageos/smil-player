@@ -9,6 +9,7 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { SMILFileObject } from '../../../models/filesModels';
 import { findDuration } from '../tools/scheduleTools';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
+import { IPlaylistProcessor } from '../playlistProcessor/IPlaylistProcessor';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { addEventOnTriggerWidget } from '../tools/htmlTools';
 import { ListenerScope } from '../tools/listenerScope';
@@ -43,7 +44,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 	public readonly triggersEndless: TriggerEndless = {};
 	public readonly dynamicPlaylist: DynamicPlaylistEndless = {};
 	public smilObject: SMILFileObject;
-	private readonly processPlaylist: Function;
+	private readonly processPlaylist: IPlaylistProcessor['processPlaylist'];
 
 	// Owns the lifetime of every DOM listener registered by watchTriggers
 	// and its inner watch* helpers. removeAll() at the top of watchTriggers
@@ -61,7 +62,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		files: FilesManager,
 		options: PlaylistOptions,
 		log: Log,
-		processPlaylist: Function,
+		processPlaylist: IPlaylistProcessor['processPlaylist'],
 		cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 	) {
 		super(sos, files, options, log);
