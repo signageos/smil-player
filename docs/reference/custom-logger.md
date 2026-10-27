@@ -36,8 +36,8 @@ Rules for `write`:
 - If you buffer, flush on `pagehide`/`beforeunload`. Applet restarts are frequent and the last buffer
   usually holds the reason.
 - The entry carries no device identity. Read it from `sos` in your factory if you need it.
-- Do not import from `src/components/` or `src/models/` (the `ISos` type is the one exception). Browser APIs,
-  bundled packages and the `sos` object are all allowed. `npm run lint` enforces the import rule.
+- Do not import from `src/` by any path; type the host as `LoggerHost` from `@signageos/smil-logger/loggers`.
+  Browser APIs, bundled packages and the `sos` object are all allowed. `npm run lint` enforces the import rule.
 
 ## Swapping the logger
 

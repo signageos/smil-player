@@ -35,7 +35,7 @@
     "lint": "npm run lint:tslint && npm run lint:docs && npm run lint:package-boundary",
     "lint:package-boundary": "node tools/check-package-boundary.mjs",
     "lint:fix": "npm run lint:tslint-fix && npm run lint:docs -- --fix",
-    "lint:tslint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test,packages}/**/*.{ts,tsx}\"",
+    "lint:tslint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test,packages}/**/*.{ts,tsx}\" --exclude \"**/node_modules/**\"",
     "lint:tslint-fix": "npm run lint:tslint -- --fix",
     "lint:docs": "node ./tools/validate-docs.mjs",
     "upload-applet": "sos applet upload",

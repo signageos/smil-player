@@ -7,14 +7,14 @@ import fs from 'fs';
 import path from 'path';
 
 const DEBUG_ALLOWED = ['packages/logger/loggers/consoleLogger.ts', 'packages/logger/test/consoleLogger.spec.ts'];
-const SPECIFIER = /(?:from|import)\s*'([^']+)'/g;
+const SPECIFIER = /(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g;
 const violations = [];
 
 for (const pkg of fs.readdirSync('packages', { withFileTypes: true }).filter((d) => d.isDirectory())) {
 	const pkgDir = path.resolve('packages', pkg.name);
 	const files = fs
 		.readdirSync(pkgDir, { recursive: true })
-		.filter((f) => f.endsWith('.ts') && !f.split(path.sep).includes('node_modules'));
+		.filter((f) => /\.tsx?$/.test(f) && !f.split(path.sep).includes('node_modules'));
 	for (const rel of files) {
 		const file = path.join(pkgDir, rel);
 		const shown = path.relative('.', file);
