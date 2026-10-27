@@ -33,13 +33,19 @@ export function createScheduleTools(log: Log) {
 	 * @param playerName
 	 * @param playerId
 	 */
-	function setDefaultAwaitConditional(
-		playlistElement: PlaylistElement,
-		playerName: string,
-		playerId: string,
-	): number {
+	type SetDefaultAwaitConditionalOptions = {
+		playlistElement: PlaylistElement;
+		playerName: string;
+		playerId: string;
+	};
+
+	function setDefaultAwaitConditional({
+		playlistElement,
+		playerName,
+		playerId,
+	}: SetDefaultAwaitConditionalOptions): number {
 		// found element which can be player right now
-		if (!conditional.shouldSkipElement(playlistElement, playerName, playerId)) {
+		if (!conditional.shouldSkipElement({ element: playlistElement, playerName, playerId })) {
 			return SMILScheduleEnum.playImmediately;
 		}
 		return SMILScheduleEnum.defaultAwait;
@@ -51,11 +57,13 @@ export function createScheduleTools(log: Log) {
 	 * @param playerName
 	 * @param playerId
 	 */
-	function setDefaultAwait(
-		elementsArray: PlaylistElement[],
-		playerName: string = '',
-		playerId: string = '',
-	): number {
+	type SetDefaultAwaitOptions = {
+		elementsArray: PlaylistElement[];
+		playerName?: string;
+		playerId?: string;
+	};
+
+	function setDefaultAwait({ elementsArray, playerName = '', playerId = '' }: SetDefaultAwaitOptions): number {
 		for (const loopElem of elementsArray) {
 			// Runtime unavailable-content flag — never a playable candidate. Must be checked
 			// before the no-begin-no-expr early exit below, which would otherwise report a
@@ -73,7 +81,8 @@ export function createScheduleTools(log: Log) {
 				if (setDefaultAwaitWallclock(loopElem) === SMILScheduleEnum.playImmediately) {
 					if (loopElem.hasOwnProperty('expr')) {
 						if (
-							setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately
+							setDefaultAwaitConditional({ playlistElement: loopElem, playerName, playerId }) ===
+							SMILScheduleEnum.playImmediately
 						) {
 							return SMILScheduleEnum.playImmediately;
 						} else {
@@ -85,7 +94,10 @@ export function createScheduleTools(log: Log) {
 			}
 
 			if (loopElem.hasOwnProperty('expr') && !loopElem.hasOwnProperty('begin')) {
-				if (setDefaultAwaitConditional(loopElem, playerName, playerId) === SMILScheduleEnum.playImmediately) {
+				if (
+					setDefaultAwaitConditional({ playlistElement: loopElem, playerName, playerId }) ===
+					SMILScheduleEnum.playImmediately
+				) {
 					return SMILScheduleEnum.playImmediately;
 				}
 			}

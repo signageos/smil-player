@@ -18,20 +18,28 @@ import { generateCurrentDate } from './generalTools';
 import { parseRFC5545Duration } from './rfc5545';
 import { ComparableExpr, ConstExpr, FuncExpr, ParsedExpr } from '../../../models/conditionalModels';
 
-export type SetDefaultAwaitFn = (elementsArray: PlaylistElement[], playerName?: string, playerId?: string) => number;
+type SetDefaultAwaitOptions = {
+	elementsArray: PlaylistElement[];
+	playerName?: string;
+	playerId?: string;
+};
+
+export type SetDefaultAwaitFn = (options: SetDefaultAwaitOptions) => number;
 
 /**
  * Built by createScheduleTools(log): shouldSkipElement needs setDefaultAwait and setDefaultAwait needs
  * shouldSkipElement, so the two modules form one factory and the cycle is closed by this parameter.
  */
 export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitFn) {
-	function shouldSkipElement(
-		element: SMILMediaSingle | PlaylistElement | PlaylistElement[],
-		playerName: string = '',
-		playerId: string = '',
-	): boolean {
+	type ShouldSkipElementOptions = {
+		element: SMILMediaSingle | PlaylistElement | PlaylistElement[];
+		playerName?: string;
+		playerId?: string;
+	};
+
+	function shouldSkipElement({ element, playerName = '', playerId = '' }: ShouldSkipElementOptions): boolean {
 		if (Array.isArray(element)) {
-			const result = setDefaultAwait(element, playerName, playerId) !== SMILScheduleEnum.playImmediately;
+			const result = setDefaultAwait({ elementsArray: element, playerName, playerId }) !== SMILScheduleEnum.playImmediately;
 			if (result) {
 				log.debug('[conditional] array conditional expired: no playable item found');
 			}
@@ -43,7 +51,7 @@ export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitF
 			log.debug('[conditional] content marked as skip, treating as expired: src=%s', (element as { src?: string }).src);
 			return true;
 		}
-		if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe(element.expr!, playerName, playerId)) {
+		if (element.hasOwnProperty(ExprTag) && !checkConditionalExprSafe({ expression: element.expr!, playerName, playerId })) {
 			log.debug('[conditional] expression false, skipping: expr=%s', element.expr);
 			return true;
 		}
@@ -56,24 +64,36 @@ export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitF
 	 * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
 	 * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
 	 */
-	function checkConditionalExprSafe(expression: string, playerName: string = '', playerId: string = '') {
+	type CheckConditionalExprSafeOptions = {
+		expression: string;
+		playerName?: string;
+		playerId?: string;
+	};
+
+	function checkConditionalExprSafe({ expression, playerName = '', playerId = '' }: CheckConditionalExprSafeOptions) {
 		try {
 			expression = sanitizeConditionalExpr(expression);
-			return checkConditionalExpr(expression, playerName, playerId);
+			return checkConditionalExpr({ expression, playerName, playerId });
 		} catch (error) {
 			log.warn('[conditional] parse error in expr: %O', error);
 			return false;
 		}
 	}
 
-	function checkConditionalExpr(expression: string, playerName: string, playerId: string): boolean {
+	type CheckConditionalExprOptions = {
+		expression: string;
+		playerName: string;
+		playerId: string;
+	};
+
+	function checkConditionalExpr({ expression, playerName, playerId }: CheckConditionalExprOptions): boolean {
 		const splitByAnd = split(expression, {
 			...algebraicSplitOpts,
 			separator: [BinaryOperatorChar.AND, BinaryOperatorChar.and],
 		});
 		if (splitByAnd.length > 1) {
 			for (const element of splitByAnd) {
-				if (!checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
+				if (!checkConditionalExprSafe({ expression: trimAndRemoveEdgeBrackets(element), playerName, playerId })) {
 					return false;
 				}
 			}
@@ -86,14 +106,14 @@ export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitF
 		});
 		if (splitByOr.length > 1) {
 			for (const element of splitByOr) {
-				if (checkConditionalExprSafe(trimAndRemoveEdgeBrackets(element), playerName, playerId)) {
+				if (checkConditionalExprSafe({ expression: trimAndRemoveEdgeBrackets(element), playerName, playerId })) {
 					return true;
 				}
 			}
 			return false;
 		}
 
-		return executeConditionalExpr(expression, playerName, playerId);
+		return executeConditionalExpr({ element: expression, playerName, playerId });
 	}
 
 	return { shouldSkipElement, checkConditionalExprSafe, checkConditionalExpr };
@@ -161,8 +181,18 @@ function compareIcsExpr(icsData: string): boolean {
  * @param comparator
  * @param isUtc -  if date is in UTC or not
  */
-function compareWeekDayExpr(compareValue: string, comparator: ComparatorChar, isUtc: boolean): boolean {
-	return compareValues(generateCurrentDate(isUtc).day(), parseInt(compareValue), { comparator, compareValue: '0' });
+type CompareWeekDayExprOptions = {
+	compareValue: string;
+	comparator: ComparatorChar;
+	isUtc: boolean;
+};
+
+function compareWeekDayExpr({ compareValue, comparator, isUtc }: CompareWeekDayExprOptions): boolean {
+	return compareValues({
+		firstArgument: generateCurrentDate(isUtc).day(),
+		secondArgument: parseInt(compareValue),
+		comparable: { comparator, compareValue: '0' },
+	});
 }
 
 /**
@@ -171,13 +201,19 @@ function compareWeekDayExpr(compareValue: string, comparator: ComparatorChar, is
  * @param comparable
  * @param isUtc - if date is in UTC or not
  */
-function compareSimpleDateAndTimeExpr(inputValue: string, comparable: ComparableExpr, isUtc: boolean): boolean {
+type CompareSimpleDateAndTimeExprOptions = {
+	inputValue: string;
+	comparable: ComparableExpr;
+	isUtc: boolean;
+};
+
+function compareSimpleDateAndTimeExpr({ inputValue, comparable, isUtc }: CompareSimpleDateAndTimeExprOptions): boolean {
 	const formattedDate = generateCurrentDate(isUtc).format(ConditionalExprFormat.dateAndTimeFormat);
 	const formattedInputValue = isIsoDate(inputValue)
 		? moment(inputValue).format(ConditionalExprFormat.dateAndTimeFormat)
 		: inputValue;
 
-	return compareValues(formattedDate, formattedInputValue, comparable);
+	return compareValues({ firstArgument: formattedDate, secondArgument: formattedInputValue, comparable });
 }
 
 /**
@@ -186,13 +222,19 @@ function compareSimpleDateAndTimeExpr(inputValue: string, comparable: Comparable
  * @param comparable
  * @param isUtc - if time is in UTC or not
  */
-function compareSimpleTimeExpr(inputValue: string, comparable: ComparableExpr, isUtc: boolean): boolean {
+type CompareSimpleTimeExprOptions = {
+	inputValue: string;
+	comparable: ComparableExpr;
+	isUtc: boolean;
+};
+
+function compareSimpleTimeExpr({ inputValue, comparable, isUtc }: CompareSimpleTimeExprOptions): boolean {
 	const formattedTime = generateCurrentDate(isUtc).format(ConditionalExprFormat.timeFormat);
 	const formattedInputValue = isValidTime(inputValue)
 		? moment(inputValue, ConditionalExprFormat.timeFormat).format(ConditionalExprFormat.timeFormat)
 		: inputValue;
 
-	return compareValues(formattedTime, formattedInputValue, comparable);
+	return compareValues({ firstArgument: formattedTime, secondArgument: formattedInputValue, comparable });
 }
 
 /**
@@ -200,7 +242,12 @@ function compareSimpleTimeExpr(inputValue: string, comparable: ComparableExpr, i
  * @param inputValue example: output of adapi-date() ~ 2021-04-24T05:00:00
  * @param delimiter example: T
  */
-function parseSubstringAfterExpr(inputValue: string, delimiter: string): string {
+type ParseSubstringAfterExprOptions = {
+	inputValue: string;
+	delimiter: string;
+};
+
+function parseSubstringAfterExpr({ inputValue, delimiter }: ParseSubstringAfterExprOptions): string {
 	return inputValue.substr(inputValue.indexOf(delimiter) + 1);
 }
 
@@ -305,14 +352,20 @@ function parseString(str: string) {
  * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
  * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
  */
-function executeConditionalExpr(element: string, playerName: string = '', playerId: string = ''): boolean {
+type ExecuteConditionalExprOptions = {
+	element: string;
+	playerName?: string;
+	playerId?: string;
+};
+
+function executeConditionalExpr({ element, playerName = '', playerId = '' }: ExecuteConditionalExprOptions): boolean {
 	const parsed = parseConditionalExpr(element);
 	const comparable: ComparableExpr = { comparator: parsed.comparator, compareValue: parsed.compareValue };
 
 	// this is very rare case, where top level expr is constant (always returns same)
 	if ('constValue' in parsed) {
 		// E.g.: expr="1 > 0" (true)
-		return compareValues(parsed.constValue, '0', comparable);
+		return compareValues({ firstArgument: parsed.constValue, secondArgument: '0', comparable });
 	}
 
 	// helper simplified syntax for weekdayConditional expressions
@@ -321,7 +374,7 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 			throw new Error(`You have to compare weekday() function`);
 		}
 		const isUtc = parsed.func === ConditionalExprFunction.weekDayUTC;
-		return compareWeekDayExpr(parsed.compareValue, parsed.comparator, isUtc);
+		return compareWeekDayExpr({ compareValue: parsed.compareValue, comparator: parsed.comparator, isUtc });
 	}
 
 	if (parsed.func === ConditionalExprFunction.compareConst) {
@@ -330,7 +383,11 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 		// this is very rare case, where two const values are compared
 		if ('constValue' in firstParsed && 'constValue' in secondParsed) {
 			// E.g.: expr="compare(1, 0) > 0"
-			return compareValues(firstParsed.constValue, secondParsed.constValue, comparable);
+			return compareValues({
+				firstArgument: firstParsed.constValue,
+				secondArgument: secondParsed.constValue,
+				comparable,
+			});
 		}
 
 		let funcArg: FuncExpr;
@@ -363,19 +420,19 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentDate) {
-			return compareSimpleDateAndTimeExpr(constArg.constValue, comparable, false);
+			return compareSimpleDateAndTimeExpr({ inputValue: constArg.constValue, comparable, isUtc: false });
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentDateUTC) {
-			return compareSimpleDateAndTimeExpr(constArg.constValue, comparable, true);
+			return compareSimpleDateAndTimeExpr({ inputValue: constArg.constValue, comparable, isUtc: true });
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentTime) {
-			return compareSimpleTimeExpr(constArg.constValue, comparable, false);
+			return compareSimpleTimeExpr({ inputValue: constArg.constValue, comparable, isUtc: false });
 		}
 
 		if (funcArg.func === ConditionalExprFunction.currentTimeUTC) {
-			return compareSimpleTimeExpr(constArg.constValue, comparable, true);
+			return compareSimpleTimeExpr({ inputValue: constArg.constValue, comparable, isUtc: true });
 		}
 
 		// Backward compatibility function in compare only for adapi-compare('12:00', substring-after(adapi-date(), 'T'))
@@ -388,11 +445,11 @@ function executeConditionalExpr(element: string, playerName: string = '', player
 			if ('func' in parsedFirstFuncArg) {
 				if (parsedFirstFuncArg.func === ConditionalExprFunction.currentDate) {
 					const inputValue = generateCurrentDate(false).format(ConditionalExprFormat.dateAndTimeFormat);
-					return compareValues(
-						parseSubstringAfterExpr(inputValue, delimiter),
-						constArg.constValue,
+					return compareValues({
+						firstArgument: parseSubstringAfterExpr({ inputValue, delimiter }),
+						secondArgument: constArg.constValue,
 						comparable,
-					);
+					});
 				}
 			} else {
 				throw new Error(`Currently unsupported syntax of substring-after: ${element}`);
@@ -409,7 +466,13 @@ function executeConditionalExpr(element: string, playerName: string = '', player
  * @param secondArgument - string or number to compare
  * @param comparable
  */
-function compareValues(firstArgument: string | number, secondArgument: string | number, comparable: ComparableExpr) {
+type CompareValuesOptions = {
+	firstArgument: string | number;
+	secondArgument: string | number;
+	comparable: ComparableExpr;
+};
+
+function compareValues({ firstArgument, secondArgument, comparable }: CompareValuesOptions) {
 	// TODO introduce comparison other than "0". It's already available in comparable.compareValue
 	if (
 		firstArgument < secondArgument &&

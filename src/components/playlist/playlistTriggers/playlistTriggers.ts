@@ -553,9 +553,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
 				// Cross-trigger cancellation: check if another trigger's end matches this triggerId
-				const crossCancelKey = findTriggerToCancelByEndId(
-					this.smilObject.triggers, this.triggersEndless, triggerId,
-				);
+				const crossCancelKey = findTriggerToCancelByEndId({
+					triggers: this.smilObject.triggers,
+					triggersEndless: this.triggersEndless,
+					firingTriggerId: triggerId,
+				});
 				if (crossCancelKey) {
 					this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
 					const target = this.triggersEndless[crossCancelKey];
@@ -696,9 +698,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
 		// Cross-trigger cancellation: check if another trigger's end matches this trigger
-		const crossCancelKey = findTriggerToCancelByEndId(
-			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
-		);
+		const crossCancelKey = findTriggerToCancelByEndId({
+			triggers: this.smilObject.triggers,
+			triggersEndless: this.triggersEndless,
+			firingTriggerId: triggerInfo.trigger,
+		});
 		if (crossCancelKey) {
 			this.log.debug('[trigger-mouse] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
 			const target = this.triggersEndless[crossCancelKey];
@@ -798,9 +802,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
 		// Cross-trigger cancellation: check if another trigger's end matches this trigger
-		const crossCancelKey = findTriggerToCancelByEndId(
-			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
-		);
+		const crossCancelKey = findTriggerToCancelByEndId({
+			triggers: this.smilObject.triggers,
+			triggersEndless: this.triggersEndless,
+			firingTriggerId: triggerInfo.trigger,
+		});
 		if (crossCancelKey) {
 			this.log.debug('[trigger-keyboard] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
 			const target = this.triggersEndless[crossCancelKey];

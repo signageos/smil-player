@@ -422,7 +422,7 @@ describe('Playlist tools component', () => {
 
 		testSchedules.forEach((schedule, i) => {
 			it(`should return ${awaitTimes[i]} for schedule set ${i}`, () => {
-				const response = setDefaultAwait(schedule);
+				const response = setDefaultAwait({ elementsArray: schedule });
 				expect(response).to.be.equal(awaitTimes[i]);
 			});
 		});
@@ -431,7 +431,7 @@ describe('Playlist tools component', () => {
 			const elements = [
 				{ dur: '5s', video: [] },
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return playImmediately when bare element follows expired wallclock', () => {
@@ -444,7 +444,7 @@ describe('Playlist tools component', () => {
 				},
 				{ dur: '5s', img: [] },
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return playImmediately for active wallclock with active conditional expr', () => {
@@ -456,7 +456,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for active wallclock with expired conditional expr', () => {
@@ -468,7 +468,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 
 		it('should return playImmediately for expr-only element (no wallclock) with active expr', () => {
@@ -478,7 +478,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for expr-only element (no wallclock) with expired expr', () => {
@@ -488,7 +488,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 
 		it('should return defaultAwait for single element with all-expired wallclock', () => {
@@ -500,7 +500,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 	});
 
@@ -860,34 +860,34 @@ describe('Playlist tools component', () => {
 	describe('processRandomPlayMode', () => {
 		it('should return shuffled object for random mode', () => {
 			const playlist = { playMode: 'random', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
 		});
 
 		it('should return single element for random_one mode', () => {
 			const playlist = { playMode: 'random_one', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			const playableKeys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(playableKeys.length).to.be.equal(1);
 		});
 
 		it('should return single element for one mode', () => {
 			const playlist = { playMode: 'one', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			const playableKeys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(playableKeys.length).to.be.equal(1);
 		});
 
 		it('should return original playlist for unsupported playMode', () => {
 			const playlist = { playMode: 'unknown', img: { src: 'a.jpg' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.eql(playlist);
 		});
 
 		it('should be case-insensitive for playMode', () => {
 			const playlist = { playMode: 'RANDOM', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
 		});

@@ -55,11 +55,11 @@ export class XmlParser implements IXmlParser {
 		const regions = extractRegionInfo(xmlObject.smil.head.layout);
 		const transitions = extractTransitionsInfo(xmlObject.smil.head.layout);
 
-		this.xml.parseHeadInfo(xmlObject.smil.head, regions, triggerList);
+		this.xml.parseHeadInfo({ metaObjects: xmlObject.smil.head, regions, triggerList });
 		playableMedia.playlist = xmlObject.smil.body as SMILPlaylist;
 
 		// traverse json as tree of nodes
-		this.xml.extractDataFromPlaylist(playableMedia, downloads, triggerList, dynamicList);
+		this.xml.extractDataFromPlaylist({ playableMedia, downloads, triggerList, dynamicList });
 
 		this.xml.removeDataFromPlaylist(playableMedia);
 

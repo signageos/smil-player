@@ -98,7 +98,7 @@ describe('scheduleTools direct function tests', () => {
 			const element: PlaylistElement = {
 				expr: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
 			};
-			expect(setDefaultAwaitConditional(element, 'player1', 'id1')).to.equal(
+			expect(setDefaultAwaitConditional({ playlistElement: element, playerName: 'player1', playerId: 'id1' })).to.equal(
 				SMILScheduleEnum.playImmediately,
 			);
 		});
@@ -108,7 +108,7 @@ describe('scheduleTools direct function tests', () => {
 			const element: PlaylistElement = {
 				expr: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
 			};
-			expect(setDefaultAwaitConditional(element, 'player1', 'id1')).to.equal(
+			expect(setDefaultAwaitConditional({ playlistElement: element, playerName: 'player1', playerId: 'id1' })).to.equal(
 				SMILScheduleEnum.defaultAwait,
 			);
 		});
@@ -117,7 +117,7 @@ describe('scheduleTools direct function tests', () => {
 			const element: PlaylistElement = {
 				expr: "adapi-compare(smil-playerName(),'myPlayer')=0",
 			};
-			expect(setDefaultAwaitConditional(element, 'myPlayer', 'id1')).to.equal(
+			expect(setDefaultAwaitConditional({ playlistElement: element, playerName: 'myPlayer', playerId: 'id1' })).to.equal(
 				SMILScheduleEnum.playImmediately,
 			);
 		});
@@ -126,7 +126,7 @@ describe('scheduleTools direct function tests', () => {
 			const element: PlaylistElement = {
 				expr: "adapi-compare(smil-playerName(),'otherPlayer')=0",
 			};
-			expect(setDefaultAwaitConditional(element, 'myPlayer', 'id1')).to.equal(
+			expect(setDefaultAwaitConditional({ playlistElement: element, playerName: 'myPlayer', playerId: 'id1' })).to.equal(
 				SMILScheduleEnum.defaultAwait,
 			);
 		});
@@ -135,7 +135,7 @@ describe('scheduleTools direct function tests', () => {
 			const element: PlaylistElement = {
 				expr: "adapi-compare(smil-playerId(),'device-123')=0",
 			};
-			expect(setDefaultAwaitConditional(element, 'player1', 'device-123')).to.equal(
+			expect(setDefaultAwaitConditional({ playlistElement: element, playerName: 'player1', playerId: 'device-123' })).to.equal(
 				SMILScheduleEnum.playImmediately,
 			);
 		});
@@ -189,10 +189,10 @@ describe('setDefaultAwait with skipContentMark runtime flag', () => {
 	// from the no-begin-no-expr early exit and regress seq scheduling.
 
 	it('marked element without begin/expr is not a playable candidate', () => {
-		expect(setDefaultAwait([{ skipContentMark: true } as any])).to.equal(SMILScheduleEnum.defaultAwait);
+		expect(setDefaultAwait({ elementsArray: [{ skipContentMark: true } as any] })).to.equal(SMILScheduleEnum.defaultAwait);
 	});
 
 	it('unmarked sibling after a marked element keeps the array playable', () => {
-		expect(setDefaultAwait([{ skipContentMark: true } as any, {}])).to.equal(SMILScheduleEnum.playImmediately);
+		expect(setDefaultAwait({ elementsArray: [{ skipContentMark: true } as any, {}] })).to.equal(SMILScheduleEnum.playImmediately);
 	});
 });

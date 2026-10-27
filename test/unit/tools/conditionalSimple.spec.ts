@@ -21,76 +21,76 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 	describe('Playlist tools component checkConditionalExprSafe playerId tests', () => {
 		it('Should return correct response', () => {
 			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerId())";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare('testing', smil-playerId())";
-			expect(checkConditionalExprSafe(testExpression, '', 'testing')).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerId: 'testing' })).to.be.equal(true);
 
 			testExpression = "adapi-compare(smil-playerId(), 'testing')";
-			expect(checkConditionalExprSafe(testExpression, '', 'testing')).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerId: 'testing' })).to.be.equal(true);
 
 			testExpression = "adapi-compare(smil-playerId(), 'sdsdsds')";
-			expect(checkConditionalExprSafe(testExpression, '', 'ewrwerw')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerId: 'ewrwerw' })).to.be.equal(false);
 		});
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe playerName tests', () => {
 		it('Should return correct response', () => {
 			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerName())";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare('testing', smil-playerName())";
-			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerName: 'testing' })).to.be.equal(true);
 
 			testExpression = "adapi-compare(smil-playerName(), 'testing')";
-			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerName: 'testing' })).to.be.equal(true);
 
 			testExpression = "adapi-compare(smil-playerName(), 'sdsdsds')";
-			expect(checkConditionalExprSafe(testExpression, 'ewrwerw', '')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerName: 'ewrwerw' })).to.be.equal(false);
 		});
 	});
 
 	describe('Playlist tools component checkConditionalExprSafe adapi-date tests', () => {
 		it('Should return correct response', () => {
 			let testExpression = "adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')&lt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare('2010-01-01T00:00:00', adapi-date())&lt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			const today = moment().format('YYYY-MM-DDTHH:mm:ss');
 			testExpression = `adapi-compare(adapi-date(),\'${today}\')=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(),\'${today}\')&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(),\'${today}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare('2010-01-01T00:00:00', adapi-date())&gt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare('2030-01-01T00:00:00', adapi-date())&gt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare(adapi-date(), '2010-01-01T00:00:00')&gt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare(adapi-date(), '2010-01-01T00:00:00')&gt;=0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = "adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;=0";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	});
 
@@ -98,90 +98,90 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should match current weekday', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `${funcName}()=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match different weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() + 3) % 7;
 			let testExpression = `${funcName}()=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should handle greater than current weekday', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `${funcName}()&gt;${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should handle less than current weekday', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `${funcName}()&lt;${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should handle greater than or equal current weekday', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `${funcName}()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should handle less than or equal current weekday', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `${funcName}()&lt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match >= next weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			let testExpression = `${funcName}()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should handle adapi-compare date expression', () => {
 			let testExpression = `adapi-compare('2013-05-01T00:00:00', adapi-date()) &lt;= 0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match <= yesterday weekday', () => {
 			let dayOfWeek = moment().subtract(1, 'day').isoWeekday() % 7;
 			let testExpression = `${funcName}()&lt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should match >= previous weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() - 1) % 7;
 			let testExpression = `${funcName}()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should match <= next weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			let testExpression = `${funcName}()&lt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should match reversed >= with next weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			let testExpression = `${dayOfWeek}&gt;=${funcName}()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should match reversed <= with previous weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() - 1) % 7;
 			let testExpression = `${dayOfWeek}&lt;=${funcName}()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match reversed >= with previous weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() - 1) % 7;
 			let testExpression = `${dayOfWeek}&gt;=${funcName}()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should not match reversed <= with next weekday', () => {
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			let testExpression = `${dayOfWeek}&lt;=${funcName}()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	}
 
@@ -197,61 +197,61 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should match past time <= comparison', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', ${funcName}())&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match future time <= comparison', () => {
 			let dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', ${funcName}())&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should match future time reversed <= comparison', () => {
 			let dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(${funcName}(), \'${dayTime}\')&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should match future time >= comparison', () => {
 			let dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', ${funcName}()))&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match future time reversed >= comparison', () => {
 			let dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(${funcName}(), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should match past time reversed >= comparison', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(${funcName}(), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match past time reversed <= with HH:mm format', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm');
 			let testExpression = `adapi-compare(${funcName}(), \'${dayTime}\')&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should match past time reversed >= with HH:mm format', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm');
 			let testExpression = `adapi-compare(${funcName}(), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 
 		it('Should not match past time >= with HH:mm format', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm');
 			let testExpression = `adapi-compare(\'${dayTime}\', ${funcName}())&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 
 		it('Should match past time <= with HH:mm format', () => {
 			let dayTime = moment().subtract(hourOffset, 'hour').format('HH:mm');
 			let testExpression = `adapi-compare(\'${dayTime}\', ${funcName}())&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	}
 
@@ -267,27 +267,27 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			testExpression = `adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			dayTime = moment().add(1, 'hour').format('HH:mm:ss');
 			testExpression = `adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			testExpression = `adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
@@ -300,47 +300,47 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 			// event starting edge
 			MockDate.set('2021-04-21T11:59:59');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			MockDate.set('2021-04-21T12:00:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			// event ending edge
 			MockDate.set('2021-04-21T17:59:59');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			MockDate.set('2021-04-21T18:00:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			MockDate.set('2021-04-21T18:00:01');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			// Still running event & even end date did not reached
 			MockDate.set('2021-04-22T14:40:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			// time is after endDate but event already started using recurrency rule
 			MockDate.set('2021-04-22T14:41:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			MockDate.set('2021-04-22T14:42:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			// Next day recurrency is not valid
 			MockDate.set('2021-04-23T11:59:59');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			MockDate.set('2021-04-23T12:00:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			MockDate.set('2021-04-23T17:59:59');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			MockDate.set('2021-04-23T18:00:00');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			MockDate.set('2021-04-23T18:00:01');
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	});
 
@@ -348,25 +348,25 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 and adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;0 and adapi-compare(\'2030-01-01T00:00:00\', adapi-date())&gt;0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;0 and adapi-compare(\'2010-01-01T00:00:00\', adapi-date())&gt;0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 and ${dayOfWeek}&gt;=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 and ${dayOfWeek}&lt;=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			dayOfWeek = moment().isoWeekday();
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 and ${dayOfWeek}=adapi-weekday() and ${dayOfWeek}&gt;=adapi-weekday()
 			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
@@ -374,31 +374,31 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 or adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')&gt;=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression =
 				`adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;0 or ` +
 				`adapi-compare(\'2030-01-01T00:00:00\', adapi-date())&gt;0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression =
 				`adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')&gt;0 or ` +
 				`adapi-compare(\'2010-01-01T00:00:00\', adapi-date())&gt;0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 or ${dayOfWeek}&gt;=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0 or ${dayOfWeek}&lt;=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			dayOfWeek = moment().isoWeekday();
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}&lt;adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0 or ${dayOfWeek}=adapi-weekday() or ${dayOfWeek}&gt;adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
@@ -406,25 +406,25 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0 and adapi-compare(substring-after(adapi-date(), \'T\'), \'${dayTime}\')>=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2030-01-01T00:00:00\', adapi-date())>0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2010-01-01T00:00:00\', adapi-date())>0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			let dayOfWeek = (moment().isoWeekday() + 1) % 7;
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0 and ${dayOfWeek}>=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0 and ${dayOfWeek}<=adapi-weekday()`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			dayOfWeek = moment().isoWeekday();
 			testExpression = `adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0 and ${dayOfWeek}=adapi-weekday() and ${dayOfWeek}>=adapi-weekday()
 			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
@@ -432,66 +432,66 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = "adapi-compare('f1835d9f-be8f-4054-9e6c-123456789012', smil-playerIdd())";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare('testing', smil-playerrrNameeee())";
-			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerName: 'testing' })).to.be.equal(false);
 
 			testExpression = "adapi-compare(smil-playerIdd(), 'f1835d9f-be8f-4054-9e6c-123456789012')";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = "adapi-compare(smil-playerNameeee(), 'testing')";
-			expect(checkConditionalExprSafe(testExpression, 'testing', '')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression, playerName: 'testing' })).to.be.equal(false);
 
 			testExpression = `adapi-commmmpare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2050-01-01T00:00:00\', adapi-date())>0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = `adapi-commmmpare(adapi-date(), \'2010-01-01T00:00:00\')>0 and adapi-compare(\'2050-01-01T00:00:00\', adapi-daaaaate())>0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			let dayOfWeek = moment().isoWeekday();
 			testExpression = `adapi-compare(\'${dayTime}\', substrrrrrring-after(adapi-date(), \'T\'))<=0 and ${dayOfWeek}=adapi-weekday() and ${dayOfWeek}>=adapi-weekday()
 			and adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = `adapi-compare(\'${dayTime}\', substrrrrrring-after(adapi-date(), \'T\'))<=0 or ${dayOfWeek}=adapi-weekday() or ${dayOfWeek}>=adapi-weekday()
 			or adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))<=0`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
 	describe('shouldSkipElement', () => {
 		it('should return false for element without expr tag', () => {
 			const element = { src: 'video.mp4' } as any;
-			expect(shouldSkipElement(element)).to.be.equal(false);
+			expect(shouldSkipElement({ element })).to.be.equal(false);
 		});
 
 		it('should return false for element with valid (active) expr', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
 			} as any;
-			expect(shouldSkipElement(element)).to.be.equal(false);
+			expect(shouldSkipElement({ element })).to.be.equal(false);
 		});
 
 		it('should return true for element with expired expr', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
 			} as any;
-			expect(shouldSkipElement(element)).to.be.equal(true);
+			expect(shouldSkipElement({ element })).to.be.equal(true);
 		});
 
 		it('should handle playerName matching', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(smil-playerName(), 'TestPlayer')",
 			} as any;
-			expect(shouldSkipElement(element, 'TestPlayer')).to.be.equal(false);
-			expect(shouldSkipElement(element, 'OtherPlayer')).to.be.equal(true);
+			expect(shouldSkipElement({ element, playerName: 'TestPlayer' })).to.be.equal(false);
+			expect(shouldSkipElement({ element, playerName: 'OtherPlayer' })).to.be.equal(true);
 		});
 
 		it('should handle array input (delegates to setDefaultAwait)', () => {
 			// Array with element that has no begin and no expr → playImmediately → not expired
 			const elements = [{ repeatCount: '1', video: [] }] as any[];
-			expect(shouldSkipElement(elements)).to.be.equal(false);
+			expect(shouldSkipElement({ element: elements })).to.be.equal(false);
 		});
 
 		it('should return true for array where all elements have future wallclock', () => {
@@ -503,7 +503,7 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 					video: [],
 				},
 			] as any[];
-			expect(shouldSkipElement(elements)).to.be.equal(true);
+			expect(shouldSkipElement({ element: elements })).to.be.equal(true);
 		});
 	});
 
@@ -512,54 +512,62 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0",
 			} as any;
-			expect(setDefaultAwaitConditional(element, '', '')).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(
+				setDefaultAwaitConditional({ playlistElement: element, playerName: '', playerId: '' }),
+			).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for element with expired expr', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')<0",
 			} as any;
-			expect(setDefaultAwaitConditional(element, '', '')).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(
+				setDefaultAwaitConditional({ playlistElement: element, playerName: '', playerId: '' }),
+			).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 
 		it('should return playImmediately for matching playerName', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(smil-playerName(), 'TestPlayer')",
 			} as any;
-			expect(setDefaultAwaitConditional(element, 'TestPlayer', '')).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(
+				setDefaultAwaitConditional({ playlistElement: element, playerName: 'TestPlayer', playerId: '' }),
+			).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for non-matching playerName', () => {
 			const element = {
 				[ExprTag]: "adapi-compare(smil-playerName(), 'TestPlayer')",
 			} as any;
-			expect(setDefaultAwaitConditional(element, 'OtherPlayer', '')).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(
+				setDefaultAwaitConditional({ playlistElement: element, playerName: 'OtherPlayer', playerId: '' }),
+			).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 	});
 
 	describe('error path tests', () => {
 		it('should return false for empty expression string', () => {
-			expect(checkConditionalExprSafe('')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: '' })).to.be.equal(false);
 		});
 
 		it('should return false for unknown function name', () => {
-			expect(checkConditionalExprSafe("adapi-nonexistent()")).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: "adapi-nonexistent()" })).to.be.equal(false);
 		});
 
 		it('should return false for expression with too many comparators', () => {
-			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), '2030-01-01')<0<1")).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(), '2030-01-01')<0<1" })).to.be.equal(false);
 		});
 
 		it('should return false for malformed expression with no function', () => {
-			expect(checkConditionalExprSafe("just a plain string")).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: "just a plain string" })).to.be.equal(false);
 		});
 
 		it('should return false for expression with unmatched parentheses', () => {
-			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), '2030-01-01'")).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(), '2030-01-01'" })).to.be.equal(false);
 		});
 
 		it('should return false for expression comparing two functions (unsupported)', () => {
-			expect(checkConditionalExprSafe("adapi-compare(adapi-date(), adapi-gmdate())<0")).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(), adapi-gmdate())<0" })).to.be.equal(false);
 		});
 	});
 
@@ -570,21 +578,21 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 
 		it('should treat <0 and <1 the same (compareValue ignored)', () => {
 			// adapi-date() < '2030-01-01' → true regardless of compareValue being 0 or 1
-			const ltZero = checkConditionalExprSafe("adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0");
-			const ltOne = checkConditionalExprSafe("adapi-compare(adapi-date(),'2030-01-01T00:00:00')<1");
+			const ltZero = checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0" });
+			const ltOne = checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<1" });
 			expect(ltZero).to.equal(ltOne);
 		});
 
 		it('should treat >0 and >1 the same (compareValue ignored)', () => {
 			// adapi-date() > '2010-01-01' → true regardless of compareValue
-			const gtZero = checkConditionalExprSafe("adapi-compare(adapi-date(),'2010-01-01T00:00:00')>0");
-			const gtOne = checkConditionalExprSafe("adapi-compare(adapi-date(),'2010-01-01T00:00:00')>1");
+			const gtZero = checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')>0" });
+			const gtOne = checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(),'2010-01-01T00:00:00')>1" });
 			expect(gtZero).to.equal(gtOne);
 		});
 
 		it('should return true for =0 when values are equal (compareValue is the expected result)', () => {
 			// playerId comparison: adapi-compare(smil-playerId(), 'myId') = 0 means "equal"
-			const result = checkConditionalExprSafe("adapi-compare(smil-playerId(),'myId')=0", '', 'myId');
+			const result = checkConditionalExprSafe({ expression: "adapi-compare(smil-playerId(),'myId')=0", playerId: 'myId' });
 			expect(result).to.equal(true);
 		});
 	});
@@ -593,36 +601,36 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('should evaluate nested AND with 3+ conditions', () => {
 			// All true: date in future AND matching player AND matching id
 			const expr = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0 AND adapi-compare(smil-playerName(),'test')=0 AND adapi-compare(smil-playerId(),'id1')=0";
-			expect(checkConditionalExprSafe(expr, 'test', 'id1')).to.equal(true);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'test', playerId: 'id1' })).to.equal(true);
 		});
 
 		it('should return false if any AND condition fails', () => {
 			const expr = "adapi-compare(adapi-date(),'2030-01-01T00:00:00')<0 AND adapi-compare(smil-playerName(),'wrong')=0";
-			expect(checkConditionalExprSafe(expr, 'test', '')).to.equal(false);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'test' })).to.equal(false);
 		});
 
 		it('should evaluate nested OR with 3+ conditions', () => {
 			// First false, second false, third true
 			const expr = "adapi-compare(smil-playerName(),'wrong1')=0 OR adapi-compare(smil-playerName(),'wrong2')=0 OR adapi-compare(smil-playerName(),'test')=0";
-			expect(checkConditionalExprSafe(expr, 'test', '')).to.equal(true);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'test' })).to.equal(true);
 		});
 
 		it('should return false if all OR conditions fail', () => {
 			const expr = "adapi-compare(smil-playerName(),'wrong1')=0 OR adapi-compare(smil-playerName(),'wrong2')=0";
-			expect(checkConditionalExprSafe(expr, 'test', '')).to.equal(false);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'test' })).to.equal(false);
 		});
 
 		it('should split AND first, making "A OR B AND C" evaluate as "(A OR B) AND C"', () => {
 			// AND splits first → ["A OR B", "C"]. Both must be true for AND.
 			// "A OR B" → A=true → true. "C" → false. Overall: false.
 			const expr = "adapi-compare(smil-playerName(),'match')=0 OR adapi-compare(smil-playerName(),'wrong')=0 AND adapi-compare(smil-playerId(),'wrong')=0";
-			expect(checkConditionalExprSafe(expr, 'match', '')).to.equal(false);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'match' })).to.equal(false);
 		});
 
 		it('should use brackets to override AND/OR precedence', () => {
 			// [A OR B] forces OR evaluation first, then the result is the whole expression
 			const expr = "[adapi-compare(smil-playerName(),'match')=0 OR adapi-compare(smil-playerName(),'wrong')=0]";
-			expect(checkConditionalExprSafe(expr, 'match', '')).to.equal(true);
+			expect(checkConditionalExprSafe({ expression: expr, playerName: 'match' })).to.equal(true);
 		});
 	});
 });
@@ -634,7 +642,7 @@ describe('shouldSkipElement with skipContentMark runtime flag', () => {
 	// as expired by every conditional evaluation entry point.
 
 	it('marked element with no expr is expired', () => {
-		expect(shouldSkipElement({ skipContentMark: true } as any)).to.equal(true);
+		expect(shouldSkipElement({ element: { skipContentMark: true } as any })).to.equal(true);
 	});
 
 	it('marked element with a passing declarative expr is still expired', () => {
@@ -642,10 +650,10 @@ describe('shouldSkipElement with skipContentMark runtime flag', () => {
 			expr: "adapi-compare(smil-playerName(),'match')",
 			skipContentMark: true,
 		};
-		expect(shouldSkipElement(element, 'match', '')).to.equal(true);
+		expect(shouldSkipElement({ element, playerName: 'match' })).to.equal(true);
 	});
 
 	it('unmarked element with no expr is not expired', () => {
-		expect(shouldSkipElement({} as any)).to.equal(false);
+		expect(shouldSkipElement({ element: {} as any })).to.equal(false);
 	});
 });

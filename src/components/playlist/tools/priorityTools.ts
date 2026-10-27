@@ -1,11 +1,17 @@
 import { PriorityObject } from '../../../models/priorityModels';
 import { PriorityDefault, PriorityRule } from '../../../enums/priorityEnums';
 
-export function createPriorityObject(
-	priorityClass: PriorityObject,
-	priorityLevel: number,
-	maxPriorityLevel: number,
-): PriorityObject {
+type CreatePriorityObjectOptions = {
+	priorityClass: PriorityObject;
+	priorityLevel: number;
+	maxPriorityLevel: number;
+};
+
+export function createPriorityObject({
+	priorityClass,
+	priorityLevel,
+	maxPriorityLevel,
+}: CreatePriorityObjectOptions): PriorityObject {
 	return {
 		priorityLevel,
 		maxPriorityLevel,

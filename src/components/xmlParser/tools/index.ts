@@ -232,12 +232,19 @@ export function createXmlTools(log: Log) {
 	 * @param triggerList
 	 * @param dynamicList
 	 */
-	function extractDataFromPlaylist(
-		playableMedia: SMILPlaylist,
-		downloads: DownloadsList,
-		triggerList: TriggerList,
-		dynamicList: DynamicPlaylistList,
-	) {
+	type ExtractDataFromPlaylistOptions = {
+		playableMedia: SMILPlaylist;
+		downloads: DownloadsList;
+		triggerList: TriggerList;
+		dynamicList: DynamicPlaylistList;
+	};
+
+	function extractDataFromPlaylist({
+		playableMedia,
+		downloads,
+		triggerList,
+		dynamicList,
+	}: ExtractDataFromPlaylistOptions) {
 		new JefNode(playableMedia.playlist).filter(
 			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
 				// detect intro element, may not exist
@@ -293,7 +300,13 @@ export function createXmlTools(log: Log) {
 		);
 	}
 
-	function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
+	type ParseHeadInfoOptions = {
+		metaObjects: XmlHeadObject;
+		regions: RegionsObject;
+		triggerList: TriggerList;
+	};
+
+	function parseHeadInfo({ metaObjects, regions, triggerList }: ParseHeadInfoOptions) {
 		if (!isNil(metaObjects.meta)) {
 			parseMetaInfo(metaObjects.meta, regions);
 		}

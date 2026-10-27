@@ -82,10 +82,22 @@ export function createWallclockTools(log: Log) {
 				// repeat once every day, startTime in future, dayTime in past
 				if (timeStart >= nowTime && dateStart < nowDay && splitStringEnd[2] === 'P1D') {
 					// startTime and endTime both in the past, or its scheduled for different weekDay
-					datePart = computeScheduledDate(moment(), nowTime, timeStart, dateStart, dayInfoStart);
+					datePart = computeScheduledDate({
+						startDate: moment(),
+						nowTime,
+						scheduledTime: timeStart,
+						scheduledDate: dateStart,
+						dayInfo: dayInfoStart,
+					});
 					timeToStart = moment(`${datePart}T${timeStart}`).valueOf() - nowMillis;
 
-					datePart = computeScheduledDate(moment(nowDay), nowTime, timeEnd, dateStart, dayInfoStart);
+					datePart = computeScheduledDate({
+						startDate: moment(nowDay),
+						nowTime,
+						scheduledTime: timeEnd,
+						scheduledDate: dateStart,
+						dayInfo: dayInfoStart,
+					});
 					timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 
 					log.debug('[wallclock] P1D repeat, start ahead: waitBeforeStart=%d, playUntil=%d', timeToStart, timeToEnd);
@@ -118,10 +130,22 @@ export function createWallclockTools(log: Log) {
 			}
 
 			// startTime and endTime both in the past, or its scheduled for different weekDay
-			datePart = computeScheduledDate(moment(), nowTime, timeStart, dateStart, dayInfoStart);
+			datePart = computeScheduledDate({
+				startDate: moment(),
+				nowTime,
+				scheduledTime: timeStart,
+				scheduledDate: dateStart,
+				dayInfo: dayInfoStart,
+			});
 			timeToStart = moment(`${datePart}T${timeStart}`).valueOf() - nowMillis;
 
-			datePart = computeScheduledDate(moment(nowDay), nowTime, timeEnd, dateStart, dayInfoStart);
+			datePart = computeScheduledDate({
+				startDate: moment(nowDay),
+				nowTime,
+				scheduledTime: timeEnd,
+				scheduledDate: dateStart,
+				dayInfo: dayInfoStart,
+			});
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 
 			// no endTime specified, SMIL element has only begin tag
@@ -147,14 +171,26 @@ export function createWallclockTools(log: Log) {
 		}
 
 		// startTime and endTime both in the future, pick correct weekday if specified
-		datePart = computeScheduledDate(moment(dateStart), nowTime, timeStart, dateStart, dayInfoStart);
+		datePart = computeScheduledDate({
+			startDate: moment(dateStart),
+			nowTime,
+			scheduledTime: timeStart,
+			scheduledDate: dateStart,
+			dayInfo: dayInfoStart,
+		});
 		timeToStart = moment(`${datePart}T${timeStart}`).valueOf() - nowMillis;
 
 		// if wallclock is specified like P1D without endTime, set endtTime as end of the day
 		if (dateStart < dateEnd && splitStringStart[2] === 'P1D') {
 			timeToEnd = moment(`${dateStart}T${timeEnd}`).valueOf();
 		} else {
-			datePart = computeScheduledDate(moment(dateEnd), nowTime, timeEnd, dateEnd, dayInfoStart);
+			datePart = computeScheduledDate({
+				startDate: moment(dateEnd),
+				nowTime,
+				scheduledTime: timeEnd,
+				scheduledDate: dateEnd,
+				dayInfo: dayInfoStart,
+			});
 			timeToEnd = moment(`${datePart}T${timeEnd}`).valueOf();
 		}
 
@@ -165,13 +201,21 @@ export function createWallclockTools(log: Log) {
 		};
 	}
 
-	function computeScheduledDate(
-		startDate: moment.Moment,
-		nowTime: string,
-		scheduledTime: string,
-		scheduledDate: string,
-		dayInfo: string,
-	) {
+	type ComputeScheduledDateOptions = {
+		startDate: moment.Moment;
+		nowTime: string;
+		scheduledTime: string;
+		scheduledDate: string;
+		dayInfo: string;
+	};
+
+	function computeScheduledDate({
+		startDate,
+		nowTime,
+		scheduledTime,
+		scheduledDate,
+		dayInfo,
+	}: ComputeScheduledDateOptions) {
 		// day of the week when will playing stop
 		const terminalDay = startDate.isoWeekday();
 		// dayInfo is shaped like "+w3" or "-w3" — index 2 is the weekday digit.

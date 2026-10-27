@@ -16,7 +16,7 @@ describe('priorityTools', () => {
 				higher: PriorityRule.pause,
 				pauseDisplay: 'hide',
 			};
-			const result = createPriorityObject(input, 1, 3);
+			const result = createPriorityObject({ priorityClass: input, priorityLevel: 1, maxPriorityLevel: 3 });
 			expect(result.lower).to.equal(PriorityRule.never);
 			expect(result.peer).to.equal(PriorityRule.stop);
 			expect(result.higher).to.equal(PriorityRule.pause);
@@ -32,7 +32,7 @@ describe('priorityTools', () => {
 				higher: undefined as any,
 				pauseDisplay: undefined as any,
 			};
-			const result = createPriorityObject(input, 1, 3);
+			const result = createPriorityObject({ priorityClass: input, priorityLevel: 1, maxPriorityLevel: 3 });
 			expect(result.lower).to.equal(PriorityDefault.lower);
 			expect(result.peer).to.equal(PriorityDefault.peer);
 			expect(result.higher).to.equal(PriorityDefault.higher);
@@ -47,7 +47,7 @@ describe('priorityTools', () => {
 				peer: PriorityRule.never,
 				higher: PriorityRule.stop,
 			};
-			const result = createPriorityObject(input, 7, 10);
+			const result = createPriorityObject({ priorityClass: input, priorityLevel: 7, maxPriorityLevel: 10 });
 			expect(result.priorityLevel).to.equal(7);
 			expect(result.maxPriorityLevel).to.equal(10);
 		});

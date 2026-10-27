@@ -95,7 +95,7 @@ export class PlaylistCommon implements IPlaylistCommon {
 	) => {
 		while (
 			!this.cancelFunction[version] &&
-			(conditionalExpr === '' || !this.schedule.shouldSkipElement({ [ExprTag]: conditionalExpr })) &&
+			(conditionalExpr === '' || !this.schedule.shouldSkipElement({ element: { [ExprTag]: conditionalExpr } })) &&
 			(!dynamicPlaylistId ||
 				!dynamicPlaylist[dynamicPlaylistId] ||
 				dynamicPlaylist[dynamicPlaylistId]?.play === true)

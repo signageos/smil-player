@@ -2110,11 +2110,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				!isNil(element.triggerValue) &&
 				this.currentlyPlaying[regionInfo.regionName][SMILTriggersEnum.triggerValue] !== element.triggerValue
 			) {
-				let triggerValueToCancel = findTriggerToCancel(
-					this.triggers.triggersEndless,
-					regionInfo.regionName,
-					element.triggerValue,
-				);
+				let triggerValueToCancel = findTriggerToCancel({
+					triggerObject: this.triggers.triggersEndless,
+					regionName: regionInfo.regionName,
+					triggerValue: element.triggerValue,
+				});
 				timedDebug.debug(
 					'[processor] cancelling trigger: id=%s, current=%s, new=%s',
 					triggerValueToCancel,
@@ -2556,7 +2556,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Genuine (non-skipContent) conditionals, and the checkAheadCount case (recovered by
 		// prefetchAheadElements), keep the fast intentional skip.
 		const skipContentRecheck = this.isSkipContentRecheckable(value);
-		if (this.schedule.shouldSkipElement(value, this.playerName, this.playerId) && !skipContentRecheck) {
+		if (this.schedule.shouldSkipElement({
+			element: value,
+			playerName: this.playerName,
+			playerId: this.playerId,
+		}) && !skipContentRecheck) {
 			this.log.debug(`[${debugId}] Conditional expression: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;
@@ -2587,7 +2591,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		// Re-check conditional expression after prePlayCheck.
 		// The fetch strategy inside detectUpdateOnly may have set the skipContentMark flag
 		// when the HTTP status matched skipContentOnHttpStatus (e.g. 404).
-		if (!this.smilObject.checkAheadCount && this.schedule.shouldSkipElement(value, this.playerName, this.playerId)) {
+		if (!this.smilObject.checkAheadCount && this.schedule.shouldSkipElement({
+			element: value,
+			playerName: this.playerName,
+			playerId: this.playerId,
+		})) {
 			this.log.debug(`[${debugId}] Conditional expression after pre-play check: %s, for element: %O is false`, value.expr!, value);
 			await sleep(100);
 			return true;

@@ -62,25 +62,25 @@ describe('tickerTools', () => {
 
 	describe('computeTickerTextTop', () => {
 		it('vertically centers the text within the wrapper', () => {
-			expect(computeTickerTextTop(100, 20)).to.equal(40); // 100/2 - 20/2
+			expect(computeTickerTextTop({ clientHeight: 100, fontSize: 20 })).to.equal(40); // 100/2 - 20/2
 		});
 
 		it('rounds the centered position', () => {
-			expect(computeTickerTextTop(101, 20)).to.equal(41); // round(50.5 - 10) = round(40.5)
+			expect(computeTickerTextTop({ clientHeight: 101, fontSize: 20 })).to.equal(41); // round(50.5 - 10) = round(40.5)
 		});
 	});
 
 	describe('isTextBehindLeftEdge', () => {
 		it('is true once the text right edge passes the left boundary', () => {
-			expect(isTextBehindLeftEdge(-50, 10)).to.equal(true); // -40 < 0
+			expect(isTextBehindLeftEdge({ left: -50, width: 10 })).to.equal(true); // -40 < 0
 		});
 
 		it('is false while any part of the text is still visible', () => {
-			expect(isTextBehindLeftEdge(-5, 10)).to.equal(false); // 5 < 0 is false
+			expect(isTextBehindLeftEdge({ left: -5, width: 10 })).to.equal(false); // 5 < 0 is false
 		});
 
 		it('treats the exact edge (left + width === 0) as not yet behind', () => {
-			expect(isTextBehindLeftEdge(-10, 10)).to.equal(false); // 0 < 0 is false
+			expect(isTextBehindLeftEdge({ left: -10, width: 10 })).to.equal(false); // 0 < 0 is false
 		});
 	});
 });

@@ -219,7 +219,11 @@ export class PlaylistTraverser {
 				// would permanently disable the element. The still-404 case is released by
 				// releaseSlot in playElement, so this does not reintroduce the phantom blocker.
 				if (
-					this.schedule.shouldSkipElement(value as SMILMedia, this.config.playerName, this.config.playerId) &&
+					this.schedule.shouldSkipElement({
+						element: value as SMILMedia,
+						playerName: this.config.playerName,
+						playerId: this.config.playerId,
+					}) &&
 					!this.actions.isSkipContentRecheckable(value as SMILMedia)
 				) {
 					this.log.debug('[traverser] media conditional false, skipping: key=%s, expr=%s', key, (value as SMILMedia).expr!);
@@ -376,7 +380,11 @@ export class PlaylistTraverser {
 					if (parent.startsWith('seq') && !hasPriority) {
 						let anySeqSiblingActive = false;
 						for (const elem of value) {
-							if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+							if (this.schedule.shouldSkipElement({
+								element: elem,
+								playerName: this.config.playerName,
+								playerId: this.config.playerId,
+							})) {
 								continue;
 							}
 
@@ -413,7 +421,11 @@ export class PlaylistTraverser {
 
 					let anyActive = false;
 					for (const elem of value) {
-						if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+						if (this.schedule.shouldSkipElement({
+							element: elem,
+							playerName: this.config.playerName,
+							playerId: this.config.playerId,
+						})) {
 							continue;
 						}
 
@@ -495,7 +507,11 @@ export class PlaylistTraverser {
 
 					if (timeToEnd < Date.now()) {
 						if (
-							this.schedule.setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
+							this.schedule.setDefaultAwait({
+								elementsArray: [value],
+								playerName: this.config.playerName,
+								playerId: this.config.playerId,
+							}) ===
 							SMILScheduleEnum.defaultAwait
 						) {
 							this.log.debug('[traverser-par] no active wallclock, setting default await');
@@ -657,11 +673,11 @@ export class PlaylistTraverser {
 							}
 						}
 
-						valueElement = this.tools.processRandomPlayMode(
-							valueElement,
-							this.control.randomPlaylist,
-							playModeParentId,
-						);
+						valueElement = this.tools.processRandomPlayMode({
+							playlist: valueElement,
+							randomPlaylistInfo: this.control.randomPlaylist,
+							parent: playModeParentId,
+						});
 					}
 
 					// this.log.debug('processing seq element: %O', valueElement);
@@ -674,7 +690,11 @@ export class PlaylistTraverser {
 						// if no playable element was found in array, set defaultAwait for last element to avoid infinite loop
 						if (
 							arrayIndex === value?.length - 1 &&
-							this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait &&
+							this.schedule.setDefaultAwait({
+								elementsArray: value,
+								playerName: this.config.playerName,
+								playerId: this.config.playerId,
+							}) === SMILScheduleEnum.defaultAwait &&
 							!this.schedule.areAllWallclocksPermanentlyExpired(value)
 						) {
 							this.log.debug('[traverser-seq] no active wallclock, setting default await');
@@ -882,11 +902,19 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+			if (this.schedule.shouldSkipElement({
+				element: elem,
+				playerName: this.config.playerName,
+				playerId: this.config.playerId,
+			})) {
 				this.log.debug('[traverser-priority] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
-					this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
+					this.schedule.setDefaultAwait({
+						elementsArray: value,
+						playerName: this.config.playerName,
+						playerId: this.config.playerId,
+					}) === SMILScheduleEnum.defaultAwait
 				) {
 					this.log.debug('[traverser-priority] no active conditional, setting default await');
 					await this.control.sleep(SMILScheduleEnum.defaultAwait);
@@ -895,7 +923,11 @@ export class PlaylistTraverser {
 				continue;
 			}
 
-			const priorityObject = createPriorityObject(elem as PriorityObject, arrayIndex, value?.length - 1);
+			const priorityObject = createPriorityObject({
+				priorityClass: elem as PriorityObject,
+				priorityLevel: arrayIndex,
+				maxPriorityLevel: value?.length - 1,
+			});
 
 			// Extract and store sync index bounds for this priority level
 			this.actions.storePriorityBounds(elem, priorityObject.priorityLevel);
@@ -925,11 +957,19 @@ export class PlaylistTraverser {
 		let arrayIndex = value?.length - 1;
 		for (let elem of value) {
 			// wallclock has higher priority than conditional expression
-			if (this.schedule.shouldSkipElement(elem, this.config.playerName, this.config.playerId)) {
+			if (this.schedule.shouldSkipElement({
+				element: elem,
+				playerName: this.config.playerName,
+				playerId: this.config.playerId,
+			})) {
 				this.log.debug('[traverser-excl] conditional false, skipping: expr=%s', elem[ExprTag]!);
 				if (
 					arrayIndex === 0 &&
-					this.schedule.setDefaultAwait(value, this.config.playerName, this.config.playerId) === SMILScheduleEnum.defaultAwait
+					this.schedule.setDefaultAwait({
+						elementsArray: value,
+						playerName: this.config.playerName,
+						playerId: this.config.playerId,
+					}) === SMILScheduleEnum.defaultAwait
 				) {
 					this.log.debug('[traverser-excl] no active conditional, setting default await');
 					await this.control.sleep(SMILScheduleEnum.defaultAwait);
@@ -1079,14 +1119,22 @@ export class PlaylistTraverser {
 		arrayIndex: number = -1,
 		length: number = -1,
 	): Promise<boolean> => {
-		if (!this.schedule.shouldSkipElement(value, this.config.playerName, this.config.playerId)) {
+		if (!this.schedule.shouldSkipElement({
+			element: value,
+			playerName: this.config.playerName,
+			playerId: this.config.playerId,
+		})) {
 			return false;
 		}
 		this.log.debug('[traverser-conditional] conditional false, skipping: expr=%s', value[ExprTag]!);
 		const isLastOrSingle = arrayIndex === -1 || arrayIndex === length - 1;
 		if (
 			isLastOrSingle &&
-			this.schedule.setDefaultAwait([value], this.config.playerName, this.config.playerId) ===
+			this.schedule.setDefaultAwait({
+				elementsArray: [value],
+				playerName: this.config.playerName,
+				playerId: this.config.playerId,
+			}) ===
 				SMILScheduleEnum.defaultAwait
 		) {
 			this.log.debug('[traverser-conditional] no active conditional, setting default await');

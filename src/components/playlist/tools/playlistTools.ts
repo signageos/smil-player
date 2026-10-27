@@ -70,11 +70,13 @@ export function createPlaylistTools(log: Log) {
 		});
 	}
 
-	function processRandomPlayMode(
-		playlist: { [key in string]: string },
-		randomPlaylistInfo: RandomPlaylist,
-		parent: string,
-	) {
+	type ProcessRandomPlayModeOptions = {
+		playlist: { [key in string]: string };
+		randomPlaylistInfo: RandomPlaylist;
+		parent: string;
+	};
+
+	function processRandomPlayMode({ playlist, randomPlaylistInfo, parent }: ProcessRandomPlayModeOptions) {
 		switch (playlist.playMode.toLowerCase()) {
 			case 'random':
 				return shuffleObject(playlist);

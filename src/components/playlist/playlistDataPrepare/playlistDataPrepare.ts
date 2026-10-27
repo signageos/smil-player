@@ -184,7 +184,7 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 					}
 
 					if (key.startsWith(HtmlEnum.ticker)) {
-						elem.id = this.ticker.createTickerElement(elem, elem.regionInfo, key);
+						elem.id = this.ticker.createTickerElement({ ticker: elem, regionInfo: elem.regionInfo, key });
 					}
 					this.log.debug('[prepare] element info extracted: src=%s', elem.src);
 				}
