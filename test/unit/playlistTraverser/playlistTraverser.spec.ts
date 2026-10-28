@@ -256,7 +256,7 @@ describe('PlaylistTraverser', () => {
 
 			await traverser.processPlaylist({ playlist, version: 0 });
 
-			// First call: isLast = false (arg index 7)
+			// First call: isLast = false
 			expect(engine.actions.playElement.calls[0][0].isLast).to.equal(false);
 			// Second call: isLast = true
 			expect(engine.actions.playElement.calls[1][0].isLast).to.equal(true);

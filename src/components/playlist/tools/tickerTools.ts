@@ -37,22 +37,22 @@ export function resolveSpeedPxPerSec(rawVelocity: string | undefined): number {
 	return Number.isInteger(velocity) ? velocity : DEFAULT_SPEED_PX_PER_SEC;
 }
 
-/** Vertical centering of a text line of `fontSize` within a `clientHeight` wrapper. */
 type ComputeTickerTextTopOptions = {
 	clientHeight: number;
 	fontSize: number;
 };
 
+/** Vertical centering of a text line of `fontSize` within a `clientHeight` wrapper. */
 export function computeTickerTextTop({ clientHeight, fontSize }: ComputeTickerTextTopOptions): number {
 	return Math.round(clientHeight / 2 - fontSize / 2);
 }
 
-/** A text child is behind the left edge (and must recycle) once its right edge crosses 0. */
 type IsTextBehindLeftEdgeOptions = {
 	left: number;
 	width: number;
 };
 
+/** A text child is behind the left edge (and must recycle) once its right edge crosses 0. */
 export function isTextBehindLeftEdge({ left, width }: IsTextBehindLeftEdgeOptions): boolean {
 	return left + width < 0;
 }

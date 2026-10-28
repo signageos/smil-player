@@ -5,7 +5,7 @@ import { DEFAULT_LAST_MODIFIED } from '../../../enums/fileEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { UpdateCheckResult } from '../IFilesManager';
 
-type XhrRequestOptions = {
+export type XhrRequestOptions = {
 	method: string;
 	url: string;
 	timeout: number;

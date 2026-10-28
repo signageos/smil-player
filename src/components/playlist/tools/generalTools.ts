@@ -442,6 +442,11 @@ export function findFirstMediaDescendant(
 	return undefined;
 }
 
+type ComputePlayModeSyncRangesOptions = {
+	before: { [regionName: string]: number };
+	after: { [regionName: string]: number };
+};
+
 /**
  * Given two per-region syncIndex snapshots taken before and after processing
  * a playMode="one" parent's descendants, returns the per-region range of
@@ -449,11 +454,6 @@ export function findFirstMediaDescendant(
  * populate `synchronization.playModeSyncRanges` uniformly whether the media
  * is a direct child of the playMode parent or nested one level deeper.
  */
-type ComputePlayModeSyncRangesOptions = {
-	before: { [regionName: string]: number };
-	after: { [regionName: string]: number };
-};
-
 export function computePlayModeSyncRanges({
 	before,
 	after,
@@ -483,15 +483,15 @@ export function getConfigString(
 	return typeof value === 'string' ? value : undefined;
 }
 
-/**
- * Extracts a boolean value from config, handling string 'true'/'false'
- */
 type GetConfigBooleanOptions = {
 	config: Record<string, number | string | boolean> | undefined;
 	key: string;
 	defaultValue?: boolean;
 };
 
+/**
+ * Extracts a boolean value from config, handling string 'true'/'false'
+ */
 export function getConfigBoolean({ config, key, defaultValue = false }: GetConfigBooleanOptions): boolean {
 	if (!config) {
 		return defaultValue;

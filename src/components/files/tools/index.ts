@@ -301,18 +301,18 @@ export function shouldNotDownload(localFilePath: string, file: MergedDownloadLis
 	);
 }
 
-/**
- * playCheckUrl gate classifier: skip playback when the gate response status is explicitly listed
- * in skipPlaybackOnHttpStatus, or — with the element's playCheckSkipOnError flag — on any unlisted
- * 5xx ("server broken"). Everything else plays (fail-open). An empty list means the gate is inert
- * (the meta is required, no default).
- */
 type ShouldGateSkipForStatusOptions = {
 	status: number;
 	skipPlaybackHttpStatusCodes: number[];
 	skipOnError?: boolean;
 };
 
+/**
+ * playCheckUrl gate classifier: skip playback when the gate response status is explicitly listed
+ * in skipPlaybackOnHttpStatus, or — with the element's playCheckSkipOnError flag — on any unlisted
+ * 5xx ("server broken"). Everything else plays (fail-open). An empty list means the gate is inert
+ * (the meta is required, no default).
+ */
 export function shouldGateSkipForStatus({
 	status,
 	skipPlaybackHttpStatusCodes,
@@ -378,18 +378,18 @@ export function getOfflineReportFileIndex(filePath: string): number {
 	return parseInt(fileName.split('.csv')[0].replace(/\D/g, ''), 10);
 }
 
-/**
- * The watcher holds back the currently active file only while it is purely
- * accumulating reportMode="batch" reports below the limit. Files containing
- * failure-saved realtime reports must upload on the next pass — the device
- * being back online is the whole point of saving them.
- */
 type ShouldSkipActiveReportFileOptions = {
 	trackedInfo: OfflineReportFileInfo | undefined;
 	reportCount: number;
 	reportFileLimit: number;
 };
 
+/**
+ * The watcher holds back the currently active file only while it is purely
+ * accumulating reportMode="batch" reports below the limit. Files containing
+ * failure-saved realtime reports must upload on the next pass — the device
+ * being back online is the whole point of saving them.
+ */
 export function shouldSkipActiveReportFile({
 	trackedInfo,
 	reportCount,

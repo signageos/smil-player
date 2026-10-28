@@ -27,16 +27,16 @@ export interface BillboardColumn {
 	offset: number;
 }
 
-/**
- * Pure column geometry for the billboard image transition: one descriptor per
- * vertical strip of the source image. See createHtmlElement for how each maps
- * onto an <li><div> strip element.
- */
 type ComputeBillboardColumnsOptions = {
 	regionWidth: number;
 	columnCount: number;
 };
 
+/**
+ * Pure column geometry for the billboard image transition: one descriptor per
+ * vertical strip of the source image. See createHtmlElement for how each maps
+ * onto an <li><div> strip element.
+ */
 export function computeBillboardColumns({
 	regionWidth,
 	columnCount,
@@ -166,6 +166,13 @@ export function createHtmlTools(log: Log) {
 		element?.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 	}
 
+	type CreateDomElementOptions = {
+		value: SMILImage | SMILWidget;
+		htmlElement: string;
+		key: string;
+		isSpecial?: boolean;
+	};
+
 	/**
 	 * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
 	 * @param value - Smil image or Smil widget
@@ -174,13 +181,6 @@ export function createHtmlTools(log: Log) {
 	 * @param isSpecial - determines if element is trigger element, dynamic playlist or ordinary one
 	 * ( trigger and dynamic playlist is played on demand )
 	 */
-	type CreateDomElementOptions = {
-		value: SMILImage | SMILWidget;
-		htmlElement: string;
-		key: string;
-		isSpecial?: boolean;
-	};
-
 	function createDomElement({ value, htmlElement, key, isSpecial = false }: CreateDomElementOptions): string {
 		const elementId = generateElementId({
 			filepath: value.localFilePath,

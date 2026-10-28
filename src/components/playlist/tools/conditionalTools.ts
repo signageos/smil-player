@@ -58,18 +58,18 @@ export function createConditionalFns(log: Log, setDefaultAwait: SetDefaultAwaitF
 		return false;
 	}
 
-	/**
-	 * Checks if conditional expression evaluates true or false
-	 * @param expression - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
-	 * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
-	 * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
-	 */
 	type CheckConditionalExprSafeOptions = {
 		expression: string;
 		playerName?: string;
 		playerId?: string;
 	};
 
+	/**
+	 * Checks if conditional expression evaluates true or false
+	 * @param expression - conditional expression such as adapi-compare('2030-01-01T00:00:00', adapi-date())&lt;0
+	 * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
+	 * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
+	 */
 	function checkConditionalExprSafe({ expression, playerName = '', playerId = '' }: CheckConditionalExprSafeOptions) {
 		try {
 			expression = sanitizeConditionalExpr(expression);
@@ -175,18 +175,18 @@ function compareIcsExpr(icsData: string): boolean {
 	});
 }
 
-/**
- * Evaluates expression comparing days in week expr="adapi-weekday()=1" or expr="adapi-gmweekday()=1"
- * @param compareValue week days 0 (Sunday) to 6 (Saturday)
- * @param comparator
- * @param isUtc -  if date is in UTC or not
- */
 type CompareWeekDayExprOptions = {
 	compareValue: string;
 	comparator: ComparatorChar;
 	isUtc: boolean;
 };
 
+/**
+ * Evaluates expression comparing days in week expr="adapi-weekday()=1" or expr="adapi-gmweekday()=1"
+ * @param compareValue week days 0 (Sunday) to 6 (Saturday)
+ * @param comparator
+ * @param isUtc -  if date is in UTC or not
+ */
 function compareWeekDayExpr({ compareValue, comparator, isUtc }: CompareWeekDayExprOptions): boolean {
 	return compareValues({
 		firstArgument: generateCurrentDate(isUtc).day(),
@@ -195,18 +195,18 @@ function compareWeekDayExpr({ compareValue, comparator, isUtc }: CompareWeekDayE
 	});
 }
 
-/**
- * Evaluates expression comparing two dates expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
- * @param inputValue - date specified 2010-01-01T00:00:00
- * @param comparable
- * @param isUtc - if date is in UTC or not
- */
 type CompareSimpleDateAndTimeExprOptions = {
 	inputValue: string;
 	comparable: ComparableExpr;
 	isUtc: boolean;
 };
 
+/**
+ * Evaluates expression comparing two dates expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
+ * @param inputValue - date specified 2010-01-01T00:00:00
+ * @param comparable
+ * @param isUtc - if date is in UTC or not
+ */
 function compareSimpleDateAndTimeExpr({ inputValue, comparable, isUtc }: CompareSimpleDateAndTimeExprOptions): boolean {
 	const formattedDate = generateCurrentDate(isUtc).format(ConditionalExprFormat.dateAndTimeFormat);
 	const formattedInputValue = isIsoDate(inputValue)
@@ -216,18 +216,18 @@ function compareSimpleDateAndTimeExpr({ inputValue, comparable, isUtc }: Compare
 	return compareValues({ firstArgument: formattedDate, secondArgument: formattedInputValue, comparable });
 }
 
-/**
- * Evaluates expression comparing two times expr="adapi-compare(time(),'19:00:00')&lt;0"
- * @param inputValue - date specified 19:00:00
- * @param comparable
- * @param isUtc - if time is in UTC or not
- */
 type CompareSimpleTimeExprOptions = {
 	inputValue: string;
 	comparable: ComparableExpr;
 	isUtc: boolean;
 };
 
+/**
+ * Evaluates expression comparing two times expr="adapi-compare(time(),'19:00:00')&lt;0"
+ * @param inputValue - date specified 19:00:00
+ * @param comparable
+ * @param isUtc - if time is in UTC or not
+ */
 function compareSimpleTimeExpr({ inputValue, comparable, isUtc }: CompareSimpleTimeExprOptions): boolean {
 	const formattedTime = generateCurrentDate(isUtc).format(ConditionalExprFormat.timeFormat);
 	const formattedInputValue = isValidTime(inputValue)
@@ -237,16 +237,16 @@ function compareSimpleTimeExpr({ inputValue, comparable, isUtc }: CompareSimpleT
 	return compareValues({ firstArgument: formattedTime, secondArgument: formattedInputValue, comparable });
 }
 
-/**
- * Parses nested substring expression substring-after('2021-04-24T05:00:00', 'T') -> '05:00:00'
- * @param inputValue example: output of adapi-date() ~ 2021-04-24T05:00:00
- * @param delimiter example: T
- */
 type ParseSubstringAfterExprOptions = {
 	inputValue: string;
 	delimiter: string;
 };
 
+/**
+ * Parses nested substring expression substring-after('2021-04-24T05:00:00', 'T') -> '05:00:00'
+ * @param inputValue example: output of adapi-date() ~ 2021-04-24T05:00:00
+ * @param delimiter example: T
+ */
 function parseSubstringAfterExpr({ inputValue, delimiter }: ParseSubstringAfterExprOptions): string {
 	return inputValue.substr(inputValue.indexOf(delimiter) + 1);
 }
@@ -346,18 +346,18 @@ function parseString(str: string) {
 	return str;
 }
 
-/**
- * Evaluates unparsed expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
- * @param element - conditional expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
- * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
- * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
- */
 type ExecuteConditionalExprOptions = {
 	element: string;
 	playerName?: string;
 	playerId?: string;
 };
 
+/**
+ * Evaluates unparsed expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
+ * @param element - conditional expression expr="adapi-compare(adapi-date(),'2010-01-01T00:00:00')&lt;0"
+ * @param playerName - name of player specified in sos timings config ( sos.config.playerName )
+ * @param playerId - id of player specified in sos timings config ( sos.config.playerId )
+ */
 function executeConditionalExpr({ element, playerName = '', playerId = '' }: ExecuteConditionalExprOptions): boolean {
 	const parsed = parseConditionalExpr(element);
 	const comparable: ComparableExpr = { comparator: parsed.comparator, compareValue: parsed.compareValue };
@@ -460,18 +460,18 @@ function executeConditionalExpr({ element, playerName = '', playerId = '' }: Exe
 	throw new Error(`Conditional expression format is not supported: ${element}`);
 }
 
-/**
- * check if values and specified comparator match
- * @param firstArgument - string or number to compare
- * @param secondArgument - string or number to compare
- * @param comparable
- */
 type CompareValuesOptions = {
 	firstArgument: string | number;
 	secondArgument: string | number;
 	comparable: ComparableExpr;
 };
 
+/**
+ * check if values and specified comparator match
+ * @param firstArgument - string or number to compare
+ * @param secondArgument - string or number to compare
+ * @param comparable
+ */
 function compareValues({ firstArgument, secondArgument, comparable }: CompareValuesOptions) {
 	// TODO introduce comparison other than "0". It's already available in comparable.compareValue
 	if (

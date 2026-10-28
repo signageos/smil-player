@@ -225,13 +225,6 @@ export function createXmlTools(log: Log) {
 		});
 	}
 
-	/**
-	 * traverse json object represented as tree and extracts data for media downloads and trigger objects
-	 * @param playableMedia
-	 * @param downloads
-	 * @param triggerList
-	 * @param dynamicList
-	 */
 	type ExtractDataFromPlaylistOptions = {
 		playableMedia: SMILPlaylist;
 		downloads: DownloadsList;
@@ -239,6 +232,13 @@ export function createXmlTools(log: Log) {
 		dynamicList: DynamicPlaylistList;
 	};
 
+	/**
+	 * traverse json object represented as tree and extracts data for media downloads and trigger objects
+	 * @param playableMedia
+	 * @param downloads
+	 * @param triggerList
+	 * @param dynamicList
+	 */
 	function extractDataFromPlaylist({
 		playableMedia,
 		downloads,

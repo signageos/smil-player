@@ -583,77 +583,77 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 			target: window,
 			type: 'sosEvent',
 			listener: async (event: CustomEvent) => {
-					if (!event.detail || isObject(event.detail)) {
-						this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
-						return;
+				if (!event.detail || isObject(event.detail)) {
+					this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
+					return;
+				}
+
+				const triggerId =
+					this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
+				// Widgets triggers do not have info specified in smil xml header, only in playlist
+				const triggerInfo = {
+					trigger: triggerId,
+				};
+
+				const triggerMedia = this.smilObject.triggers[triggerId];
+				this.log.debug('[trigger-widget] received widget event: trigger=%s', triggerId);
+
+				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
+
+				// Cross-trigger cancellation: check if another trigger's end matches this triggerId
+				const crossCancelKey = findTriggerToCancelByEndId({
+					triggers: this.smilObject.triggers,
+					triggersEndless: this.triggersEndless,
+					firingTriggerId: triggerId,
+				});
+				if (crossCancelKey) {
+					this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
+					const target = this.triggersEndless[crossCancelKey];
+					target.play = false;
+					target.cancelDeferred?.resolve();
+					if (target.regionInfo) {
+						await this.cancelPreviousMedia(target.regionInfo);
 					}
+				}
 
-					const triggerId =
-						this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.widgetPrefix}-${event.detail}`].trigger;
-					// Widgets triggers do not have info specified in smil xml header, only in playlist
-					const triggerInfo = {
-						trigger: triggerId,
-					};
+				// Cancel-only trigger with no content — nothing more to do
+				if (isNil(triggerMedia)) {
+					return;
+				}
 
-					const triggerMedia = this.smilObject.triggers[triggerId];
-					this.log.debug('[trigger-widget] received widget event: trigger=%s', triggerId);
-
-					set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
-
-					// Cross-trigger cancellation: check if another trigger's end matches this triggerId
-					const crossCancelKey = findTriggerToCancelByEndId({
-						triggers: this.smilObject.triggers,
-						triggersEndless: this.triggersEndless,
-						firingTriggerId: triggerId,
-					});
-					if (crossCancelKey) {
-						this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
-						const target = this.triggersEndless[crossCancelKey];
-						target.play = false;
-						target.cancelDeferred?.resolve();
-						if (target.regionInfo) {
-							await this.cancelPreviousMedia(target.regionInfo);
-						}
-					}
-
-					// Cancel-only trigger with no content — nothing more to do
-					if (isNil(triggerMedia)) {
-						return;
-					}
-
-					// Already playing — handle end-condition toggle or skip
-					if (this.triggersEndless[triggerId]?.play) {
-						if (triggerMedia.seq?.end === triggerId) {
+				// Already playing — handle end-condition toggle or skip
+				if (this.triggersEndless[triggerId]?.play) {
+					if (triggerMedia.seq?.end === triggerId) {
+						this.log.debug(
+							'[trigger-widget] cancelling via end-condition toggle: trigger=%s, region=%s',
+							triggerId,
+							this.triggersEndless[triggerId]?.regionInfo?.regionName,
+						);
+						const currentTrigger = this.triggersEndless[triggerId];
+						currentTrigger.play = false;
+						currentTrigger.cancelDeferred?.resolve();
+						if (currentTrigger.regionInfo) {
 							this.log.debug(
-								'[trigger-widget] cancelling via end-condition toggle: trigger=%s, region=%s',
+								'[trigger-widget] stopping media in region: region=%s, trigger=%s',
+								currentTrigger.regionInfo.regionName,
 								triggerId,
-								this.triggersEndless[triggerId]?.regionInfo?.regionName,
 							);
-							const currentTrigger = this.triggersEndless[triggerId];
-							currentTrigger.play = false;
-							currentTrigger.cancelDeferred?.resolve();
-							if (currentTrigger.regionInfo) {
-								this.log.debug(
-									'[trigger-widget] stopping media in region: region=%s, trigger=%s',
-									currentTrigger.regionInfo.regionName,
-									triggerId,
-								);
-								await this.cancelPreviousMedia(currentTrigger.regionInfo);
-							}
-						} else {
-							this.log.debug('[trigger-widget] already playing, skipping: trigger=%s', triggerId);
+							await this.cancelPreviousMedia(currentTrigger.regionInfo);
 						}
-						return;
+					} else {
+						this.log.debug('[trigger-widget] already playing, skipping: trigger=%s', triggerId);
 					}
+					return;
+				}
 
-					const stringDuration = findDuration(triggerMedia);
-					if (!isNil(stringDuration)) {
-						this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
-						await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
-						return;
-					}
-					this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
-					await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
+				const stringDuration = findDuration(triggerMedia);
+				if (!isNil(stringDuration)) {
+					this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
+					await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
+					return;
+				}
+				this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
+				await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			},
 			options: false,
 		});

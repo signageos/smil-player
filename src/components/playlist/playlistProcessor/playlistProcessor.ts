@@ -99,7 +99,7 @@ export type ProcessPriorityTagOptions = {
 	conditionalExpr?: string;
 };
 
-type ProcessExclTagOptions = {
+export type ProcessExclTagOptions = {
 	value: PlaylistElement | PlaylistElement[];
 	version: number;
 	parent?: string;

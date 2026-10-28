@@ -29,6 +29,9 @@ import {
 	PlayElementOptions,
 	PrefetchAheadElementsOptions,
 	ProcessDynamicPlaylistOptions,
+	ProcessExclTagOptions,
+	ProcessPlaylistOptions,
+	ProcessPriorityTagOptions,
 	WaitTimeoutOrFileUpdateOptions,
 } from './playlistProcessor';
 
@@ -104,31 +107,6 @@ export interface IPlaylistEngine {
 	actions: ITraverserActions;
 	control: ITraverserControl;
 }
-
-type ProcessPlaylistOptions = {
-	playlist: PlaylistElement | PlaylistElement[];
-	version: number;
-	parent?: string;
-	endTime?: number;
-	priorityObject?: PriorityObject;
-	conditionalExpr?: string;
-};
-
-type ProcessPriorityTagOptions = {
-	value: PlaylistElement | PlaylistElement[];
-	version: number;
-	parent?: string;
-	endTime?: number;
-	conditionalExpr?: string;
-};
-
-type ProcessExclTagOptions = {
-	value: PlaylistElement | PlaylistElement[];
-	version: number;
-	parent?: string;
-	endTime?: number;
-	conditionalExpr?: string;
-};
 
 type CreateDefaultPromiseOptions = {
 	value: PlaylistElement;
@@ -366,7 +344,6 @@ export class PlaylistTraverser {
 
 				processedAnyContent = true;
 				allNeverPlay = false;
-				// promises = await this.processPriorityTag(value, version, parent ?? 'seq', endTime, conditionalExpr);
 			}
 
 			if (key === 'priorityClass') {

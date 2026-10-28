@@ -62,7 +62,11 @@ import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfP
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
-import { createFetchingStrategies, FetchingStrategies } from './fetchingStrategies/fetchingStrategies';
+import {
+	createFetchingStrategies,
+	FetchingStrategies,
+	XhrRequestOptions,
+} from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
 
 declare global {
@@ -3864,12 +3868,7 @@ export class FilesManager implements IFilesManager {
 		url: downloadUrl,
 		timeout,
 		authHeaders,
-	}: {
-		method: string;
-		url: string;
-		timeout: number;
-		authHeaders?: Record<string, string>;
-	}): Promise<Response> {
+	}: XhrRequestOptions): Promise<Response> {
 		return new Promise<Response>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.open(method, downloadUrl, true);

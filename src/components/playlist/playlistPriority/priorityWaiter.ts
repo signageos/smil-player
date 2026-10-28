@@ -22,11 +22,6 @@ export interface WaitCondition {
 export function createPriorityWaiter(log: Log) {
 	const { shouldContinueWaiting } = createPriorityDecisionEngine(log);
 
-	/**
-	 * Structured wait loop for priority ordering.
-	 * Uses waitForTurn for priority-ordered waking (only highest-priority waiter wakes first).
-	 * Uses waiter's endTime for precise expiry-based wakeup (no fixed timeout).
-	 */
 	type WaitForPriorityReleaseOptions = {
 		stateManager: PriorityStateManager;
 		currentPriorityRegion: CurrentlyPlayingRegion[];
@@ -39,6 +34,11 @@ export function createPriorityWaiter(log: Log) {
 		condition: WaitCondition;
 	};
 
+	/**
+	 * Structured wait loop for priority ordering.
+	 * Uses waitForTurn for priority-ordered waking (only highest-priority waiter wakes first).
+	 * Uses waiter's endTime for precise expiry-based wakeup (no fixed timeout).
+	 */
 	async function waitForPriorityRelease({
 		stateManager,
 		currentPriorityRegion,

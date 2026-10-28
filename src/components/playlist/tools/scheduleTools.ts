@@ -27,18 +27,18 @@ export function createScheduleTools(log: Log) {
 		return SMILScheduleEnum.defaultAwait;
 	}
 
-	/**
-	 * function to set defaultAwait in case of no active element in conditional expression schedule to avoid infinite loop
-	 * @param playlistElement - element of SMIL media playlists ( seq, or par tags )
-	 * @param playerName
-	 * @param playerId
-	 */
 	type SetDefaultAwaitConditionalOptions = {
 		playlistElement: PlaylistElement;
 		playerName: string;
 		playerId: string;
 	};
 
+	/**
+	 * function to set defaultAwait in case of no active element in conditional expression schedule to avoid infinite loop
+	 * @param playlistElement - element of SMIL media playlists ( seq, or par tags )
+	 * @param playerName
+	 * @param playerId
+	 */
 	function setDefaultAwaitConditional({
 		playlistElement,
 		playerName,
@@ -51,18 +51,18 @@ export function createScheduleTools(log: Log) {
 		return SMILScheduleEnum.defaultAwait;
 	}
 
-	/**
-	 * function to set defaultAwait in case of no active element in conditional or wallclock expression schedule to avoid infinite loop
-	 * @param elementsArray - array of elements of SMIL media playlists ( seq, or par tags )
-	 * @param playerName
-	 * @param playerId
-	 */
 	type SetDefaultAwaitOptions = {
 		elementsArray: PlaylistElement[];
 		playerName?: string;
 		playerId?: string;
 	};
 
+	/**
+	 * function to set defaultAwait in case of no active element in conditional or wallclock expression schedule to avoid infinite loop
+	 * @param elementsArray - array of elements of SMIL media playlists ( seq, or par tags )
+	 * @param playerName
+	 * @param playerId
+	 */
 	function setDefaultAwait({ elementsArray, playerName = '', playerId = '' }: SetDefaultAwaitOptions): number {
 		for (const loopElem of elementsArray) {
 			// Runtime unavailable-content flag — never a playable candidate. Must be checked

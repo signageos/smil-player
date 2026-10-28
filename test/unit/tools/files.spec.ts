@@ -345,7 +345,7 @@ describe('Files tools component', () => {
 
 		it('should still skip listed statuses regardless of skipOnError', () => {
 			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [404], skipOnError: true })).to.be.equal(true);
-			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [404] })).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [404], skipOnError: false })).to.be.equal(true);
 		});
 	});
 

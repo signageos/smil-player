@@ -7,17 +7,17 @@ import { SMILMedia } from '../../../models/mediaModels';
 export type PriorityRelation = 'higher' | 'peer' | 'lower';
 
 export function createPriorityDecisionEngine(log: Log) {
+	type DeterminePriorityRelationOptions = {
+		incomingLevel: number;
+		existingLevel: number;
+	};
+
 	/**
 	 * Determines the relationship between an incoming element and an existing (previously playing) element.
 	 * "higher" means the incoming element has higher priority (higher number = higher priority).
 	 * "lower" means the incoming element has lower priority.
 	 * "peer" means they have the same priority level.
 	 */
-	type DeterminePriorityRelationOptions = {
-		incomingLevel: number;
-		existingLevel: number;
-	};
-
 	function determinePriorityRelation({
 		incomingLevel,
 		existingLevel,
@@ -155,6 +155,13 @@ export function createPriorityDecisionEngine(log: Log) {
 		version: number;
 	};
 
+	/**
+	 * Finds the index of an existing entry in the tracking array that matches the given info.
+	 * Prefers exact match (media+parent+version) over parent-only match (parent+version).
+	 * Returns an object with:
+	 * - matchIndex: the index of the matching entry (-1 if not found)
+	 * - matchType: 'exact' if media+parent+version match, 'parent' if parent+version match, 'none' if new entry
+	 */
 	function findMatchingEntryIndex({
 		entries,
 		media,
@@ -222,13 +229,6 @@ type IsMediaMatchOptions = {
 	b: SMILMedia;
 };
 
-/**
- * Finds the index of an existing entry in the tracking array that matches the given info.
- * Prefers exact match (media+parent+version) over parent-only match (parent+version).
- * Returns an object with:
- * - matchIndex: the index of the matching entry (-1 if not found)
- * - matchType: 'exact' if media+parent+version match, 'parent' if parent+version match, 'none' if new entry
- */
 /**
  * Checks if two SMILMedia objects represent the same playlist entry.
  * Uses targeted field comparison instead of deep equality — the match is for
