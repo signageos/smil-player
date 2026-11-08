@@ -16,9 +16,9 @@ form).
 
 ### src/index.ts
 
-The main file of SMIL player, is responsible for getting input either from html form from public/index.html or from
-smilUrl which is passed using SoS timings. Also, it sets up internal storage, where SMIL player saves all files, and it
-composes together rest of functions exposed by playlist of by files, so they cooperate together correctly.
+Entry point. Resolves the SMIL URL (`?smilUrl=` query parameter or `window.__SMIL_URL__` for the emulator and
+Playwright, otherwise the `smilUrl` applet config via `sos.config`), builds the logger (`createLogger(sos)`) and starts
+`SmilPlayer`, which sets up internal storage and wires the files and playlist components together.
 
 ### src/components/files
 
@@ -63,7 +63,7 @@ found in SMIL folder, where are files in SMIL format and their json counterparts
 
 Tools folder contains helper functions.
 
-Mock folder contains SMIL files which are used in tests as mocks for testing correct behaviour of xmlParser component.
+SMIL mocks for the parser tests live in `test/mocks/xmlParserMock` (parsed playlist mocks in `test/mocks/playlistMock`).
 
 ### src/enums
 
@@ -82,14 +82,14 @@ contract; `@signageos/smil-logger/loggers` holds the selectable implementations.
 
 ### SMIL/
 
-Folder with example SMIL files and its parsed versions in json. Json version is used further in application to download
-media, process playlist etc...
+Three example SMIL files with their parsed JSON counterparts (`repeatCount`, `wallclock`, `zones`) — documentation of
+the SMIL → JSON conversion only; nothing in `src/` reads them.
 
 ### test/
 
-Folder contains simple unit tests to test supporting functions. Tests are written with Mocha framework using chai for
-asserts. Unit tests are using mocks in JSON or SMIL format which are stored is same folders as tested functionality.
-Complex tests for front-end part of application and media playing are missing for now.
+Mocha + chai unit tests for pure helpers and the parser; mocks (JSON/SMIL) live in `test/mocks/`. Playback, content
+update, priority, triggers and sync are covered end-to-end by the Playwright suite in `test-runner/` (fixtures served
+by `test-server/`), run against the local emulator — see the test commands in [CLAUDE.md](CLAUDE.md).
 
 ## How to develop
 
@@ -113,10 +113,9 @@ are listed in the Common Commands section of [CLAUDE.md](CLAUDE.md).
 
 - @signageos/front-applet
 - @signageos/front-display
-- @signageos/cli https://docs.signageos.io/hc/en-us/articles/4405111438354
 - esbuild https://esbuild.github.io/ + swc https://swc.rs/ (bundle, then ES5 lowering)
 - tslint
-- debug
+- debug (only inside `packages/logger`)
 - Istanbul test coverage, reports https://istanbul.js.org/
 - lodash
 
