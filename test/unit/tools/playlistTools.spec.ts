@@ -144,10 +144,10 @@ describe('Playlist tools component', () => {
 	});
 
 	describe('Playlist tools component generateParentId tests', () => {
-		it('returns `tagName-md5` format and is deterministic', () => {
+		it('returns `tagName-sha256` format and is deterministic', () => {
 			const value: any = { repeatCount: '1', video: { src: 'https://cdn/a.mp4', region: 'main' } };
 			const first = generateParentId('seq', value);
-			expect(first).to.match(/^seq-[0-9a-f]{32}$/);
+			expect(first).to.match(/^seq-[0-9a-f]{64}$/);
 			expect(generateParentId('seq', value)).to.be.equal(first);
 		});
 
@@ -159,7 +159,7 @@ describe('Playlist tools component', () => {
 				video: { src: 'https://cdn/spot.mp4', region: 'main', soundLevel: '0%' },
 				img2: { src: 'https://cdn/banner.jpg', dur: '5s', region: 'main', fit: 'fill' },
 			};
-			expect(generateParentId('seq', value)).to.be.equal('seq-29a2f914eabdd69a122410bf6a8d937f');
+			expect(generateParentId('seq', value)).to.be.equal('seq-483acdf3702423819823282f81091d26779dd9ab773f0de406825b2a365d7725');
 		});
 
 		describe('stability under runtime playback mutations', () => {

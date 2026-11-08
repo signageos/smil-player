@@ -15,7 +15,7 @@ TEST_SERVER_LOG="/tmp/smil-test-server.log"
 EMULATOR_PID_FILE="/tmp/smil-emulator.pid"
 TEST_SERVER_PID_FILE="/tmp/smil-test-server.pid"
 
-EMULATOR_TIMEOUT=120   # seconds — webpack compile can be slow
+EMULATOR_TIMEOUT=120   # seconds — build + emulator start (normally a few seconds)
 TEST_SERVER_TIMEOUT=10 # seconds
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

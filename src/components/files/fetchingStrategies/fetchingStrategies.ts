@@ -10,6 +10,7 @@ export type XhrRequestOptions = {
 	url: string;
 	timeout: number;
 	authHeaders?: Record<string, string>;
+	body?: string;
 };
 
 type XhrRequestFunction = (options: XhrRequestOptions) => Promise<Response>;

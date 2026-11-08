@@ -1,7 +1,5 @@
 import * as path from 'path';
-import * as querystring from 'querystring';
 import * as URLVar from 'url';
-import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { getFileName, getStorageFileName, hasMalformedStem } from './fileName';
@@ -78,8 +76,20 @@ export function getUrlWithoutQueryParams(url: string | number | null | undefined
 	return url.split('?')[0];
 }
 
+/** Same output as node's querystring.encode for the string / string[] values url.parse(…, true) yields. */
+function encodeQuery(query: { [key: string]: string | string[] | undefined }): string {
+	return Object.keys(query)
+		.map((key) =>
+			([] as string[])
+				.concat(query[key] ?? '')
+				.map((value) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+				.join('&'),
+		)
+		.join('&');
+}
+
 export function createDownloadPath(sourceUrl: string): string {
-	return `${corsAnywhere}${createVersionedUrl({ sourceUrl })}`;
+	return createVersionedUrl({ sourceUrl });
 }
 
 // assets/loading.mp4 => http://example-smil-url.com/assets/loading.mp4
@@ -123,7 +133,7 @@ export function createVersionedUrl({
 		return urlWithoutSearch;
 	}
 	parsedUrl.query.__smil_version = generateSmilUrlVersion({ playlistVersion, smilUrlVersion, wasUpdated });
-	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
+	return urlWithoutSearch + '?' + encodeQuery(parsedUrl.query);
 }
 
 type GenerateSmilUrlVersionOptions = {
@@ -174,7 +184,7 @@ export function copyQueryParameters({ fromUrl, toUrl }: CopyQueryParametersOptio
 	if (Object.keys(parsedToUrl.query).length === 0) {
 		return toUrlWithoutSearch;
 	}
-	return toUrlWithoutSearch + '?' + querystring.encode(parsedToUrl.query);
+	return toUrlWithoutSearch + '?' + encodeQuery(parsedToUrl.query);
 }
 
 type CreateLocalFilePathOptions = {
@@ -201,6 +211,10 @@ export function createLocalFilePath({ localFilePath, src, fallbackUrlForExt }: C
  */
 export function getCanonicalFileName(srcUrl: string, mediaInfoObject: MediaInfoObject): string {
 	const baseKey = getFileName(srcUrl);
+	// src-less media (ticker) — same guard as getFileName; path-browserify 1.x throws on a non-string.
+	if (!baseKey) {
+		return baseKey;
+	}
 	// Fast path: the URL pathname already carried its own extension, so baseKey
 	// IS the canonical key. Gate on the extension itself — NOT on the key being
 	// present in the map. A present-but-extensionless baseKey may be a stale

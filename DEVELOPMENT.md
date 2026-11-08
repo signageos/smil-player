@@ -75,7 +75,7 @@ Typescript types and definitions used in application
 
 ### packages/
 
-npm workspace packages, consumed from TypeScript source by the same webpack build (no per-package build or
+npm workspace packages, consumed from TypeScript source by the same esbuild bundle (no per-package build or
 publishing). A module lives here when it has its own dependency or its own consumer, and it may not import
 from `src/` (`npm run lint:package-boundary`). `packages/logger` (`@signageos/smil-logger`) is the logging
 contract; `@signageos/smil-logger/loggers` holds the selectable implementations.
@@ -99,7 +99,9 @@ Complex tests for front-end part of application and media playing are missing fo
 3. How to run this project:
     1. install node modules => **npm install**
     2. build application => **npm run build**, this will create dist folder with compiled source code
-    3. run application => **npm start**
+       (esbuild bundles `src/index.ts`, swc lowers the bundle to ES5 for Chrome 38 devices; see `tools/build.mjs`)
+    3. run application => **npm start** (rebuilds on `src/` changes and serves the applet in the local
+       signageOS emulator from `tools/emulator.mjs`)
     4. steps above should complete without any error, your application is running on **http://your.pc.ip.address:8090**
 
 For applet configuration options (`smilUrl`, `videoBackground`, sync settings, etc.), see the
@@ -112,7 +114,7 @@ are listed in the Common Commands section of [CLAUDE.md](CLAUDE.md).
 - @signageos/front-applet
 - @signageos/front-display
 - @signageos/cli https://docs.signageos.io/hc/en-us/articles/4405111438354
-- webpack https://webpack.js.org/
+- esbuild https://esbuild.github.io/ + swc https://swc.rs/ (bundle, then ES5 lowering)
 - tslint
 - debug
 - Istanbul test coverage, reports https://istanbul.js.org/

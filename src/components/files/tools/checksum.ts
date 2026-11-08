@@ -1,7 +1,5 @@
-import { createHash } from 'crypto';
+import { sha256 } from 'js-sha256';
 
 export function checksumString(message: string, length: number = 50) {
-	const hash = createHash('sha256');
-	hash.update(message);
-	return hash.digest('hex').substring(0, length);
+	return sha256(message).substring(0, length);
 }

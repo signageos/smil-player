@@ -18,8 +18,8 @@ export const EMULATOR_BASE = process.env.SMIL_EMULATOR_BASE || 'http://localhost
  * these usually means a root-cause investigation, not a timeout bump.
  */
 export const Timeouts = {
-	/** Cold-load first-element visibility — covers webpack-dev-server
-	 *  compile + every-asset prefetch on the very first navigation. */
+	/** Cold-load first-element visibility — covers the emulator boot +
+	 *  every-asset prefetch on the very first navigation. */
 	firstElement: 90000,
 	/** Standard element-visibility wait — one playlist transition end-to-end. */
 	elementAwait: 13000,

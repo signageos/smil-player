@@ -19,10 +19,13 @@ import {
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
 import omit from 'lodash/omit';
+import objectSorter from 'node-object-hash/dist/objectSorter';
+import { sha256 } from 'js-sha256';
 
-const hasher = require('node-object-hash');
+// node-object-hash's own hash() needs node crypto; keep its sorter, digest with a browser-safe sha256.
+const sortObject = objectSorter({});
 
-export const hashSortCoerce = hasher({ alg: 'md5' });
+export const hashSortCoerce = { hash: (value: unknown) => sha256(sortObject(value)) };
 
 type GenerateElementIdOptions = {
 	filepath: string;

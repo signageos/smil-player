@@ -36,6 +36,7 @@ import {
 import { createOfflineReportTools, OfflineReportTools } from './tools/offlineReports';
 import {
 	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
+	CUSTOM_ENDPOINT_REQUEST_TIMEOUT,
 	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 	DEFAULT_LAST_MODIFIED,
 	FileStructure,
@@ -400,11 +401,12 @@ export class FilesManager implements IFilesManager {
 				'[files] sending custom report: endpoint=%s',
 				this.smilLogging.endpoint!,
 			);
-			const response = await fetch(this.smilLogging.endpoint!, {
+			// XHR, not fetch: Chrome 38 devices have no native fetch and the player ships no polyfill.
+			const response = await this.makeXhrRequest({
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				url: this.smilLogging.endpoint!,
+				timeout: CUSTOM_ENDPOINT_REQUEST_TIMEOUT,
+				authHeaders: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload),
 			});
 
@@ -3868,6 +3870,7 @@ export class FilesManager implements IFilesManager {
 		url: downloadUrl,
 		timeout,
 		authHeaders,
+		body,
 	}: XhrRequestOptions): Promise<Response> {
 		return new Promise<Response>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
@@ -3882,6 +3885,7 @@ export class FilesManager implements IFilesManager {
 			xhr.onload = () => {
 				const response = {
 					status: xhr.status,
+					ok: xhr.status >= 200 && xhr.status < 300,
 					headers: {
 						get: (name: string) => xhr.getResponseHeader(name),
 						forEach: (callback: (value: string, key: string) => void) => {
@@ -3904,7 +3908,7 @@ export class FilesManager implements IFilesManager {
 			xhr.ontimeout = () => {
 				reject(new Error('Request timeout'));
 			};
-			xhr.send();
+			xhr.send(body);
 		});
 	}
 
