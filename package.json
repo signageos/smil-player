@@ -38,7 +38,7 @@
     "lint:tslint": "tslint --config node_modules/@signageos/codestyle/tslint.json \"{src,test,packages}/**/*.{ts,tsx}\" --exclude \"**/node_modules/**\"",
     "lint:tslint-fix": "npm run lint:tslint -- --fix",
     "lint:docs": "node ./tools/validate-docs.mjs",
-    "upload-applet": "sos applet upload",
+    "upload-applet": "sos --profile=default applet upload",
     "clean": "del-cli --force dist/*",
     "clean-build": "npm run build && npm run escheck && npm run check:chrome38",
     "build": "npm run clean && npm run typecheck && node tools/build.mjs",
