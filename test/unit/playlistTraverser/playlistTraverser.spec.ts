@@ -166,6 +166,8 @@ describe('PlaylistTraverser', () => {
 			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
+			// must yield, otherwise an indefinite parent loop spins and starves the event loop
+			expect(engine.control.sleep.calls.length).to.equal(1);
 		});
 
 		it('should retry when playElement returns RETRY', async () => {

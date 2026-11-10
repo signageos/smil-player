@@ -292,8 +292,6 @@ export class SmilPlayer implements ISmilPlayer {
 					await sleep(1000);
 				}
 
-				this.processor.setSmilObject(smilObject);
-
 				// sos.config.reportUrl overrides the report endpoint but keeps the logging types
 				// requested by the smil meta (e.g. type="manual,standard").
 				// Must run BEFORE sendSmiFileReport so the first playlist-playback report
@@ -326,6 +324,8 @@ export class SmilPlayer implements ISmilPlayer {
 				// seamlessly updated playlist dont start with intro
 				if (smilObject.intro.length > 0 && playIntro && Object.keys(smilObject.dynamic).length === 0) {
 					const introPromises: Promise<void>[] = [];
+					// the intro helpers read the intro media off the processor's smilObject
+					this.processor.setSmilObject(smilObject);
 					// download intro file before anything else
 					const introMedia = await this.processor.downloadIntro();
 
@@ -348,6 +348,10 @@ export class SmilPlayer implements ISmilPlayer {
 					await this.files.prepareDownloadMediaSetup(smilObject);
 					this.log.debug('[smil] media download complete');
 					await this.dataPrepare.manageFilesAndInfo(smilObject, smilUrl);
+					// Publish the new SMIL to the processor only once it is fully prepared: on a content
+					// update the previous version's loop is still running and reads the processor's
+					// smilObject on every pass.
+					this.processor.setSmilObject(smilObject);
 				}
 
 				// smil processing ok, end loop

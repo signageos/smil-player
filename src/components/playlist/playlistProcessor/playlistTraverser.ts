@@ -213,6 +213,9 @@ export class PlaylistTraverser {
 			if (XmlTags.extractedElements.concat(XmlTags.textElements).includes(removeDigits(key))) {
 				if (isNil((value as SMILMedia).regionInfo)) {
 					this.log.warn('[traverser] skipping element with no regionInfo: key=%s', key);
+					// Must yield: inside a repeatCount="indefinite" parent a pass that never awaits
+					// spins the endless loop synchronously and starves the event loop for good.
+					await this.control.sleep(SMILScheduleEnum.defaultAwait);
 					continue;
 				}
 
