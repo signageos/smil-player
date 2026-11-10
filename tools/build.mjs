@@ -5,7 +5,7 @@
 //   node tools/build.mjs --watch    rebuild on src changes
 //   node tools/build.mjs --serve    after the build, serve dist/ in the local emulator (tools/emulator.mjs, :8090)
 //   NODE_ENV=production             minify, no source maps
-import { build, context } from 'esbuild';
+import { build, context, transform as esbuildTransform } from 'esbuild';
 import { transform } from '@swc/core';
 import fs from 'fs';
 import path from 'path';
@@ -62,12 +62,16 @@ async function emit(result) {
 		filename: 'index.js',
 		isModule: false,
 		env: { targets: { chrome: '38' } },
-		minify: prod,
-		jsc: prod ? { minify: { compress: true, mangle: true } } : undefined,
 		sourceMaps: !prod,
 		inputSourceMap: prod ? undefined : files['index.js.map'].text,
 	});
 	let code = out.code;
+	if (prod) {
+		// Minify with esbuild, not swc: swc's minifier unquotes object keys like {"℘": …} into identifiers that
+		// Chrome 38's V8 (older Unicode tables) rejects with "Unexpected token ILLEGAL" at parse time, so nothing
+		// runs. esbuild's default ascii charset keeps such keys quoted (check:chrome38 guards this).
+		code = (await esbuildTransform(code, { minify: true, target: 'es5' })).code;
+	}
 	if (out.map) {
 		fs.writeFileSync(path.join(dist, 'index.js.map'), out.map);
 		code += '\n//# sourceMappingURL=index.js.map';
