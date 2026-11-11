@@ -129,6 +129,8 @@ export function getSmilUrls(port: number = 3000) {
 		reportEventsSkipped: `${base}/reporting/reportEventsSkipped.smil`,
 		reportEventsDeleted: `${base}/reporting/reportEventsDeleted.smil`,
 		reportEventsDeletedAfter: `${base}/reporting/reportEventsDeletedAfter.smil`,
+		// Served via /unused-cleanup/ (test-controlled switch to the playlist that drops a video).
+		unusedFilesCleanup: `${base}/unused-cleanup/playlist.smil`,
 		fallbackToPreviousPlaylist: `${base}/fallback-smil/fallbackToPrevious.smil`,
 		playModeOneSync: `${base}/syncFiles/playModeOneSync.smil`,
 		linearPlaylistAckParity: `${base}/syncFiles/linearPlaylistAckParity.smil`,

@@ -106,6 +106,7 @@ export function createMockFiles(): any {
 		sendMediaReport: stub().resolves(undefined),
 		sendOptInEventReport: stub().resolves(undefined),
 		currentFilesSetup: stub().resolves(undefined),
+		runPendingUnusedFilesCleanup: stub(),
 	};
 }
 

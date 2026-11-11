@@ -1,0 +1,24 @@
+<smil>
+    <head>
+        <!-- Phase 2 of test-runner/contentUpdate/unusedFilesCleanup.test.ts: drops dropped.mp4,
+             adds added.mp4. The begin/end placeholders below are filled by the test server with a window
+             opening a few seconds ahead, so this playlist is downloaded and prepared while the previous one is
+             still the one on screen. -->
+        <meta http-equiv="Refresh" content="5" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-playback,media-deleted"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <par begin="CLEANUP_V2_BEGIN" end="CLEANUP_V2_END">
+                <seq repeatCount="indefinite">
+                    <video src="http://localhost:3000/unused-cleanup/slot/added.mp4" region="main" soundLevel="0%" dur="5s"/>
+                    <video src="http://localhost:3000/unused-cleanup/slot/kept.mp4" region="main" soundLevel="0%"/>
+                </seq>
+            </par>
+        </par>
+    </body>
+</smil>

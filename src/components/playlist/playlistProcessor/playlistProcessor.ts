@@ -407,13 +407,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		});
 		downloadPromises = downloadPromises.concat(result.promises);
 
-		// Get the mediaInfoObject for this file
-		const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([
-			this.smilObject.intro[0][introMedia],
-		] as MergedDownloadList[]);
-
-		// Update the mediaInfoObject after download completes
-		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+		// Record the download in mediaInfo
+		await this.files.updateMediaInfoAfterDownloads(
+			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
+			result.filesToUpdate,
+		);
 
 		await Promise.all(downloadPromises);
 		this.log.debug('[processor] intro media downloaded: src=%s', this.smilObject.intro[0]?.src);
@@ -661,6 +659,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			// Stop all currently playing content
 			await this.stopAllContent();
+			// the retired version no longer plays: files the new SMIL dropped can go now
+			this.files.runPendingUnusedFilesCleanup();
 
 			// Clear old promises for ALL regions since we just cancelled everything
 			this.log.debug('[processor] clearing old promises for all regions after version update');
@@ -2417,6 +2417,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.setCheckFilesLoop(true);
 			this.foundNewPlaylist = false;
 			await this.stopAllContent();
+			this.files.runPendingUnusedFilesCleanup();
 			return;
 		}
 

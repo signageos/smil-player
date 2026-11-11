@@ -1,0 +1,21 @@
+<smil>
+    <head>
+        <!-- Phase 1 of test-runner/contentUpdate/unusedFilesCleanup.test.ts, served through
+             /unused-cleanup/playlist.smil. 5s refresh so the update to
+             unusedFilesCleanupAfter.smil (which drops the second video) is picked up quickly. -->
+        <meta http-equiv="Refresh" content="5" updateMechanism="location"/>
+        <meta log="true" type="manual" endpoint="http://localhost:3000/report" events="media-playback,media-deleted"/>
+        <layout>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq repeatCount="indefinite">
+                <video src="http://localhost:3000/unused-cleanup/slot/kept.mp4" region="main" soundLevel="0%"/>
+                <video src="http://localhost:3000/unused-cleanup/slot/dropped.mp4" region="main" soundLevel="0%"/>
+            </seq>
+        </par>
+    </body>
+</smil>
