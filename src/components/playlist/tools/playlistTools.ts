@@ -1,7 +1,7 @@
 /* tslint:disable: missing whitespace */
 import get = require('lodash/get');
 import isNil = require('lodash/isNil');
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { CurrentlyPlayingRegion, PlaylistElement, RandomPlaylist } from '../../../models/playlistModels';
 import { RegionAttributes, RegionsObject } from '../../../models/xmlJsonModels';
 import { XmlTags } from '../../../enums/xmlEnums';
@@ -70,18 +70,20 @@ export function createPlaylistTools(log: Log) {
 		});
 	}
 
-	function processRandomPlayMode(
-		playlist: { [key in string]: string },
-		randomPlaylistInfo: RandomPlaylist,
-		parent: string,
-	) {
+	type ProcessRandomPlayModeOptions = {
+		playlist: { [key in string]: string };
+		randomPlaylistInfo: RandomPlaylist;
+		parent: string;
+	};
+
+	function processRandomPlayMode({ playlist, randomPlaylistInfo, parent }: ProcessRandomPlayModeOptions) {
 		switch (playlist.playMode.toLowerCase()) {
 			case 'random':
 				return shuffleObject(playlist);
 			case 'random_one':
 				return pickRandomOne(playlist);
 			case 'one':
-				return getNextElementToPlay(playlist, randomPlaylistInfo, parent);
+				return getNextElementToPlay({ playlist, randomPlaylistInfo, parent });
 			default:
 				log.debug('[general] no valid playMode, returning original: playMode=%s', playlist.playmode);
 				return playlist;

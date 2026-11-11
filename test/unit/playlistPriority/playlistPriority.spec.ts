@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { PlaylistPriority } from '../../../src/components/playlist/playlistPriority/playlistPriority';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -64,7 +64,16 @@ describe('PlaylistPriority', () => {
 			})];
 			stateManager.setPlaying('main', 0);
 
-			await priority.handlePriorityWhenDone(media, 'main', 0, 3, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 3,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.timesPlayed).to.equal(1);
 		});
 
@@ -77,7 +86,16 @@ describe('PlaylistPriority', () => {
 			})];
 			stateManager.setPlaying('main', 0);
 
-			await priority.handlePriorityWhenDone(media, 'main', 0, 3, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 3,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.timesPlayed).to.equal(0);
 		});
 
@@ -91,7 +109,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 
 			// endTime=0 (indefinite), isLast=false, same version, not cancelled
-			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(true);
 		});
 
@@ -105,7 +132,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 
 			// endTime=3 (repeat count), timesPlayed will be 3 after increment, isLast=true
-			await priority.handlePriorityWhenDone(media, 'main', 0, 3, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 3,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(state.main[0].player.timesPlayed).to.equal(0); // reset by markFinished
 		});
@@ -120,7 +156,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 			cancelFunction[0] = true; // simulate SMIL file update
 
-			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 		});
 
@@ -134,7 +179,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 
 			// version=1 < currentVersion=2 → expired
-			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 2, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 2,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 		});
 
@@ -162,7 +216,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 1);
 			cancelFunction[0] = true; // force finish
 
-			await priority.handlePriorityWhenDone(media, 'main', 1, 0, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[1].player.playing).to.equal(false);
 			expect(state.main[0].player.contentPause).to.equal(0); // unpaused
 		});
@@ -181,7 +244,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 			cancelFunction[0] = true; // force finish
 
-			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(cancelCalled).to.equal(true);
 		});
 
@@ -199,7 +271,16 @@ describe('PlaylistPriority', () => {
 			stateManager.setPlaying('main', 0);
 			cancelFunction[0] = true; // force finish
 
-			await priority.handlePriorityWhenDone(media, 'main', 0, 0, false, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(cancelCalled).to.equal(false);
 		});
 	});
@@ -226,15 +307,24 @@ describe('PlaylistPriority', () => {
 				}),
 			];
 			stateManager.setPlaying('main', 0);
-			stateManager.ensurePromiseAwaiting('main', 1);
-			stateManager.updatePriorityTracking('main', 1, 1);
+			stateManager.ensurePromiseAwaiting({ regionName: 'main', version: 1 });
+			stateManager.updatePriorityTracking({ regionName: 'main', version: 1, priority: 1 });
 			return media;
 		}
 
 		it('keeps the slot and the level claim when the next pass already re-registered it', async () => {
 			const media = seedCampaign(true);
 			// endTime=1 (repeatCount 1) + isLast → this pass is "finished"
-			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(true);
 			expect(state.main[0].player.timesPlayed).to.equal(0);
 			expect(state.main[0].player.successorRegistered).to.equal(false);
@@ -243,14 +333,32 @@ describe('PlaylistPriority', () => {
 
 		it('releases the slot and the level claim when no successor registered (last pass)', async () => {
 			const media = seedCampaign(false);
-			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
 		});
 
 		it('releases despite a successor when the version expired (SMIL update path)', async () => {
 			const media = seedCampaign(true);
-			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 2, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 2,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
 		});
@@ -272,7 +380,16 @@ describe('PlaylistPriority', () => {
 					},
 				}),
 			);
-			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[1].player.contentPause).to.equal(PAUSE_CONTENT_VALUE);
 			expect(state.main[0].controlledPlaylists).to.deep.equal([1]);
 		});
@@ -294,7 +411,16 @@ describe('PlaylistPriority', () => {
 					},
 				}),
 			);
-			await priority.handlePriorityWhenDone(media, 'main', 0, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 			expect(state.main[0].player.playing).to.equal(false);
 			expect(promiseAwaiting.main.highestProcessingPriority).to.equal(-1);
 			expect(state.main[1].player.contentPause).to.equal(0);
@@ -349,7 +475,16 @@ describe('PlaylistPriority', () => {
 		it('holds the unpause while the controller class window is still open', async () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(Date.now() + 60_000);
 
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 
 			// pass itself is finished (sibling handover unaffected)
 			expect(state.main[controllerIndex].player.playing).to.equal(false);
@@ -362,7 +497,16 @@ describe('PlaylistPriority', () => {
 		it('unpauses when the controller class window has closed', async () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(Date.now() - 1_000);
 
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(0);
 			expect(state.main[controllerIndex].controlledPlaylists).to.deep.equal([]);
@@ -371,7 +515,16 @@ describe('PlaylistPriority', () => {
 		it('releases EVERY paused victim accumulated during the window, not just the last', async () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(Date.now() - 1_000, 2);
 
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(0);
 			expect(state.main[1].player.contentPause).to.equal(0);
@@ -381,7 +534,16 @@ describe('PlaylistPriority', () => {
 		it('unpauses when no window was ever stamped', async () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(undefined);
 
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(0);
 		});
@@ -390,7 +552,16 @@ describe('PlaylistPriority', () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(Date.now() + 60_000);
 			cancelFunction[0] = true;
 
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 1, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 1,
+				triggers: mockTriggers,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(0);
 		});
@@ -399,7 +570,16 @@ describe('PlaylistPriority', () => {
 			const { media, controllerIndex } = seedPausedVictimsWithController(Date.now() + 60_000);
 
 			// version=1 < currentVersion=2
-			await priority.handlePriorityWhenDone(media, 'main', controllerIndex, 1, true, 1, 2, mockTriggers);
+			await priority.handlePriorityWhenDone({
+				value: media,
+				priorityRegionName: 'main',
+				currentIndex: controllerIndex,
+				endTime: 1,
+				isLast: true,
+				version: 1,
+				currentVersion: 2,
+				triggers: mockTriggers,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(0);
 		});

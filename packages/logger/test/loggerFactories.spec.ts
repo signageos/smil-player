@@ -1,7 +1,7 @@
 import * as chai from 'chai';
-import { ConsoleLogger, loggerFactories } from '../../../src/loggers';
-import { RemoteLogger } from '../../../src/loggers/remoteLogger';
-import { ISos } from '../../../src/models/sosModels';
+import { loggerFactories } from '../loggers';
+import { RemoteLogger } from '../loggers/remoteLogger';
+import { LoggerHost } from '../loggers';
 
 const expect = chai.expect;
 
@@ -12,11 +12,11 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).window = dom.window;
 }
 
-function fakeSos(config: Record<string, string | number | boolean>): ISos {
+function fakeSos(config: Record<string, string | number | boolean>): LoggerHost {
 	return {
 		config,
 		management: { getSerialNumber: () => Promise.resolve('SN-1') },
-	} as unknown as ISos;
+	} as unknown as LoggerHost;
 }
 
 describe('loggerFactories.remote', () => {
@@ -37,11 +37,8 @@ describe('loggerFactories.remote', () => {
 		created.push(logger as RemoteLogger);
 	});
 
-	it('falls back to the console logger when loggerUrl is missing', () => {
-		expect(loggerFactories.remote(fakeSos({}))).to.be.instanceOf(ConsoleLogger);
-	});
-
-	it('falls back to the console logger when loggerUrl is empty', () => {
-		expect(loggerFactories.remote(fakeSos({ loggerUrl: '' }))).to.be.instanceOf(ConsoleLogger);
+	it('returns undefined when loggerUrl is missing or empty so createLogger substitutes console once', () => {
+		expect(loggerFactories.remote(fakeSos({}))).to.equal(undefined);
+		expect(loggerFactories.remote(fakeSos({ loggerUrl: '' }))).to.equal(undefined);
 	});
 });

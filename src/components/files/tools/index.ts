@@ -1,7 +1,5 @@
 import * as path from 'path';
-import * as querystring from 'querystring';
 import * as URLVar from 'url';
-import { corsAnywhere } from '../../../../config/parameters';
 import { MediaInfoObject, MergedDownloadList } from '../../../models/filesModels';
 import { CustomEndpointReport, ItemType } from '../../../models/reportingModels';
 import { getFileName, getStorageFileName, hasMalformedStem } from './fileName';
@@ -78,22 +76,47 @@ export function getUrlWithoutQueryParams(url: string | number | null | undefined
 	return url.split('?')[0];
 }
 
+/** Same output as node's querystring.encode for the string / string[] values url.parse(…, true) yields. */
+function encodeQuery(query: { [key: string]: string | string[] | undefined }): string {
+	return Object.keys(query)
+		.map((key) =>
+			([] as string[])
+				.concat(query[key] ?? '')
+				.map((value) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+				.join('&'),
+		)
+		.join('&');
+}
+
 export function createDownloadPath(sourceUrl: string): string {
-	return `${corsAnywhere}${createVersionedUrl(sourceUrl)}`;
+	return createVersionedUrl({ sourceUrl });
 }
 
 // assets/loading.mp4 => http://example-smil-url.com/assets/loading.mp4
-export function convertRelativePathToAbsolute(src: string, smilFileUrl: string): string {
+type ConvertRelativePathToAbsoluteOptions = {
+	src: string;
+	smilFileUrl: string;
+};
+
+export function convertRelativePathToAbsolute({ src, smilFileUrl }: ConvertRelativePathToAbsoluteOptions): string {
 	return isRelativePath(src) ? `${getPath(smilFileUrl)}/${src}` : src;
 }
 
-export function createVersionedUrl(
-	sourceUrl: string,
-	playlistVersion: number = 0,
-	smilUrlVersion: string | null = null,
-	isWidget: boolean = false,
-	wasUpdated: boolean = false,
-): string {
+type CreateVersionedUrlOptions = {
+	sourceUrl: string;
+	playlistVersion?: number;
+	smilUrlVersion?: string | null;
+	isWidget?: boolean;
+	wasUpdated?: boolean;
+};
+
+export function createVersionedUrl({
+	sourceUrl,
+	playlistVersion = 0,
+	smilUrlVersion = null,
+	isWidget = false,
+	wasUpdated = false,
+}: CreateVersionedUrlOptions): string {
 	const parsedUrl = URLVar.parse(sourceUrl, true);
 	const searchLength = parsedUrl.search?.length ?? 0;
 	const urlWithoutSearch = sourceUrl.substr(0, sourceUrl.length - searchLength);
@@ -109,15 +132,21 @@ export function createVersionedUrl(
 	if (sourceUrl.startsWith('file://')) {
 		return urlWithoutSearch;
 	}
-	parsedUrl.query.__smil_version = generateSmilUrlVersion(playlistVersion, smilUrlVersion, wasUpdated);
-	return urlWithoutSearch + '?' + querystring.encode(parsedUrl.query);
+	parsedUrl.query.__smil_version = generateSmilUrlVersion({ playlistVersion, smilUrlVersion, wasUpdated });
+	return urlWithoutSearch + '?' + encodeQuery(parsedUrl.query);
 }
 
-export function generateSmilUrlVersion(
-	playlistVersion: number = 0,
-	smilUrlVersion: string | null = null,
-	wasUpdated: boolean = false,
-): string {
+type GenerateSmilUrlVersionOptions = {
+	playlistVersion?: number;
+	smilUrlVersion?: string | null;
+	wasUpdated?: boolean;
+};
+
+export function generateSmilUrlVersion({
+	playlistVersion = 0,
+	smilUrlVersion = null,
+	wasUpdated = false,
+}: GenerateSmilUrlVersionOptions = {}): string {
 	if (
 		!isNil(smilUrlVersion) &&
 		playlistVersion === parseInt(smilUrlVersion.substring(smilUrlVersion.indexOf('_') + 1)) &&
@@ -140,7 +169,12 @@ export function getSmilVersionUrl(sourceUrl: string | null): string | null {
 	return null;
 }
 
-export function copyQueryParameters(fromUrl: string, toUrl: string) {
+type CopyQueryParametersOptions = {
+	fromUrl: string;
+	toUrl: string;
+};
+
+export function copyQueryParameters({ fromUrl, toUrl }: CopyQueryParametersOptions) {
 	const parsedFromUrl = URLVar.parse(fromUrl, true);
 	const parsedToUrl = URLVar.parse(toUrl, true);
 	const searchLength = parsedToUrl.search?.length ?? 0;
@@ -150,10 +184,16 @@ export function copyQueryParameters(fromUrl: string, toUrl: string) {
 	if (Object.keys(parsedToUrl.query).length === 0) {
 		return toUrlWithoutSearch;
 	}
-	return toUrlWithoutSearch + '?' + querystring.encode(parsedToUrl.query);
+	return toUrlWithoutSearch + '?' + encodeQuery(parsedToUrl.query);
 }
 
-export function createLocalFilePath(localFilePath: string, src: string, fallbackUrlForExt?: string): string {
+type CreateLocalFilePathOptions = {
+	localFilePath: string;
+	src: string;
+	fallbackUrlForExt?: string;
+};
+
+export function createLocalFilePath({ localFilePath, src, fallbackUrlForExt }: CreateLocalFilePathOptions): string {
 	return `${localFilePath}/${getFileName(src, fallbackUrlForExt)}`;
 }
 
@@ -171,6 +211,10 @@ export function createLocalFilePath(localFilePath: string, src: string, fallback
  */
 export function getCanonicalFileName(srcUrl: string, mediaInfoObject: MediaInfoObject): string {
 	const baseKey = getFileName(srcUrl);
+	// src-less media (ticker) — same guard as getFileName; path-browserify 1.x throws on a non-string.
+	if (!baseKey) {
+		return baseKey;
+	}
 	// Fast path: the URL pathname already carried its own extension, so baseKey
 	// IS the canonical key. Gate on the extension itself — NOT on the key being
 	// present in the map. A present-but-extensionless baseKey may be a stale
@@ -232,7 +276,13 @@ export function createJsonStructureMediaInfo(fileList: MergedDownloadList[]): Me
 	return fileLastModifiedObject;
 }
 
-export function updateJsonObject(jsonObject: MediaInfoObject, attr: string, value: number | string) {
+type UpdateJsonObjectOptions = {
+	jsonObject: MediaInfoObject;
+	attr: string;
+	value: number | string;
+};
+
+export function updateJsonObject({ jsonObject, attr, value }: UpdateJsonObjectOptions) {
 	jsonObject[attr] = value;
 }
 
@@ -241,7 +291,13 @@ export function mapFileType(filePath: string): ItemType {
 	return get(mapObject, fileType, 'unknown');
 }
 
-export function createSourceReportObject(localFilePath: string, fileSrc: string, type: string = '') {
+type CreateSourceReportObjectOptions = {
+	localFilePath: string;
+	fileSrc: string;
+	type?: string;
+};
+
+export function createSourceReportObject({ localFilePath, fileSrc, type = '' }: CreateSourceReportObjectOptions) {
 	return {
 		filePath: {
 			path: localFilePath,
@@ -259,17 +315,23 @@ export function shouldNotDownload(localFilePath: string, file: MergedDownloadLis
 	);
 }
 
+type ShouldGateSkipForStatusOptions = {
+	status: number;
+	skipPlaybackHttpStatusCodes: number[];
+	skipOnError?: boolean;
+};
+
 /**
  * playCheckUrl gate classifier: skip playback when the gate response status is explicitly listed
  * in skipPlaybackOnHttpStatus, or — with the element's playCheckSkipOnError flag — on any unlisted
  * 5xx ("server broken"). Everything else plays (fail-open). An empty list means the gate is inert
  * (the meta is required, no default).
  */
-export function shouldGateSkipForStatus(
-	status: number,
-	skipPlaybackHttpStatusCodes: number[],
-	skipOnError: boolean = false,
-): boolean {
+export function shouldGateSkipForStatus({
+	status,
+	skipPlaybackHttpStatusCodes,
+	skipOnError = false,
+}: ShouldGateSkipForStatusOptions): boolean {
 	if (skipPlaybackHttpStatusCodes.includes(status)) {
 		return true;
 	}
@@ -289,11 +351,17 @@ export function isLocalFileWidget(filePath: string): boolean {
 	return filePath.includes(WidgetFullPath);
 }
 
-export function createPoPMessagePayload(
-	value: MergedDownloadList,
-	errMessage: string | null = null,
-	event: 'download' | undefined = undefined,
-): IRecordItemOptions {
+type CreatePoPMessagePayloadOptions = {
+	value: MergedDownloadList;
+	errMessage?: string | null;
+	event?: 'download' | undefined;
+};
+
+export function createPoPMessagePayload({
+	value,
+	errMessage = null,
+	event = undefined,
+}: CreatePoPMessagePayloadOptions): IRecordItemOptions {
 	return {
 		...{
 			name: value.popName!,
@@ -324,17 +392,23 @@ export function getOfflineReportFileIndex(filePath: string): number {
 	return parseInt(fileName.split('.csv')[0].replace(/\D/g, ''), 10);
 }
 
+type ShouldSkipActiveReportFileOptions = {
+	trackedInfo: OfflineReportFileInfo | undefined;
+	reportCount: number;
+	reportFileLimit: number;
+};
+
 /**
  * The watcher holds back the currently active file only while it is purely
  * accumulating reportMode="batch" reports below the limit. Files containing
  * failure-saved realtime reports must upload on the next pass — the device
  * being back online is the whole point of saving them.
  */
-export function shouldSkipActiveReportFile(
-	trackedInfo: OfflineReportFileInfo | undefined,
-	reportCount: number,
-	reportFileLimit: number,
-): boolean {
+export function shouldSkipActiveReportFile({
+	trackedInfo,
+	reportCount,
+	reportFileLimit,
+}: ShouldSkipActiveReportFileOptions): boolean {
 	return !!trackedInfo && !trackedInfo.hasFailureReports && reportCount < reportFileLimit;
 }
 
@@ -353,11 +427,17 @@ export function isCustomEndpointEventAllowed(logger: SmilLogger, eventName: stri
 	return allowed.includes(eventName);
 }
 
-export function createCustomEndpointMessagePayload(
-	message: IRecordItemOptions,
-	locationUrl?: string,
-	statusCode?: number,
-): CustomEndpointReport {
+type CreateCustomEndpointMessagePayloadOptions = {
+	message: IRecordItemOptions;
+	locationUrl?: string;
+	statusCode?: number;
+};
+
+export function createCustomEndpointMessagePayload({
+	message,
+	locationUrl,
+	statusCode,
+}: CreateCustomEndpointMessagePayloadOptions): CustomEndpointReport {
 	return {
 		...message,
 		...(message.tags ? { tags: removeLastArrayItem(message.tags) } : {}),

@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { isNil } from 'lodash';
@@ -16,6 +16,26 @@ import {
 } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
 import { PriorityConflictResolver } from './priorityConflictResolver';
+
+export type PriorityBehaviourOptions = {
+	value: SMILMedia;
+	elementKey: string;
+	version: number;
+	parent?: string;
+	endTime?: number;
+	priorityObject?: PriorityObject;
+};
+
+export type HandlePriorityWhenDoneOptions = {
+	value: SMILMedia;
+	priorityRegionName: string;
+	currentIndex: number;
+	endTime: number;
+	isLast: boolean;
+	version: number;
+	currentVersion: number;
+	triggers: PlaylistTriggers;
+};
 
 export class PlaylistPriority implements IPlaylistPriority {
 	public readonly stateManager: PriorityStateManager;
@@ -60,27 +80,27 @@ export class PlaylistPriority implements IPlaylistPriority {
 		);
 	}
 
-	public priorityBehaviour = async (
-		value: SMILMedia,
-		elementKey: string,
-		version: number,
-		parent: string = '0',
-		endTime: number = 0,
-		priorityObject: PriorityObject = <PriorityObject>{},
-	): Promise<{
+	public priorityBehaviour = async ({
+		value,
+		elementKey,
+		version,
+		parent = '0',
+		endTime = 0,
+		priorityObject = <PriorityObject>{},
+	}: PriorityBehaviourOptions): Promise<{
 		currentIndex: number;
 		previousPlayingIndex: number;
 	}> => {
 		const priorityRegionName = value.regionInfo.regionName;
 
-		const { currentIndex, previousPlayingIndex } = this.stateManager.registerOrUpdate(
-			priorityRegionName,
+		const { currentIndex, previousPlayingIndex } = this.stateManager.registerOrUpdate({
+			regionName: priorityRegionName,
 			value,
 			parent,
 			endTime,
 			priorityObject,
 			version,
-		);
+		});
 		this.log.debug(
 			'[priority] registered element: region=%s, currentIndex=%d, previousIndex=%d',
 			priorityRegionName,
@@ -88,13 +108,17 @@ export class PlaylistPriority implements IPlaylistPriority {
 			previousPlayingIndex,
 		);
 
-		if (this.stateManager.hasConflict(priorityRegionName, currentIndex, previousPlayingIndex)) {
+		if (this.stateManager.hasConflict({
+			regionName: priorityRegionName,
+			currentIndex,
+			previousIndex: previousPlayingIndex,
+		})) {
 			this.log.debug(
 				'[priority] detected conflict: region=%s, src=%s',
 				priorityRegionName,
 				this.stateManager.getEntry(priorityRegionName, currentIndex).media.src,
 			);
-			await this.conflictResolver.handlePriorityBeforePlay(
+			await this.conflictResolver.handlePriorityBeforePlay({
 				elementKey,
 				priorityObject,
 				priorityRegionName,
@@ -102,7 +126,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 				previousPlayingIndex,
 				parent,
 				endTime,
-			);
+			});
 		}
 
 		this.stateManager.setPlaying(priorityRegionName, currentIndex);
@@ -110,16 +134,16 @@ export class PlaylistPriority implements IPlaylistPriority {
 		return { currentIndex, previousPlayingIndex };
 	};
 
-	public handlePriorityWhenDone = async (
-		value: SMILMedia,
-		priorityRegionName: string,
-		currentIndex: number,
-		endTime: number,
-		isLast: boolean,
-		version: number,
-		currentVersion: number,
-		triggers: PlaylistTriggers,
-	): Promise<void> => {
+	public handlePriorityWhenDone = async ({
+		value,
+		priorityRegionName,
+		currentIndex,
+		endTime,
+		isLast,
+		version,
+		currentVersion,
+		triggers,
+	}: HandlePriorityWhenDoneOptions): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		this.log.debug('[priority] checking completion: region=%s, src=%s', priorityRegionName, currentIndexPriority.media.src);
 
@@ -128,7 +152,10 @@ export class PlaylistPriority implements IPlaylistPriority {
 		}
 
 		const endTimeExpired = isEndTimeExpired(currentIndexPriority.player.endTime);
-		const repeatCountExpired = isRepeatCountExpired(currentIndexPriority.player.timesPlayed, endTime);
+		const repeatCountExpired = isRepeatCountExpired({
+			timesPlayed: currentIndexPriority.player.timesPlayed,
+			endTime,
+		});
 		const smilFileUpdated = this.getCancelFunction();
 		const expiredVersion = version < currentVersion;
 
@@ -158,15 +185,15 @@ export class PlaylistPriority implements IPlaylistPriority {
 				!endTimeExpired &&
 				this.stateManager.hasSuccessor(priorityRegionName, currentIndex);
 
-			const { pausedIndexes } = this.stateManager.markFinished(
-				priorityRegionName,
-				currentIndex,
-				holdForSuccessor,
-			);
+			const { pausedIndexes } = this.stateManager.markFinished({
+				regionName: priorityRegionName,
+				index: currentIndex,
+				keepPlaying: holdForSuccessor,
+			});
 
 			const priorityLevel = currentIndexPriority.priority?.priorityLevel;
 			if (priorityLevel !== undefined && !holdForSuccessor) {
-				this.stateManager.cleanupPriorityTracking(priorityRegionName, version, priorityLevel);
+				this.stateManager.cleanupPriorityTracking({ regionName: priorityRegionName, version, priorityLevel });
 				this.log.debug(
 					'[priority-done] cleaned up priority tracking for completed priority %s in region %s',
 					priorityLevel,
@@ -205,7 +232,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 					priorityRegionName,
 					currentIndexPriority.media.src,
 				);
-				await this._sideEffects.cancelDynamicPlaylist(triggers, value, value.dynamicValue!);
+				await this._sideEffects.cancelDynamicPlaylist({ triggers, value, dynamicValue: value.dynamicValue! });
 			}
 		} else {
 			this.log.debug(

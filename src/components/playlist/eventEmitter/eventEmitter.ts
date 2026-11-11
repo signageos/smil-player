@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { EventEmitter } from 'events';
 import { SMILVideo } from '../../../models/mediaModels';
 import { StreamEnums } from '../../../enums/mediaEnums';
@@ -19,13 +19,21 @@ export class SmilEventEmitter extends EventEmitter {
 	}
 }
 
-export async function waitForSuccessOrFailEvents(
-	eventEmitter: EventEmitter,
-	stream: SMILVideo,
-	successEvent: string,
-	failEvent: string,
-	log: Log,
-) {
+type WaitForSuccessOrFailEventsOptions = {
+	eventEmitter: EventEmitter;
+	stream: SMILVideo;
+	successEvent: string;
+	failEvent: string;
+	log: Log;
+};
+
+export async function waitForSuccessOrFailEvents({
+	eventEmitter,
+	stream,
+	successEvent,
+	failEvent,
+	log,
+}: WaitForSuccessOrFailEventsOptions) {
 	return new Promise<void>((resolve: () => void, reject: (error: Error) => void) => {
 		let successListener: () => void;
 		let failListener: () => void;

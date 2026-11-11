@@ -1,5 +1,5 @@
 import Debug, { Debugger } from 'debug';
-import { formatMessage, LogEntry, Logger } from '../logger';
+import { formatMessage, LogEntry, Logger } from '../index';
 
 /**
  * Default logger: reproduces the player's historical console output through the `debug` package

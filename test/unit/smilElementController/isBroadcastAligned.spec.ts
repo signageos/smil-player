@@ -9,7 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { SMILElementController } from '../../../src/components/playlist/playlistProcessor/SMILElementController';
 import { Synchronization, SyncMessage } from '../../../src/models/syncModels';
@@ -30,7 +30,8 @@ function makeSynchronization(overrides: Partial<Synchronization> = {}): Synchron
 
 function makeSyncGroupMock(storedByKey: Record<string, SyncMessage | undefined>) {
 	return {
-		getSyncCoordinationMessage: (type: string, regionName: string) => storedByKey[`${type}|${regionName}`],
+		getSyncCoordinationMessage: ({ type, regionName }: { type: string; regionName: string }) =>
+			storedByKey[`${type}|${regionName}`],
 	} as any;
 }
 
@@ -50,7 +51,7 @@ function callIsBroadcastAligned(
 	regionName: string,
 	syncGroup: any,
 ): boolean {
-	return (controller as any).isBroadcastAligned(commandType, regionName, syncGroup);
+	return (controller as any).isBroadcastAligned({ commandType, regionName, syncGroup });
 }
 
 describe('SMILElementController.isBroadcastAligned', () => {

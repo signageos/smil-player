@@ -4,14 +4,14 @@ sidebar_position: 6
 # Custom logger
 
 The SMIL Player writes all diagnostic output through one injected logger. The contract lives in
-`src/logger/`; implementations live in `src/loggers/`, where the default `ConsoleLogger` prints to the
+`packages/logger/`; implementations live in `packages/logger/loggers/`, where the default `ConsoleLogger` prints to the
 browser console when `debugEnabled` is on. A `remote` logger that POSTs batches to a URL ships as well; see below.
 To send logs elsewhere, implement one method and register it.
 
 ## The contract
 
 ```ts
-import { Logger, LogEntry, formatMessage } from '../logger'; // from src/loggers/
+import { Logger, LogEntry, formatMessage } from '../index'; // from packages/logger/loggers/
 
 interface LogEntry {
 	level: 'debug' | 'info' | 'warn' | 'error';
@@ -23,6 +23,7 @@ interface LogEntry {
 
 interface Logger {
 	write(entry: LogEntry): void;
+	stop?(): void;       // optional: release timers/listeners when a config change replaces this logger
 }
 ```
 
@@ -36,19 +37,20 @@ Rules for `write`:
 - If you buffer, flush on `pagehide`/`beforeunload`. Applet restarts are frequent and the last buffer
   usually holds the reason.
 - The entry carries no device identity. Read it from `sos` in your factory if you need it.
-- Do not import from `src/components/` or `src/models/` (the `ISos` type is the one exception). Browser APIs,
-  bundled packages and the `sos` object are all allowed. `npm run lint` enforces the import rule.
+- Do not import from `src/` by any path; type the host as `LoggerHost` from `@signageos/smil-logger/loggers`.
+  Browser APIs, bundled packages and the `sos` object are all allowed. `npm run lint` enforces the import rule.
 
 ## Swapping the logger
 
 Two ways, in order of preference:
 
-1. **Register it and select it by config.** Add a factory to `loggerFactories` in `src/loggers/index.ts`, then set the
+1. **Register it and select it by config.** Add a factory to `loggerFactories` in `packages/logger/loggers/index.ts`, then set the
    `logger` applet config key to its name. Devices switch without a rebuild; the name is re-read on every log line, so
-   a config change takes effect immediately. Unknown names fall back to `console`.
+   a config change takes effect immediately. Several names separated by commas (`console,html`) write to every
+   listed logger. Unknown names are ignored; when none is known it falls back to `console`.
 
    ```ts
-   // src/loggers/index.ts
+   // packages/logger/loggers/index.ts
    export const loggerFactories: Record<string, LoggerFactory> = {
    	console: (sos) => new ConsoleLogger(() => sos.config.debugEnabled === true || sos.config.debugEnabled === 'true'),
    	html: () => new HtmlLogger(document.body),
@@ -56,7 +58,8 @@ Two ways, in order of preference:
    ```
 
    Per-logger settings come from `sos.config` too (for example a `loggerUrl` key for a remote logger); the factory
-   receives `sos` for exactly this purpose.
+   receives `sos` for exactly this purpose. Return `undefined` when that config is incomplete: the line then goes to
+   `console` instead, and only once even if `console` is listed as well.
 
 2. **Hard-wire it** when you build a dedicated bundle and want no config dependency:
 
@@ -92,11 +95,12 @@ export class HtmlLogger implements Logger {
 
 ## Shipped: `remote`
 
-`RemoteLogger` (`src/loggers/remoteLogger.ts`) is selected with the applet config `logger=remote` and needs
+`RemoteLogger` (`packages/logger/loggers/remoteLogger.ts`) is selected with the applet config `logger=remote` and needs
 `loggerUrl`. It is for devices where nobody can open a developer console.
 
 - Sends every level. Nothing is sent while `debugEnabled` is off, so the stream is switched on and off from
-  config without a redeploy. The console prints nothing while `remote` is selected; set `logger=console` to get it back.
+  config without a redeploy. The console prints nothing while only `remote` is selected; set `logger=console,remote` to
+  get both.
 - Lines are rendered with `formatMessage` at write time, buffered (cap 1000, oldest dropped) and POSTed every
   5 seconds and on `pagehide`. A failed POST is dropped, there is no retry.
 - One request at a time: while a POST is pending, ticks keep buffering instead of opening more connections to a

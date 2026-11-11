@@ -1,5 +1,10 @@
 import { CustomEndpointReport } from '../../../models/reportingModels';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
+
+type ParseOfflineReportLinesOptions = {
+	fileContent: string;
+	filePath: string;
+};
 
 export function createOfflineReportTools(log: Log) {
 	/**
@@ -15,10 +20,7 @@ export function createOfflineReportTools(log: Log) {
 	 * Extracted from `FilesManager.watchCustomEndpointReports` so the logic
 	 * is unit-testable without mocking the `sos` SDK.
 	 */
-	function parseOfflineReportLines(
-		fileContent: string,
-		filePath: string,
-	): CustomEndpointReport[] {
+	function parseOfflineReportLines({ fileContent, filePath }: ParseOfflineReportLinesOptions): CustomEndpointReport[] {
 		return fileContent
 			.split('\n')
 			.map((jsonString): CustomEndpointReport | undefined => {

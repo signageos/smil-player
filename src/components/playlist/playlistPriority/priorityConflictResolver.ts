@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILVideo } from '../../../models/mediaModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { removeDigits } from '../tools/generalTools';
@@ -8,6 +8,60 @@ import { createPriorityWaiter, PriorityWaiter } from './priorityWaiter';
 import { IPrioritySideEffects } from './prioritySideEffects';
 import { createPriorityDecisionEngine, PriorityDecisionEngine } from './priorityDecisionEngine';
 import { PriorityStateManager } from './priorityStateManager';
+
+type HandlePriorityBeforePlayOptions = {
+	elementKey: string;
+	priorityObject: PriorityObject;
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+	parent: string;
+	endTime: number;
+	depth?: number;
+};
+
+type HandlePrecedingContentStopOptions = {
+	priorityObject: PriorityObject;
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+};
+
+type HandlePauseBehaviourOptions = {
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+};
+
+type HandleNeverBehaviourOptions = {
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+	priorityObject: PriorityObject;
+};
+
+type HandleDeferBehaviourOptions = {
+	elementKey: string;
+	priorityObject: PriorityObject;
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+	parent: string;
+	endTime: number;
+	depth?: number;
+};
+
+type HandlePriorityRulesOptions = {
+	elementKey: string;
+	priorityObject: PriorityObject;
+	priorityRegionName: string;
+	currentIndex: number;
+	previousPlayingIndex: number;
+	parent: string;
+	endTime: number;
+	priorityRule: PriorityRule;
+	depth: number;
+};
 
 export class PriorityConflictResolver {
 
@@ -27,16 +81,16 @@ export class PriorityConflictResolver {
 		this.waiter = createPriorityWaiter(log);
 	}
 
-	public handlePriorityBeforePlay = async (
-		elementKey: string,
-		priorityObject: PriorityObject,
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-		parent: string,
-		endTime: number,
-		depth: number = 0,
-	): Promise<void> => {
+	public handlePriorityBeforePlay = async ({
+		elementKey,
+		priorityObject,
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+		parent,
+		endTime,
+		depth = 0,
+	}: HandlePriorityBeforePlayOptions): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		const previousIndexPriority = this.stateManager.getEntry(priorityRegionName, previousPlayingIndex);
 
@@ -55,15 +109,18 @@ export class PriorityConflictResolver {
 
 		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (currentIndexPriority.parent === parent && currentIndexPriority.behaviour === PriorityBehaviour.stop) {
-			await this.handlePrecedingContentStop(
+			await this.handlePrecedingContentStop({
 				priorityObject,
 				priorityRegionName,
 				currentIndex,
 				previousPlayingIndex,
-			);
+			});
 		}
 
-		const relation = this.engine.determinePriorityRelation(priorityObject.priorityLevel, previousIndexPriority.priority.priorityLevel);
+		const relation = this.engine.determinePriorityRelation({
+			incomingLevel: priorityObject.priorityLevel,
+			existingLevel: previousIndexPriority.priority.priorityLevel,
+		});
 
 		if (relation === 'higher' && previousIndexPriority.player.playing) {
 			const rule = this.engine.selectApplicableRule('higher', previousIndexPriority.priority);
@@ -75,7 +132,7 @@ export class PriorityConflictResolver {
 				previousIndexPriority.media.src,
 				previousIndexPriority.priority.priorityLevel,
 			);
-			await this.handlePriorityRules(
+			await this.handlePriorityRules({
 				elementKey,
 				priorityObject,
 				priorityRegionName,
@@ -83,9 +140,9 @@ export class PriorityConflictResolver {
 				previousPlayingIndex,
 				parent,
 				endTime,
-				rule,
+				priorityRule: rule,
 				depth,
-			);
+			});
 		} else if (peerConflict) {
 			const rule = this.engine.selectApplicableRule('peer', previousIndexPriority.priority);
 			this.log.debug(
@@ -96,7 +153,7 @@ export class PriorityConflictResolver {
 				previousIndexPriority.media.src,
 				previousIndexPriority.priority.priorityLevel,
 			);
-			await this.handlePriorityRules(
+			await this.handlePriorityRules({
 				elementKey,
 				priorityObject,
 				priorityRegionName,
@@ -104,9 +161,9 @@ export class PriorityConflictResolver {
 				previousPlayingIndex,
 				parent,
 				endTime,
-				rule,
+				priorityRule: rule,
 				depth,
-			);
+			});
 		} else if (relation === 'lower' && previousIndexPriority.player.playing) {
 			const rule = this.engine.selectApplicableRule('lower', previousIndexPriority.priority);
 			this.log.debug(
@@ -117,7 +174,7 @@ export class PriorityConflictResolver {
 				previousIndexPriority.media.src,
 				previousIndexPriority.priority.priorityLevel,
 			);
-			await this.handlePriorityRules(
+			await this.handlePriorityRules({
 				elementKey,
 				priorityObject,
 				priorityRegionName,
@@ -125,20 +182,20 @@ export class PriorityConflictResolver {
 				previousPlayingIndex,
 				parent,
 				endTime,
-				rule,
+				priorityRule: rule,
 				depth,
-			);
+			});
 		}
 
 		this.log.debug('[priority] completed priority resolution');
 	};
 
-	public handlePrecedingContentStop = async (
-		priorityObject: PriorityObject,
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-	): Promise<void> => {
+	public handlePrecedingContentStop = async ({
+		priorityObject,
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+	}: HandlePrecedingContentStopOptions): Promise<void> => {
 		const currentPriorityRegion = this.stateManager.getRegion(priorityRegionName)!;
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		this.log.debug(
@@ -146,16 +203,16 @@ export class PriorityConflictResolver {
 			currentIndexPriority.media.src,
 		);
 
-		const result = await this.waiter.waitForPriorityRelease(
-			this.stateManager,
+		const result = await this.waiter.waitForPriorityRelease({
+			stateManager: this.stateManager,
 			currentPriorityRegion,
 			currentIndexPriority,
-			currentIndex,
-			previousPlayingIndex,
+			waiterIndex: currentIndex,
+			blockerIndex: previousPlayingIndex,
 			priorityRegionName,
 			priorityObject,
-			() => this.getCancelFunction(),
-			{
+			isCancelled: () => this.getCancelFunction(),
+			condition: {
 				shouldExit: (newIdx) => {
 					if (newIdx === -1) {
 						this.log.debug('[priority] stop released: no active higher-priority blocker');
@@ -174,16 +231,16 @@ export class PriorityConflictResolver {
 					return newIdx;
 				},
 			},
-		);
+		});
 
 		this.log.debug('[priority] stop lock released: result=%s, src=%s', result, currentIndexPriority.media.src);
 	};
 
-	public handlePauseBehaviour = (
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-	): void => {
+	public handlePauseBehaviour = ({
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+	}: HandlePauseBehaviourOptions): void => {
 		const previousIndexPriority = this.stateManager.getEntry(priorityRegionName, previousPlayingIndex);
 
 		if (previousIndexPriority.media.hasOwnProperty('transitionInfo')) {
@@ -191,7 +248,11 @@ export class PriorityConflictResolver {
 		}
 
 		this.log.debug('[priority] pausing playlist: src=%s, reason=higher/peer priority takeover', previousIndexPriority.media.src);
-		this.stateManager.setPaused(priorityRegionName, previousPlayingIndex, currentIndex);
+		this.stateManager.setPaused({
+			regionName: priorityRegionName,
+			index: previousPlayingIndex,
+			controllerIndex: currentIndex,
+		});
 	};
 
 	public handleStopBehaviour = (priorityRegionName: string, previousPlayingIndex: number): void => {
@@ -205,12 +266,12 @@ export class PriorityConflictResolver {
 		this.stateManager.setStopped(priorityRegionName, previousPlayingIndex);
 	};
 
-	public handleNeverBehaviour = async (
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-		priorityObject: PriorityObject,
-	) => {
+	public handleNeverBehaviour = async ({
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+		priorityObject,
+	}: HandleNeverBehaviourOptions) => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		this.log.debug(
 			'[priority] never behaviour: blocking element src=%s, waiting for blocker to finish',
@@ -221,16 +282,16 @@ export class PriorityConflictResolver {
 		// beginning — its begin is ignored and it is not added to the queue.
 		this.stateManager.setNeverBlocked(priorityRegionName, currentIndex);
 
-		await this.waiter.waitForPriorityRelease(
-			this.stateManager,
-			this.stateManager.getRegion(priorityRegionName)!,
+		await this.waiter.waitForPriorityRelease({
+			stateManager: this.stateManager,
+			currentPriorityRegion: this.stateManager.getRegion(priorityRegionName)!,
 			currentIndexPriority,
-			currentIndex,
-			previousPlayingIndex,
+			waiterIndex: currentIndex,
+			blockerIndex: previousPlayingIndex,
 			priorityRegionName,
 			priorityObject,
-			() => this.getCancelFunction(),
-			{
+			isCancelled: () => this.getCancelFunction(),
+			condition: {
 				shouldExit: (newIdx) => {
 					if (newIdx === -1) {
 						// Claim the slot atomically before any peer defer waiter
@@ -257,19 +318,19 @@ export class PriorityConflictResolver {
 					return null;
 				},
 			},
-		);
+		});
 	};
 
-	public handleDeferBehaviour = async (
-		elementKey: string,
-		priorityObject: PriorityObject,
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-		parent: string,
-		endTime: number,
-		depth: number = 0,
-	): Promise<void> => {
+	public handleDeferBehaviour = async ({
+		elementKey,
+		priorityObject,
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+		parent,
+		endTime,
+		depth = 0,
+	}: HandleDeferBehaviourOptions): Promise<void> => {
 		const currentPriorityRegion = this.stateManager.getRegion(priorityRegionName)!;
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		this.log.debug('[priority] defer behaviour: queuing src=%s until current content finishes', currentIndexPriority.media.src);
@@ -293,16 +354,16 @@ export class PriorityConflictResolver {
 			this.log.error('[priority] defer error: failed to prepare dynamic video: %O', err);
 		}
 
-		const result = await this.waiter.waitForPriorityRelease(
-			this.stateManager,
+		const result = await this.waiter.waitForPriorityRelease({
+			stateManager: this.stateManager,
 			currentPriorityRegion,
 			currentIndexPriority,
-			currentIndex,
-			previousPlayingIndex,
+			waiterIndex: currentIndex,
+			blockerIndex: previousPlayingIndex,
 			priorityRegionName,
 			priorityObject,
-			() => this.getCancelFunction(),
-			{
+			isCancelled: () => this.getCancelFunction(),
+			condition: {
 				shouldExit: (newIdx) => {
 					if (newIdx === -1) {
 						this.log.debug('[priority] defer released: no active higher-priority blocker');
@@ -321,7 +382,7 @@ export class PriorityConflictResolver {
 					return newIdx;
 				},
 			},
-		);
+		});
 
 		// After release, if a peer/lower priority is now playing, resolve conflicts
 		if (result === 'released') {
@@ -331,44 +392,49 @@ export class PriorityConflictResolver {
 					this.log.debug('[priority] max recursion depth reached: depth=%d, region=%s', depth, priorityRegionName);
 					return;
 				}
-				await this.handlePriorityBeforePlay(
+				await this.handlePriorityBeforePlay({
 					elementKey,
 					priorityObject,
 					priorityRegionName,
 					currentIndex,
-					newPlayingIndex,
+					previousPlayingIndex: newPlayingIndex,
 					parent,
 					endTime,
-					depth + 1,
-				);
+					depth: depth + 1,
+				});
 			}
 		}
 	};
 
-	private handlePriorityRules = async (
-		elementKey: string,
-		priorityObject: PriorityObject,
-		priorityRegionName: string,
-		currentIndex: number,
-		previousPlayingIndex: number,
-		parent: string,
-		endTime: number,
-		priorityRule: PriorityRule,
-		depth: number,
-	): Promise<void> => {
+	private handlePriorityRules = async ({
+		elementKey,
+		priorityObject,
+		priorityRegionName,
+		currentIndex,
+		previousPlayingIndex,
+		parent,
+		endTime,
+		priorityRule,
+		depth,
+	}: HandlePriorityRulesOptions): Promise<void> => {
 		this.log.debug('[priority] applying rule: %s, region=%s', priorityRule, priorityRegionName);
 		switch (priorityRule) {
 			case PriorityRule.never:
-				await this.handleNeverBehaviour(priorityRegionName, currentIndex, previousPlayingIndex, priorityObject);
+				await this.handleNeverBehaviour({
+					priorityRegionName,
+					currentIndex,
+					previousPlayingIndex,
+					priorityObject,
+				});
 				break;
 			case PriorityRule.stop:
 				this.handleStopBehaviour(priorityRegionName, previousPlayingIndex);
 				break;
 			case PriorityRule.pause:
-				this.handlePauseBehaviour(priorityRegionName, currentIndex, previousPlayingIndex);
+				this.handlePauseBehaviour({ priorityRegionName, currentIndex, previousPlayingIndex });
 				break;
 			case PriorityRule.defer:
-				await this.handleDeferBehaviour(
+				await this.handleDeferBehaviour({
 					elementKey,
 					priorityObject,
 					priorityRegionName,
@@ -377,7 +443,7 @@ export class PriorityConflictResolver {
 					parent,
 					endTime,
 					depth,
-				);
+				});
 				break;
 			default:
 				this.log.warn('[priority] unsupported priority rule: %s', priorityRule);

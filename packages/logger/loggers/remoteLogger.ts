@@ -1,4 +1,4 @@
-import { formatMessage, LogEntry, Logger } from '../logger';
+import { formatMessage, LogEntry, Logger } from '../index';
 
 export interface RemoteLoggerOptions {
 	/** Flush period in ms. 0 disables the timer (tests). Default 5000. */

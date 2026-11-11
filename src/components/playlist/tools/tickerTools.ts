@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILTicker } from '../../../models/mediaModels';
 import { XmlTags } from '../../../enums/xmlEnums';
 import { HtmlEnum } from '../../../enums/htmlEnums';
@@ -37,13 +37,23 @@ export function resolveSpeedPxPerSec(rawVelocity: string | undefined): number {
 	return Number.isInteger(velocity) ? velocity : DEFAULT_SPEED_PX_PER_SEC;
 }
 
+type ComputeTickerTextTopOptions = {
+	clientHeight: number;
+	fontSize: number;
+};
+
 /** Vertical centering of a text line of `fontSize` within a `clientHeight` wrapper. */
-export function computeTickerTextTop(clientHeight: number, fontSize: number): number {
+export function computeTickerTextTop({ clientHeight, fontSize }: ComputeTickerTextTopOptions): number {
 	return Math.round(clientHeight / 2 - fontSize / 2);
 }
 
+type IsTextBehindLeftEdgeOptions = {
+	left: number;
+	width: number;
+};
+
 /** A text child is behind the left edge (and must recycle) once its right edge crosses 0. */
-export function isTextBehindLeftEdge(left: number, width: number): boolean {
+export function isTextBehindLeftEdge({ left, width }: IsTextBehindLeftEdgeOptions): boolean {
 	return left + width < 0;
 }
 
@@ -63,7 +73,13 @@ function linkFontFamily(fontFamily: string) {
 }
 
 export function createTickerTools(log: Log) {
-	function createTickerElement(ticker: SMILTicker, regionInfo: RegionAttributes, key: string): string {
+	type CreateTickerElementOptions = {
+		ticker: SMILTicker;
+		regionInfo: RegionAttributes;
+		key: string;
+	};
+
+	function createTickerElement({ ticker, regionInfo, key }: CreateTickerElementOptions): string {
 		const elementId = `ticker-${ticker.regionInfo.regionName}-${key}`;
 		log.debug('[ticker] creating element: id=%s', elementId);
 		if (document.getElementById(elementId)) {
@@ -145,7 +161,7 @@ export function startTickerAnimation(wrapperElement: HTMLElement, ticker: SMILTi
 
 		textChildElement.setAttribute('id', `${ticker.id}_text${index}`);
 		textChildElement.style.position = 'absolute';
-		textChildElement.style.top = `${computeTickerTextTop(wrapperElement.clientHeight, fontSize)}px`;
+		textChildElement.style.top = `${computeTickerTextTop({ clientHeight: wrapperElement.clientHeight, fontSize })}px`;
 		textChildElement.style.left = `${left}px`;
 		textChildElement.style.transition = 'left 1s linear';
 		textChildElement.innerText = text;
@@ -163,7 +179,7 @@ export function startTickerAnimation(wrapperElement: HTMLElement, ticker: SMILTi
 		lastChildRightEdgeLeft -= speedPxPerSec;
 		textChildren = textChildren.map((textChild: TextChild) => {
 			let left = textChild.left;
-			const isBehindLeftEdge = isTextBehindLeftEdge(textChild.left, textChild.width);
+			const isBehindLeftEdge = isTextBehindLeftEdge({ left: textChild.left, width: textChild.width });
 
 			if (isBehindLeftEdge) {
 				left = Math.max(lastChildRightEdgeLeft, wrapperElement.clientWidth);

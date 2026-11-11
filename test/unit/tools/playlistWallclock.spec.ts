@@ -3,7 +3,7 @@ import moment from 'moment';
 import MockDate from 'mockdate';
 import { formatDate, formatWeekDate, computeWaitInterval } from '../../testTools/testTools';
 import { createWallclockTools } from '../../../src/components/playlist/tools/wallclockTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { SMILScheduleEnum } from '../../../src/enums/scheduleEnums';
 
 const expect = chai.expect;

@@ -28,7 +28,7 @@ describe('triggerTools', () => {
 				'trigger-A': { regionName: 'zone1', play: true },
 				'trigger-B': { regionName: 'zone2', play: true },
 			});
-			const result = findTriggerToCancel(triggers, 'zone1', 'trigger-B');
+			const result = findTriggerToCancel({ triggerObject: triggers, regionName: 'zone1', triggerValue: 'trigger-B' });
 			expect(result).to.equal('trigger-A');
 		});
 
@@ -36,7 +36,7 @@ describe('triggerTools', () => {
 			const triggers = makeTriggerEndless({
 				'trigger-A': { regionName: 'zone1', play: true },
 			});
-			const result = findTriggerToCancel(triggers, 'zone2', 'trigger-B');
+			const result = findTriggerToCancel({ triggerObject: triggers, regionName: 'zone2', triggerValue: 'trigger-B' });
 			expect(result).to.equal('');
 		});
 
@@ -44,7 +44,7 @@ describe('triggerTools', () => {
 			const triggers = makeTriggerEndless({
 				'trigger-A': { regionName: 'zone1', play: true },
 			});
-			const result = findTriggerToCancel(triggers, 'zone1', 'trigger-A');
+			const result = findTriggerToCancel({ triggerObject: triggers, regionName: 'zone1', triggerValue: 'trigger-A' });
 			expect(result).to.equal('');
 		});
 
@@ -52,7 +52,7 @@ describe('triggerTools', () => {
 			const triggers = makeTriggerEndless({
 				'trigger-A': { regionName: 'zone1', play: false },
 			});
-			const result = findTriggerToCancel(triggers, 'zone1', 'trigger-B');
+			const result = findTriggerToCancel({ triggerObject: triggers, regionName: 'zone1', triggerValue: 'trigger-B' });
 			expect(result).to.equal('');
 		});
 	});
@@ -65,7 +65,7 @@ describe('triggerTools', () => {
 			const endless = makeTriggerEndless({
 				'trigger1': { regionName: 'zone1', play: true },
 			});
-			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			const result = findTriggerToCancelByEndId({ triggers, triggersEndless: endless, firingTriggerId: 'trigger2' });
 			expect(result).to.equal('trigger1');
 		});
 
@@ -76,7 +76,7 @@ describe('triggerTools', () => {
 			const endless = makeTriggerEndless({
 				'trigger1': { regionName: 'zone1', play: true },
 			});
-			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			const result = findTriggerToCancelByEndId({ triggers, triggersEndless: endless, firingTriggerId: 'trigger2' });
 			expect(result).to.equal('');
 		});
 
@@ -87,14 +87,14 @@ describe('triggerTools', () => {
 			const endless = makeTriggerEndless({
 				'trigger1': { regionName: 'zone1', play: false },
 			});
-			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			const result = findTriggerToCancelByEndId({ triggers, triggersEndless: endless, firingTriggerId: 'trigger2' });
 			expect(result).to.equal('');
 		});
 
 		it('Should return empty string when triggers object is empty', () => {
 			const triggers = {} as { [key: string]: TriggerObject };
 			const endless = makeTriggerEndless({});
-			const result = findTriggerToCancelByEndId(triggers, endless, 'trigger2');
+			const result = findTriggerToCancelByEndId({ triggers, triggersEndless: endless, firingTriggerId: 'trigger2' });
 			expect(result).to.equal('');
 		});
 	});

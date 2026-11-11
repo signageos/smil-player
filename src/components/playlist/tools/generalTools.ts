@@ -19,12 +19,21 @@ import {
 import { SMILAudio, SMILImage, SMILVideo, SMILWidget, VideoParams } from '../../../models/mediaModels';
 import difference from 'lodash/difference';
 import omit from 'lodash/omit';
+import objectSorter from 'node-object-hash/dist/objectSorter';
+import { sha256 } from 'js-sha256';
 
-const hasher = require('node-object-hash');
+// node-object-hash's own hash() needs node crypto; keep its sorter, digest with a browser-safe sha256.
+const sortObject = objectSorter({});
 
-export const hashSortCoerce = hasher({ alg: 'md5' });
+export const hashSortCoerce = { hash: (value: unknown) => sha256(sortObject(value)) };
 
-export function generateElementId(filepath: string, regionName: string, key: string): string {
+type GenerateElementIdOptions = {
+	filepath: string;
+	regionName: string;
+	key: string;
+};
+
+export function generateElementId({ filepath, regionName, key }: GenerateElementIdOptions): string {
 	return `${getFileName(filepath)}-${regionName}-${key}`;
 }
 
@@ -219,7 +228,15 @@ export function projectForParentGeneration(value: unknown): unknown {
 	return value;
 }
 
-export function generateBackupImagePlaylist(imageUrl: string, repeatCount: string): BackupPlaylist {
+type GenerateBackupImagePlaylistOptions = {
+	imageUrl: string;
+	repeatCount: string;
+};
+
+export function generateBackupImagePlaylist({
+	imageUrl,
+	repeatCount,
+}: GenerateBackupImagePlaylistOptions): BackupPlaylist {
 	return {
 		seq: {
 			repeatCount: repeatCount,
@@ -285,11 +302,17 @@ export async function sleep(ms: number): Promise<void> {
 	clearTimeout(timeoutId);
 }
 
-export async function promiseWithTimeout<T>(
-	promise: Promise<T>,
-	timeoutMs: number,
-	errorMessage: string = 'Client-side timeout exceeded',
-): Promise<T> {
+type PromiseWithTimeoutOptions<T> = {
+	promise: Promise<T>;
+	timeoutMs: number;
+	errorMessage?: string;
+};
+
+export async function promiseWithTimeout<T>({
+	promise,
+	timeoutMs,
+	errorMessage = 'Client-side timeout exceeded',
+}: PromiseWithTimeoutOptions<T>): Promise<T> {
 	let timeoutId: ReturnType<typeof setTimeout>;
 	const timeoutPromise = new Promise<never>((_, reject) => {
 		timeoutId = setTimeout(
@@ -343,11 +366,13 @@ export function pickRandomOne(playlist: { [key in string]: unknown }) {
 	return omit(localPlaylist, diff);
 }
 
-export function getNextElementToPlay(
-	playlist: { [key in string]: unknown },
-	randomPlaylistInfo: RandomPlaylist,
-	parent: string,
-) {
+type GetNextElementToPlayOptions = {
+	playlist: { [key in string]: unknown };
+	randomPlaylistInfo: RandomPlaylist;
+	parent: string;
+};
+
+export function getNextElementToPlay({ playlist, randomPlaylistInfo, parent }: GetNextElementToPlayOptions) {
 	if (!randomPlaylistInfo[parent]) {
 		randomPlaylistInfo[parent] = {
 			previousIndex: 0,
@@ -420,6 +445,11 @@ export function findFirstMediaDescendant(
 	return undefined;
 }
 
+type ComputePlayModeSyncRangesOptions = {
+	before: { [regionName: string]: number };
+	after: { [regionName: string]: number };
+};
+
 /**
  * Given two per-region syncIndex snapshots taken before and after processing
  * a playMode="one" parent's descendants, returns the per-region range of
@@ -427,10 +457,10 @@ export function findFirstMediaDescendant(
  * populate `synchronization.playModeSyncRanges` uniformly whether the media
  * is a direct child of the playMode parent or nested one level deeper.
  */
-export function computePlayModeSyncRanges(
-	before: { [regionName: string]: number },
-	after: { [regionName: string]: number },
-): { [regionName: string]: { start: number; end: number } } {
+export function computePlayModeSyncRanges({
+	before,
+	after,
+}: ComputePlayModeSyncRangesOptions): { [regionName: string]: { start: number; end: number } } {
 	const ranges: { [regionName: string]: { start: number; end: number } } = {};
 	for (const region of Object.keys(after)) {
 		const b = before[region] ?? 0;
@@ -456,14 +486,16 @@ export function getConfigString(
 	return typeof value === 'string' ? value : undefined;
 }
 
+type GetConfigBooleanOptions = {
+	config: Record<string, number | string | boolean> | undefined;
+	key: string;
+	defaultValue?: boolean;
+};
+
 /**
  * Extracts a boolean value from config, handling string 'true'/'false'
  */
-export function getConfigBoolean(
-	config: Record<string, number | string | boolean> | undefined,
-	key: string,
-	defaultValue: boolean = false,
-): boolean {
+export function getConfigBoolean({ config, key, defaultValue = false }: GetConfigBooleanOptions): boolean {
 	if (!config) {
 		return defaultValue;
 	}

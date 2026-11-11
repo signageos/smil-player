@@ -1,16 +1,19 @@
 import { MergedDownloadList } from '../../../models/filesModels';
 import { createDownloadPath } from '../tools';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { DEFAULT_LAST_MODIFIED } from '../../../enums/fileEnums';
 import { SMILEnums } from '../../../enums/generalEnums';
 import { UpdateCheckResult } from '../IFilesManager';
 
-type XhrRequestFunction = (
-	method: string,
-	url: string,
-	timeout: number,
-	authHeaders?: Record<string, string>,
-) => Promise<Response>;
+export type XhrRequestOptions = {
+	method: string;
+	url: string;
+	timeout: number;
+	authHeaders?: Record<string, string>;
+	body?: string;
+};
+
+type XhrRequestFunction = (options: XhrRequestOptions) => Promise<Response>;
 
 export interface FetchStrategy {
 	(
@@ -23,6 +26,12 @@ export interface FetchStrategy {
 	strategyType?: string;
 }
 
+type StrategyContentOptions = {
+	response: Response;
+	reportUrl: string;
+	media: MergedDownloadList;
+};
+
 interface StrategyCallbacks {
 	prefix: string;
 	// Value used when the request times out or hits a server/skip error.
@@ -31,20 +40,29 @@ interface StrategyCallbacks {
 	// Report URL derived from the HEAD response (stored on media.useInReportUrl).
 	getReportUrl: (response: Response, media: MergedDownloadList) => string;
 	// Value to return when an update is forced (updateContentHttpStatusCodes match).
-	onUpdateContent: (response: Response, reportUrl: string, media: MergedDownloadList) => string;
+	onUpdateContent: (options: StrategyContentOptions) => string;
 	// Final resolved value on a normal (non-forced) successful response.
-	extractFinalValue: (response: Response, reportUrl: string, media: MergedDownloadList) => string;
+	extractFinalValue: (options: StrategyContentOptions) => string;
 }
 
+type ExecuteHeadRequestOptions = {
+	media: MergedDownloadList;
+	timeOut: number;
+	skipContentHttpStatusCodes?: number[];
+	updateContentHttpStatusCodes?: number[];
+	makeXhrRequest: XhrRequestFunction;
+	callbacks: StrategyCallbacks;
+};
+
 export function createFetchingStrategies(log: Log) {
-	async function executeHeadRequest(
-		media: MergedDownloadList,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
-		makeXhrRequest: XhrRequestFunction,
-		callbacks: StrategyCallbacks,
-	): Promise<UpdateCheckResult> {
+	async function executeHeadRequest({
+		media,
+		timeOut,
+		skipContentHttpStatusCodes = [],
+		updateContentHttpStatusCodes = [],
+		makeXhrRequest,
+		callbacks,
+	}: ExecuteHeadRequestOptions): Promise<UpdateCheckResult> {
 		const { prefix } = callbacks;
 		let response: Response;
 		const downloadUrl = createDownloadPath(media.updateCheckUrl ?? media.src);
@@ -56,7 +74,7 @@ export function createFetchingStrategies(log: Log) {
 			delete media.skipContentMark;
 
 			const authHeaders = window.getAuthHeaders?.(downloadUrl);
-			response = await makeXhrRequest('HEAD', downloadUrl, timeOut, authHeaders);
+			response = await makeXhrRequest({ method: 'HEAD', url: downloadUrl, timeout: timeOut, authHeaders });
 		} catch (err) {
 			if (err.message === 'Request timeout') {
 				log.warn('[files] %s request aborted (timeout=%d): src=%s', prefix, timeOut, media.src);
@@ -87,7 +105,12 @@ export function createFetchingStrategies(log: Log) {
 		if (resourceLocation && resourceLocation !== downloadUrl && contentLength === 0) {
 			try {
 				const cdnAuthHeaders = window.getAuthHeaders?.(resourceLocation);
-				const cdnResponse = await makeXhrRequest('HEAD', resourceLocation, timeOut, cdnAuthHeaders);
+				const cdnResponse = await makeXhrRequest({
+					method: 'HEAD',
+					url: resourceLocation,
+					timeout: timeOut,
+					authHeaders: cdnAuthHeaders,
+				});
 				contentLength = parseInt(cdnResponse?.headers?.get('content-length') || '0', 10) || 0;
 				log.debug('[files] %s content-length from CDN HEAD: %d bytes for %s', prefix, contentLength, resourceLocation);
 			} catch (err) {
@@ -118,7 +141,7 @@ export function createFetchingStrategies(log: Log) {
 			log.debug('[files] %s forcing update (status=%d matched update codes): src=%s', prefix, response.status, media.src);
 			return {
 				shouldUpdate: true,
-				value: callbacks.onUpdateContent(response, reportUrl, media),
+				value: callbacks.onUpdateContent({ response, reportUrl, media }),
 				statusCode: response.status,
 				contentLength,
 			};
@@ -126,7 +149,7 @@ export function createFetchingStrategies(log: Log) {
 
 		return {
 			shouldUpdate: true,
-			value: callbacks.extractFinalValue(response, reportUrl, media),
+			value: callbacks.extractFinalValue({ response, reportUrl, media }),
 			statusCode: response.status,
 			contentLength,
 		};
@@ -139,8 +162,8 @@ export function createFetchingStrategies(log: Log) {
 			const resourceLocation = response?.headers?.get('location') ?? response.url;
 			return resourceLocation || media.src;
 		},
-		onUpdateContent: (_response, reportUrl, media) => reportUrl ?? media.src,
-		extractFinalValue: (_response, reportUrl, media) => {
+		onUpdateContent: ({ reportUrl, media }) => reportUrl ?? media.src,
+		extractFinalValue: ({ reportUrl, media }) => {
 			log.debug('[files] resolved location: src=%s, location=%s', media.src, reportUrl);
 			return reportUrl || media.src;
 		},
@@ -150,14 +173,14 @@ export function createFetchingStrategies(log: Log) {
 		prefix: '[lastModified]',
 		fallbackValue: () => DEFAULT_LAST_MODIFIED,
 		getReportUrl: (response, media) => response?.url || media.src,
-		onUpdateContent: (_response, _reportUrl, media) => {
+		onUpdateContent: ({ media }) => {
 			const futureDate = new Date();
 			futureDate.setFullYear(futureDate.getFullYear() + 1);
 			const futureDateString = futureDate.toUTCString();
 			log.debug('[files] forcing update (future date): src=%s, date=%s', media.src, futureDateString);
 			return futureDateString;
 		},
-		extractFinalValue: (response, _reportUrl, media) => {
+		extractFinalValue: ({ response, media }) => {
 			const newLastModified = response?.headers?.get('last-modified');
 			log.debug('[files] last-modified: src=%s, value=%s', media.src, newLastModified);
 			return newLastModified || DEFAULT_LAST_MODIFIED;
@@ -166,11 +189,25 @@ export function createFetchingStrategies(log: Log) {
 
 	const locationHeaderStrategy: FetchStrategy = async (
 		media, timeOut, skipContentHttpStatusCodes, updateContentHttpStatusCodes, makeXhrRequest,
-	) => executeHeadRequest(media, timeOut, skipContentHttpStatusCodes, updateContentHttpStatusCodes, makeXhrRequest, locationCallbacks);
+	) => executeHeadRequest({
+		media,
+		timeOut,
+		skipContentHttpStatusCodes,
+		updateContentHttpStatusCodes,
+		makeXhrRequest,
+		callbacks: locationCallbacks,
+	});
 
 	const lastModifiedStrategy: FetchStrategy = async (
 		media, timeOut, skipContentHttpStatusCodes, updateContentHttpStatusCodes, makeXhrRequest,
-	) => executeHeadRequest(media, timeOut, skipContentHttpStatusCodes, updateContentHttpStatusCodes, makeXhrRequest, lastModifiedCallbacks);
+	) => executeHeadRequest({
+		media,
+		timeOut,
+		skipContentHttpStatusCodes,
+		updateContentHttpStatusCodes,
+		makeXhrRequest,
+		callbacks: lastModifiedCallbacks,
+	});
 
 	// Add strategy type identifiers
 	locationHeaderStrategy.strategyType = SMILEnums.location;

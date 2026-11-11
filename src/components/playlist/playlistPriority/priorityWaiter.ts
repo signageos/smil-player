@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
 import { PriorityObject } from '../../../models/priorityModels';
 import { ENDTIME_REPEAT_THRESHOLD } from '../../../enums/priorityEnums';
@@ -22,22 +22,34 @@ export interface WaitCondition {
 export function createPriorityWaiter(log: Log) {
 	const { shouldContinueWaiting } = createPriorityDecisionEngine(log);
 
+	type WaitForPriorityReleaseOptions = {
+		stateManager: PriorityStateManager;
+		currentPriorityRegion: CurrentlyPlayingRegion[];
+		currentIndexPriority: CurrentlyPlayingRegion;
+		waiterIndex: number;
+		blockerIndex: number;
+		priorityRegionName: string;
+		priorityObject: PriorityObject;
+		isCancelled: () => boolean;
+		condition: WaitCondition;
+	};
+
 	/**
 	 * Structured wait loop for priority ordering.
 	 * Uses waitForTurn for priority-ordered waking (only highest-priority waiter wakes first).
 	 * Uses waiter's endTime for precise expiry-based wakeup (no fixed timeout).
 	 */
-	async function waitForPriorityRelease(
-		stateManager: PriorityStateManager,
-		currentPriorityRegion: CurrentlyPlayingRegion[],
-		currentIndexPriority: CurrentlyPlayingRegion,
-		waiterIndex: number,
-		blockerIndex: number,
-		priorityRegionName: string,
-		priorityObject: PriorityObject,
-		isCancelled: () => boolean,
-		condition: WaitCondition,
-	): Promise<WaitResult> {
+	async function waitForPriorityRelease({
+		stateManager,
+		currentPriorityRegion,
+		currentIndexPriority,
+		waiterIndex,
+		blockerIndex,
+		priorityRegionName,
+		priorityObject,
+		isCancelled,
+		condition,
+	}: WaitForPriorityReleaseOptions): Promise<WaitResult> {
 		while (true) {
 			const previousPlayer = currentPriorityRegion[blockerIndex].player;
 
@@ -51,11 +63,11 @@ export function createPriorityWaiter(log: Log) {
 				);
 
 				const racers: Promise<any>[] = [
-					stateManager.waitForTurn(
-						priorityRegionName,
-						(entries) => !entries[blockerIndex]?.player.playing,
-						priorityObject.priorityLevel,
-					),
+					stateManager.waitForTurn({
+						regionName: priorityRegionName,
+						predicate: (entries) => !entries[blockerIndex]?.player.playing,
+						priorityLevel: priorityObject.priorityLevel,
+					}),
 				];
 
 				// Precise wakeup at waiter's endTime (wallclock mode only)

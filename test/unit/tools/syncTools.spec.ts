@@ -1,6 +1,6 @@
 import * as chai from 'chai';
 import { createSyncTools, initSyncObject, hasDynamicContent } from '../../../src/components/playlist/tools/syncTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { SMILFileObject } from '../../../src/models/filesModels';
 
 const expect = chai.expect;

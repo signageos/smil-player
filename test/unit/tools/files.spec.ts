@@ -261,7 +261,7 @@ describe('Files tools component', () => {
 
 		data.forEach(([smilUrlVersion, playlistVersion, result]) => {
 			it(`should return ${result} for smilUrlVersion: ${smilUrlVersion} and playlistVersion:${playlistVersion}`, () => {
-				expect(generateSmilUrlVersion(playlistVersion, smilUrlVersion)).to.be.equal(result);
+				expect(generateSmilUrlVersion({ playlistVersion, smilUrlVersion })).to.be.equal(result);
 			});
 		});
 
@@ -273,7 +273,7 @@ describe('Files tools component', () => {
 
 		anotherData.forEach(([smilUrlVersion, playlistVersion, endChars]) => {
 			it(`should end with ${endChars} for smilUrlVersion: ${smilUrlVersion} and playlistVersion:${playlistVersion}`, () => {
-				const result = generateSmilUrlVersion(playlistVersion, smilUrlVersion);
+				const result = generateSmilUrlVersion({ playlistVersion, smilUrlVersion });
 				expect(result).to.have.string(endChars);
 			});
 		});
@@ -308,44 +308,44 @@ describe('Files tools component', () => {
 
 	describe('shouldGateSkipForStatus', () => {
 		it('should skip when status is listed', () => {
-			expect(shouldGateSkipForStatus(404, [403, 404, 410])).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [403, 404, 410] })).to.be.equal(true);
 		});
 
 		it('should play on 200 and 304 when not listed', () => {
-			expect(shouldGateSkipForStatus(200, [403, 404, 410])).to.be.equal(false);
-			expect(shouldGateSkipForStatus(304, [403, 404, 410])).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 200, skipPlaybackHttpStatusCodes: [403, 404, 410] })).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 304, skipPlaybackHttpStatusCodes: [403, 404, 410] })).to.be.equal(false);
 		});
 
 		it('should fail-open on unlisted 5xx', () => {
-			expect(shouldGateSkipForStatus(500, [403, 404, 410])).to.be.equal(false);
-			expect(shouldGateSkipForStatus(503, [403, 404, 410])).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 500, skipPlaybackHttpStatusCodes: [403, 404, 410] })).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 503, skipPlaybackHttpStatusCodes: [403, 404, 410] })).to.be.equal(false);
 		});
 
 		it('should skip on a listed 503 (explicit list wins over fail-open)', () => {
-			expect(shouldGateSkipForStatus(503, [503])).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 503, skipPlaybackHttpStatusCodes: [503] })).to.be.equal(true);
 		});
 
 		it('should never skip with an empty list (gate inert)', () => {
-			expect(shouldGateSkipForStatus(404, [])).to.be.equal(false);
-			expect(shouldGateSkipForStatus(403, [])).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [] })).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 403, skipPlaybackHttpStatusCodes: [] })).to.be.equal(false);
 		});
 
 		it('should skip unlisted 5xx when skipOnError is set (500-599 boundary)', () => {
-			expect(shouldGateSkipForStatus(500, [403, 404], true)).to.be.equal(true);
-			expect(shouldGateSkipForStatus(503, [403, 404], true)).to.be.equal(true);
-			expect(shouldGateSkipForStatus(599, [403, 404], true)).to.be.equal(true);
-			expect(shouldGateSkipForStatus(499, [403, 404], true)).to.be.equal(false);
-			expect(shouldGateSkipForStatus(600, [403, 404], true)).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 500, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 503, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 599, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 499, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 600, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(false);
 		});
 
 		it('should not let skipOnError affect non-5xx unlisted statuses', () => {
-			expect(shouldGateSkipForStatus(200, [403, 404], true)).to.be.equal(false);
-			expect(shouldGateSkipForStatus(404, [403], true)).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 200, skipPlaybackHttpStatusCodes: [403, 404], skipOnError: true })).to.be.equal(false);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [403], skipOnError: true })).to.be.equal(false);
 		});
 
 		it('should still skip listed statuses regardless of skipOnError', () => {
-			expect(shouldGateSkipForStatus(404, [404], true)).to.be.equal(true);
-			expect(shouldGateSkipForStatus(404, [404], false)).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [404], skipOnError: true })).to.be.equal(true);
+			expect(shouldGateSkipForStatus({ status: 404, skipPlaybackHttpStatusCodes: [404], skipOnError: false })).to.be.equal(true);
 		});
 	});
 
@@ -391,55 +391,37 @@ describe('Files tools component', () => {
 
 	describe('copyQueryParameters', () => {
 		it('should copy query parameters from one URL to another', () => {
-			const result = copyQueryParameters(
-				'https://example.com/file?token=abc&key=123',
-				'https://other.com/file.mp4',
-			);
+			const result = copyQueryParameters({ fromUrl: 'https://example.com/file?token=abc&key=123', toUrl: 'https://other.com/file.mp4' });
 			expect(result).to.include('token=abc');
 			expect(result).to.include('key=123');
 			expect(result).to.include('https://other.com/file.mp4?');
 		});
 
 		it('should merge query parameters when target already has params', () => {
-			const result = copyQueryParameters(
-				'https://example.com/file?token=abc',
-				'https://other.com/file.mp4?existing=yes',
-			);
+			const result = copyQueryParameters({ fromUrl: 'https://example.com/file?token=abc', toUrl: 'https://other.com/file.mp4?existing=yes' });
 			expect(result).to.include('token=abc');
 			expect(result).to.include('existing=yes');
 		});
 
 		it('should return URL without ? when no query parameters exist', () => {
-			const result = copyQueryParameters(
-				'https://example.com/file',
-				'https://other.com/file.mp4',
-			);
+			const result = copyQueryParameters({ fromUrl: 'https://example.com/file', toUrl: 'https://other.com/file.mp4' });
 			expect(result).to.be.equal('https://other.com/file.mp4');
 		});
 	});
 
 	describe('convertRelativePathToAbsolute', () => {
 		it('should convert relative path to absolute using SMIL URL base', () => {
-			const result = convertRelativePathToAbsolute(
-				'assets/loading.mp4',
-				'https://example.com/smil/content.smil',
-			);
+			const result = convertRelativePathToAbsolute({ src: 'assets/loading.mp4', smilFileUrl: 'https://example.com/smil/content.smil' });
 			expect(result).to.be.equal('https://example.com/smil/assets/loading.mp4');
 		});
 
 		it('should return absolute URLs unchanged', () => {
-			const result = convertRelativePathToAbsolute(
-				'https://cdn.example.com/video.mp4',
-				'https://example.com/smil/content.smil',
-			);
+			const result = convertRelativePathToAbsolute({ src: 'https://cdn.example.com/video.mp4', smilFileUrl: 'https://example.com/smil/content.smil' });
 			expect(result).to.be.equal('https://cdn.example.com/video.mp4');
 		});
 
 		it('should handle relative paths with subdirectories', () => {
-			const result = convertRelativePathToAbsolute(
-				'media/videos/clip.mp4',
-				'https://example.com/smil/content.smil',
-			);
+			const result = convertRelativePathToAbsolute({ src: 'media/videos/clip.mp4', smilFileUrl: 'https://example.com/smil/content.smil' });
 			expect(result).to.be.equal('https://example.com/smil/media/videos/clip.mp4');
 		});
 	});
@@ -468,12 +450,12 @@ describe('Files tools component', () => {
 
 	describe('createLocalFilePath', () => {
 		it('should combine local path and file name from src', () => {
-			const result = createLocalFilePath('smil/videos', 'https://example.com/video.mp4');
+			const result = createLocalFilePath({ localFilePath: 'smil/videos', src: 'https://example.com/video.mp4' });
 			expect(result).to.be.equal(`smil/videos/${getFileName('https://example.com/video.mp4')}`);
 		});
 
 		it('should handle relative src paths', () => {
-			const result = createLocalFilePath('smil/images', 'image.png');
+			const result = createLocalFilePath({ localFilePath: 'smil/images', src: 'image.png' });
 			expect(result).to.be.equal('smil/images/image.png');
 		});
 	});
@@ -506,7 +488,7 @@ describe('Files tools component', () => {
 
 	describe('createSourceReportObject', () => {
 		it('should create correct source report object', () => {
-			const result = createSourceReportObject('/local/path/file.mp4', 'https://example.com/file.mp4', 'internal');
+			const result = createSourceReportObject({ localFilePath: '/local/path/file.mp4', fileSrc: 'https://example.com/file.mp4', type: 'internal' });
 			expect(result).to.eql({
 				filePath: {
 					path: '/local/path/file.mp4',
@@ -518,7 +500,7 @@ describe('Files tools component', () => {
 		});
 
 		it('should default storage type to empty string', () => {
-			const result = createSourceReportObject('/local/path/file.mp4', 'https://example.com/file.mp4');
+			const result = createSourceReportObject({ localFilePath: '/local/path/file.mp4', fileSrc: 'https://example.com/file.mp4' });
 			expect(result.filePath.storage).to.be.equal('');
 		});
 	});
@@ -526,13 +508,13 @@ describe('Files tools component', () => {
 	describe('updateJsonObject', () => {
 		it('should update existing attribute', () => {
 			const obj: any = { key1: 'value1' };
-			updateJsonObject(obj, 'key1', 'newValue');
+			updateJsonObject({ jsonObject: obj, attr: 'key1', value: 'newValue' });
 			expect(obj.key1).to.be.equal('newValue');
 		});
 
 		it('should add new attribute', () => {
 			const obj: any = {};
-			updateJsonObject(obj, 'newKey', 42);
+			updateJsonObject({ jsonObject: obj, attr: 'newKey', value: 42 });
 			expect(obj.newKey).to.be.equal(42);
 		});
 	});
@@ -561,33 +543,33 @@ describe('Files tools component', () => {
 	describe('createPoPMessagePayload', () => {
 		it('should create basic payload with name and playback success', () => {
 			const value = { src: 'test', popName: 'testMedia' } as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.name).to.be.equal('testMedia');
 			expect(result.playbackSuccess).to.be.equal(true);
 		});
 
 		it('should include error message when present', () => {
 			const value = { src: 'test', popName: 'testMedia' } as MergedDownloadList;
-			const result = createPoPMessagePayload(value, 'Download failed');
+			const result = createPoPMessagePayload({ value, errMessage: 'Download failed' });
 			expect(result.playbackSuccess).to.be.equal(false);
 			expect(result.errorMessage).to.be.equal('Download failed');
 		});
 
 		it('should not include playbackSuccess for download events', () => {
 			const value = { src: 'test', popName: 'testMedia' } as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null, 'download');
+			const result = createPoPMessagePayload({ value, event: 'download' });
 			expect(result).to.not.have.property('playbackSuccess');
 		});
 
 		it('should include customId when popCustomId is set', () => {
 			const value = { src: 'test', popName: 'testMedia', popCustomId: 'custom-123' } as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.customId).to.be.equal('custom-123');
 		});
 
 		it('should include type when popType is set', () => {
 			const value = { src: 'test', popName: 'testMedia', popType: 'video' } as unknown as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.type).to.be.equal('video');
 		});
 
@@ -598,7 +580,7 @@ describe('Files tools component', () => {
 				popTags: 'tag1,tag2',
 				useInReportUrl: 'reportUrl',
 			} as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.tags).to.be.an('array');
 			expect(result.tags![0]).to.be.equal('tag1');
 			expect(result.tags![1]).to.be.equal('tag2');
@@ -613,7 +595,7 @@ describe('Files tools component', () => {
 				popName: 'testMedia',
 				popTags: 'tag1,tag2',
 			} as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.tags).to.have.lengthOf(4);
 			expect(result.tags![2]).to.be.equal('https://cms.example.com/content/1234');
 			expect(result.tags![3]).to.be.a('string');
@@ -621,7 +603,7 @@ describe('Files tools component', () => {
 
 		it('should include fileName when popFileName is set', () => {
 			const value = { src: 'test', popName: 'testMedia', popFileName: 'myfile.mp4' } as MergedDownloadList;
-			const result = createPoPMessagePayload(value, null);
+			const result = createPoPMessagePayload({ value });
 			expect(result.fileName).to.be.equal('myfile.mp4');
 		});
 	});
@@ -629,27 +611,27 @@ describe('Files tools component', () => {
 	describe('createCustomEndpointMessagePayload', () => {
 		it('should add time timestamp', () => {
 			const message = { name: 'testMedia', playbackSuccess: true };
-			const result = createCustomEndpointMessagePayload(message);
+			const result = createCustomEndpointMessagePayload({ message });
 			expect(result.time).to.be.a('number');
 			expect(result.name).to.be.equal('testMedia');
 		});
 
 		// Pre-4.0 receivers (e.g. signagelab) validate on the ISO `recordedAt` field; keep it next to `time`.
 		it('should keep the legacy recordedAt ISO timestamp', () => {
-			const result = createCustomEndpointMessagePayload({ name: 'testMedia', playbackSuccess: true });
+			const result = createCustomEndpointMessagePayload({ message: { name: 'testMedia', playbackSuccess: true } });
 			expect(result.recordedAt).to.be.a('string');
 			expect(new Date(result.recordedAt).toISOString()).to.be.equal(result.recordedAt);
 		});
 
 		it('should remove last item from tags', () => {
 			const message = { name: 'testMedia', tags: ['tag1', 'tag2', 'toRemove'] };
-			const result = createCustomEndpointMessagePayload(message);
+			const result = createCustomEndpointMessagePayload({ message });
 			expect(result.tags).to.eql(['tag1', 'tag2']);
 		});
 
 		it('should not include tags when not in message', () => {
 			const message = { name: 'testMedia' };
-			const result = createCustomEndpointMessagePayload(message);
+			const result = createCustomEndpointMessagePayload({ message });
 			expect(result).to.not.have.property('tags');
 		});
 
@@ -662,7 +644,11 @@ describe('Files tools component', () => {
 				popName: 'media-download',
 				popTags: 'campaign,cz',
 			} as MergedDownloadList;
-			const result = createCustomEndpointMessagePayload(createPoPMessagePayload(value), value.src, 502);
+			const result = createCustomEndpointMessagePayload({
+				message: createPoPMessagePayload({ value }),
+				locationUrl: value.src,
+				statusCode: 502,
+			});
 			expect(result.tags).to.eql(['campaign', 'cz', 'https://cms.example.com/content/1234']);
 			expect(JSON.stringify(result)).to.not.include('null');
 			expect(result.status).to.be.equal(502);
@@ -672,7 +658,7 @@ describe('Files tools component', () => {
 
 	describe('createVersionedUrl', () => {
 		it('should add __smil_version query param', () => {
-			const result = createVersionedUrl('https://example.com/file.mp4', 5);
+			const result = createVersionedUrl({ sourceUrl: 'https://example.com/file.mp4', playlistVersion: 5 });
 			expect(result).to.include('https://example.com/file.mp4?');
 			expect(result).to.include('__smil_version=');
 			// version string should end with _5 (playlistVersion)
@@ -681,29 +667,29 @@ describe('Files tools component', () => {
 		});
 
 		it('should strip version for external widgets (isWidget=true, non-local URL)', () => {
-			const result = createVersionedUrl('https://external-site.com/widget/index.html', 1, null, true);
+			const result = createVersionedUrl({ sourceUrl: 'https://external-site.com/widget/index.html', playlistVersion: 1, isWidget: true });
 			expect(result).to.equal('https://external-site.com/widget/index.html');
 			expect(result).to.not.include('__smil_version');
 		});
 
 		it('should keep version for local file widgets', () => {
-			const result = createVersionedUrl('internal/smil/widgets/mywidget.wgt', 2, null, true);
+			const result = createVersionedUrl({ sourceUrl: 'internal/smil/widgets/mywidget.wgt', playlistVersion: 2, isWidget: true });
 			expect(result).to.include('__smil_version=');
 		});
 
 		it('should preserve existing query params', () => {
-			const result = createVersionedUrl('https://example.com/file.mp4?token=abc', 3);
+			const result = createVersionedUrl({ sourceUrl: 'https://example.com/file.mp4?token=abc', playlistVersion: 3 });
 			expect(result).to.include('token=abc');
 			expect(result).to.include('__smil_version=');
 		});
 
 		it('should reuse smilUrlVersion when playlistVersion matches', () => {
-			const result = createVersionedUrl('https://example.com/file.mp4', 7, '54321_7');
+			const result = createVersionedUrl({ sourceUrl: 'https://example.com/file.mp4', playlistVersion: 7, smilUrlVersion: '54321_7' });
 			expect(result).to.include('__smil_version=54321_7');
 		});
 
 		it('should generate new version when playlistVersion does not match smilUrlVersion', () => {
-			const result = createVersionedUrl('https://example.com/file.mp4', 8, '54321_7');
+			const result = createVersionedUrl({ sourceUrl: 'https://example.com/file.mp4', playlistVersion: 8, smilUrlVersion: '54321_7' });
 			const version = result.split('__smil_version=')[1];
 			expect(version).to.match(/_8$/);
 			expect(version).to.not.equal('54321_7');
@@ -755,11 +741,11 @@ describe('Files tools component', () => {
 				popFileName: 'video.mp4',
 			};
 			const build = (popName: string) =>
-				createCustomEndpointMessagePayload(
-					createPoPMessagePayload({ ...value, popName } as MergedDownloadList),
-					value.src,
-					200,
-				);
+				createCustomEndpointMessagePayload({
+					message: createPoPMessagePayload({ value: { ...value, popName } as MergedDownloadList }),
+					locationUrl: value.src,
+					statusCode: 200,
+				});
 			const reference = build('media-download');
 			for (const name of ['media-copied', 'media-moved', 'media-restored', 'media-deleted', 'media-skipped']) {
 				const payload = build(name);

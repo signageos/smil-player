@@ -1,4 +1,4 @@
-import { Log } from '../../logger';
+import { Log } from '@signageos/smil-logger';
 import { initSyncObject } from './tools/syncTools';
 import { PlaylistProcessor } from './playlistProcessor/playlistProcessor';
 import { ISos } from '../../models/sosModels';

@@ -55,19 +55,34 @@ export function getResyncTargetForState(
 			: resyncTargets.finish;
 }
 
+type GetPriorityBoundsOptions = {
+	regionName: string;
+	priorityLevel: number | undefined;
+	syncIndexBoundsPerPriority: Synchronization['syncIndexBoundsPerPriority'];
+};
+
 /**
  * Get priority bounds for a region and priority level from stored data.
  */
-export function getPriorityBounds(
-	regionName: string,
-	priorityLevel: number | undefined,
-	syncIndexBoundsPerPriority: Synchronization['syncIndexBoundsPerPriority'],
-): { min: number; max: number } | undefined {
+export function getPriorityBounds({
+	regionName,
+	priorityLevel,
+	syncIndexBoundsPerPriority,
+}: GetPriorityBoundsOptions): { min: number; max: number } | undefined {
 	if (priorityLevel === undefined) {
 		return undefined;
 	}
 	return syncIndexBoundsPerPriority?.[regionName]?.[priorityLevel];
 }
+
+type GetWrappedSyncIndexOptions = {
+	nextIndex: number;
+	priorityMaxSyncIndex: number | undefined;
+	priorityMinSyncIndex: number | undefined;
+	slaveMaxSyncIndex: number | undefined;
+	slaveMinSyncIndex: number | undefined;
+	globalMaxSyncIndex: number | undefined;
+};
 
 /**
  * Calculate wrapped sync index for resync target.
@@ -75,14 +90,14 @@ export function getPriorityBounds(
  * CASE 1.5: Use slave's observed max (excludes wallclock-skipped elements)
  * CASE 2: Simple playlist (no priorityClass) - use global maxSyncIndexPerRegion
  */
-export function getWrappedSyncIndex(
-	nextIndex: number,
-	priorityMaxSyncIndex: number | undefined,
-	priorityMinSyncIndex: number | undefined,
-	slaveMaxSyncIndex: number | undefined,
-	slaveMinSyncIndex: number | undefined,
-	globalMaxSyncIndex: number | undefined,
-): number {
+export function getWrappedSyncIndex({
+	nextIndex,
+	priorityMaxSyncIndex,
+	priorityMinSyncIndex,
+	slaveMaxSyncIndex,
+	slaveMinSyncIndex,
+	globalMaxSyncIndex,
+}: GetWrappedSyncIndexOptions): number {
 	// CASE 1: Priority playlist - use priority-specific bounds from message
 	if (priorityMaxSyncIndex !== undefined && nextIndex > priorityMaxSyncIndex) {
 		return priorityMinSyncIndex ?? 1;
@@ -102,16 +117,22 @@ export function getWrappedSyncIndex(
 	return nextIndex;
 }
 
+type GetNextEffectiveSyncIndexOptions = {
+	masterIndex: number;
+	regionName: string;
+	playModeSyncRanges: Synchronization['playModeSyncRanges'];
+};
+
 /**
  * Compute the next effective syncIndex after the given master position.
  * If masterIndex is within a playMode=one range, skips past remaining
  * siblings to the first syncIndex of the next seq element.
  */
-export function getNextEffectiveSyncIndex(
-	masterIndex: number,
-	regionName: string,
-	playModeSyncRanges: Synchronization['playModeSyncRanges'],
-): number {
+export function getNextEffectiveSyncIndex({
+	masterIndex,
+	regionName,
+	playModeSyncRanges,
+}: GetNextEffectiveSyncIndexOptions): number {
 	const ranges = playModeSyncRanges?.[regionName];
 	if (ranges) {
 		for (const range of ranges) {
@@ -123,21 +144,33 @@ export function getNextEffectiveSyncIndex(
 	return masterIndex + 1;
 }
 
+type IsWraparoundScenarioOptions = {
+	slaveIndex: number;
+	masterIndex: number;
+	priorityMin: number | undefined;
+	priorityMax: number | undefined;
+	globalMax: number | undefined;
+	regionName: string;
+	slaveEffectiveMax: number | undefined;
+	slaveEffectiveMin: number | undefined;
+	playModeSyncRanges: Synchronization['playModeSyncRanges'];
+};
+
 /**
  * Detects if slave wrapping to start of range while master message is from end of range.
  * This happens when slave checks for a new command before master's new command arrives.
  */
-export function isWraparoundScenario(
-	slaveIndex: number,
-	masterIndex: number,
-	priorityMin: number | undefined,
-	priorityMax: number | undefined,
-	globalMax: number | undefined,
-	regionName: string,
-	slaveEffectiveMax: number | undefined,
-	slaveEffectiveMin: number | undefined,
-	playModeSyncRanges: Synchronization['playModeSyncRanges'],
-): boolean {
+export function isWraparoundScenario({
+	slaveIndex,
+	masterIndex,
+	priorityMin,
+	priorityMax,
+	globalMax,
+	regionName,
+	slaveEffectiveMax,
+	slaveEffectiveMin,
+	playModeSyncRanges,
+}: IsWraparoundScenarioOptions): boolean {
 	// Use priority bounds if available, otherwise prefer slave's observed min/max
 	const minIndex = priorityMin ?? slaveEffectiveMin ?? 1;
 	const maxIndex = priorityMax ?? slaveEffectiveMax ?? globalMax;
@@ -149,21 +182,27 @@ export function isWraparoundScenario(
 	// Wraparound: slave at start of range, master message from end of range
 	const slaveAtStart = slaveIndex <= minIndex + 1;
 	// Account for playMode=one ranges
-	const effectiveNext = getNextEffectiveSyncIndex(masterIndex, regionName, playModeSyncRanges);
+	const effectiveNext = getNextEffectiveSyncIndex({ masterIndex, regionName, playModeSyncRanges });
 	const masterAtEnd = masterIndex >= maxIndex - 1 || effectiveNext > maxIndex;
 
 	return slaveAtStart && masterAtEnd;
 }
 
+type HasPriorityChangedOptions = {
+	storedPriority: number | undefined;
+	messagePriority: number | undefined;
+	expectedPriority: number | undefined;
+};
+
 /**
  * Check if a message's priority level indicates a priority transition
  * relative to stored and expected priority levels.
  */
-export function hasPriorityChanged(
-	storedPriority: number | undefined,
-	messagePriority: number | undefined,
-	expectedPriority: number | undefined,
-): boolean {
+export function hasPriorityChanged({
+	storedPriority,
+	messagePriority,
+	expectedPriority,
+}: HasPriorityChangedOptions): boolean {
 	// Message differs from stored priority (actual transition detected)
 	if (storedPriority !== undefined && messagePriority !== storedPriority) { return true; }
 	if (storedPriority === undefined && messagePriority !== undefined) { return true; }
@@ -177,19 +216,29 @@ export function hasPriorityChanged(
 	return false;
 }
 
+type ShouldSkipForResyncOptions = {
+	syncIndex: number;
+	syncingInAction: boolean;
+	resyncTarget: number | undefined;
+};
+
 /**
  * Check if slave should skip waiting during active resync (not yet at target).
  */
-export function shouldSkipForResync(
-	syncIndex: number,
-	syncingInAction: boolean,
-	resyncTarget: number | undefined,
-): boolean {
+export function shouldSkipForResync({ syncIndex, syncingInAction, resyncTarget }: ShouldSkipForResyncOptions): boolean {
 	if (syncingInAction && resyncTarget !== undefined && syncIndex < resyncTarget) {
 		return true;
 	}
 	return false;
 }
+
+type ProcessElementStateOptions = {
+	value: VirtualElementState;
+	expectedState: SyncElementState;
+	syncIndex: number;
+	regionName: string;
+	context: ProcessElementStateContext;
+};
 
 /**
  * Process element state value and determine action.
@@ -198,13 +247,13 @@ export function shouldSkipForResync(
  * - RESYNC: Slave is behind master, trigger resync to skip elements
  * - WAIT: Keep waiting for the correct broadcast
  */
-export function processElementState(
-	value: VirtualElementState,
-	expectedState: SyncElementState,
-	syncIndex: number,
-	regionName: string,
-	context: ProcessElementStateContext,
-): ProcessElementStateResult {
+export function processElementState({
+	value,
+	expectedState,
+	syncIndex,
+	regionName,
+	context,
+}: ProcessElementStateOptions): ProcessElementStateResult {
 	const {
 		maxSyncIndexPerRegion,
 		slaveEffectiveMax,
@@ -227,25 +276,30 @@ export function processElementState(
 		return { action: ProcessAction.CONTINUE };
 	} else if (
 		value.syncIndex < syncIndex ||
-		isWraparoundScenario(
-			syncIndex, value.syncIndex,
-			value.priorityMinSyncIndex, value.priorityMaxSyncIndex,
-			maxSyncIndexPerRegion, regionName,
-			slaveEffectiveMax, slaveEffectiveMin, playModeSyncRanges,
-		)
+		isWraparoundScenario({
+			slaveIndex: syncIndex,
+			masterIndex: value.syncIndex,
+			priorityMin: value.priorityMinSyncIndex,
+			priorityMax: value.priorityMaxSyncIndex,
+			globalMax: maxSyncIndexPerRegion,
+			regionName,
+			slaveEffectiveMax,
+			slaveEffectiveMin,
+			playModeSyncRanges,
+		})
 	) {
 		// Slave is ahead of master — wait for master to catch up
 		return { action: ProcessAction.WAIT };
 	} else if (expectedState === 'prepared' && value.state === 'playing' && value.syncIndex > syncIndex) {
 		// Waiting for 'prepared' but master is already playing a future element — resync
-		const nextIndex = getWrappedSyncIndex(
-			getNextEffectiveSyncIndex(value.syncIndex, regionName, playModeSyncRanges),
-			value.priorityMaxSyncIndex,
-			value.priorityMinSyncIndex,
+		const nextIndex = getWrappedSyncIndex({
+			nextIndex: getNextEffectiveSyncIndex({ masterIndex: value.syncIndex, regionName, playModeSyncRanges }),
+			priorityMaxSyncIndex: value.priorityMaxSyncIndex,
+			priorityMinSyncIndex: value.priorityMinSyncIndex,
 			slaveMaxSyncIndex,
 			slaveMinSyncIndex,
 			globalMaxSyncIndex,
-		);
+		});
 		return {
 			action: ProcessAction.RESYNC,
 			mutations: {
@@ -255,14 +309,14 @@ export function processElementState(
 		};
 	} else if (value.state === expectedState && value.syncIndex > syncIndex) {
 		// Master ahead with same state
-		const nextIndex = getWrappedSyncIndex(
-			getNextEffectiveSyncIndex(value.syncIndex, regionName, playModeSyncRanges),
-			value.priorityMaxSyncIndex,
-			value.priorityMinSyncIndex,
+		const nextIndex = getWrappedSyncIndex({
+			nextIndex: getNextEffectiveSyncIndex({ masterIndex: value.syncIndex, regionName, playModeSyncRanges }),
+			priorityMaxSyncIndex: value.priorityMaxSyncIndex,
+			priorityMinSyncIndex: value.priorityMinSyncIndex,
 			slaveMaxSyncIndex,
 			slaveMinSyncIndex,
 			globalMaxSyncIndex,
-		);
+		});
 		const field: 'prepare' | 'play' | 'finish' =
 			expectedState === 'prepared' ? 'prepare'
 				: expectedState === 'playing' ? 'play'
@@ -282,14 +336,14 @@ export function processElementState(
 
 		if (receivedIndex > expectedIndex) {
 			// Behind in state progression
-			const nextIndex = getWrappedSyncIndex(
-				getNextEffectiveSyncIndex(syncIndex, regionName, playModeSyncRanges),
-				value.priorityMaxSyncIndex,
-				value.priorityMinSyncIndex,
+			const nextIndex = getWrappedSyncIndex({
+				nextIndex: getNextEffectiveSyncIndex({ masterIndex: syncIndex, regionName, playModeSyncRanges }),
+				priorityMaxSyncIndex: value.priorityMaxSyncIndex,
+				priorityMinSyncIndex: value.priorityMinSyncIndex,
 				slaveMaxSyncIndex,
 				slaveMinSyncIndex,
 				globalMaxSyncIndex,
-			);
+			});
 			return {
 				action: ProcessAction.RESYNC,
 				mutations: {

@@ -3,7 +3,7 @@ import moment from 'moment';
 import MockDate from 'mockdate';
 
 import { createScheduleTools } from '../../../src/components/playlist/tools/scheduleTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 
 const expect = chai.expect;
 const { checkConditionalExprSafe } = createScheduleTools(noopLog);
@@ -21,13 +21,13 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `[ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&gt;${dayOfWeek} ] or [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `[ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	});
 
@@ -36,19 +36,19 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			let dayOfWeek = moment().isoWeekday() % 7;
 			let testExpression = `[[[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]]
 			and [ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&lt;${dayOfWeek}]] and adapi-weekday()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `[[[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]]
 			and [ adapi-weekday()&gt;${dayOfWeek} or adapi-weekday()&lt;${dayOfWeek}]] and adapi-weekday()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = `adapi-weekday()&gt;=${dayOfWeek} and [[[ adapi-weekday()&gt;=${dayOfWeek} or adapi-weekday()&gt;${dayOfWeek} ] and [ adapi-weekday()&gt;=${dayOfWeek} and adapi-weekday()&lt;=${dayOfWeek} ]]
 			and [ adapi-weekday()&gt;${dayOfWeek} or adapi-weekday()&lt;${dayOfWeek}]]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression = `[[[ adapi-weekday()&gt;=${dayOfWeek} OR adapi-weekday()&gt;${dayOfWeek} ] AND [ adapi-weekday()&gt;=${dayOfWeek} AND adapi-weekday()&lt;=${dayOfWeek} ]]
 			AND [ adapi-weekday()&gt;=${dayOfWeek} OR adapi-weekday()&lt;${dayOfWeek}]] AND adapi-weekday()&gt;=${dayOfWeek}`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 		});
 	});
 
@@ -56,13 +56,13 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let dayTime = moment().subtract(1, 'hour').format('HH:mm:ss');
 			let testExpression = `[adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0] AND [adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `[adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0] OR [adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression = `[adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&gt;=0] AND [adapi-compare(\'${dayTime}\', substring-after(adapi-date(), \'T\'))&lt;=0]`;
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	});
 
@@ -70,15 +70,15 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		it('Should return correct response', () => {
 			let testExpression =
 				"[adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 OR adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(true);
 
 			testExpression =
 				"[adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 AND adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 
 			testExpression =
 				"adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 AND [adapi-compare(adapi-date(), '2030-01-01T00:00:00')&gt;0 OR adapi-compare(adapi-date(), '2030-01-01T00:00:00')&lt;0]";
-			expect(checkConditionalExprSafe(testExpression)).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: testExpression })).to.be.equal(false);
 		});
 	});
 
@@ -95,21 +95,21 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 		// unbalanced opening bracket, unclosed paren in a function call.
 
 		it('returns false for an unbalanced leading bracket', () => {
-			expect(checkConditionalExprSafe('[[adapi-weekday()=4')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: '[[adapi-weekday()=4' })).to.be.equal(false);
 		});
 
 		it('returns false for an unclosed paren in a function call', () => {
 			expect(
-				checkConditionalExprSafe("adapi-compare(adapi-date(), '2030-01-01T00:00:00'&lt;0"),
+				checkConditionalExprSafe({ expression: "adapi-compare(adapi-date(), '2030-01-01T00:00:00'&lt;0" }),
 			).to.be.equal(false);
 		});
 
 		it('returns false for an empty expression', () => {
-			expect(checkConditionalExprSafe('')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: '' })).to.be.equal(false);
 		});
 
 		it('returns false for a whitespace-only expression', () => {
-			expect(checkConditionalExprSafe('   ')).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: '   ' })).to.be.equal(false);
 		});
 
 		// Locks in the limitation flagged by the TODO at
@@ -127,12 +127,12 @@ describe('Playlist tools checkConditionalExprSafe', () => {
 			// adapi-date() at mocked now is < 2030-01-01, so adapi-compare
 			// returns -1; both >0 and >99 evaluate to false because the
 			// comparator only checks the sign.
-			expect(checkConditionalExprSafe(futureExpr('&gt;0'))).to.be.equal(false);
-			expect(checkConditionalExprSafe(futureExpr('&gt;99'))).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: futureExpr('&gt;0') })).to.be.equal(false);
+			expect(checkConditionalExprSafe({ expression: futureExpr('&gt;99') })).to.be.equal(false);
 
 			// And both <0 / <99 evaluate to true symmetrically.
-			expect(checkConditionalExprSafe(futureExpr('&lt;0'))).to.be.equal(true);
-			expect(checkConditionalExprSafe(futureExpr('&lt;99'))).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: futureExpr('&lt;0') })).to.be.equal(true);
+			expect(checkConditionalExprSafe({ expression: futureExpr('&lt;99') })).to.be.equal(true);
 		});
 	});
 });

@@ -33,7 +33,7 @@ import {
 import { createPlaylistTools } from '../../../src/components/playlist/tools/playlistTools';
 import { extractDayInfo } from '../../../src/components/playlist/tools/wallclockTools';
 import { createScheduleTools, findDuration } from '../../../src/components/playlist/tools/scheduleTools';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { PlaylistElement } from '../../../src/models/playlistModels';
 import { CurrentlyPlayingRegion } from '../../../src/models/playlistModels';
 import { RegionsObject } from '../../../src/models/xmlJsonModels';
@@ -144,10 +144,10 @@ describe('Playlist tools component', () => {
 	});
 
 	describe('Playlist tools component generateParentId tests', () => {
-		it('returns `tagName-md5` format and is deterministic', () => {
+		it('returns `tagName-sha256` format and is deterministic', () => {
 			const value: any = { repeatCount: '1', video: { src: 'https://cdn/a.mp4', region: 'main' } };
 			const first = generateParentId('seq', value);
-			expect(first).to.match(/^seq-[0-9a-f]{32}$/);
+			expect(first).to.match(/^seq-[0-9a-f]{64}$/);
 			expect(generateParentId('seq', value)).to.be.equal(first);
 		});
 
@@ -159,7 +159,7 @@ describe('Playlist tools component', () => {
 				video: { src: 'https://cdn/spot.mp4', region: 'main', soundLevel: '0%' },
 				img2: { src: 'https://cdn/banner.jpg', dur: '5s', region: 'main', fit: 'fill' },
 			};
-			expect(generateParentId('seq', value)).to.be.equal('seq-29a2f914eabdd69a122410bf6a8d937f');
+			expect(generateParentId('seq', value)).to.be.equal('seq-483acdf3702423819823282f81091d26779dd9ab773f0de406825b2a365d7725');
 		});
 
 		describe('stability under runtime playback mutations', () => {
@@ -422,7 +422,7 @@ describe('Playlist tools component', () => {
 
 		testSchedules.forEach((schedule, i) => {
 			it(`should return ${awaitTimes[i]} for schedule set ${i}`, () => {
-				const response = setDefaultAwait(schedule);
+				const response = setDefaultAwait({ elementsArray: schedule });
 				expect(response).to.be.equal(awaitTimes[i]);
 			});
 		});
@@ -431,7 +431,7 @@ describe('Playlist tools component', () => {
 			const elements = [
 				{ dur: '5s', video: [] },
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return playImmediately when bare element follows expired wallclock', () => {
@@ -444,7 +444,7 @@ describe('Playlist tools component', () => {
 				},
 				{ dur: '5s', img: [] },
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return playImmediately for active wallclock with active conditional expr', () => {
@@ -456,7 +456,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for active wallclock with expired conditional expr', () => {
@@ -468,7 +468,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 
 		it('should return playImmediately for expr-only element (no wallclock) with active expr', () => {
@@ -478,7 +478,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.playImmediately);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.playImmediately);
 		});
 
 		it('should return defaultAwait for expr-only element (no wallclock) with expired expr', () => {
@@ -488,7 +488,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 
 		it('should return defaultAwait for single element with all-expired wallclock', () => {
@@ -500,7 +500,7 @@ describe('Playlist tools component', () => {
 					video: [],
 				},
 			];
-			expect(setDefaultAwait(elements as PlaylistElement[])).to.be.equal(SMILScheduleEnum.defaultAwait);
+			expect(setDefaultAwait({ elementsArray: elements as PlaylistElement[] })).to.be.equal(SMILScheduleEnum.defaultAwait);
 		});
 	});
 
@@ -696,14 +696,26 @@ describe('Playlist tools component', () => {
 
 	describe('generateElementId', () => {
 		it('should generate element id from filepath, region, and key', () => {
-			const result = generateElementId('https://example.com/video.mp4', 'main', 'video');
+			const result = generateElementId({
+				filepath: 'https://example.com/video.mp4',
+				regionName: 'main',
+				key: 'video',
+			});
 			expect(result).to.include('main');
 			expect(result).to.include('video');
 		});
 
 		it('should generate different ids for different regions', () => {
-			const id1 = generateElementId('https://example.com/video.mp4', 'main', 'video');
-			const id2 = generateElementId('https://example.com/video.mp4', 'sidebar', 'video');
+			const id1 = generateElementId({
+				filepath: 'https://example.com/video.mp4',
+				regionName: 'main',
+				key: 'video',
+			});
+			const id2 = generateElementId({
+				filepath: 'https://example.com/video.mp4',
+				regionName: 'sidebar',
+				key: 'video',
+			});
 			expect(id1).to.not.be.equal(id2);
 		});
 	});
@@ -750,7 +762,10 @@ describe('Playlist tools component', () => {
 
 	describe('generateBackupImagePlaylist', () => {
 		it('should generate correct backup playlist structure', () => {
-			const result = generateBackupImagePlaylist('https://example.com/backup.jpg', '5');
+			const result = generateBackupImagePlaylist({
+				imageUrl: 'https://example.com/backup.jpg',
+				repeatCount: '5',
+			});
 			expect(result.seq.repeatCount).to.be.equal('5');
 			expect(result.seq.img.src).to.be.equal('https://example.com/backup.jpg');
 			expect(result.seq.img.dur).to.be.equal('10');
@@ -785,39 +800,39 @@ describe('Playlist tools component', () => {
 
 	describe('getConfigBoolean', () => {
 		it('should return boolean true from config', () => {
-			expect(getConfigBoolean({ key: true }, 'key')).to.be.equal(true);
+			expect(getConfigBoolean({ config: { key: true }, key: 'key' })).to.be.equal(true);
 		});
 
 		it('should return boolean false from config', () => {
-			expect(getConfigBoolean({ key: false }, 'key')).to.be.equal(false);
+			expect(getConfigBoolean({ config: { key: false }, key: 'key' })).to.be.equal(false);
 		});
 
 		it('should parse string "true"', () => {
-			expect(getConfigBoolean({ key: 'true' }, 'key')).to.be.equal(true);
+			expect(getConfigBoolean({ config: { key: 'true' }, key: 'key' })).to.be.equal(true);
 		});
 
 		it('should parse string "TRUE"', () => {
-			expect(getConfigBoolean({ key: 'TRUE' }, 'key')).to.be.equal(true);
+			expect(getConfigBoolean({ config: { key: 'TRUE' }, key: 'key' })).to.be.equal(true);
 		});
 
 		it('should parse string "false"', () => {
-			expect(getConfigBoolean({ key: 'false' }, 'key')).to.be.equal(false);
+			expect(getConfigBoolean({ config: { key: 'false' }, key: 'key' })).to.be.equal(false);
 		});
 
 		it('should return default for missing key', () => {
-			expect(getConfigBoolean({ other: true }, 'key')).to.be.equal(false);
+			expect(getConfigBoolean({ config: { other: true }, key: 'key' })).to.be.equal(false);
 		});
 
 		it('should return custom default for missing key', () => {
-			expect(getConfigBoolean({ other: true }, 'key', true)).to.be.equal(true);
+			expect(getConfigBoolean({ config: { other: true }, key: 'key', defaultValue: true })).to.be.equal(true);
 		});
 
 		it('should return default for undefined config', () => {
-			expect(getConfigBoolean(undefined, 'key')).to.be.equal(false);
+			expect(getConfigBoolean({ config: undefined, key: 'key' })).to.be.equal(false);
 		});
 
 		it('should return default for numeric value', () => {
-			expect(getConfigBoolean({ key: 1 }, 'key')).to.be.equal(false);
+			expect(getConfigBoolean({ config: { key: 1 }, key: 'key' })).to.be.equal(false);
 		});
 	});
 
@@ -829,7 +844,7 @@ describe('Playlist tools component', () => {
 				video: { src: 'video1.mp4' },
 			};
 			const randomPlaylistInfo = {};
-			const result = getNextElementToPlay(playlist, randomPlaylistInfo, 'parent1');
+			const result = getNextElementToPlay({ playlist, randomPlaylistInfo, parent: 'parent1' });
 			const keys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(keys.length).to.be.equal(1);
 		});
@@ -841,8 +856,8 @@ describe('Playlist tools component', () => {
 				video: { src: 'video1.mp4' },
 			};
 			const randomPlaylistInfo = {};
-			const result1 = getNextElementToPlay(playlist, randomPlaylistInfo, 'parent1');
-			const result2 = getNextElementToPlay(playlist, randomPlaylistInfo, 'parent1');
+			const result1 = getNextElementToPlay({ playlist, randomPlaylistInfo, parent: 'parent1' });
+			const result2 = getNextElementToPlay({ playlist, randomPlaylistInfo, parent: 'parent1' });
 			const keys1 = Object.keys(result1).filter((k) => k !== 'playMode');
 			const keys2 = Object.keys(result2).filter((k) => k !== 'playMode');
 			expect(keys1[0]).to.be.equal('img');
@@ -852,7 +867,7 @@ describe('Playlist tools component', () => {
 
 		it('should initialize randomPlaylistInfo for new parent', () => {
 			const randomPlaylistInfo = {};
-			getNextElementToPlay({ img: { src: 'a.jpg' } }, randomPlaylistInfo, 'newParent');
+			getNextElementToPlay({ playlist: { img: { src: 'a.jpg' } }, randomPlaylistInfo, parent: 'newParent' });
 			expect(randomPlaylistInfo).to.have.property('newParent');
 		});
 	});
@@ -860,34 +875,34 @@ describe('Playlist tools component', () => {
 	describe('processRandomPlayMode', () => {
 		it('should return shuffled object for random mode', () => {
 			const playlist = { playMode: 'random', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
 		});
 
 		it('should return single element for random_one mode', () => {
 			const playlist = { playMode: 'random_one', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			const playableKeys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(playableKeys.length).to.be.equal(1);
 		});
 
 		it('should return single element for one mode', () => {
 			const playlist = { playMode: 'one', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			const playableKeys = Object.keys(result).filter((k) => k !== 'playMode');
 			expect(playableKeys.length).to.be.equal(1);
 		});
 
 		it('should return original playlist for unsupported playMode', () => {
 			const playlist = { playMode: 'unknown', img: { src: 'a.jpg' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.eql(playlist);
 		});
 
 		it('should be case-insensitive for playMode', () => {
 			const playlist = { playMode: 'RANDOM', img: { src: 'a.jpg' }, video: { src: 'b.mp4' } };
-			const result = processRandomPlayMode(playlist as any, {}, 'parent1');
+			const result = processRandomPlayMode({ playlist: playlist as any, randomPlaylistInfo: {}, parent: 'parent1' });
 			expect(result).to.have.property('img');
 			expect(result).to.have.property('video');
 		});
@@ -904,9 +919,9 @@ describe('Playlist tools component', () => {
 				],
 			};
 			const info = {};
-			const r0 = getNextElementToPlay(playlist, info, 'parent1') as any;
-			const r1 = getNextElementToPlay(playlist, info, 'parent1') as any;
-			const r2 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r0 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
+			const r1 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
+			const r2 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
 
 			expect(r0.seq).to.deep.equal([{ video: { src: 'a.mp4' } }]);
 			expect(r1.seq).to.deep.equal([{ img: { src: 'b.jpg' } }]);
@@ -919,9 +934,9 @@ describe('Playlist tools component', () => {
 				seq: [{ video: { src: 'a.mp4' } }, { img: { src: 'b.jpg' } }],
 			};
 			const info = {};
-			getNextElementToPlay(playlist, info, 'parent1');
-			getNextElementToPlay(playlist, info, 'parent1');
-			const r3 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' });
+			getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' });
+			const r3 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
 			expect(r3.seq).to.deep.equal([{ video: { src: 'a.mp4' } }]);
 		});
 
@@ -932,10 +947,10 @@ describe('Playlist tools component', () => {
 				video0: { src: 'c.mp4' },
 			};
 			const info = {};
-			const r0 = getNextElementToPlay(playlist, info, 'parent1') as any;
-			const r1 = getNextElementToPlay(playlist, info, 'parent1') as any;
-			const r2 = getNextElementToPlay(playlist, info, 'parent1') as any;
-			const r3 = getNextElementToPlay(playlist, info, 'parent1') as any;
+			const r0 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
+			const r1 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
+			const r2 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
+			const r3 = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' }) as any;
 
 			expect(r0).to.not.have.property('video0');
 			expect(r0.seq).to.deep.equal([{ img: { src: 'a.jpg' } }]);
@@ -953,7 +968,7 @@ describe('Playlist tools component', () => {
 		it('should return the playlist unchanged when there are no playable children', () => {
 			const playlist = { playMode: 'one' };
 			const info = {};
-			const result = getNextElementToPlay(playlist, info, 'parent1');
+			const result = getNextElementToPlay({ playlist, randomPlaylistInfo: info, parent: 'parent1' });
 			expect(result).to.deep.equal({ playMode: 'one' });
 		});
 	});
@@ -1139,7 +1154,7 @@ describe('Playlist tools component', () => {
 		it('should record a single-region delta as one range', () => {
 			const before = { main: 1 };
 			const after = { main: 4 };
-			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+			expect(computePlayModeSyncRanges({ before, after })).to.deep.equal({
 				main: { start: 2, end: 4 },
 			});
 		});
@@ -1147,7 +1162,7 @@ describe('Playlist tools component', () => {
 		it('should record separate ranges per region when multiple regions advance', () => {
 			const before = { main: 1, side: 5 };
 			const after = { main: 3, side: 8 };
-			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+			expect(computePlayModeSyncRanges({ before, after })).to.deep.equal({
 				main: { start: 2, end: 3 },
 				side: { start: 6, end: 8 },
 			});
@@ -1156,7 +1171,7 @@ describe('Playlist tools component', () => {
 		it('should skip regions with no index advance', () => {
 			const before = { main: 4, side: 2 };
 			const after = { main: 4, side: 5 };
-			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+			expect(computePlayModeSyncRanges({ before, after })).to.deep.equal({
 				side: { start: 3, end: 5 },
 			});
 		});
@@ -1164,14 +1179,14 @@ describe('Playlist tools component', () => {
 		it('should treat a region absent from the before snapshot as starting at 0', () => {
 			const before = { main: 2 };
 			const after = { main: 2, side: 3 };
-			expect(computePlayModeSyncRanges(before, after)).to.deep.equal({
+			expect(computePlayModeSyncRanges({ before, after })).to.deep.equal({
 				side: { start: 1, end: 3 },
 			});
 		});
 
 		it('should return an empty object when nothing advanced', () => {
-			expect(computePlayModeSyncRanges({ main: 4 }, { main: 4 })).to.deep.equal({});
-			expect(computePlayModeSyncRanges({}, {})).to.deep.equal({});
+			expect(computePlayModeSyncRanges({ before: { main: 4 }, after: { main: 4 } })).to.deep.equal({});
+			expect(computePlayModeSyncRanges({ before: {}, after: {} })).to.deep.equal({});
 		});
 	});
 

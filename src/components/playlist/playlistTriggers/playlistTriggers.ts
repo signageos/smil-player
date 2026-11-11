@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { SMILMedia } from '../../../models/mediaModels';
 import { Deferred } from '../tools/Deferred';
 import { getConfigString, sleep } from '../tools/generalTools';
@@ -9,6 +9,7 @@ import { RegionAttributes } from '../../../models/xmlJsonModels';
 import { SMILFileObject } from '../../../models/filesModels';
 import { findDuration } from '../tools/scheduleTools';
 import Nexmosphere from '@signageos/front-applet-extension-nexmosphere/es6';
+import { IPlaylistProcessor } from '../playlistProcessor/IPlaylistProcessor';
 import { RfidAntennaEvent } from '@signageos/front-applet/es6/Sensors/IRfidAntenna';
 import { addEventOnTriggerWidget } from '../tools/htmlTools';
 import { ListenerScope } from '../tools/listenerScope';
@@ -39,11 +40,54 @@ import { clearDynamicSyncCoordination } from '../tools/dynamicTools';
 import { createSyncTools, SyncTools } from '../tools/syncTools';
 import { findTriggerToCancelByEndId } from '../tools/triggerTools';
 
+type AreTriggerConditionsMetOptions = {
+	conditions: ParsedTriggerCondition[];
+	logicCondition: string;
+	action: string;
+};
+
+type ProcessRfidAntennaOptions = {
+	smilObject: SMILFileObject;
+	sensor: ParsedSensor;
+	tag: number;
+	action: string;
+};
+
+type ProcessTriggerRepeatCountOptions = {
+	triggerInfo: { trigger: string };
+	triggerMedia: TriggerObject;
+	priorityObject?: PriorityObject;
+};
+
+type ProcessTriggerDurationOptions = {
+	triggerInfo: { trigger: string };
+	triggerMedia: TriggerObject;
+	stringDuration: string;
+	priorityObject?: PriorityObject;
+};
+
+type HandleDynamicPlaylistOptions = {
+	dynamicPlaylistId: string;
+	dynamicPlaylistConfig: DynamicPlaylist;
+	dynamicMedia: DynamicPlaylistObject;
+	version: number;
+	parent?: string;
+	endTime?: number;
+	priorityObject?: PriorityObject;
+	conditionalExpr?: string;
+};
+
+export type WatchTriggersOptions = {
+	smilObject: SMILFileObject;
+	playlistVersion: () => number;
+	filesLoop: () => boolean;
+};
+
 export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTriggers {
 	public readonly triggersEndless: TriggerEndless = {};
 	public readonly dynamicPlaylist: DynamicPlaylistEndless = {};
 	public smilObject: SMILFileObject;
-	private readonly processPlaylist: Function;
+	private readonly processPlaylist: IPlaylistProcessor['processPlaylist'];
 
 	// Owns the lifetime of every DOM listener registered by watchTriggers
 	// and its inner watch* helpers. removeAll() at the top of watchTriggers
@@ -61,7 +105,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		files: FilesManager,
 		options: PlaylistOptions,
 		log: Log,
-		processPlaylist: Function,
+		processPlaylist: IPlaylistProcessor['processPlaylist'],
 		cancelAllInRegion?: (regionName: string, filter?: (entry: CurrentlyPlayingRegion) => boolean) => void,
 	) {
 		super(sos, files, options, log);
@@ -71,11 +115,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.cancelAllInRegion = cancelAllInRegion;
 	}
 
-	public watchTriggers = async (
-		smilObject: SMILFileObject,
-		playlistVersion: () => number,
-		filesLoop: () => boolean,
-	) => {
+	public watchTriggers = async ({ smilObject, playlistVersion, filesLoop }: WatchTriggersOptions) => {
 		// Detach every listener registered on a previous invocation before
 		// re-running setup. Without this, each playlist-loop iteration
 		// would stack a fresh layer of handlers on document / window /
@@ -161,16 +201,16 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		return regionInfo;
 	};
 
-	public handleDynamicPlaylist = async (
-		dynamicPlaylistId: string,
-		dynamicPlaylistConfig: DynamicPlaylist,
-		dynamicMedia: DynamicPlaylistObject,
-		version: number,
-		parent: string = '',
-		endTime: number = 0,
-		priorityObject: PriorityObject = {} as PriorityObject,
-		conditionalExpr: string = '',
-	) => {
+	public handleDynamicPlaylist = async ({
+		dynamicPlaylistId,
+		dynamicPlaylistConfig,
+		dynamicMedia,
+		version,
+		parent = '',
+		endTime = 0,
+		priorityObject = {} as PriorityObject,
+		conditionalExpr = '',
+	}: HandleDynamicPlaylistOptions) => {
 		this.dynamicPlaylist[dynamicPlaylistId].latestEventFired = Date.now();
 		this.dynamicPlaylist[dynamicPlaylistId].syncId = dynamicPlaylistConfig.syncId;
 		this.dynamicPlaylist[dynamicPlaylistId].dynamicConfig = dynamicPlaylistConfig;
@@ -191,7 +231,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentDynamicPlaylist.dynamicRandom = dynamicRandom;
 		currentDynamicPlaylist.play = true;
 		this.log.debug('[trigger-dynamic] starting: id=%s', dynamicPlaylistId);
-		await this.processPlaylist(dynamicMedia, version, parent, endTime, priorityObject, conditionalExpr);
+		await this.processPlaylist({
+			playlist: dynamicMedia,
+			version,
+			parent,
+			endTime,
+			priorityObject,
+			conditionalExpr,
+		});
 		this.log.debug('[trigger-dynamic] finished: id=%s', dynamicPlaylistId);
 	};
 
@@ -333,11 +380,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			if (dynamicPlaylistConfig.action === 'start' && dynamicPlaylistConfig.syncId) {
 				// join sync group, fullScreenTrigger is default region for dynamic playlist right now
-				await this.sync.joinSyncGroup(
-					this.sos,
-					this.synchronization,
-					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
-				);
+				await this.sync.joinSyncGroup({
+					sos: this.sos,
+					synchronization: this.synchronization,
+					groupName: `${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
+				});
 				this.log.debug(
 					'[trigger-dynamic] joined sync group: group=%s',
 					`${this.synchronization.syncGroupName}-fullScreenTrigger-${dynamicPlaylistConfig.syncId}`,
@@ -346,15 +393,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const version = filesLoop() ? playlistVersion() : playlistVersion() + 1;
 
-			await this.handleDynamicPlaylist(
+			await this.handleDynamicPlaylist({
 				dynamicPlaylistId,
 				dynamicPlaylistConfig,
 				dynamicMedia,
 				version,
-				'',
-				0,
 				priorityObject,
-			);
+			});
 		});
 	};
 
@@ -494,9 +539,13 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 					const triggerMedia = this.smilObject.triggers[triggerInfo.trigger];
 					const stringDuration = findDuration(triggerMedia);
 					if (!isNil(stringDuration)) {
-						await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration!);
+						await this.processTriggerDuration({
+							triggerInfo,
+							triggerMedia,
+							stringDuration: stringDuration!,
+						});
 					} else {
-						await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+						await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 					}
 				} else {
 					this.log.debug('[trigger-sync] failover trigger already playing, skipping');
@@ -530,10 +579,10 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchWidgetTriggers = () => {
 		this.log.debug('[trigger-widget] watching widget triggers');
-		this.listenerScope.add(
-			window,
-			'sosEvent',
-			async (event: CustomEvent) => {
+		this.listenerScope.add({
+			target: window,
+			type: 'sosEvent',
+			listener: async (event: CustomEvent) => {
 				if (!event.detail || isObject(event.detail)) {
 					this.log.warn('[trigger-widget] invalid widget event data: detail=%O', event.detail);
 					return;
@@ -552,9 +601,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				set(this.triggersEndless, `${triggerId}.latestEventFired`, Date.now());
 
 				// Cross-trigger cancellation: check if another trigger's end matches this triggerId
-				const crossCancelKey = findTriggerToCancelByEndId(
-					this.smilObject.triggers, this.triggersEndless, triggerId,
-				);
+				const crossCancelKey = findTriggerToCancelByEndId({
+					triggers: this.smilObject.triggers,
+					triggersEndless: this.triggersEndless,
+					firingTriggerId: triggerId,
+				});
 				if (crossCancelKey) {
 					this.log.debug('[trigger-widget] cross-cancel: firingTrigger=%s cancels=%s', triggerId, crossCancelKey);
 					const target = this.triggersEndless[crossCancelKey];
@@ -598,14 +649,14 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				const stringDuration = findDuration(triggerMedia);
 				if (!isNil(stringDuration)) {
 					this.log.debug('[trigger-widget] starting with duration: trigger=%s, duration=%s', triggerId, stringDuration);
-					await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+					await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 					return;
 				}
 				this.log.debug('[trigger-widget] starting with repeatCount: trigger=%s', triggerId);
-				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+				await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			},
-			false,
-		);
+			options: false,
+		});
 	};
 
 	private watchRfidAntena = async () => {
@@ -643,7 +694,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PICKED, async (tag: number) => {
 					try {
-						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PICKED);
+						await this.processRfidAntenna({
+							smilObject: this.smilObject,
+							sensor,
+							tag,
+							action: RfidAntennaEvent.PICKED,
+						});
 					} catch (err) {
 						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=picked', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
@@ -651,7 +707,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 				});
 				sensorArray[sensorArray.length - 1].on(RfidAntennaEvent.PLACED, async (tag: number) => {
 					try {
-						await this.processRfidAntenna(this.smilObject, sensor, tag, RfidAntennaEvent.PLACED);
+						await this.processRfidAntenna({
+							smilObject: this.smilObject,
+							sensor,
+							tag,
+							action: RfidAntennaEvent.PLACED,
+						});
 					} catch (err) {
 						this.log.error('[trigger-rfid] error processing tag: sensor=%s, tag=%s, action=placed', sensor.id, tag);
 						await this.files.sendGeneralErrorReport(err.message);
@@ -663,23 +724,39 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 	private watchOnTouchOnClick = () => {
 		try {
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.mouseEventType, async () => {
-				await this.processOnTouchOnClick();
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.mouseEventType as string,
+				listener: async () => {
+					await this.processOnTouchOnClick();
+				},
 			});
 
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.touchEventType, async () => {
-				await this.processOnTouchOnClick();
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.touchEventType as string,
+				listener: async () => {
+					await this.processOnTouchOnClick();
+				},
 			});
 		} catch (err) {
 			this.log.error('[trigger-mouse] failed to add event listener: error=%O', err);
 		}
 
-		this.listenerScope.add(document, SMILTriggersEnum.mouseEventType, async () => {
-			await this.processOnTouchOnClick();
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.mouseEventType as string,
+			listener: async () => {
+				await this.processOnTouchOnClick();
+			},
 		});
 
-		this.listenerScope.add(document, SMILTriggersEnum.touchEventType, async () => {
-			await this.processOnTouchOnClick();
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.touchEventType as string,
+			listener: async () => {
+				await this.processOnTouchOnClick();
+			},
 		});
 	};
 
@@ -695,9 +772,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
 		// Cross-trigger cancellation: check if another trigger's end matches this trigger
-		const crossCancelKey = findTriggerToCancelByEndId(
-			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
-		);
+		const crossCancelKey = findTriggerToCancelByEndId({
+			triggers: this.smilObject.triggers,
+			triggersEndless: this.triggersEndless,
+			firingTriggerId: triggerInfo.trigger,
+		});
 		if (crossCancelKey) {
 			this.log.debug('[trigger-mouse] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
 			const target = this.triggersEndless[crossCancelKey];
@@ -728,15 +807,20 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 
 		if (!isNil(this.smilObject.triggerSensorInfo[`${SMILTriggersEnum.mousePrefix}`]) && !isNil(triggerMedia)) {
-			addEventOnTriggerWidget(triggerMedia, this.triggersEndless, triggerInfo, this.listenerScope);
+			addEventOnTriggerWidget({
+				elem: triggerMedia,
+				triggerEndless: this.triggersEndless,
+				triggerInfo,
+				scope: this.listenerScope,
+			});
 			const stringDuration = findDuration(triggerMedia);
 			this.log.debug('[trigger-mouse] starting: trigger=%s, duration=%s', triggerInfo.trigger, stringDuration);
 			if (!isNil(stringDuration)) {
-				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 				return;
 			}
 
-			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+			await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 		}
 	};
 
@@ -747,15 +831,23 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		};
 
 		try {
-			this.listenerScope.add(window.parent.document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
-				state = await this.processKeyDownEvent(event, state);
+			this.listenerScope.add({
+				target: window.parent.document,
+				type: SMILTriggersEnum.keyboardEventType as string,
+				listener: async (event: KeyboardEvent) => {
+					state = await this.processKeyDownEvent(event, state);
+				},
 			});
 		} catch (err) {
 			this.log.error('[trigger-keyboard] failed to add event listener: error=%O', err);
 		}
 
-		this.listenerScope.add(document, SMILTriggersEnum.keyboardEventType, async (event: KeyboardEvent) => {
-			state = await this.processKeyDownEvent(event, state);
+		this.listenerScope.add({
+			target: document,
+			type: SMILTriggersEnum.keyboardEventType as string,
+			listener: async (event: KeyboardEvent) => {
+				state = await this.processKeyDownEvent(event, state);
+			},
 		});
 	};
 
@@ -797,9 +889,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		set(this.triggersEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
 
 		// Cross-trigger cancellation: check if another trigger's end matches this trigger
-		const crossCancelKey = findTriggerToCancelByEndId(
-			this.smilObject.triggers, this.triggersEndless, triggerInfo.trigger,
-		);
+		const crossCancelKey = findTriggerToCancelByEndId({
+			triggers: this.smilObject.triggers,
+			triggersEndless: this.triggersEndless,
+			firingTriggerId: triggerInfo.trigger,
+		});
 		if (crossCancelKey) {
 			this.log.debug('[trigger-keyboard] cross-cancel: firingTrigger=%s cancels=%s', triggerInfo.trigger, crossCancelKey);
 			const target = this.triggersEndless[crossCancelKey];
@@ -826,9 +920,9 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 
 			const stringDuration = findDuration(triggerMedia);
 			if (!isNil(stringDuration)) {
-				await this.processTriggerDuration(triggerInfo, triggerMedia, stringDuration);
+				await this.processTriggerDuration({ triggerInfo, triggerMedia, stringDuration });
 			} else {
-				await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+				await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			}
 		}
 
@@ -848,12 +942,12 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		return state;
 	};
 
-	private processTriggerDuration = async (
-		triggerInfo: { trigger: string },
-		triggerMedia: TriggerObject,
-		stringDuration: string,
-		priorityObject: PriorityObject = {} as PriorityObject,
-	) => {
+	private processTriggerDuration = async ({
+		triggerInfo,
+		triggerMedia,
+		stringDuration,
+		priorityObject = {} as PriorityObject,
+	}: ProcessTriggerDurationOptions) => {
 		const durationMillis = this.schedule.setElementDuration(stringDuration);
 		const triggerRandom = getRandomInt(100000);
 		const currentTrigger = this.triggersEndless[triggerInfo.trigger];
@@ -870,13 +964,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		promises.push(
 			(async () => {
 				while (play) {
-					await this.processPlaylist(
-						triggerMedia,
-						SMILScheduleEnum.triggerPlaylistVersion,
-						'',
-						0,
+					await this.processPlaylist({
+						playlist: triggerMedia,
+						version: SMILScheduleEnum.triggerPlaylistVersion as number,
 						priorityObject,
-					);
+					});
 				}
 			})(),
 		);
@@ -908,11 +1000,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 	};
 
-	private processTriggerRepeatCount = async (
-		triggerInfo: { trigger: string },
-		triggerMedia: TriggerObject,
-		priorityObject: PriorityObject = {} as PriorityObject,
-	) => {
+	private processTriggerRepeatCount = async ({
+		triggerInfo,
+		triggerMedia,
+		priorityObject = {} as PriorityObject,
+	}: ProcessTriggerRepeatCountOptions) => {
 		const triggerRandom = getRandomInt(100000);
 		const currentTrigger = this.triggersEndless[triggerInfo.trigger];
 
@@ -921,7 +1013,11 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		currentTrigger.triggerRandom = triggerRandom;
 		delete currentTrigger.regionInfo;
 
-		await this.processPlaylist(triggerMedia, SMILScheduleEnum.triggerPlaylistVersion, '', 0, priorityObject);
+		await this.processPlaylist({
+			playlist: triggerMedia,
+			version: SMILScheduleEnum.triggerPlaylistVersion as number,
+			priorityObject,
+		});
 
 		// Re-read from object — regionInfo was repopulated by handleTriggers() during processPlaylist
 		const regionInfo = this.triggersEndless[triggerInfo.trigger]?.regionInfo;
@@ -939,18 +1035,18 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		}
 	};
 
-	private processRfidAntenna = async (
-		smilObject: SMILFileObject,
-		sensor: ParsedSensor,
-		tag: number,
-		action: string,
-	) => {
+	private processRfidAntenna = async ({ smilObject, sensor, tag, action }: ProcessRfidAntennaOptions) => {
 		this.log.debug('[trigger-rfid] tag event: tag=%s, action=%s, sensor=%s', tag, action, sensor.id);
 		const triggerInfo = smilObject.triggerSensorInfo[`${sensor.id}-${tag}`];
 		// check if some conditions equals emitted parameters
-		if (this.areTriggerConditionsMet(triggerInfo.condition, triggerInfo.stringCondition, action)) {
+		const conditionsMet = this.areTriggerConditionsMet({
+			conditions: triggerInfo.condition,
+			logicCondition: triggerInfo.stringCondition,
+			action,
+		});
+		if (conditionsMet) {
 			const triggerMedia = smilObject.triggers[triggerInfo.trigger];
-			await this.processTriggerRepeatCount(triggerInfo, triggerMedia);
+			await this.processTriggerRepeatCount({ triggerInfo, triggerMedia });
 			return;
 		}
 
@@ -968,11 +1064,7 @@ export class PlaylistTriggers extends PlaylistCommon implements IPlaylistTrigger
 		this.log.debug('[trigger-rfid] no matching condition: trigger=%s, action=%s', triggerInfo.trigger, action);
 	};
 
-	private areTriggerConditionsMet(
-		conditions: ParsedTriggerCondition[],
-		logicCondition: string,
-		action: string,
-	): boolean {
+	private areTriggerConditionsMet({ conditions, logicCondition, action }: AreTriggerConditionsMetOptions): boolean {
 		this.log.debug('[trigger] evaluating conditions: operator=%s, action=%s, count=%d', logicCondition, action, conditions.length);
 		switch (logicCondition) {
 			case BinaryOperatorChar.or:

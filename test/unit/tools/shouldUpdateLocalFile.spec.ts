@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';
@@ -35,9 +35,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(null);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(false);
 	});
@@ -48,9 +52,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(serverDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: serverDate };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(true);
 		expect(result.value).to.equal(serverDate);
@@ -63,9 +71,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		// stored value is null (key missing from mediaInfoObject)
 		const mediaInfoObject: any = { [getFileName(TEST_SRC)]: null };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(true);
 		expect(result.value).to.equal(serverDate);
@@ -77,9 +89,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(serverDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: serverDate };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(false);
 	});
@@ -90,9 +106,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(newerDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(true);
 		expect(result.value).to.equal(newerDate);
@@ -104,9 +124,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(olderDate);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(true);
 		expect(result.value).to.equal(olderDate);
@@ -117,9 +141,13 @@ describe('shouldUpdateLocalFile (last-modified strategy)', () => {
 		const fetchStrategy = createFetchStrategy(DEFAULT_LAST_MODIFIED);
 		const mediaInfoObject = { [getFileName(TEST_SRC)]: 'Mon, 01 Jan 2024 00:00:00 GMT' };
 
-		const result = await filesManager.shouldUpdateLocalFile(
-			LOCAL_FILE_PATH, TEST_MEDIA, mediaInfoObject, 5000, [], [], fetchStrategy,
-		);
+		const result = await filesManager.shouldUpdateLocalFile({
+			localFilePath: LOCAL_FILE_PATH,
+			media: TEST_MEDIA,
+			mediaInfoObject,
+			timeOut: 5000,
+			fetchStrategy,
+		});
 
 		expect(result.shouldUpdate).to.equal(false);
 	});

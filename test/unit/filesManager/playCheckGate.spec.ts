@@ -9,7 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { ISos } from '../../../src/models/sosModels';
@@ -34,9 +34,9 @@ function makeSmilObject(skipPlaybackOnHttpStatus: number[] | undefined): SMILFil
 /** FilesManager with its private XHR primitive stubbed; records calls. */
 function makeFilesManager(xhr: { status?: number; reject?: boolean }) {
 	const fm = new FilesManager({} as unknown as ISos, noopLog);
-	const calls: any[][] = [];
-	(fm as any).makeXhrRequest = async (...args: any[]) => {
-		calls.push(args);
+	const calls: any[] = [];
+	(fm as any).makeXhrRequest = async (options: any) => {
+		calls.push(options);
 		if (xhr.reject) {
 			throw new Error('network down');
 		}
@@ -51,9 +51,9 @@ describe('components/files/filesManager - playCheckGate', () => {
 		const result = await fm.playCheckGate(makeGatedImage(), makeSmilObject([404]));
 		expect(result).to.be.equal(true);
 		expect(calls.length).to.be.equal(1);
-		expect(calls[0][0]).to.be.equal('GET');
+		expect(calls[0].method).to.be.equal('GET');
 		// gate URL gets the cache-buster appended, base URL must be preserved
-		expect(calls[0][1]).to.contain('https://api.example.com/gate/image');
+		expect(calls[0].url).to.contain('https://api.example.com/gate/image');
 	});
 
 	it('plays on an unlisted status (including 5xx)', async () => {

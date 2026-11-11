@@ -126,26 +126,26 @@ export function createMockPriority(): any {
  * Subclass that exposes protected methods for testing.
  */
 export class TestablePlaylistProcessor extends PlaylistProcessor {
-	public exposedSetCurrentlyPlaying: (
-		element: SMILVideo | SosHtmlElement,
-		tag: string,
-		regionName: string,
-		timedDebug?: TimedDebugger,
-	) => void = this.setCurrentlyPlaying;
+	public exposedSetCurrentlyPlaying: (options: {
+		element: SMILVideo | SosHtmlElement;
+		tag: string;
+		regionName: string;
+		timedDebug?: TimedDebugger;
+	}) => void = this.setCurrentlyPlaying;
 	public exposedGetCancelFunction: () => boolean = this.getCancelFunction;
-	public exposedWaitTimeoutOrFileUpdate: (timeout: number, version: number) => Promise<boolean> =
+	public exposedWaitTimeoutOrFileUpdate: (options: { timeout: number; version: number }) => Promise<boolean> =
 		this.waitTimeoutOrFileUpdate;
-	public exposedHandleVideoPlay: (
-		video: SMILVideo,
-		params: any,
-		sosVideoObject: any,
-		currentRegionInfo: any,
-		parentRegionInfo: any,
-		version: number,
-		arrayIndex: number,
-		currentIndex: number,
-		timedDebug: TimedDebugger,
-	) => Promise<void> = this.handleVideoPlay;
+	public exposedHandleVideoPlay: (options: {
+		video: SMILVideo;
+		params: any;
+		sosVideoObject: any;
+		currentRegionInfo: any;
+		parentRegionInfo: any;
+		version: number;
+		arrayIndex: number;
+		currentIndex: number;
+		timedDebug: TimedDebugger;
+	}) => Promise<void> = this.handleVideoPlay;
 
 	public getCurrentlyPlaying() {
 		return this.currentlyPlaying;

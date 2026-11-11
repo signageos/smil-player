@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import MockDate from 'mockdate';
 import { PlaylistTraverser } from '../../../src/components/playlist/playlistProcessor/playlistTraverser';
@@ -110,11 +110,11 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('test.mp4');
-			expect(engine.actions.playElement.calls[0][2]).to.equal('video'); // key
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('test.mp4');
+			expect(engine.actions.playElement.calls[0][0].key).to.equal('video'); // key
 		});
 
 		it('should process multiple elements in sequence', async () => {
@@ -131,11 +131,11 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('first.mp4');
-			expect(engine.actions.playElement.calls[1][0].src).to.equal('second.jpg');
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('first.mp4');
+			expect(engine.actions.playElement.calls[1][0].value.src).to.equal('second.jpg');
 		});
 
 		it('should skip non-object values (e.g. repeatCount attributes)', async () => {
@@ -149,7 +149,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -163,9 +163,11 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
+			// must yield, otherwise an indefinite parent loop spins and starves the event loop
+			expect(engine.control.sleep.calls.length).to.equal(1);
 		});
 
 		it('should retry when playElement returns RETRY', async () => {
@@ -184,7 +186,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(playElementStub.calls.length).to.equal(2);
 			expect(engine.control.sleep.calledWith(100)).to.equal(true);
@@ -201,7 +203,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			// retryCount goes 0..9 = 10 iterations total
 			expect(playElementStub.calls.length).to.equal(10);
@@ -218,10 +220,10 @@ describe('PlaylistTraverser', () => {
 			} as any;
 
 			const priorityObject = { priorityLevel: 2 } as PriorityObject;
-			await traverser.processPlaylist(playlist, 1, '', 0, priorityObject);
+			await traverser.processPlaylist({ playlist, version: 1, priorityObject });
 
 			const args = engine.actions.playElement.calls[0];
-			expect(args[8]).to.deep.equal({ version: 1, priority: 2 });
+			expect(args[0].priorityCoord).to.deep.equal({ version: 1, priority: 2 });
 		});
 
 		it('should not pass priorityCoord when priorityObject has no priorityLevel', async () => {
@@ -234,10 +236,10 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 1, '', 0, {} as PriorityObject);
+			await traverser.processPlaylist({ playlist, version: 1 });
 
 			const args = engine.actions.playElement.calls[0];
-			expect(args[8]).to.equal(undefined);
+			expect(args[0].priorityCoord).to.equal(undefined);
 		});
 
 		it('should mark isLast correctly for the last element', async () => {
@@ -254,19 +256,19 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
-			// First call: isLast = false (arg index 7)
-			expect(engine.actions.playElement.calls[0][7]).to.equal(false);
+			// First call: isLast = false
+			expect(engine.actions.playElement.calls[0][0].isLast).to.equal(false);
 			// Second call: isLast = true
-			expect(engine.actions.playElement.calls[1][7]).to.equal(true);
+			expect(engine.actions.playElement.calls[1][0].isLast).to.equal(true);
 		});
 	});
 
 	describe('processPlaylist - seq tag', () => {
 		it('should process seq elements sequentially', async () => {
 			const callOrder: string[] = [];
-			const playElementStub = stub().callsFake((value: any) => {
+			const playElementStub = stub().callsFake(({ value }: any) => {
 				callOrder.push(value.src);
 				return undefined;
 			});
@@ -291,7 +293,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(callOrder).to.deep.equal(['first.mp4', 'second.jpg']);
 		});
@@ -309,7 +311,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -333,7 +335,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
 		});
@@ -350,7 +352,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.processDynamicPlaylist.calls.length).to.equal(1);
 		});
@@ -365,7 +367,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.control.sleep.calledWith(1000)).to.equal(true);
 			expect(engine.actions.processDynamicPlaylist.calls.length).to.equal(0);
@@ -398,7 +400,7 @@ describe('PlaylistTraverser', () => {
 				},
 			] as any;
 
-			const promises = await traverser.processPriorityTag(value, 0, 'seq', 0, '');
+			const promises = await traverser.processPriorityTag({ value, version: 0, parent: 'seq' });
 			await Promise.all(promises);
 
 			// Both priority class elements should trigger storePriorityBounds
@@ -421,12 +423,12 @@ describe('PlaylistTraverser', () => {
 				},
 			] as any;
 
-			const promises = await traverser.processPriorityTag(value, 0, 'seq', 0, '');
+			const promises = await traverser.processPriorityTag({ value, version: 0, parent: 'seq' });
 			await Promise.all(promises);
 
 			// The video element should be played
 			expect(engine.actions.playElement.calls.length).to.equal(1);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('high.mp4');
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('high.mp4');
 		});
 	});
 
@@ -450,7 +452,7 @@ describe('PlaylistTraverser', () => {
 				},
 			] as any;
 
-			const promises = await traverser.processExclTag(value, 0, 'seq', 0, '');
+			const promises = await traverser.processExclTag({ value, version: 0, parent: 'seq' });
 			await Promise.all(promises);
 
 			// Both elements should trigger playElement (via processPlaylist)
@@ -468,7 +470,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			const promises = await traverser.processExclTag(value, 0, 'seq', 0, '');
+			const promises = await traverser.processExclTag({ value, version: 0, parent: 'seq' });
 			await Promise.all(promises);
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
@@ -488,7 +490,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
 		});
@@ -500,10 +502,10 @@ describe('PlaylistTraverser', () => {
 				excl: [{ video: makeVideo() }],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
-			// playElement parent arg (index 3) should be 'seq'
-			expect(engine.actions.playElement.calls[0][3]).to.equal('seq');
+			// playElement parent field should be 'seq'
+			expect(engine.actions.playElement.calls[0][0].parent).to.equal('seq');
 		});
 	});
 
@@ -517,7 +519,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq' });
 
 			expect(engine.actions.storePriorityBounds.calls.length).to.equal(1);
 		});
@@ -531,9 +533,9 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
-			expect(engine.actions.playElement.calls[0][3]).to.equal('seq');
+			expect(engine.actions.playElement.calls[0][0].parent).to.equal('seq');
 		});
 	});
 
@@ -542,7 +544,7 @@ describe('PlaylistTraverser', () => {
 	describe('processPlaylist - par array', () => {
 		it('should process par array elements sequentially with seq parent', async () => {
 			const callOrder: string[] = [];
-			const playElementStub = stub().callsFake((value: any) => {
+			const playElementStub = stub().callsFake(({ value }: any) => {
 				callOrder.push(value.src);
 				return undefined;
 			});
@@ -559,7 +561,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq-parent', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq-parent' });
 
 			expect(callOrder).to.deep.equal(['first.mp4', 'second.mp4']);
 		});
@@ -574,7 +576,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par-parent', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par-parent' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
 		});
@@ -591,7 +593,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par-parent', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par-parent' });
 
 			// Both elements are played — expr is propagated but doesn't block at array level
 			expect(engine.actions.playElement.calls.length).to.equal(2);
@@ -608,7 +610,7 @@ describe('PlaylistTraverser', () => {
 				par: { repeatCount: 'indefinite', video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.control.runEndlessLoop.calls.length).to.equal(1);
 		});
@@ -620,7 +622,7 @@ describe('PlaylistTraverser', () => {
 				par: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.control.runEndlessLoop.calls.length).to.equal(1);
 		});
@@ -632,7 +634,7 @@ describe('PlaylistTraverser', () => {
 				par: { repeatCount: '3', video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(3);
 		});
@@ -644,7 +646,7 @@ describe('PlaylistTraverser', () => {
 				par: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -656,7 +658,7 @@ describe('PlaylistTraverser', () => {
 				par: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -670,7 +672,7 @@ describe('PlaylistTraverser', () => {
 				par: { expr: CONDITIONAL_EXPR, video: makeVideo('skip.mp4') },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 		});
@@ -698,7 +700,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			const result = await traverser.processPlaylist(playlist, 0, '', 0);
+			const result = await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 			expect(result).to.equal(SMILScheduleEnum.allExpired);
@@ -718,7 +720,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 		});
@@ -735,7 +737,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -751,7 +753,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -771,7 +773,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -787,7 +789,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -806,7 +808,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -822,7 +824,7 @@ describe('PlaylistTraverser', () => {
 				seq: { repeatCount: '2', video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
 		});
@@ -834,7 +836,7 @@ describe('PlaylistTraverser', () => {
 				seq: { repeatCount: '2', video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par-parent', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par-parent' });
 
 			// Still called twice — promises pushed and awaited at end
 			expect(engine.actions.playElement.calls.length).to.equal(2);
@@ -847,7 +849,7 @@ describe('PlaylistTraverser', () => {
 				seq: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -859,7 +861,7 @@ describe('PlaylistTraverser', () => {
 				seq: { repeatCount: 'indefinite', video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.control.runEndlessLoop.calls.length).to.equal(1);
 		});
@@ -871,7 +873,7 @@ describe('PlaylistTraverser', () => {
 				seq: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.control.runEndlessLoop.calls.length).to.equal(1);
 		});
@@ -883,7 +885,7 @@ describe('PlaylistTraverser', () => {
 				seq: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -900,10 +902,10 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('play.mp4');
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('play.mp4');
 		});
 
 		it('should sleep defaultAwait when conditional expired on last seq element', async () => {
@@ -917,7 +919,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 			expect(engine.control.sleep.calls.some((c: any[]) => c[0] === 200)).to.equal(true);
@@ -946,7 +948,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			const result = await traverser.processPlaylist(playlist, 0, 'par', 0);
+			const result = await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 			expect(result).to.equal(SMILScheduleEnum.allExpired);
@@ -970,7 +972,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// sleep(200) called for defaultAwait on last element
 			expect(engine.control.sleep.calls.some((c: any[]) => c[0] === 200)).to.equal(true);
@@ -993,11 +995,11 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// First element skipped (conditional expired), second plays
 			expect(engine.actions.playElement.calls.length).to.equal(1);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('play.mp4');
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('play.mp4');
 		});
 
 		it('should play element with active wallclock and repeatCount=2', async () => {
@@ -1012,7 +1014,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(2);
 		});
@@ -1037,11 +1039,11 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// Only the active element plays — future element skipped (timeToStart > 0, length > 1)
 			expect(engine.actions.playElement.calls.length).to.equal(1);
-			expect(engine.actions.playElement.calls[0][0].src).to.equal('current.mp4');
+			expect(engine.actions.playElement.calls[0][0].value.src).to.equal('current.mp4');
 		});
 
 		it('should enter while loop for single indefinite wallclock element', async () => {
@@ -1059,7 +1061,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// Enters while loop, getCancelFunction breaks after 1 iteration
 			expect(engine.actions.playElement.calls.length).to.equal(1);
@@ -1085,7 +1087,7 @@ describe('PlaylistTraverser', () => {
 				],
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// Both played once (indefinite overridden to definite for multi-element seq)
 			expect(engine.actions.playElement.calls.length).to.equal(2);
@@ -1102,7 +1104,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -1124,11 +1126,11 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.coordinatePlayModeSync.calls.length).to.equal(1);
-			// First arg is regionName
-			expect(engine.actions.coordinatePlayModeSync.calls[0][0]).to.equal('main');
+			// Options object carries regionName
+			expect(engine.actions.coordinatePlayModeSync.calls[0][0].regionName).to.equal('main');
 		});
 
 		it('should NOT call coordinatePlayModeSync for playMode=random without sync', async () => {
@@ -1144,7 +1146,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			expect(engine.actions.coordinatePlayModeSync.calls.length).to.equal(0);
 			// Elements still played (shuffled order)
@@ -1165,7 +1167,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'par', 0);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'par' });
 
 			// randomPlaylist should have an entry with updated previousIndex
 			const keys = Object.keys(engine.control.randomPlaylist);
@@ -1203,7 +1205,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			const result = await traverser.processPlaylist(playlist, 0, '', 0);
+			const result = await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(result).to.equal(SMILScheduleEnum.allExpired);
 			expect(engine.actions.playElement.calls.length).to.equal(0);
@@ -1225,7 +1227,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			const result = await traverser.processPlaylist(playlist, 0, '', 0);
+			const result = await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(result).to.not.equal(SMILScheduleEnum.allExpired);
 			expect(engine.actions.playElement.calls.length).to.equal(1);
@@ -1254,11 +1256,11 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.control.waitTimeoutOrFileUpdate.calls.length).to.equal(1);
 			// timeToStart should be positive (future schedule)
-			expect(engine.control.waitTimeoutOrFileUpdate.calls[0][0]).to.be.greaterThan(0);
+			expect(engine.control.waitTimeoutOrFileUpdate.calls[0][0].timeout).to.be.greaterThan(0);
 			// File not updated (returns false) so element plays
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 		});
@@ -1277,7 +1279,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			// File was updated during wait — element not played
 			expect(engine.actions.playElement.calls.length).to.equal(0);
@@ -1294,7 +1296,7 @@ describe('PlaylistTraverser', () => {
 			} as any;
 
 			// version=0 < playlistVersion=1 → loop condition fails
-			await traverser.processPlaylist(playlist, 0, '', 0);
+			await traverser.processPlaylist({ playlist, version: 0 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(0);
 		});
@@ -1306,7 +1308,7 @@ describe('PlaylistTraverser', () => {
 				par: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 500);
+			await traverser.processPlaylist({ playlist, version: 0, endTime: 500 });
 
 			expect(engine.actions.playElement.calls.length).to.equal(1);
 			// runEndlessLoop should NOT be called (endTime is 500, not 0)
@@ -1324,7 +1326,7 @@ describe('PlaylistTraverser', () => {
 				par: { video: makeVideo() },
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', endTimeValue);
+			await traverser.processPlaylist({ playlist, version: 0, endTime: endTimeValue });
 
 			// While loop enters once, getCancelFunction breaks it
 			expect(engine.actions.playElement.calls.length).to.equal(1);
@@ -1363,7 +1365,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq-parent', 0, priorityObject);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq-parent', priorityObject });
 
 			expect(priorityObject.activeWindowEnd).to.equal(new Date('2025-06-15T18:00:00').getTime());
 		});
@@ -1381,7 +1383,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, '', 0, priorityObject);
+			await traverser.processPlaylist({ playlist, version: 0, priorityObject });
 
 			expect(priorityObject.activeWindowEnd).to.equal(new Date('2025-06-15T18:00:00').getTime());
 		});
@@ -1399,7 +1401,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq-parent', 0, priorityObject);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq-parent', priorityObject });
 
 			expect(priorityObject.activeWindowEnd).to.equal(undefined);
 		});
@@ -1417,7 +1419,7 @@ describe('PlaylistTraverser', () => {
 				},
 			} as any;
 
-			await traverser.processPlaylist(playlist, 0, 'seq-parent', 0, priorityObject);
+			await traverser.processPlaylist({ playlist, version: 0, parent: 'seq-parent', priorityObject });
 
 			expect(priorityObject.activeWindowEnd).to.equal(undefined);
 		});

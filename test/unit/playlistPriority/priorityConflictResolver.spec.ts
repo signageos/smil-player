@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { PriorityConflictResolver } from '../../../src/components/playlist/playlistPriority/priorityConflictResolver';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -73,7 +73,7 @@ describe('PriorityConflictResolver', () => {
 			];
 			stateManager.setPlaying('main', 0);
 
-			resolver.handlePauseBehaviour('main', 1, 0);
+			resolver.handlePauseBehaviour({ priorityRegionName: 'main', currentIndex: 1, previousPlayingIndex: 0 });
 
 			expect(state.main[0].player.contentPause).to.equal(9999999);
 			expect(state.main[0].player.playing).to.equal(false);
@@ -98,12 +98,15 @@ describe('PriorityConflictResolver', () => {
 			];
 			stateManager.setPlaying('main', 0);
 
-			await resolver.handlePriorityBeforePlay(
-				'video1',
-				makePriorityObject({ priorityLevel: 1 }),
-				'main', 1, 0, 'par-222',
-				Date.now() + 10000,
-			);
+			await resolver.handlePriorityBeforePlay({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: Date.now() + 10000,
+			});
 
 			// Previous entry should be never-blocked
 			expect(state.main[0].player.playing).to.equal(false);
@@ -123,11 +126,15 @@ describe('PriorityConflictResolver', () => {
 			];
 			stateManager.setPlaying('main', 0);
 
-			await resolver.handlePriorityBeforePlay(
-				'video1',
-				makePriorityObject({ priorityLevel: 1 }),
-				'main', 1, 0, 'par-222', 0,
-			);
+			await resolver.handlePriorityBeforePlay({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: 0,
+			});
 
 			expect(state.main[0].player.stop).to.equal(true);
 			expect(state.main[0].player.playing).to.equal(false);
@@ -147,11 +154,15 @@ describe('PriorityConflictResolver', () => {
 			];
 			stateManager.setPlaying('main', 0);
 
-			await resolver.handlePriorityBeforePlay(
-				'video1',
-				makePriorityObject({ priorityLevel: 1 }),
-				'main', 1, 0, 'par-222', 0,
-			);
+			await resolver.handlePriorityBeforePlay({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: 0,
+			});
 
 			expect(state.main[0].player.contentPause).to.equal(9999999);
 			expect(state.main[0].behaviour).to.equal(PriorityBehaviour.pause);
@@ -174,14 +185,18 @@ describe('PriorityConflictResolver', () => {
 
 			// never behaviour blocks — resolve blocker immediately so test doesn't hang
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         10);
 
-			await resolver.handlePriorityBeforePlay(
-				'video1',
-				makePriorityObject({ priorityLevel: 0 }),
-				'main', 1, 0, 'par-222', 0,
-			);
+			await resolver.handlePriorityBeforePlay({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 0 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: 0,
+			});
 
 			// The higher priority entry should NOT be stopped (remap prevents it)
 			expect(state.main[0].player.stop).to.equal(false);
@@ -201,12 +216,15 @@ describe('PriorityConflictResolver', () => {
 			];
 			stateManager.setPlaying('main', 0);
 
-			await resolver.handlePriorityBeforePlay(
-				'video1',
-				makePriorityObject({ priorityLevel: 1 }),
-				'main', 1, 0, 'par-222',
-				Date.now() + 10000,
-			);
+			await resolver.handlePriorityBeforePlay({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: Date.now() + 10000,
+			});
 
 			expect(state.main[0].player.stop).to.equal(true);
 		});
@@ -229,14 +247,18 @@ describe('PriorityConflictResolver', () => {
 
 			// Release blocker after short delay
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         20);
 
-			await resolver.handleDeferBehaviour(
-				'video1',
-				makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
-				'main', 1, 0, 'par-222', 0,
-			);
+			await resolver.handleDeferBehaviour({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: 0,
+			});
 
 			// Should have been deferred
 			expect(state.main[1].behaviour).to.equal(PriorityBehaviour.none); // reset after release
@@ -269,14 +291,18 @@ describe('PriorityConflictResolver', () => {
 			stateManager.setPlaying('main', 0);
 
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         20);
 
-			await resolver.handleDeferBehaviour(
-				'video1',
-				makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
-				'main', 1, 0, 'par-222', 0,
-			);
+			await resolver.handleDeferBehaviour({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-222',
+				endTime: 0,
+			});
 
 			expect(prepareCalled).to.equal(true);
 		});
@@ -307,15 +333,19 @@ describe('PriorityConflictResolver', () => {
 			// P1 finishes → P3 starts playing, P2 is released from defer
 			setTimeout(() => {
 				state.main[0].player.playing = false;
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 				stateManager.setPlaying('main', 2);
 			},         20);
 
-			await resolver.handleDeferBehaviour(
-				'video1',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
-				'main', 1, 0, 'par-P2', 0, 0,
-			);
+			await resolver.handleDeferBehaviour({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-P2',
+				endTime: 0,
+			});
 
 			// After recursion, P3 should be stopped by P2 (P2 has higher priority than P3)
 			expect(state.main[2].player.stop).to.equal(true);
@@ -338,16 +368,21 @@ describe('PriorityConflictResolver', () => {
 
 			// Release blocker immediately
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 				stateManager.setPlaying('main', 0); // simulate peer still playing after release
 			},         10);
 
 			// Call with depth=3 (at the limit)
-			await resolver.handleDeferBehaviour(
-				'video1',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
-				'main', 1, 0, 'par-B', 0, 3,
-			);
+			await resolver.handleDeferBehaviour({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-B',
+				endTime: 0,
+				depth: 3,
+			});
 
 			// Should NOT have stopped the peer (recursion stopped)
 			expect(state.main[0].player.stop).to.equal(false);
@@ -369,16 +404,21 @@ describe('PriorityConflictResolver', () => {
 
 			// Release blocker, low-priority is still playing
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 				stateManager.setPlaying('main', 0);
 			},         10);
 
 			// Call with depth=2 (one below max)
-			await resolver.handleDeferBehaviour(
-				'video1',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
-				'main', 1, 0, 'par-high', 0, 2,
-			);
+			await resolver.handleDeferBehaviour({
+				elementKey: 'video1',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 2 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+				parent: 'par-high',
+				endTime: 0,
+				depth: 2,
+			});
 
 			// Recursion should proceed — lower priority entry should be stopped
 			expect(state.main[0].player.stop).to.equal(true);
@@ -403,13 +443,15 @@ describe('PriorityConflictResolver', () => {
 			stateManager.setPlaying('main', 0);
 
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         20);
 
-			await resolver.handlePrecedingContentStop(
-				makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
-				'main', 1, 0,
-			);
+			await resolver.handlePrecedingContentStop({
+				priorityObject: makePriorityObject({ priorityLevel: 0, maxPriorityLevel: 1 }),
+				priorityRegionName: 'main',
+				currentIndex: 1,
+				previousPlayingIndex: 0,
+			});
 
 			// After release, stop state should be reset
 			expect(state.main[1].behaviour).to.equal(PriorityBehaviour.none);

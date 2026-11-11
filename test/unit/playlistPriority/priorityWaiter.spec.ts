@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { createPriorityWaiter, WaitCondition } from '../../../src/components/playlist/playlistPriority/priorityWaiter';
 import { PriorityStateManager } from '../../../src/components/playlist/playlistPriority/priorityStateManager';
@@ -31,17 +31,17 @@ describe('priorityWaiter', () => {
 				updateBlocker: () => null,
 			};
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('released');
 		});
@@ -57,17 +57,17 @@ describe('priorityWaiter', () => {
 				updateBlocker: () => 0,
 			};
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
-				() => true,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
+				isCancelled: () => true,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('cancelled');
 		});
@@ -83,17 +83,17 @@ describe('priorityWaiter', () => {
 				updateBlocker: () => 0,
 			};
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('expired');
 		});
@@ -112,20 +112,20 @@ describe('priorityWaiter', () => {
 
 			// Resolve the blocker after a short delay
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         50);
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('released');
 		});
@@ -162,25 +162,25 @@ describe('priorityWaiter', () => {
 
 			// First blocker finishes, then start second
 			setTimeout(() => {
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 				stateManager.setPlaying('main', 2);
 			},         30);
 			// Second blocker finishes
 			setTimeout(() => {
-				stateManager.markFinished('main', 2);
+				stateManager.markFinished({ regionName: 'main', index: 2 });
 			},         60);
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 0 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 0 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('released');
 			expect(blockerTransitions).to.be.greaterThan(0);
@@ -198,17 +198,17 @@ describe('priorityWaiter', () => {
 				updateBlocker: () => 0,
 			};
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('expired');
 		});
@@ -229,20 +229,20 @@ describe('priorityWaiter', () => {
 			// Cancel and release blocker after a short delay
 			setTimeout(() => {
 				cancelled = true;
-				stateManager.markFinished('main', 0);
+				stateManager.markFinished({ regionName: 'main', index: 0 });
 			},         30);
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1 }),
-				() => cancelled,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1 }),
+				isCancelled: () => cancelled,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('cancelled');
 		});
@@ -258,17 +258,17 @@ describe('priorityWaiter', () => {
 				updateBlocker: () => null,
 			};
 
-			const result = await waitForPriorityRelease(
+			const result = await waitForPriorityRelease({
 				stateManager,
-				state.main,
-				state.main[1],
-				1,
-				0,
-				'main',
-				makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
-				() => false,
+				currentPriorityRegion: state.main,
+				currentIndexPriority: state.main[1],
+				waiterIndex: 1,
+				blockerIndex: 0,
+				priorityRegionName: 'main',
+				priorityObject: makePriorityObject({ priorityLevel: 1, maxPriorityLevel: 1 }),
+				isCancelled: () => false,
 				condition,
-			);
+			});
 
 			expect(result).to.equal('released');
 		});

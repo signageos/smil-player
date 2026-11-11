@@ -5,7 +5,7 @@ import {
 	isRepeatCountExpired,
 	isMediaMatch,
 } from '../../../src/components/playlist/playlistPriority/priorityDecisionEngine';
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { PriorityRule, ENDTIME_REPEAT_THRESHOLD } from '../../../src/enums/priorityEnums';
 import { SMILMedia } from '../../../src/models/mediaModels';
 import { makePriorityObject, makeRegion } from './testHelpers';
@@ -25,20 +25,20 @@ describe('PriorityDecisionEngine', () => {
 	describe('determinePriorityRelation', () => {
 		it('should return "higher" when existing has lower priority level (higher priority)', () => {
 			// existing level 0 (highest) vs incoming level 2 (lower) -> existing is higher priority
-			expect(determinePriorityRelation(2, 0)).to.equal('higher');
+			expect(determinePriorityRelation({ incomingLevel: 2, existingLevel: 0 })).to.equal('higher');
 		});
 
 		it('should return "lower" when existing has higher priority level (lower priority)', () => {
 			// existing level 2 (lower) vs incoming level 0 (highest) -> existing is lower priority
-			expect(determinePriorityRelation(0, 2)).to.equal('lower');
+			expect(determinePriorityRelation({ incomingLevel: 0, existingLevel: 2 })).to.equal('lower');
 		});
 
 		it('should return "peer" when same priority level', () => {
-			expect(determinePriorityRelation(1, 1)).to.equal('peer');
+			expect(determinePriorityRelation({ incomingLevel: 1, existingLevel: 1 })).to.equal('peer');
 		});
 
 		it('should return "peer" for zero-level equality', () => {
-			expect(determinePriorityRelation(0, 0)).to.equal('peer');
+			expect(determinePriorityRelation({ incomingLevel: 0, existingLevel: 0 })).to.equal('peer');
 		});
 	});
 
@@ -190,16 +190,16 @@ describe('PriorityDecisionEngine', () => {
 
 	describe('isRepeatCountExpired', () => {
 		it('should return true when timesPlayed >= endTime', () => {
-			expect(isRepeatCountExpired(3, 3)).to.equal(true);
-			expect(isRepeatCountExpired(5, 3)).to.equal(true);
+			expect(isRepeatCountExpired({ timesPlayed: 3, endTime: 3 })).to.equal(true);
+			expect(isRepeatCountExpired({ timesPlayed: 5, endTime: 3 })).to.equal(true);
 		});
 
 		it('should return false when timesPlayed < endTime', () => {
-			expect(isRepeatCountExpired(2, 3)).to.equal(false);
+			expect(isRepeatCountExpired({ timesPlayed: 2, endTime: 3 })).to.equal(false);
 		});
 
 		it('should return false when endTime is 0 (indefinite)', () => {
-			expect(isRepeatCountExpired(100, 0)).to.equal(false);
+			expect(isRepeatCountExpired({ timesPlayed: 100, endTime: 0 })).to.equal(false);
 		});
 	});
 
@@ -311,37 +311,37 @@ describe('PriorityDecisionEngine', () => {
 		it('should return true for same src, region, dynamicValue, and triggerValue', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
 			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(true);
+			expect(isMediaMatch({ a, b })).to.equal(true);
 		});
 
 		it('should return false when src differs', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
 			const b = { src: 'video2.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(false);
+			expect(isMediaMatch({ a, b })).to.equal(false);
 		});
 
 		it('should return false when regionName differs', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' } } as SMILMedia;
 			const b = { src: 'video1.mp4', regionInfo: { regionName: 'sidebar' } } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(false);
+			expect(isMediaMatch({ a, b })).to.equal(false);
 		});
 
 		it('should return false when dynamicValue differs', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dynamicValue: 'dyn1' } as SMILMedia;
 			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dynamicValue: 'dyn2' } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(false);
+			expect(isMediaMatch({ a, b })).to.equal(false);
 		});
 
 		it('should return false when triggerValue differs', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, triggerValue: 'trig1' } as SMILMedia;
 			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, triggerValue: 'trig2' } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(false);
+			expect(isMediaMatch({ a, b })).to.equal(false);
 		});
 
 		it('should match when non-identity fields differ (dur, localFilePath)', () => {
 			const a = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dur: '5s' } as SMILMedia;
 			const b = { src: 'video1.mp4', regionInfo: { regionName: 'main' }, dur: '10s' } as SMILMedia;
-			expect(isMediaMatch(a, b)).to.equal(true);
+			expect(isMediaMatch({ a, b })).to.equal(true);
 		});
 	});
 
@@ -354,7 +354,7 @@ describe('PriorityDecisionEngine', () => {
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }),
 				makeRegion({ media: media2, parent: 'par-222', version: 1 }),
 			];
-			const result = findMatchingEntryIndex(entries, media1, 'par-111', 1);
+			const result = findMatchingEntryIndex({ entries, media: media1, parent: 'par-111', version: 1 });
 			expect(result.matchIndex).to.equal(0);
 			expect(result.matchType).to.equal('exact');
 		});
@@ -363,7 +363,7 @@ describe('PriorityDecisionEngine', () => {
 			const entries = [
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }),
 			];
-			const result = findMatchingEntryIndex(entries, media2, 'par-111', 1);
+			const result = findMatchingEntryIndex({ entries, media: media2, parent: 'par-111', version: 1 });
 			expect(result.matchIndex).to.equal(0);
 			expect(result.matchType).to.equal('parent');
 		});
@@ -372,7 +372,7 @@ describe('PriorityDecisionEngine', () => {
 			const entries = [
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }),
 			];
-			const result = findMatchingEntryIndex(entries, media2, 'par-222', 1);
+			const result = findMatchingEntryIndex({ entries, media: media2, parent: 'par-222', version: 1 });
 			expect(result.matchIndex).to.equal(-1);
 			expect(result.matchType).to.equal('none');
 		});
@@ -381,13 +381,13 @@ describe('PriorityDecisionEngine', () => {
 			const entries = [
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }),
 			];
-			const result = findMatchingEntryIndex(entries, media1, 'par-111', 2);
+			const result = findMatchingEntryIndex({ entries, media: media1, parent: 'par-111', version: 2 });
 			expect(result.matchIndex).to.equal(-1);
 			expect(result.matchType).to.equal('none');
 		});
 
 		it('should return none for empty entries array', () => {
-			const result = findMatchingEntryIndex([], media1, 'par-111', 1);
+			const result = findMatchingEntryIndex({ entries: [], media: media1, parent: 'par-111', version: 1 });
 			expect(result.matchIndex).to.equal(-1);
 			expect(result.matchType).to.equal('none');
 		});
@@ -397,7 +397,7 @@ describe('PriorityDecisionEngine', () => {
 				makeRegion({ media: media2, parent: 'par-111', version: 1 }), // parent match
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }), // exact match
 			];
-			const result = findMatchingEntryIndex(entries, media1, 'par-111', 1);
+			const result = findMatchingEntryIndex({ entries, media: media1, parent: 'par-111', version: 1 });
 			expect(result.matchIndex).to.equal(1);
 			expect(result.matchType).to.equal('exact');
 		});
@@ -407,7 +407,7 @@ describe('PriorityDecisionEngine', () => {
 			const entries = [
 				makeRegion({ media: media1, parent: 'par-111', version: 1 }),
 			];
-			const result = findMatchingEntryIndex(entries, media3, 'par-111', 1);
+			const result = findMatchingEntryIndex({ entries, media: media3, parent: 'par-111', version: 1 });
 			expect(result.matchIndex).to.equal(0);
 			expect(result.matchType).to.equal('parent');
 		});

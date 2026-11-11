@@ -2,7 +2,8 @@ import fs from 'fs';
 import { compile } from '@mdx-js/mdx';
 import { sync as globSync } from 'glob';
 
-const filePaths = globSync('./docs/**/*.md');
+// docs/superpowers is gitignored local-only notes (plans, specs), never published and not written as MDX
+const filePaths = globSync('./docs/**/*.md', { ignore: 'docs/superpowers/**' });
 
 (async () => {
 	const errors = [];

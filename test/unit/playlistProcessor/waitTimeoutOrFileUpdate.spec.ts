@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import {
 	TestablePlaylistProcessor,
@@ -27,7 +27,7 @@ describe('waitTimeoutOrFileUpdate', () => {
 	it('is NOT aborted by a cancel aimed at an older playlist version', async () => {
 		const processor = processorWithTwoVersions();
 		const start = Date.now();
-		const wait = processor.exposedWaitTimeoutOrFileUpdate(200, 1);
+		const wait = processor.exposedWaitTimeoutOrFileUpdate({ timeout: 200, version: 1 });
 		setTimeout(() => processor.setCancelFunction(true, 0), 50); // retire v0 (processVersionUpdate)
 		const fileUpdated = await wait;
 		const elapsed = Date.now() - start;
@@ -38,7 +38,7 @@ describe('waitTimeoutOrFileUpdate', () => {
 	it('survives an older-version cancel and is still aborted by a later cancel of its own version', async () => {
 		const processor = processorWithTwoVersions();
 		const start = Date.now();
-		const wait = processor.exposedWaitTimeoutOrFileUpdate(1000, 1);
+		const wait = processor.exposedWaitTimeoutOrFileUpdate({ timeout: 1000, version: 1 });
 		setTimeout(() => processor.setCancelFunction(true, 0), 30);
 		setTimeout(() => processor.setCancelFunction(true, 1), 100);
 		expect(await wait).to.equal(true);
@@ -50,7 +50,7 @@ describe('waitTimeoutOrFileUpdate', () => {
 	it('IS aborted by a cancel of the current playlist version', async () => {
 		const processor = processorWithTwoVersions();
 		const start = Date.now();
-		const wait = processor.exposedWaitTimeoutOrFileUpdate(200, 1);
+		const wait = processor.exposedWaitTimeoutOrFileUpdate({ timeout: 200, version: 1 });
 		setTimeout(() => processor.setCancelFunction(true, 1), 50);
 		const fileUpdated = await wait;
 		expect(fileUpdated).to.equal(true);

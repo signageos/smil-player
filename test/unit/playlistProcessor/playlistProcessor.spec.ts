@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import * as chai from 'chai';
 import { PlaylistCommon } from '../../../src/components/playlist/playlistCommon/playlistCommon';
 import { WaitStatus, PAUSE_CONTENT_VALUE } from '../../../src/enums/priorityEnums';
@@ -63,7 +63,7 @@ describe('PlaylistProcessor', () => {
 				regionInfo: { regionName: 'main', left: 0, top: 0, width: 100, height: 100 },
 			} as any;
 
-			processor.exposedSetCurrentlyPlaying(element, 'video', 'main');
+			processor.exposedSetCurrentlyPlaying({ element, tag: 'video', regionName: 'main' });
 
 			const playing = processor.getCurrentlyPlaying();
 			expect(playing.main).to.not.equal(undefined);
@@ -87,7 +87,7 @@ describe('PlaylistProcessor', () => {
 				syncGroupName: 'group1',
 			} as any;
 
-			processor.exposedSetCurrentlyPlaying(element, 'video', 'main');
+			processor.exposedSetCurrentlyPlaying({ element, tag: 'video', regionName: 'main' });
 
 			const playing = processor.getCurrentlyPlaying();
 			expect(playing.main.dynamicValue).to.equal('dynamic://test');
@@ -116,7 +116,7 @@ describe('PlaylistProcessor', () => {
 				regionInfo: { regionName: 'main', left: 0, top: 0, width: 100, height: 100 },
 			} as any;
 
-			processor.exposedSetCurrentlyPlaying(element, 'video', 'main');
+			processor.exposedSetCurrentlyPlaying({ element, tag: 'video', regionName: 'main' });
 
 			const playing = processor.getCurrentlyPlaying();
 			expect(playing.main.dynamicValue).to.equal(undefined);
@@ -144,7 +144,7 @@ describe('PlaylistProcessor', () => {
 				regionInfo: { regionName: 'main', left: 0, top: 0, width: 100, height: 100 },
 			} as any;
 
-			processor.exposedSetCurrentlyPlaying(element, 'video', 'main');
+			processor.exposedSetCurrentlyPlaying({ element, tag: 'video', regionName: 'main' });
 
 			const playing = processor.getCurrentlyPlaying();
 			expect(playing.main.nextElement).to.deep.equal(nextElem);
@@ -164,7 +164,7 @@ describe('PlaylistProcessor', () => {
 				regionInfo: { regionName: 'sidebar', left: 0, top: 0, width: 200, height: 200 },
 			} as any;
 
-			processor.exposedSetCurrentlyPlaying(element, 'html', 'sidebar');
+			processor.exposedSetCurrentlyPlaying({ element, tag: 'html', regionName: 'sidebar' });
 
 			const playing = processor.getCurrentlyPlaying();
 			expect(playing.sidebar.media).to.equal('html');
@@ -293,7 +293,7 @@ describe('PlaylistProcessor', () => {
 			const processor = makeGateProcessor(files);
 			const value = makeGatedImage();
 
-			const result = await (processor as any).resolveContentAvailability(value, 'img0', 'test');
+			const result = await (processor as any).resolveContentAvailability({ value, key: 'img0', debugId: 'test' });
 
 			expect(result).to.equal(true);
 			expect(files.playCheckGate.callCount()).to.equal(1);
@@ -305,7 +305,11 @@ describe('PlaylistProcessor', () => {
 			files.playCheckGate = stub().resolves(false);
 			const processor = makeGateProcessor(files);
 
-			const result = await (processor as any).resolveContentAvailability(makeGatedImage(), 'img0', 'test');
+			const result = await (processor as any).resolveContentAvailability({
+				value: makeGatedImage(),
+				key: 'img0',
+				debugId: 'test',
+			});
 
 			expect(result).to.equal(false);
 			expect(files.playCheckGate.callCount()).to.equal(1);
@@ -318,7 +322,7 @@ describe('PlaylistProcessor', () => {
 			const value = makeGatedImage();
 			delete value.playCheckUrl;
 
-			const result = await (processor as any).resolveContentAvailability(value, 'img0', 'test');
+			const result = await (processor as any).resolveContentAvailability({ value, key: 'img0', debugId: 'test' });
 
 			expect(result).to.equal(false);
 			expect(files.playCheckGate.callCount()).to.equal(0);
@@ -329,7 +333,11 @@ describe('PlaylistProcessor', () => {
 			files.playCheckGate = stub().resolves(true);
 			const processor = makeGateProcessor(files, { checkBeforePlay: true, checkAheadCount: 2 });
 
-			const result = await (processor as any).resolveContentAvailability(makeGatedImage(), 'img0', 'test');
+			const result = await (processor as any).resolveContentAvailability({
+				value: makeGatedImage(),
+				key: 'img0',
+				debugId: 'test',
+			});
 
 			expect(result).to.equal(true);
 			expect(files.playCheckGate.callCount()).to.equal(1);
@@ -342,7 +350,7 @@ describe('PlaylistProcessor', () => {
 			const value = makeGatedImage();
 			value.skipContentMark = true;
 
-			const result = await (processor as any).resolveContentAvailability(value, 'img0', 'test');
+			const result = await (processor as any).resolveContentAvailability({ value, key: 'img0', debugId: 'test' });
 
 			expect(result).to.equal(true);
 			expect(files.playCheckGate.callCount()).to.equal(0);
@@ -380,8 +388,16 @@ describe('PlaylistProcessor', () => {
 			const value = makeGatedImage();
 			value.useInReportUrl = 'http://example.com/image.png'; // skip mediaInfo init path
 
-			// (value, version, key, parent, currentIndex, previousPlayingIndex, endTime, isLast)
-			await (processor as any).playElement(value, 0, 'img0', '0', 3, 0, 0, false);
+			await (processor as any).playElement({
+				value,
+				version: 0,
+				key: 'img0',
+				parent: '0',
+				currentIndex: 3,
+				previousPlayingIndex: 0,
+				endTime: 0,
+				isLast: false,
+			});
 
 			expect(files.playCheckGate.callCount()).to.equal(1);
 			expect(releaseCalls).to.eql([['main', 3]]);
@@ -431,9 +447,17 @@ describe('PlaylistProcessor', () => {
 			const regionInfo = { regionName: 'dynamic' } as any;
 			const timedDebug = { debug: () => undefined, warn: () => undefined, error: () => undefined } as any;
 
-			const result = await (processor as any).shouldWaitAndContinue(
-				media, regionInfo, 'main', 0, 0, 0, false, 0, timedDebug, undefined,
-			);
+			const result = await (processor as any).shouldWaitAndContinue({
+				media,
+				regionInfo,
+				parentRegionName: 'main',
+				currentIndex: 0,
+				previousPlayingIndex: 0,
+				endTime: 0,
+				isLast: false,
+				version: 0,
+				timedDebug,
+			});
 			await Promise.resolve(); // flush microtasks so a resolved deferred runs its .then
 
 			expect(result).to.equal(WaitStatus.SKIP);
@@ -469,9 +493,17 @@ describe('PlaylistProcessor', () => {
 
 			const media = { src: 'img.jpg', regionInfo: { regionName: 'main' } } as any;
 			const timedDebug = { debug: () => undefined, warn: () => undefined, error: () => undefined } as any;
-			const result = await (processor as any).shouldWaitAndContinue(
-				media, media.regionInfo, 'main', 0, 0, 1, true, 0, timedDebug, undefined,
-			);
+			const result = await (processor as any).shouldWaitAndContinue({
+				media,
+				regionInfo: media.regionInfo,
+				parentRegionName: 'main',
+				currentIndex: 0,
+				previousPlayingIndex: 0,
+				endTime: 1,
+				isLast: true,
+				version: 0,
+				timedDebug,
+			});
 
 			expect(result).to.equal(WaitStatus.CONTINUE);
 			expect(order).to.deep.equal(['clear:main:0', 'play:main:0']);
@@ -512,9 +544,17 @@ describe('PlaylistProcessor', () => {
 				const { sos, processor } = setup(PAUSE_CONTENT_VALUE, {
 					main: { src: 'campaign.jpg', media: 'html', playing: true },
 				});
-				await processor.exposedHandleVideoPlay(
-					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
-				);
+				await processor.exposedHandleVideoPlay({
+					video,
+					params: [...params],
+					sosVideoObject: sos.video,
+					currentRegionInfo: regionInfo,
+					parentRegionInfo: regionInfo,
+					version: 0,
+					arrayIndex: 0,
+					currentIndex: 0,
+					timedDebug,
+				});
 				expect((sos.video.play as any).calledOnce()).to.equal(true);
 				expect((sos.video.stop as any).calledOnce()).to.equal(true);
 				expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
@@ -525,9 +565,17 @@ describe('PlaylistProcessor', () => {
 			'stops its own video when its slot was stopped (not paused) during play()',
 			async () => {
 				const { sos, processor } = setup(0, { main: { src: 'campaign.jpg', media: 'html', playing: true } }, true);
-				await processor.exposedHandleVideoPlay(
-					video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
-				);
+				await processor.exposedHandleVideoPlay({
+					video,
+					params: [...params],
+					sosVideoObject: sos.video,
+					currentRegionInfo: regionInfo,
+					parentRegionInfo: regionInfo,
+					version: 0,
+					arrayIndex: 0,
+					currentIndex: 0,
+					timedDebug,
+				});
 				expect((sos.video.play as any).calledOnce()).to.equal(true);
 				expect((sos.video.stop as any).calledOnce()).to.equal(true);
 				expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
@@ -536,9 +584,17 @@ describe('PlaylistProcessor', () => {
 
 		it('takes the region normally when its slot is untouched', async () => {
 			const { sos, processor } = setup(0, {});
-			await processor.exposedHandleVideoPlay(
-				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 0, timedDebug,
-			);
+			await processor.exposedHandleVideoPlay({
+				video,
+				params: [...params],
+				sosVideoObject: sos.video,
+				currentRegionInfo: regionInfo,
+				parentRegionInfo: regionInfo,
+				version: 0,
+				arrayIndex: 0,
+				currentIndex: 0,
+				timedDebug,
+			});
 			expect((sos.video.stop as any).callCount()).to.equal(0);
 			expect(processor.getCurrentlyPlaying().main.src).to.equal('http://x/a.mp4');
 		});
@@ -550,9 +606,17 @@ describe('PlaylistProcessor', () => {
 				behaviour: 'none', version: 0, priority: { priorityLevel: 0 }, controlledPlaylists: [],
 				player: { contentPause: PAUSE_CONTENT_VALUE, stop: false, endTime: 1, playing: false, timesPlayed: 0 },
 			});
-			await processor.exposedHandleVideoPlay(
-				video, [...params], sos.video, regionInfo, regionInfo, 0, 0, 1, timedDebug,
-			);
+			await processor.exposedHandleVideoPlay({
+				video,
+				params: [...params],
+				sosVideoObject: sos.video,
+				currentRegionInfo: regionInfo,
+				parentRegionInfo: regionInfo,
+				version: 0,
+				arrayIndex: 0,
+				currentIndex: 1,
+				timedDebug,
+			});
 			expect((sos.video.stop as any).calledOnce()).to.equal(true);
 			expect(processor.getCurrentlyPlaying().main.src).to.equal('campaign.jpg');
 		});

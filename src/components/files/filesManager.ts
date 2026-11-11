@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../logger';
+import { Log } from '@signageos/smil-logger';
 import isNil = require('lodash/isNil');
 import get = require('lodash/get');
 
@@ -36,6 +36,7 @@ import {
 import { createOfflineReportTools, OfflineReportTools } from './tools/offlineReports';
 import {
 	CUSTOM_ENDPOINT_OFFLINE_INTERVAL,
+	CUSTOM_ENDPOINT_REQUEST_TIMEOUT,
 	CUSTOM_ENDPOINT_REPORT_FILE_LIMIT,
 	DEFAULT_LAST_MODIFIED,
 	FileStructure,
@@ -62,7 +63,11 @@ import IRecordItemOptions from '@signageos/front-applet/es6/FrontApplet/ProofOfP
 import { SMILScheduleEnum } from '../../enums/scheduleEnums';
 import { Resource, UpdateDetection } from './resourceChecker/resourceChecker';
 import { FetchStrategy } from './IFilesManager';
-import { createFetchingStrategies, FetchingStrategies } from './fetchingStrategies/fetchingStrategies';
+import {
+	createFetchingStrategies,
+	FetchingStrategies,
+	XhrRequestOptions,
+} from './fetchingStrategies/fetchingStrategies';
 import { SMILEnums } from '../../enums/generalEnums';
 
 declare global {
@@ -78,6 +83,182 @@ interface ContentMovement {
 	destinationFileNames: Set<string>; // Files that need this content (e.g., Set(["video_hashB.mp4"]))
 	contentValue: string | number; // The value that identifies this content (redirect URL or timestamp)
 }
+
+export type SendDownloadReportOptions = {
+	fileType: ItemType;
+	localFilePath: string;
+	value: MergedDownloadList;
+	taskStartDate: Date;
+	statusCode?: number;
+	reportUrl?: string;
+};
+
+export type SendMediaReportOptions = {
+	value: SMILVideo | SMILMediaNoVideo | SMILTicker | SosHtmlElement;
+	taskStartDate: Date;
+	itemType: MediaItemType;
+	isMediaSynced: boolean;
+	statusCode?: number;
+};
+
+export type SendSmiFileReportOptions = {
+	localFilePath: string;
+	src: string;
+	errMessage?: string | null;
+};
+
+export type SendOptInEventReportOptions = {
+	eventName: OptInReportEvent;
+	value: MergedDownloadList;
+	reportUrl?: string;
+};
+
+export type CurrentFilesSetupOptions = {
+	widgets: SMILWidget[];
+	smilObject: SMILFileObject;
+	smilUrl: string;
+};
+
+export type GetFileDetailsOptions = {
+	media: SMILVideo | SMILImage | SMILWidget | SMILAudio;
+	fileStructure: string;
+	suffix?: string;
+};
+
+export type ShouldUpdateLocalFileOptions = {
+	localFilePath: string;
+	media: MergedDownloadList;
+	mediaInfoObject: MediaInfoObject;
+	timeOut: number;
+	skipContentHttpStatusCodes?: number[];
+	updateContentHttpStatusCodes?: number[];
+	fetchStrategy: FetchStrategy;
+};
+
+export type ParallelDownloadAllFilesOptions = {
+	filesList: MergedDownloadList[];
+	localFilePath: string;
+	timeOut: number;
+	skipContentHttpStatusCodes?: number[];
+	updateContentHttpStatusCodes?: number[];
+	fetchStrategy: FetchStrategy;
+	forceDownload?: boolean;
+	latestRemoteValue?: string;
+	allFilesList?: MergedDownloadList[]; // Optional full playlist for preservation check
+	externalPendingUpdates?: Map<string, string | number>; // Complete pending updates across all phases
+	// Set to true when detection already done (e.g., from processNewContentUpdates)
+	// to avoid duplicate HEAD requests
+	skipUpdateCheck?: boolean;
+	// Content-Length from pre-existing detection (used with skipUpdateCheck)
+	latestContentLength?: number;
+};
+
+export type PrePlayCheckOptions = {
+	media: SMILVideo | SMILImage | SMILWidget | SMILAudio;
+	mediaFolder: string;
+	smilObject: SMILFileObject;
+	allMediaList: MergedDownloadList[];
+};
+
+type IsValueAlreadyStoredOptions = {
+	value: string | null;
+	mediaInfoObject: MediaInfoObject;
+	localFilePath: string;
+};
+
+type DetectContentMovementsOptions = {
+	filesList: MergedDownloadList[];
+	currentMediaInfo: MediaInfoObject;
+	mergedMediaInfo: MediaInfoObject;
+};
+
+type CopyContentToNewLocationsOptions = {
+	movements: Map<string, ContentMovement>;
+	mediaInfoObject: MediaInfoObject;
+	filesList: MergedDownloadList[];
+};
+
+type FindActualFileForMovedContentOptions = {
+	currentValue: string | null;
+	mediaInfoObject: MediaInfoObject;
+	localFilePath: string;
+};
+
+type UpdateLocalFilePathForMovedContentOptions = {
+	file: MergedDownloadList;
+	updateValue: string | number;
+	mediaInfoObject: MediaInfoObject;
+	localFilePath: string;
+};
+
+type DetectFileUpdateInternalOptions = {
+	file: MergedDownloadList;
+	localFilePath: string;
+	timeOut: number;
+	skipContentHttpStatusCodes: number[];
+	updateContentHttpStatusCodes: number[];
+	fetchStrategy: FetchStrategy;
+};
+
+type CheckLastModifiedOptions = {
+	file: MergedDownloadList;
+	localFilePath: string;
+	timeOut: number;
+	skipContentHttpStatusCodes?: number[];
+	updateContentHttpStatusCodes?: number[];
+	fetchStrategy: FetchStrategy;
+};
+
+type DetectUpdateOnlyOptions = {
+	file: MergedDownloadList;
+	localFilePath: string;
+	timeOut: number;
+	skipContentHttpStatusCodes: number[];
+	updateContentHttpStatusCodes: number[];
+	fetchStrategy: FetchStrategy;
+};
+
+type ConvertToResourcesCheckerFormatOptions = {
+	resources: MergedDownloadList[];
+	rootFolder: string;
+	timeOut: number;
+	refreshInterval: number;
+	skipContentHttpStatusCodes?: number[];
+	updateContentHttpStatusCodes?: number[];
+	fetchStrategy: FetchStrategy;
+	reloadPlayerOnUpdate?: boolean;
+	detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>;
+};
+
+type ConvertToResourceCheckerFormatOptions = {
+	resource: MergedDownloadList;
+	checkFunction: () => Promise<Promise<void>[]>;
+	defaultInterval: number;
+	reloadPlayerOnUpdate?: boolean;
+	detectFunction?: () => Promise<UpdateDetection | null>;
+};
+
+type IsContentNeededByOtherUrlsOptions = {
+	contentValue: string | number;
+	excludeUrlOrFileName: string;
+	filesList: MergedDownloadList[];
+	mediaInfoObject: MediaInfoObject;
+	pendingUpdates?: Map<string, string | number>;
+};
+
+type PreserveFileToStorageOptions = {
+	filePath: string;
+	contentValue: string | number;
+	mediaType: string;
+	protectedPaths?: Set<string>;
+};
+
+type RestoreFromStorageOptions = {
+	storagePath: string;
+	targetFolder: string;
+	requestingUrl: string;
+	extensionHintUrl?: string;
+};
 
 export class FilesManager implements IFilesManager {
 	private sos: ISos;
@@ -220,11 +401,12 @@ export class FilesManager implements IFilesManager {
 				'[files] sending custom report: endpoint=%s',
 				this.smilLogging.endpoint!,
 			);
-			const response = await fetch(this.smilLogging.endpoint!, {
+			// XHR, not fetch: Chrome 38 devices have no native fetch and the player ships no polyfill.
+			const response = await this.makeXhrRequest({
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				url: this.smilLogging.endpoint!,
+				timeout: CUSTOM_ENDPOINT_REQUEST_TIMEOUT,
+				authHeaders: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload),
 			});
 
@@ -250,14 +432,14 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	public sendDownloadReport = async (
-		fileType: ItemType,
-		localFilePath: string,
-		value: MergedDownloadList,
-		taskStartDate: Date,
-		statusCode: number = 200,
-		reportUrl?: string,
-	) => {
+	public sendDownloadReport = async ({
+		fileType,
+		localFilePath,
+		value,
+		taskStartDate,
+		statusCode = 200,
+		reportUrl,
+	}: SendDownloadReportOptions) => {
 		// For SMIL files, always use value.src. For media files, use explicit reportUrl or fall back to value.src
 		const urlForReport = fileType === 'smil' ? value.src : (reportUrl || value.src);
 
@@ -268,11 +450,11 @@ export class FilesManager implements IFilesManager {
 				this.log.debug('Custom endpoint report enabled download: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
 					await this.sendCustomEndpointReport(
-						createCustomEndpointMessagePayload(createPoPMessagePayload(value), urlForReport, statusCode),
+						createCustomEndpointMessagePayload({ message: createPoPMessagePayload({ value }), locationUrl: urlForReport, statusCode }),
 					);
 				}
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value));
+				await this.sendPoPReport(createPoPMessagePayload({ value }));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -280,11 +462,7 @@ export class FilesManager implements IFilesManager {
 			await this.sendReport({
 				type: 'SMIL.FileDownloaded',
 				itemType: fileType,
-				source: createSourceReportObject(
-					localFilePath,
-					urlForReport,
-					this.internalStorageUnit.type,
-				),
+				source: createSourceReportObject({ localFilePath, fileSrc: urlForReport, type: this.internalStorageUnit.type }),
 				startedAt: taskStartDate,
 				succeededAt: isSuccess ? moment().toDate() : null,
 				failedAt: isSuccess ? null : moment().toDate(),
@@ -293,13 +471,13 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public sendMediaReport = async (
-		value: SMILVideo | SMILMediaNoVideo | SMILTicker | SosHtmlElement,
-		taskStartDate: Date,
-		itemType: MediaItemType,
-		isMediaSynced: boolean,
-		statusCode: number = 200,
-	) => {
+	public sendMediaReport = async ({
+		value,
+		taskStartDate,
+		itemType,
+		isMediaSynced,
+		statusCode = 200,
+	}: SendMediaReportOptions) => {
 		// useInReportUrl is set at playback start in playElement()
 		// Fall back to value.src for legacy cases or edge cases
 		if ('src' in value && !value.useInReportUrl) {
@@ -313,11 +491,11 @@ export class FilesManager implements IFilesManager {
 			if (this.smilLogging.endpoint) {
 				this.log.debug('[files] custom endpoint report enabled: %s', this.smilLogging.enabled);
 				if (isCustomEndpointEventAllowed(this.smilLogging, value.popName)) {
-					const payload = createCustomEndpointMessagePayload(
-						createPoPMessagePayload(value),
-						value.useInReportUrl,
+					const payload = createCustomEndpointMessagePayload({
+						message: createPoPMessagePayload({ value }),
+						locationUrl: value.useInReportUrl,
 						statusCode,
-					);
+					});
 					if (value.reportMode === 'batch') {
 						this.log.debug('[files] report mode is batch, saving to offline storage');
 						await this.saveCustomEndpointInfo(payload, 'batch');
@@ -326,7 +504,7 @@ export class FilesManager implements IFilesManager {
 					}
 				}
 			} else {
-				await this.sendPoPReport(createPoPMessagePayload(value));
+				await this.sendPoPReport(createPoPMessagePayload({ value }));
 			}
 		}
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
@@ -334,7 +512,7 @@ export class FilesManager implements IFilesManager {
 			await this.sendReport({
 				type: isMediaSynced ? 'SMIL.MediaPlayed-Synced' : 'SMIL.MediaPlayed',
 				itemType: itemType,
-				source: 'src' in value ? createSourceReportObject(value.localFilePath, value.src) : ({} as any),
+				source: 'src' in value ? createSourceReportObject({ localFilePath: value.localFilePath, fileSrc: value.src }) : ({} as any),
 				startedAt: taskStartDate,
 				endedAt: isSuccess ? moment().toDate() : null,
 				failedAt: isSuccess ? null : moment().toDate(),
@@ -343,7 +521,7 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public sendSmiFileReport = async (localFilePath: string, src: string, errMessage: string | null = null) => {
+	public sendSmiFileReport = async ({ localFilePath, src, errMessage = null }: SendSmiFileReportOptions) => {
 		if (
 			this.smilLogging.type?.includes(smilLogging.proofOfPlay) &&
 			this.smilLogging.endpoint &&
@@ -361,7 +539,7 @@ export class FilesManager implements IFilesManager {
 		if (this.smilLogging.type?.includes(smilLogging.standard)) {
 			await this.sendReport({
 				type: 'SMIL.PlaybackStarted',
-				source: createSourceReportObject(localFilePath, src),
+				source: createSourceReportObject({ localFilePath, fileSrc: src }),
 				succeededAt: isNil(errMessage) ? moment().toDate() : null,
 				failedAt: isNil(errMessage) ? null : moment().toDate(),
 				errorMessage: errMessage,
@@ -378,11 +556,7 @@ export class FilesManager implements IFilesManager {
 	 * <meta events="..."> allowlist. Payload shape is identical to media-download.
 	 * Custom endpoint transport only.
 	 */
-	public sendOptInEventReport = async (
-		eventName: OptInReportEvent,
-		value: MergedDownloadList,
-		reportUrl?: string,
-	) => {
+	public sendOptInEventReport = async ({ eventName, value, reportUrl }: SendOptInEventReportOptions) => {
 		if (!this.smilLogging.type?.includes(smilLogging.proofOfPlay) || !this.smilLogging.endpoint) {
 			return;
 		}
@@ -392,7 +566,11 @@ export class FilesManager implements IFilesManager {
 		value.popName = eventName;
 		try {
 			await this.sendCustomEndpointReport(
-				createCustomEndpointMessagePayload(createPoPMessagePayload(value), reportUrl || value.src, 200),
+				createCustomEndpointMessagePayload({
+					message: createPoPMessagePayload({ value }),
+					locationUrl: reportUrl || value.src,
+					statusCode: 200,
+				}),
 			);
 		} catch (err) {
 			// Every call site is fire-and-forget; never let a failed report (or a
@@ -401,7 +579,7 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public currentFilesSetup = async (widgets: SMILWidget[], smilObject: SMILFileObject, smilUrl: string) => {
+	public currentFilesSetup = async ({ widgets, smilObject, smilUrl }: CurrentFilesSetupOptions) => {
 		await this.deleteUnusedFiles(smilObject, smilUrl);
 		this.log.debug('[files] unused files deleted');
 
@@ -409,11 +587,7 @@ export class FilesManager implements IFilesManager {
 		this.log.debug('[files] widgets extracted');
 	};
 
-	public getFileDetails = async (
-		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		fileStructure: string,
-		suffix: string = '',
-	) => {
+	public getFileDetails = async ({ media, fileStructure, suffix = '' }: GetFileDetailsOptions) => {
 		this.log.debug('[files] getting file details: %O', media);
 		// Resolve the canonical name against the persisted mediaInfoObject so we find
 		// the file even when the SMIL src URL has no extension (the on-disk filename
@@ -426,15 +600,15 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	public shouldUpdateLocalFile = async (
-		localFilePath: string,
-		media: MergedDownloadList,
-		mediaInfoObject: MediaInfoObject,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
-		fetchStrategy: FetchStrategy,
-	): Promise<UpdateCheckResult> => {
+	public shouldUpdateLocalFile = async ({
+		localFilePath,
+		media,
+		mediaInfoObject,
+		timeOut,
+		skipContentHttpStatusCodes = [],
+		updateContentHttpStatusCodes = [],
+		fetchStrategy,
+	}: ShouldUpdateLocalFileOptions): Promise<UpdateCheckResult> => {
 		const updateCheckResult = await fetchStrategy(
 			media,
 			timeOut,
@@ -459,7 +633,7 @@ export class FilesManager implements IFilesManager {
 			return { shouldUpdate: false, statusCode };
 		}
 
-		if (!(await this.fileExists(createLocalFilePath(localFilePath, media.src)))) {
+		if (!(await this.fileExists(createLocalFilePath({ localFilePath, src: media.src })))) {
 			this.log.debug('[files] file not in local storage, downloading: %s', media.src);
 			return {
 				shouldUpdate: true,
@@ -572,7 +746,7 @@ export class FilesManager implements IFilesManager {
 		await this.sos.fileSystem.writeFile(
 			{
 				storageUnit: this.internalStorageUnit,
-				filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				filePath: createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 			},
 			JSON.stringify(mediaInfoObject),
 		);
@@ -627,23 +801,23 @@ export class FilesManager implements IFilesManager {
 		});
 	};
 
-	public parallelDownloadAllFiles = async (
-		filesList: MergedDownloadList[],
-		localFilePath: string,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
-		fetchStrategy: FetchStrategy,
-		forceDownload: boolean = false,
-		latestRemoteValue?: string,
-		allFilesList?: MergedDownloadList[], // Optional full playlist for preservation check
-		externalPendingUpdates?: Map<string, string | number>, // Complete pending updates across all phases
-		// Set to true when detection already done (e.g., from processNewContentUpdates)
-		// to avoid duplicate HEAD requests
-		skipUpdateCheck: boolean = false,
-		// Content-Length from pre-existing detection (used with skipUpdateCheck)
-		latestContentLength?: number,
-	): Promise<{ promises: Promise<void>[]; filesToUpdate: Map<string, number | string> }> => {
+	public parallelDownloadAllFiles = async ({
+		filesList,
+		localFilePath,
+		timeOut,
+		skipContentHttpStatusCodes = [],
+		updateContentHttpStatusCodes = [],
+		fetchStrategy,
+		forceDownload = false,
+		latestRemoteValue,
+		allFilesList,
+		externalPendingUpdates,
+		skipUpdateCheck = false,
+		latestContentLength,
+	}: ParallelDownloadAllFilesOptions): Promise<{
+		promises: Promise<void>[];
+		filesToUpdate: Map<string, number | string>;
+	}> => {
 		const promises: Promise<void>[] = [];
 		const taskStartDate = moment().toDate();
 		const fileType = mapFileType(localFilePath);
@@ -669,7 +843,7 @@ export class FilesManager implements IFilesManager {
 					}
 
 					// check for local urls to files (media/file.mp4)
-					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+					file.src = convertRelativePathToAbsolute({ src: file.src, smilFileUrl: this.smilFileUrl });
 
 					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
 					// This avoids duplicate HEAD requests while Phase 3b.5 still checks storage/existing content
@@ -685,15 +859,15 @@ export class FilesManager implements IFilesManager {
 								shouldUpdate: true,
 								value: latestRemoteValue,
 							}
-							: await this.shouldUpdateLocalFile(
+							: await this.shouldUpdateLocalFile({
 								localFilePath,
-								file,
+								media: file,
 								mediaInfoObject,
 								timeOut,
 								skipContentHttpStatusCodes,
 								updateContentHttpStatusCodes,
 								fetchStrategy,
-							);
+							});
 
 					if (hasMalformedStem(file.src)) {
 						this.log.debug('[files] malformed %XX in URL stem, using raw stem for file name: src=%s', file.src);
@@ -779,8 +953,8 @@ export class FilesManager implements IFilesManager {
 				// updateValue is the resolved URL (Location header) for the location strategy.
 				// When the SMIL src has no extension (e.g. ".../content"), borrow it from the
 				// resolved URL so the on-disk filename carries the extension.
-				const fullLocalFilePath = createLocalFilePath(localFilePath, file.src, String(updateValue));
-				const actualDownloadPath = createLocalFilePath(downloadPath, file.src, String(updateValue));
+				const fullLocalFilePath = createLocalFilePath({ localFilePath, src: file.src, fallbackUrlForExt: String(updateValue) });
+				const actualDownloadPath = createLocalFilePath({ localFilePath: downloadPath, src: file.src, fallbackUrlForExt: String(updateValue) });
 
 				// Determine download URL
 				let downloadUrl: string;
@@ -801,13 +975,14 @@ export class FilesManager implements IFilesManager {
 					if (fileExistsLocally) {
 						// Use full playlist if provided, otherwise fall back to current batch
 						const filesForCheck = allFilesList || filesList;
-						const stillNeeded = this.isContentNeededByOtherUrls(
-							existingValue,
-							file.src,
-							filesForCheck,
+						const stillNeeded = this.isContentNeededByOtherUrls({
+							contentValue: existingValue,
+							excludeUrlOrFileName: file.src,
+							filesList: filesForCheck,
 							mediaInfoObject,
-							externalPendingUpdates || filesToUpdate, // Use complete pending updates if available
-						);
+							// Use complete pending updates if available
+							pendingUpdates: externalPendingUpdates || filesToUpdate,
+						});
 						shouldPreserve = !stillNeeded;
 					}
 				}
@@ -930,7 +1105,12 @@ export class FilesManager implements IFilesManager {
 						// Handle storage preservation if needed (keep existing logic)
 						if (task.shouldPreserve && task.existingValue) {
 							this.log.debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
-							await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
+							await this.preserveFileToStorage({
+								filePath: task.fullLocalFilePath,
+								contentValue: task.existingValue,
+								mediaType: fileType,
+								protectedPaths: protectedStoragePaths,
+							});
 						} else if (task.existingValue && !task.shouldPreserve) {
 							this.log.debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 						}
@@ -969,11 +1149,11 @@ export class FilesManager implements IFilesManager {
 								task.fileName,
 							);
 							await this.trackSpaceConsumed(task.actualDownloadPath);
-							this.sendOptInEventReport(
-								'media-copied',
-								task.file,
-								getReportUrlFromUpdateValue(task.updateValue),
-							);
+							this.sendOptInEventReport({
+								eventName: 'media-copied',
+								value: task.file,
+								reportUrl: getReportUrlFromUpdateValue(task.updateValue),
+							});
 
 							// CRITICAL: Track in tempDownloads for migration
 							if (task.isNewContent) {
@@ -1008,32 +1188,36 @@ export class FilesManager implements IFilesManager {
 					// Handle storage preservation if needed for first task
 					if (firstTask.shouldPreserve && firstTask.existingValue) {
 						this.log.debug('Preserving old content to storage before restoration: %s', firstTask.fullLocalFilePath);
-						await this.preserveFileToStorage(
-							firstTask.fullLocalFilePath,
-							firstTask.existingValue,
-							fileType,
-							protectedStoragePaths,
-						);
+						await this.preserveFileToStorage({
+							filePath: firstTask.fullLocalFilePath,
+							contentValue: firstTask.existingValue,
+							mediaType: fileType,
+							protectedPaths: protectedStoragePaths,
+						});
 					}
 
 					try {
 						// Restore from storage to temp for the first task. Pass updateValue
 						// as the extension hint so the restored filename matches
 						// firstTask.actualDownloadPath (which already used the same fallback).
-						restoredTempPath = await this.restoreFromStorage(
-							storageFilePath,
-							firstTask.actualDownloadPath.substring(0, firstTask.actualDownloadPath.lastIndexOf('/')),
-							firstTask.file.src,
-							typeof firstTask.updateValue === 'string' ? firstTask.updateValue : undefined,
-						);
+						restoredTempPath = await this.restoreFromStorage({
+							storagePath: storageFilePath,
+							targetFolder: firstTask.actualDownloadPath.substring(
+								0,
+								firstTask.actualDownloadPath.lastIndexOf('/'),
+							),
+							requestingUrl: firstTask.file.src,
+							extensionHintUrl:
+								typeof firstTask.updateValue === 'string' ? firstTask.updateValue : undefined,
+						});
 
 						if (restoredTempPath) {
 							this.log.debug('DEDUP: Successfully restored from storage to: %s', restoredTempPath);
-							this.sendOptInEventReport(
-								'media-restored',
-								firstTask.file,
-								getReportUrlFromUpdateValue(firstTask.updateValue),
-							);
+							this.sendOptInEventReport({
+								eventName: 'media-restored',
+								value: firstTask.file,
+								reportUrl: getReportUrlFromUpdateValue(firstTask.updateValue),
+							});
 
 							// For the first task, we already have the file in place
 							// Track it in tempDownloads
@@ -1049,12 +1233,12 @@ export class FilesManager implements IFilesManager {
 								// Handle storage preservation if needed
 								if (task.shouldPreserve && task.existingValue) {
 									this.log.debug('Preserving old content to storage before copy: %s', task.fullLocalFilePath);
-									await this.preserveFileToStorage(
-										task.fullLocalFilePath,
-										task.existingValue,
-										fileType,
-										protectedStoragePaths,
-									);
+									await this.preserveFileToStorage({
+										filePath: task.fullLocalFilePath,
+										contentValue: task.existingValue,
+										mediaType: fileType,
+										protectedPaths: protectedStoragePaths,
+									});
 								}
 
 								try {
@@ -1089,11 +1273,11 @@ export class FilesManager implements IFilesManager {
 
 									this.log.debug('DEDUP: Successfully copied restored content for: %s', task.file.src);
 									await this.trackSpaceConsumed(task.actualDownloadPath);
-									this.sendOptInEventReport(
-										'media-copied',
-										task.file,
-										getReportUrlFromUpdateValue(task.updateValue),
-									);
+									this.sendOptInEventReport({
+										eventName: 'media-copied',
+										value: task.file,
+										reportUrl: getReportUrlFromUpdateValue(task.updateValue),
+									});
 
 									// Track in tempDownloads
 									if (task.isNewContent) {
@@ -1133,7 +1317,12 @@ export class FilesManager implements IFilesManager {
 					// Preserve existing file to storage if needed
 					if (task.shouldPreserve && task.existingValue) {
 						this.log.debug('Preserving old content to storage before download: %s', task.fullLocalFilePath);
-						await this.preserveFileToStorage(task.fullLocalFilePath, task.existingValue, fileType, protectedStoragePaths);
+						await this.preserveFileToStorage({
+							filePath: task.fullLocalFilePath,
+							contentValue: task.existingValue,
+							mediaType: fileType,
+							protectedPaths: protectedStoragePaths,
+						});
 					} else if (task.existingValue && !task.shouldPreserve) {
 						this.log.debug('Content still needed by other URLs, not preserving: %s', task.existingValue);
 					}
@@ -1171,23 +1360,23 @@ export class FilesManager implements IFilesManager {
 									this.log.debug(`Tracked temp download: %s -> %s`, task.fileName, task.actualDownloadPath);
 								}
 
-								this.sendDownloadReport(
+								this.sendDownloadReport({
 									fileType,
-									task.fullLocalFilePath,
-									task.file,
+									localFilePath: task.fullLocalFilePath,
+									value: task.file,
 									taskStartDate,
-									task.statusCode,
-									getReportUrlFromUpdateValue(task.updateValue),
-								);
+									statusCode: task.statusCode,
+									reportUrl: getReportUrlFromUpdateValue(task.updateValue),
+								});
 							} catch (err) {
 								this.log.error('[files] download error: %O, file: %s', err, task.file.src);
-								this.sendDownloadReport(
+								this.sendDownloadReport({
 									fileType,
-									task.fullLocalFilePath,
-									task.file,
+									localFilePath: task.fullLocalFilePath,
+									value: task.file,
 									taskStartDate,
-									502,
-								);
+									statusCode: 502,
+								});
 								// Remove from filesToUpdate if download failed
 								filesToUpdate.delete(task.fileName);
 							}
@@ -1217,12 +1406,12 @@ export class FilesManager implements IFilesManager {
 					// Preserve existing file to storage if needed (only for primary)
 					if (primaryTask.shouldPreserve && primaryTask.existingValue) {
 						this.log.debug('Preserving old content to storage before download: %s', primaryTask.fullLocalFilePath);
-						await this.preserveFileToStorage(
-							primaryTask.fullLocalFilePath,
-							primaryTask.existingValue,
-							fileType,
-							protectedStoragePaths,
-						);
+						await this.preserveFileToStorage({
+							filePath: primaryTask.fullLocalFilePath,
+							contentValue: primaryTask.existingValue,
+							mediaType: fileType,
+							protectedPaths: protectedStoragePaths,
+						});
 					} else if (primaryTask.existingValue && !primaryTask.shouldPreserve) {
 						this.log.debug('Content still needed by other URLs, not preserving: %s', primaryTask.existingValue);
 					}
@@ -1274,14 +1463,14 @@ export class FilesManager implements IFilesManager {
 									);
 								}
 
-								this.sendDownloadReport(
+								this.sendDownloadReport({
 									fileType,
-									primaryTask.fullLocalFilePath,
-									primaryTask.file,
+									localFilePath: primaryTask.fullLocalFilePath,
+									value: primaryTask.file,
 									taskStartDate,
-									primaryTask.statusCode,
-									getReportUrlFromUpdateValue(primaryTask.updateValue),
-								);
+									statusCode: primaryTask.statusCode,
+									reportUrl: getReportUrlFromUpdateValue(primaryTask.updateValue),
+								});
 
 								// Step 5: Copy the primary file for all other tasks in this group
 								this.log.debug('DEDUP: Copying primary file for %d duplicate URLs', tasks.length - 1);
@@ -1329,11 +1518,11 @@ export class FilesManager implements IFilesManager {
 											duplicateTask.fileName,
 										);
 										await this.trackSpaceConsumed(duplicateTask.actualDownloadPath);
-										this.sendOptInEventReport(
-											'media-copied',
-											duplicateTask.file,
-											getReportUrlFromUpdateValue(duplicateTask.updateValue),
-										);
+										this.sendOptInEventReport({
+											eventName: 'media-copied',
+											value: duplicateTask.file,
+											reportUrl: getReportUrlFromUpdateValue(duplicateTask.updateValue),
+										});
 
 										// Track the copied file in temp if using temp folder
 										if (duplicateTask.isNewContent) {
@@ -1362,13 +1551,13 @@ export class FilesManager implements IFilesManager {
 								this.log.debug('DEDUP: Copy phase complete for content group');
 							} catch (err) {
 								this.log.error(`Unexpected error: %O during downloading file: %s`, err, primaryTask.file.src);
-								this.sendDownloadReport(
+								this.sendDownloadReport({
 									fileType,
-									primaryTask.fullLocalFilePath,
-									primaryTask.file,
+									localFilePath: primaryTask.fullLocalFilePath,
+									value: primaryTask.file,
 									taskStartDate,
-									502,
-								);
+									statusCode: 502,
+								});
 								// Remove from filesToUpdate if download failed
 								filesToUpdate.delete(primaryTask.fileName);
 							}
@@ -1387,12 +1576,12 @@ export class FilesManager implements IFilesManager {
 								'Preserving old content to storage (duplicate task): %s',
 								duplicateTask.fullLocalFilePath,
 							);
-							await this.preserveFileToStorage(
-								duplicateTask.fullLocalFilePath,
-								duplicateTask.existingValue,
-								fileType,
-								protectedStoragePaths,
-							);
+							await this.preserveFileToStorage({
+								filePath: duplicateTask.fullLocalFilePath,
+								contentValue: duplicateTask.existingValue,
+								mediaType: fileType,
+								protectedPaths: protectedStoragePaths,
+							});
 						}
 						// Files will be created by copy operation after primary download
 						this.log.debug('DEDUP: Download skipped for: %s (will copy from primary)', duplicateTask.file.src);
@@ -1421,11 +1610,11 @@ export class FilesManager implements IFilesManager {
 			for (const result of noDownloadResults) {
 				this.log.debug(`Updating mediaInfoObject for %s without download`, result.file.src);
 				filesToUpdate.set(result.fileName, result.updateCheck.value);
-				this.sendOptInEventReport(
-					'media-moved',
-					result.file,
-					getReportUrlFromUpdateValue(result.updateCheck.value),
-				);
+				this.sendOptInEventReport({
+					eventName: 'media-moved',
+					value: result.file,
+					reportUrl: getReportUrlFromUpdateValue(result.updateCheck.value),
+				});
 			}
 		} else {
 			// Original logic for non-location strategies
@@ -1438,7 +1627,7 @@ export class FilesManager implements IFilesManager {
 					}
 
 					// check for local urls to files (media/file.mp4)
-					file.src = convertRelativePathToAbsolute(file.src, this.smilFileUrl);
+					file.src = convertRelativePathToAbsolute({ src: file.src, smilFileUrl: this.smilFileUrl });
 
 					// Skip HEAD request if detection already done (e.g., from processNewContentUpdates)
 					// This avoids duplicate HEAD requests
@@ -1453,15 +1642,15 @@ export class FilesManager implements IFilesManager {
 								shouldUpdate: true,
 								value: latestRemoteValue,
 							}
-							: await this.shouldUpdateLocalFile(
+							: await this.shouldUpdateLocalFile({
 								localFilePath,
-								file,
+								media: file,
 								mediaInfoObject,
 								timeOut,
 								skipContentHttpStatusCodes,
 								updateContentHttpStatusCodes,
 								fetchStrategy,
-							);
+							});
 
 					// check if file is already downloaded or is forcedDownload to update existing file with new version
 					if (updateCheck.shouldUpdate) {
@@ -1508,16 +1697,20 @@ export class FilesManager implements IFilesManager {
 
 						if (existingValue && (await this.fileExists(fullLocalFilePath)) && !isNewContent) {
 							// Check if this content is needed by any other URLs
-							const stillNeeded = this.isContentNeededByOtherUrls(
-								existingValue,
-								file.src,
+							const stillNeeded = this.isContentNeededByOtherUrls({
+								contentValue: existingValue,
+								excludeUrlOrFileName: file.src,
 								filesList,
 								mediaInfoObject,
-							);
+							});
 
 							if (!stillNeeded) {
 								this.log.debug('Preserving old content to storage before download: %s', fullLocalFilePath);
-								await this.preserveFileToStorage(fullLocalFilePath, existingValue, fileType);
+								await this.preserveFileToStorage({
+									filePath: fullLocalFilePath,
+									contentValue: existingValue,
+									mediaType: fileType,
+								});
 							} else {
 								this.log.debug('Content still needed by other URLs, not preserving: %s', existingValue);
 							}
@@ -1563,17 +1756,23 @@ export class FilesManager implements IFilesManager {
 										this.log.debug(`Tracked temp download: %s -> %s`, canonicalName, actualDownloadPath);
 									}
 
-									this.sendDownloadReport(
+									this.sendDownloadReport({
 										fileType,
-										fullLocalFilePath,
-										file,
+										localFilePath: fullLocalFilePath,
+										value: file,
 										taskStartDate,
 										statusCode,
-										getReportUrlFromUpdateValue(updateValue),
-									);
+										reportUrl: getReportUrlFromUpdateValue(updateValue),
+									});
 								} catch (err) {
 									this.log.error(`Unexpected error: %O during downloading file: %s`, err, file.src);
-									this.sendDownloadReport(fileType, fullLocalFilePath, file, taskStartDate, 502);
+									this.sendDownloadReport({
+										fileType,
+										localFilePath: fullLocalFilePath,
+										value: file,
+										taskStartDate,
+										statusCode: 502,
+									});
 									// Remove from filesToUpdate if download failed
 									filesToUpdate.delete(canonicalName);
 								}
@@ -1587,11 +1786,11 @@ export class FilesManager implements IFilesManager {
 							getFileName(file.src, updateCheck.value as string | undefined),
 							updateCheck.value,
 						);
-						this.sendOptInEventReport(
-							'media-moved',
-							file,
-							getReportUrlFromUpdateValue(updateCheck.value),
-						);
+						this.sendOptInEventReport({
+							eventName: 'media-moved',
+							value: file,
+							reportUrl: getReportUrlFromUpdateValue(updateCheck.value),
+						});
 					}
 				}),
 			);
@@ -1609,7 +1808,7 @@ export class FilesManager implements IFilesManager {
 		// Update mediaInfoObject with successful downloads
 		filesToUpdate.forEach((value, fileName) => {
 			this.log.debug('[files] updating mediaInfo: file=%s', fileName);
-			updateJsonObject(mediaInfoObject, fileName, value);
+			updateJsonObject({ jsonObject: mediaInfoObject, attr: fileName, value });
 		});
 
 		// Save/update mediaInfoObject to persistent storage
@@ -1660,9 +1859,14 @@ export class FilesManager implements IFilesManager {
 
 		const detections = (await Promise.all(
 			fileEntries.map((entry) =>
-				this.detectUpdateOnly(
-					entry.file, entry.localFilePath, timeOut, skipCodes, updateCodes, fetchStrategy,
-				),
+				this.detectUpdateOnly({
+					file: entry.file,
+					localFilePath: entry.localFilePath,
+					timeOut,
+					skipContentHttpStatusCodes: skipCodes,
+					updateContentHttpStatusCodes: updateCodes,
+					fetchStrategy,
+				}),
 			),
 		)).filter((d): d is UpdateDetection => d !== null);
 
@@ -1710,16 +1914,14 @@ export class FilesManager implements IFilesManager {
 			const smilFetchStrategy = this.strategies.getStrategy(SMILEnums.lastModified);
 
 			resourceCheckers = resourceCheckers.concat(
-				this.convertToResourcesCheckerFormat(
-					[smilFile],
-					FileStructure.rootFolder,
-					smilObject.refresh.timeOut,
-					smilObject.refresh.smilFileRefresh,
-					[],
-					[],
-					smilFetchStrategy,
-					true,
-				),
+				this.convertToResourcesCheckerFormat({
+					resources: [smilFile],
+					rootFolder: FileStructure.rootFolder,
+					timeOut: smilObject.refresh.timeOut,
+					refreshInterval: smilObject.refresh.smilFileRefresh,
+					fetchStrategy: smilFetchStrategy,
+					reloadPlayerOnUpdate: true,
+				}),
 			);
 
 			// check for media updates only if its not switched off in the smil file
@@ -1728,91 +1930,87 @@ export class FilesManager implements IFilesManager {
 				const mediaFetchStrategy = this.strategies.getStrategy(smilObject.updateMechanism);
 
 				resourceCheckers = resourceCheckers.concat(
-					this.convertToResourcesCheckerFormat(
-						smilObject.video,
-						FileStructure.videos,
-						smilObject.refresh.timeOut,
-						smilObject.refresh.refreshInterval,
-						smilObject.skipContentOnHttpStatus,
-						smilObject.updateContentOnHttpStatus,
-						mediaFetchStrategy,
-						false, // reloadPlayerOnUpdate
-						(resource) =>
-							this.detectUpdateOnly(
-								resource,
-								FileStructure.videos,
-								smilObject.refresh.timeOut,
-								smilObject.skipContentOnHttpStatus,
-								smilObject.updateContentOnHttpStatus,
-								mediaFetchStrategy,
-							),
-					),
+					this.convertToResourcesCheckerFormat({
+						resources: smilObject.video,
+						rootFolder: FileStructure.videos,
+						timeOut: smilObject.refresh.timeOut,
+						refreshInterval: smilObject.refresh.refreshInterval,
+						skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+						updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+						fetchStrategy: mediaFetchStrategy,
+						detectFunction: (resource) =>
+							this.detectUpdateOnly({
+								file: resource,
+								localFilePath: FileStructure.videos,
+								timeOut: smilObject.refresh.timeOut,
+								skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+								updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+								fetchStrategy: mediaFetchStrategy,
+							}),
+					}),
 				);
 
 				resourceCheckers = resourceCheckers.concat(
-					this.convertToResourcesCheckerFormat(
-						smilObject.audio,
-						FileStructure.audios,
-						smilObject.refresh.timeOut,
-						smilObject.refresh.refreshInterval,
-						smilObject.skipContentOnHttpStatus,
-						smilObject.updateContentOnHttpStatus,
-						mediaFetchStrategy,
-						false, // reloadPlayerOnUpdate
-						(resource) =>
-							this.detectUpdateOnly(
-								resource,
-								FileStructure.audios,
-								smilObject.refresh.timeOut,
-								smilObject.skipContentOnHttpStatus,
-								smilObject.updateContentOnHttpStatus,
-								mediaFetchStrategy,
-							),
-					),
+					this.convertToResourcesCheckerFormat({
+						resources: smilObject.audio,
+						rootFolder: FileStructure.audios,
+						timeOut: smilObject.refresh.timeOut,
+						refreshInterval: smilObject.refresh.refreshInterval,
+						skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+						updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+						fetchStrategy: mediaFetchStrategy,
+						detectFunction: (resource) =>
+							this.detectUpdateOnly({
+								file: resource,
+								localFilePath: FileStructure.audios,
+								timeOut: smilObject.refresh.timeOut,
+								skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+								updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+								fetchStrategy: mediaFetchStrategy,
+							}),
+					}),
 				);
 
 				resourceCheckers = resourceCheckers.concat(
-					this.convertToResourcesCheckerFormat(
-						smilObject.img,
-						FileStructure.images,
-						smilObject.refresh.timeOut,
-						smilObject.refresh.refreshInterval,
-						smilObject.skipContentOnHttpStatus,
-						smilObject.updateContentOnHttpStatus,
-						mediaFetchStrategy,
-						false, // reloadPlayerOnUpdate
-						(resource) =>
-							this.detectUpdateOnly(
-								resource,
-								FileStructure.images,
-								smilObject.refresh.timeOut,
-								smilObject.skipContentOnHttpStatus,
-								smilObject.updateContentOnHttpStatus,
-								mediaFetchStrategy,
-							),
-					),
+					this.convertToResourcesCheckerFormat({
+						resources: smilObject.img,
+						rootFolder: FileStructure.images,
+						timeOut: smilObject.refresh.timeOut,
+						refreshInterval: smilObject.refresh.refreshInterval,
+						skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+						updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+						fetchStrategy: mediaFetchStrategy,
+						detectFunction: (resource) =>
+							this.detectUpdateOnly({
+								file: resource,
+								localFilePath: FileStructure.images,
+								timeOut: smilObject.refresh.timeOut,
+								skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+								updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+								fetchStrategy: mediaFetchStrategy,
+							}),
+					}),
 				);
 
 				resourceCheckers = resourceCheckers.concat(
-					this.convertToResourcesCheckerFormat(
-						smilObject.ref,
-						FileStructure.widgets,
-						smilObject.refresh.timeOut,
-						smilObject.refresh.refreshInterval,
-						smilObject.skipContentOnHttpStatus,
-						smilObject.updateContentOnHttpStatus,
-						mediaFetchStrategy,
-						false, // reloadPlayerOnUpdate
-						(resource) =>
-							this.detectUpdateOnly(
-								resource,
-								FileStructure.widgets,
-								smilObject.refresh.timeOut,
-								smilObject.skipContentOnHttpStatus,
-								smilObject.updateContentOnHttpStatus,
-								mediaFetchStrategy,
-							),
-					),
+					this.convertToResourcesCheckerFormat({
+						resources: smilObject.ref,
+						rootFolder: FileStructure.widgets,
+						timeOut: smilObject.refresh.timeOut,
+						refreshInterval: smilObject.refresh.refreshInterval,
+						skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+						updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+						fetchStrategy: mediaFetchStrategy,
+						detectFunction: (resource) =>
+							this.detectUpdateOnly({
+								file: resource,
+								localFilePath: FileStructure.widgets,
+								timeOut: smilObject.refresh.timeOut,
+								skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+								updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
+								fetchStrategy: mediaFetchStrategy,
+							}),
+					}),
 				);
 			}
 
@@ -1832,7 +2030,7 @@ export class FilesManager implements IFilesManager {
 	public getOrCreateMediaInfoFile = async (filesList: MergedDownloadList[]): Promise<MediaInfoObject> => {
 		if (
 			!(await this.fileExists(
-				createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+				createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 			))
 		) {
 			this.log.debug('[files] mediaInfo not found, creating new');
@@ -1841,7 +2039,7 @@ export class FilesManager implements IFilesManager {
 
 		const response = await this.sos.fileSystem.readFile({
 			storageUnit: this.internalStorageUnit,
-			filePath: createLocalFilePath(FileStructure.smilMediaInfo, FileStructure.smilMediaInfoFileName),
+			filePath: createLocalFilePath({ localFilePath: FileStructure.smilMediaInfo, src: FileStructure.smilMediaInfoFileName }),
 		});
 		try {
 			return JSON.parse(response);
@@ -2060,20 +2258,18 @@ export class FilesManager implements IFilesManager {
 				// This ensures MOVED_CONTENT (needsDownload=false) doesn't trigger downloads
 				// Pass allFilesList for preservation check, or fall back to current batch files
 				// Skip HEAD requests since detection already done - avoid duplicate requests
-				const result = await this.parallelDownloadAllFiles(
-					files,
+				const result = await this.parallelDownloadAllFiles({
+					filesList: files,
 					localFilePath,
-					SMILScheduleEnum.fileCheckTimeout,
-					[],
-					[],
+					timeOut: SMILScheduleEnum.fileCheckTimeout as number,
 					fetchStrategy,
-					groupDetections[0].needsDownload, // Use actual needsDownload value from detection
-					String(groupDetections[0].updateValue),
+					forceDownload: groupDetections[0].needsDownload, // Use actual needsDownload value from detection
+					latestRemoteValue: String(groupDetections[0].updateValue),
 					allFilesList, // Pass full files list for accurate preservation check
-					allPendingUpdates, // Pass complete pending updates across all phases
-					true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
-					groupDetections[0].contentLength, // Content-Length from HEAD response
-				);
+					externalPendingUpdates: allPendingUpdates, // Pass complete pending updates across all phases
+					skipUpdateCheck: true, // skipUpdateCheck: detection already done, avoid duplicate HEAD request
+					latestContentLength: groupDetections[0].contentLength, // Content-Length from HEAD response
+				});
 
 				// Wait for all downloads to complete
 				await Promise.all(result.promises);
@@ -2114,12 +2310,12 @@ export class FilesManager implements IFilesManager {
 					// URL would never re-prepare because wasUpdated stays false.
 					let mappingOnlyUpdate = false;
 					if (!detection.needsDownload && 'localFilePath' in detection.file) {
-						const pathChanged = await this.updateLocalFilePathForMovedContent(
-							detection.file,
-							detection.updateValue,
-							detection.mediaInfoObject,
-							detection.localFilePath,
-						);
+						const pathChanged = await this.updateLocalFilePathForMovedContent({
+							file: detection.file,
+							updateValue: detection.updateValue,
+							mediaInfoObject: detection.mediaInfoObject,
+							localFilePath: detection.localFilePath,
+						});
 						if (pathChanged) {
 							needsWasUpdated = true;
 						} else {
@@ -2168,18 +2364,22 @@ export class FilesManager implements IFilesManager {
 	public handleMovedContent = async (detection: UpdateDetection): Promise<void> => {
 		this.log.debug('handleMovedContent: Handling moved content (no download needed): %s', detection.file.src);
 
-		await this.updateLocalFilePathForMovedContent(
-			detection.file,
-			detection.updateValue,
-			detection.mediaInfoObject,
-			detection.localFilePath,
-		);
+		await this.updateLocalFilePathForMovedContent({
+			file: detection.file,
+			updateValue: detection.updateValue,
+			mediaInfoObject: detection.mediaInfoObject,
+			localFilePath: detection.localFilePath,
+		});
 
 		// Update mapping in mediaInfoObject
 		const fileName = getFileName(detection.file.src, detection.updateValue as string | undefined);
 		this.log.debug('handleMovedContent: Collecting update for moved content: %s -> %s', fileName, detection.updateValue);
 		this.collectUpdate(fileName, String(detection.updateValue));
-		this.sendOptInEventReport('media-moved', detection.file, getReportUrlFromUpdateValue(detection.updateValue));
+		this.sendOptInEventReport({
+			eventName: 'media-moved',
+			value: detection.file,
+			reportUrl: getReportUrlFromUpdateValue(detection.updateValue),
+		});
 	};
 
 	/**
@@ -2211,12 +2411,17 @@ export class FilesManager implements IFilesManager {
 		try {
 			const gateUrl = createDownloadPath(media.playCheckUrl);
 			const authHeaders = window.getAuthHeaders?.(gateUrl);
-			const response = await this.makeXhrRequest('GET', gateUrl, smilObject.refresh.timeOut, authHeaders);
-			const shouldSkip = shouldGateSkipForStatus(
-				response.status,
-				smilObject.skipPlaybackOnHttpStatus,
-				media.playCheckSkipOnError === true,
-			);
+			const response = await this.makeXhrRequest({
+				method: 'GET',
+				url: gateUrl,
+				timeout: smilObject.refresh.timeOut,
+				authHeaders,
+			});
+			const shouldSkip = shouldGateSkipForStatus({
+				status: response.status,
+				skipPlaybackHttpStatusCodes: smilObject.skipPlaybackOnHttpStatus,
+				skipOnError: media.playCheckSkipOnError === true,
+			});
 			this.log.debug(
 				'playCheckGate: url=%s, status=%d, skipPlayback=%s',
 				media.playCheckUrl,
@@ -2238,24 +2443,25 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public prePlayCheck = async (
-		media: SMILVideo | SMILImage | SMILWidget | SMILAudio,
-		mediaFolder: string,
-		smilObject: SMILFileObject,
-		allMediaList: MergedDownloadList[],
-	): Promise<void> => {
+	public prePlayCheck = async ({
+		media,
+		mediaFolder,
+		smilObject,
+		allMediaList,
+	}: PrePlayCheckOptions): Promise<void> => {
 		try {
 			this.log.debug('prePlayCheck: Checking %s in folder %s', media.src, mediaFolder);
 			const fetchStrategy = this.strategies.getStrategy(smilObject.updateMechanism);
 
 			// Phase 1: Detection (HEAD request) — runs concurrently across regions.
-			const detection = await this.detectUpdateOnly(
-				media, mediaFolder,
-				smilObject.refresh.timeOut,
-				smilObject.skipContentOnHttpStatus,
-				smilObject.updateContentOnHttpStatus,
+			const detection = await this.detectUpdateOnly({
+				file: media,
+				localFilePath: mediaFolder,
+				timeOut: smilObject.refresh.timeOut,
+				skipContentHttpStatusCodes: smilObject.skipContentOnHttpStatus,
+				updateContentHttpStatusCodes: smilObject.updateContentOnHttpStatus,
 				fetchStrategy,
-			);
+			});
 
 			if (!detection) {
 				this.log.debug('prePlayCheck: No update detected for %s', media.src);
@@ -2378,11 +2584,11 @@ export class FilesManager implements IFilesManager {
 	 * a stale entry (file deleted as unused) or the SMIL entry (lives in the root folder)
 	 * would classify new content as "moved", skip the download and leave the slot empty.
 	 */
-	private isValueAlreadyStored = async (
-		value: string | null,
-		mediaInfoObject: MediaInfoObject,
-		localFilePath: string,
-	): Promise<boolean> => {
+	private isValueAlreadyStored = async ({
+		value,
+		mediaInfoObject,
+		localFilePath,
+	}: IsValueAlreadyStoredOptions): Promise<boolean> => {
 		if (!value) {
 			return false;
 		}
@@ -2572,11 +2778,11 @@ export class FilesManager implements IFilesManager {
 	 * @param mergedMediaInfo - Merged state including pending batch updates
 	 * @returns Map of content movements, keyed by content value
 	 */
-	private detectContentMovements = (
-		filesList: MergedDownloadList[],
-		currentMediaInfo: MediaInfoObject,
-		mergedMediaInfo: MediaInfoObject,
-	): Map<string, ContentMovement> => {
+	private detectContentMovements = ({
+		filesList,
+		currentMediaInfo,
+		mergedMediaInfo,
+	}: DetectContentMovementsOptions): Map<string, ContentMovement> => {
 		const movements = new Map<string, ContentMovement>();
 
 		this.log.debug('Detecting content movements for %d files', filesList.length);
@@ -2655,11 +2861,11 @@ export class FilesManager implements IFilesManager {
 	 * @param filesList - List of files to check if content is still needed
 	 * @returns Object with successfulCopies count and Set of file names that failed to copy
 	 */
-	private copyContentToNewLocations = async (
-		movements: Map<string, ContentMovement>,
-		mediaInfoObject: MediaInfoObject,
-		filesList: MergedDownloadList[],
-	): Promise<{ successfulCopies: number; failedFileNames: Set<string> }> => {
+	private copyContentToNewLocations = async ({
+		movements,
+		mediaInfoObject,
+		filesList,
+	}: CopyContentToNewLocationsOptions): Promise<{ successfulCopies: number; failedFileNames: Set<string> }> => {
 		let successfulCopies = 0;
 		let failedCopies = 0;
 		const failedFileNames = new Set<string>();
@@ -2824,12 +3030,12 @@ export class FilesManager implements IFilesManager {
 					const destValue = mediaInfoObject[destFileName];
 					if (destValue) {
 						// Check if this content is still needed by other URLs after the movement
-						const stillNeeded = this.isContentNeededByOtherUrls(
-							destValue,
-							destFileName,
+						const stillNeeded = this.isContentNeededByOtherUrls({
+							contentValue: destValue,
+							excludeUrlOrFileName: destFileName,
 							filesList,
 							mediaInfoObject,
-						);
+						});
 
 						if (!stillNeeded) {
 							this.log.debug(
@@ -2838,7 +3044,11 @@ export class FilesManager implements IFilesManager {
 								destValue,
 							);
 							const mediaType = mapFileType(destFolder);
-							await this.preserveFileToStorage(finalDestPath, destValue, mediaType);
+							await this.preserveFileToStorage({
+								filePath: finalDestPath,
+								contentValue: destValue,
+								mediaType,
+							});
 						} else {
 							this.log.debug('  Destination content still needed elsewhere, not preserving: %s', destValue);
 						}
@@ -2966,7 +3176,11 @@ export class FilesManager implements IFilesManager {
 		this.log.debug('\n=== STEP 1: DETECTING CONTENT MOVEMENTS ===');
 		const mergedState = this.getMergedMediaInfoState(mediaInfoObject);
 		this.log.debug('Merged state includes %d batch updates', this.batchUpdates.size);
-		const contentMovements = this.detectContentMovements(filesList, mediaInfoObject, mergedState);
+		const contentMovements = this.detectContentMovements({
+			filesList,
+			currentMediaInfo: mediaInfoObject,
+			mergedMediaInfo: mergedState,
+		});
 		this.log.debug('Detected %d content movements', contentMovements.size);
 		for (const [value, movement] of contentMovements) {
 			this.log.debug(
@@ -2989,7 +3203,11 @@ export class FilesManager implements IFilesManager {
 		this.log.debug('\n=== STEP 3: COPYING MOVED CONTENT ===');
 		if (contentMovements.size > 0 && hasSpace) {
 			this.log.debug('Starting copy operations for %d movements', contentMovements.size);
-			const copyResult = await this.copyContentToNewLocations(contentMovements, mediaInfoObject, filesList);
+			const copyResult = await this.copyContentToNewLocations({
+				movements: contentMovements,
+				mediaInfoObject,
+				filesList,
+			});
 			for (const fileName of copyResult.failedFileNames) {
 				failedFileNames.add(fileName);
 			}
@@ -3146,11 +3364,11 @@ export class FilesManager implements IFilesManager {
 		return failedFileNames;
 	};
 
-	private findActualFileForMovedContent = async (
-		currentValue: string | null,
-		mediaInfoObject: MediaInfoObject,
-		localFilePath: string,
-	): Promise<{ localUri: string; filePath: string } | null> => {
+	private findActualFileForMovedContent = async ({
+		currentValue,
+		mediaInfoObject,
+		localFilePath,
+	}: FindActualFileForMovedContentOptions): Promise<{ localUri: string; filePath: string } | null> => {
 		if (!currentValue) {
 			this.log.debug('findActualFileForMovedContent: No value provided, returning null');
 			return null;
@@ -3190,21 +3408,21 @@ export class FilesManager implements IFilesManager {
 	 * Shared helper for moved content handling across checkLastModified and handleMovedContent
 	 * @returns true if successfully updated, false otherwise
 	 */
-	private updateLocalFilePathForMovedContent = async (
-		file: MergedDownloadList,
-		updateValue: string | number,
-		mediaInfoObject: MediaInfoObject,
-		localFilePath: string,
-	): Promise<boolean> => {
+	private updateLocalFilePathForMovedContent = async ({
+		file,
+		updateValue,
+		mediaInfoObject,
+		localFilePath,
+	}: UpdateLocalFilePathForMovedContentOptions): Promise<boolean> => {
 		if (!('localFilePath' in file)) {
 			return false;
 		}
 
-		const actualFile = await this.findActualFileForMovedContent(
-			String(updateValue),
+		const actualFile = await this.findActualFileForMovedContent({
+			currentValue: String(updateValue),
 			mediaInfoObject,
 			localFilePath,
-		);
+		});
 
 		if (actualFile) {
 			// Copy the shared file to the slot's own path so it's self-contained.
@@ -3297,14 +3515,14 @@ export class FilesManager implements IFilesManager {
 	 * Extracts common detection pattern to avoid duplication
 	 * @returns Detection result with updateCheck, mediaInfoObject, and isNewContent flag, or null if skipped/error
 	 */
-	private detectFileUpdateInternal = async (
-		file: MergedDownloadList,
-		localFilePath: string,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[],
-		updateContentHttpStatusCodes: number[],
-		fetchStrategy: FetchStrategy,
-	): Promise<{
+	private detectFileUpdateInternal = async ({
+		file,
+		localFilePath,
+		timeOut,
+		skipContentHttpStatusCodes,
+		updateContentHttpStatusCodes,
+		fetchStrategy,
+	}: DetectFileUpdateInternalOptions): Promise<{
 		updateCheck: UpdateCheckResult;
 		mediaInfoObject: MediaInfoObject;
 		isNewContent: boolean;
@@ -3317,20 +3535,20 @@ export class FilesManager implements IFilesManager {
 		try {
 			const mediaInfoObject = await this.getOrCreateMediaInfoFile([file]);
 
-			const updateCheck = await this.shouldUpdateLocalFile(
+			const updateCheck = await this.shouldUpdateLocalFile({
 				localFilePath,
-				file,
+				media: file,
 				mediaInfoObject,
 				timeOut,
 				skipContentHttpStatusCodes,
 				updateContentHttpStatusCodes,
 				fetchStrategy,
-			);
+			});
 
 			// Determine if new content (only matters if shouldUpdate=true)
 			const isNewContent =
 				updateCheck.shouldUpdate && updateCheck.value
-					? !(await this.isValueAlreadyStored(updateCheck.value, mediaInfoObject, localFilePath))
+					? !(await this.isValueAlreadyStored({ value: updateCheck.value, mediaInfoObject, localFilePath }))
 					: false;
 
 			return {
@@ -3344,22 +3562,22 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	private checkLastModified = async (
-		file: MergedDownloadList,
-		localFilePath: string,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
-		fetchStrategy: FetchStrategy,
-	): Promise<Promise<void>[]> => {
-		const detection = await this.detectFileUpdateInternal(
+	private checkLastModified = async ({
+		file,
+		localFilePath,
+		timeOut,
+		skipContentHttpStatusCodes = [],
+		updateContentHttpStatusCodes = [],
+		fetchStrategy,
+	}: CheckLastModifiedOptions): Promise<Promise<void>[]> => {
+		const detection = await this.detectFileUpdateInternal({
 			file,
 			localFilePath,
 			timeOut,
 			skipContentHttpStatusCodes,
 			updateContentHttpStatusCodes,
 			fetchStrategy,
-		);
+		});
 
 		if (!detection) {
 			return [];
@@ -3373,16 +3591,14 @@ export class FilesManager implements IFilesManager {
 					this.log.debug('checkLastModified: New content detected for %s, downloading to temp folder', file.src);
 
 					// Download new content to temp folder
-					const result = await this.parallelDownloadAllFiles(
-						[file],
+					const result = await this.parallelDownloadAllFiles({
+						filesList: [file],
 						localFilePath,
-						SMILScheduleEnum.fileCheckTimeout,
-						[],
-						[],
+						timeOut: SMILScheduleEnum.fileCheckTimeout as number,
 						fetchStrategy,
-						true,
-						updateCheck.value,
-					);
+						forceDownload: true,
+						latestRemoteValue: updateCheck.value,
+					});
 
 					await Promise.all(result.promises);
 
@@ -3405,17 +3621,17 @@ export class FilesManager implements IFilesManager {
 					if (updateCheck.value) {
 						const fileName = getFileName(file.src, updateCheck.value as string | undefined);
 						this.collectUpdate(fileName, String(updateCheck.value));
-						await this.updateLocalFilePathForMovedContent(
+						await this.updateLocalFilePathForMovedContent({
 							file,
-							updateCheck.value,
+							updateValue: updateCheck.value,
 							mediaInfoObject,
 							localFilePath,
-						);
-						this.sendOptInEventReport(
-							'media-moved',
-							file,
-							getReportUrlFromUpdateValue(updateCheck.value),
-						);
+						});
+						this.sendOptInEventReport({
+							eventName: 'media-moved',
+							value: file,
+							reportUrl: getReportUrlFromUpdateValue(updateCheck.value),
+						});
 					}
 
 					return [];
@@ -3428,12 +3644,12 @@ export class FilesManager implements IFilesManager {
 					file.src,
 				);
 
-				const updated = await this.updateLocalFilePathForMovedContent(
+				const updated = await this.updateLocalFilePathForMovedContent({
 					file,
-					updateCheck.value,
+					updateValue: updateCheck.value,
 					mediaInfoObject,
 					localFilePath,
-				);
+				});
 
 				const fileName = getFileName(file.src, updateCheck.value as string | undefined);
 				const oldValue = mediaInfoObject[fileName];
@@ -3450,11 +3666,11 @@ export class FilesManager implements IFilesManager {
 						updateCheck.value,
 					);
 					this.collectUpdate(fileName, updateCheck.value);
-					this.sendOptInEventReport(
-						'media-moved',
-						file,
-						getReportUrlFromUpdateValue(updateCheck.value),
-					);
+					this.sendOptInEventReport({
+						eventName: 'media-moved',
+						value: file,
+						reportUrl: getReportUrlFromUpdateValue(updateCheck.value),
+					});
 				}
 
 				if (updated) {
@@ -3480,22 +3696,22 @@ export class FilesManager implements IFilesManager {
 	 * Used for batch download optimization in resource checker
 	 * @returns UpdateDetection object if update needed, null otherwise
 	 */
-	private detectUpdateOnly = async (
-		file: MergedDownloadList,
-		localFilePath: string,
-		timeOut: number,
-		skipContentHttpStatusCodes: number[],
-		updateContentHttpStatusCodes: number[],
-		fetchStrategy: FetchStrategy,
-	): Promise<UpdateDetection | null> => {
-		const detection = await this.detectFileUpdateInternal(
+	private detectUpdateOnly = async ({
+		file,
+		localFilePath,
+		timeOut,
+		skipContentHttpStatusCodes,
+		updateContentHttpStatusCodes,
+		fetchStrategy,
+	}: DetectUpdateOnlyOptions): Promise<UpdateDetection | null> => {
+		const detection = await this.detectFileUpdateInternal({
 			file,
 			localFilePath,
 			timeOut,
 			skipContentHttpStatusCodes,
 			updateContentHttpStatusCodes,
 			fetchStrategy,
-		);
+		});
 
 		if (!detection || !detection.updateCheck.value) {
 			// When content transitions to skipContent (e.g., 404) but has existing content,
@@ -3508,7 +3724,7 @@ export class FilesManager implements IFilesManager {
 					const fullPath = `${localFilePath}/${fileName}`;
 					const mediaType = mapFileType(localFilePath);
 					this.log.debug('detectUpdateOnly: Preserving skipped content to storage: %s', file.src);
-					await this.preserveFileToStorage(fullPath, contentValue, mediaType);
+					await this.preserveFileToStorage({ filePath: fullPath, contentValue, mediaType });
 				}
 			}
 			this.log.debug('detectUpdateOnly: No update found for %s', file.src);
@@ -3591,43 +3807,43 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	private convertToResourcesCheckerFormat = (
-		resources: MergedDownloadList[],
-		rootFolder: string,
-		timeOut: number,
-		refreshInterval: number,
-		skipContentHttpStatusCodes: number[] = [],
-		updateContentHttpStatusCodes: number[] = [],
-		fetchStrategy: FetchStrategy,
-		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: (resource: MergedDownloadList) => Promise<UpdateDetection | null>,
-	) => {
+	private convertToResourcesCheckerFormat = ({
+		resources,
+		rootFolder,
+		timeOut,
+		refreshInterval,
+		skipContentHttpStatusCodes = [],
+		updateContentHttpStatusCodes = [],
+		fetchStrategy,
+		reloadPlayerOnUpdate = false,
+		detectFunction,
+	}: ConvertToResourcesCheckerFormatOptions) => {
 		return resources.map((resource) => {
-			return this.convertToResourceCheckerFormat(
+			return this.convertToResourceCheckerFormat({
 				resource,
-				async () =>
-					this.checkLastModified(
-						resource,
-						rootFolder,
+				checkFunction: async () =>
+					this.checkLastModified({
+						file: resource,
+						localFilePath: rootFolder,
 						timeOut,
 						skipContentHttpStatusCodes,
 						updateContentHttpStatusCodes,
 						fetchStrategy,
-					),
-				refreshInterval,
+					}),
+				defaultInterval: refreshInterval,
 				reloadPlayerOnUpdate,
-				detectFunction ? async () => detectFunction(resource) : undefined,
-			);
+				detectFunction: detectFunction ? async () => detectFunction(resource) : undefined,
+			});
 		});
 	};
 
-	private convertToResourceCheckerFormat = (
-		resource: MergedDownloadList,
-		checkFunction: () => Promise<Promise<void>[]>,
-		defaultInterval: number,
-		reloadPlayerOnUpdate: boolean = false,
-		detectFunction?: () => Promise<UpdateDetection | null>,
-	): Resource => {
+	private convertToResourceCheckerFormat = ({
+		resource,
+		checkFunction,
+		defaultInterval,
+		reloadPlayerOnUpdate = false,
+		detectFunction,
+	}: ConvertToResourceCheckerFormatOptions): Resource => {
 		return {
 			url: resource.updateCheckUrl ?? resource.src,
 			interval: resource.updateCheckInterval ? resource.updateCheckInterval * 1000 : defaultInterval,
@@ -3649,12 +3865,13 @@ export class FilesManager implements IFilesManager {
 		};
 	};
 
-	private async makeXhrRequest(
-		method: string,
-		downloadUrl: string,
-		timeout: number,
-		authHeaders?: Record<string, string>,
-	): Promise<Response> {
+	private async makeXhrRequest({
+		method,
+		url: downloadUrl,
+		timeout,
+		authHeaders,
+		body,
+	}: XhrRequestOptions): Promise<Response> {
 		return new Promise<Response>((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.open(method, downloadUrl, true);
@@ -3668,6 +3885,7 @@ export class FilesManager implements IFilesManager {
 			xhr.onload = () => {
 				const response = {
 					status: xhr.status,
+					ok: xhr.status >= 200 && xhr.status < 300,
 					headers: {
 						get: (name: string) => xhr.getResponseHeader(name),
 						forEach: (callback: (value: string, key: string) => void) => {
@@ -3690,7 +3908,7 @@ export class FilesManager implements IFilesManager {
 			xhr.ontimeout = () => {
 				reject(new Error('Request timeout'));
 			};
-			xhr.send();
+			xhr.send(body);
 		});
 	}
 
@@ -3712,14 +3930,14 @@ export class FilesManager implements IFilesManager {
 
 			// parseOfflineReportLines tolerates and logs corrupted lines internally,
 			// returning only the salvageable reports.
-			const reports = this.offline.parseOfflineReportLines(fileContent, filePath);
+			const reports = this.offline.parseOfflineReportLines({ fileContent, filePath });
 
 			if (
-				shouldSkipActiveReportFile(
-					this.offlineReportsInfoObject[fileIndex],
-					reports.length,
-					this.smilLogging.reportFileLimit,
-				)
+				shouldSkipActiveReportFile({
+					trackedInfo: this.offlineReportsInfoObject[fileIndex],
+					reportCount: reports.length,
+					reportFileLimit: this.smilLogging.reportFileLimit,
+				})
 			) {
 				this.log.debug(
 					'[files] skipping active batch: fileIndex=%d, reports=%d/%d',
@@ -3942,7 +4160,7 @@ export class FilesManager implements IFilesManager {
 						}
 						// The original source URL is unknown for orphaned files — report the local path.
 						// no await to not to block cleanup when server takes too long to respond
-						this.sendOptInEventReport('media-deleted', { src: storedFile.filePath });
+						this.sendOptInEventReport({ eventName: 'media-deleted', value: { src: storedFile.filePath } });
 					}
 				}
 			}
@@ -3973,13 +4191,13 @@ export class FilesManager implements IFilesManager {
 	 * @param mediaInfoObject - Current media info state
 	 * @returns true if content is needed by other URLs, false otherwise
 	 */
-	private isContentNeededByOtherUrls = (
-		contentValue: string | number,
-		excludeUrlOrFileName: string,
-		filesList: MergedDownloadList[],
-		mediaInfoObject: MediaInfoObject,
-		pendingUpdates?: Map<string, string | number>,
-	): boolean => {
+	private isContentNeededByOtherUrls = ({
+		contentValue,
+		excludeUrlOrFileName,
+		filesList,
+		mediaInfoObject,
+		pendingUpdates,
+	}: IsContentNeededByOtherUrlsOptions): boolean => {
 		// Handle both URL and filename inputs
 		const excludeFileName = excludeUrlOrFileName.includes('/')
 			? getFileName(excludeUrlOrFileName) // It's a URL, convert to filename
@@ -4114,7 +4332,7 @@ export class FilesManager implements IFilesManager {
 						await this.saveStorageInfo(storageFolder, storageInfo);
 						// Storage-info keys are the content's base source URLs.
 						// no await to not to block eviction when server takes too long to respond
-						this.sendOptInEventReport('media-deleted', { src: keyToDelete });
+						this.sendOptInEventReport({ eventName: 'media-deleted', value: { src: keyToDelete } });
 						this.log.debug(
 							'Deleted oldest storage file to make room (was at %d files): %s',
 							entries.length,
@@ -4147,12 +4365,12 @@ export class FilesManager implements IFilesManager {
 	 * @param mediaType - Type of media (video/audio/image/ref)
 	 * @returns true if preserved successfully, false otherwise
 	 */
-	private preserveFileToStorage = async (
-		filePath: string,
-		contentValue: string | number,
-		mediaType: string,
-		protectedPaths?: Set<string>,
-	): Promise<boolean> => {
+	private preserveFileToStorage = async ({
+		filePath,
+		contentValue,
+		mediaType,
+		protectedPaths,
+	}: PreserveFileToStorageOptions): Promise<boolean> => {
 		try {
 			// SMIL files should never be preserved to storage
 			if (filePath.includes('.smil')) {
@@ -4321,12 +4539,12 @@ export class FilesManager implements IFilesManager {
 	 * @param requestingUrl - The URL that's requesting this content (used to generate correct filename)
 	 * @returns temp file path if restored successfully, null otherwise
 	 */
-	private restoreFromStorage = async (
-		storagePath: string,
-		targetFolder: string,
-		requestingUrl: string,
-		extensionHintUrl?: string,
-	): Promise<string | null> => {
+	private restoreFromStorage = async ({
+		storagePath,
+		targetFolder,
+		requestingUrl,
+		extensionHintUrl,
+	}: RestoreFromStorageOptions): Promise<string | null> => {
 		try {
 			// Verify the storage file exists before attempting restoration
 			const fileStats = await this.getFileByPath(storagePath);

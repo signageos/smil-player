@@ -9,7 +9,7 @@ if (typeof (global as any).window === 'undefined') {
 	(global as any).HTMLElement = dom.window.HTMLElement;
 }
 
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { expect } from 'chai';
 import { FilesManager } from '../../../src/components/files/filesManager';
 import { getFileName } from '../../../src/components/files/tools';
@@ -50,7 +50,7 @@ function makeFilesManager(files: Set<string>, mediaInfo: Record<string, string>)
 		},
 	} as unknown as ISos;
 	const fm = new FilesManager(sos, noopLog);
-	(fm as any).makeXhrRequest = async (_method: string, url: string) => ({
+	(fm as any).makeXhrRequest = async ({ url }: { url: string }) => ({
 		status: 200,
 		url,
 		headers: { get: (name: string) => (name === 'last-modified' ? LAST_MODIFIED : null) },
@@ -65,7 +65,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 	it('downloads a new file whose Last-Modified only matches an entry with no file on disk', async () => {
 		const { fm } = makeFilesManager(new Set(), { [getFileName(OLD_SRC)]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection).to.not.equal(null);
 		expect(detection.needsDownload).to.equal(true);
@@ -75,7 +82,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 		const files = new Set([`${FileStructure.videos}/${getFileName(OLD_SRC)}`]);
 		const { fm } = makeFilesManager(files, { [getFileName(OLD_SRC)]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection).to.not.equal(null);
 		expect(detection.needsDownload).to.equal(false);
@@ -86,7 +100,14 @@ describe('components/files/filesManager - stale mediaInfo entries', () => {
 		const files = new Set([`${FileStructure.rootFolder}/${smilKey}`]);
 		const { fm } = makeFilesManager(files, { [smilKey]: LAST_MODIFIED });
 
-		const detection = await (fm as any).detectUpdateOnly(newFile(), FileStructure.videos, 2000, [], [], strategy);
+		const detection = await (fm as any).detectUpdateOnly({
+			file: newFile(),
+			localFilePath: FileStructure.videos,
+			timeOut: 2000,
+			skipContentHttpStatusCodes: [],
+			updateContentHttpStatusCodes: [],
+			fetchStrategy: strategy,
+		});
 
 		expect(detection.needsDownload).to.equal(true);
 	});

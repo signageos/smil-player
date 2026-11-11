@@ -1,5 +1,5 @@
 /* tslint:disable:Unnecessary semicolon missing whitespace */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 // @ts-ignore no ts declaration
 import { JefNode } from 'json-easy-filter';
 import isNil from 'lodash/isNil';
@@ -225,6 +225,13 @@ export function createXmlTools(log: Log) {
 		});
 	}
 
+	type ExtractDataFromPlaylistOptions = {
+		playableMedia: SMILPlaylist;
+		downloads: DownloadsList;
+		triggerList: TriggerList;
+		dynamicList: DynamicPlaylistList;
+	};
+
 	/**
 	 * traverse json object represented as tree and extracts data for media downloads and trigger objects
 	 * @param playableMedia
@@ -232,12 +239,12 @@ export function createXmlTools(log: Log) {
 	 * @param triggerList
 	 * @param dynamicList
 	 */
-	function extractDataFromPlaylist(
-		playableMedia: SMILPlaylist,
-		downloads: DownloadsList,
-		triggerList: TriggerList,
-		dynamicList: DynamicPlaylistList,
-	) {
+	function extractDataFromPlaylist({
+		playableMedia,
+		downloads,
+		triggerList,
+		dynamicList,
+	}: ExtractDataFromPlaylistOptions) {
 		new JefNode(playableMedia.playlist).filter(
 			(node: { key: string; value: any; parent: { key: string; value: any } }) => {
 				// detect intro element, may not exist
@@ -293,7 +300,13 @@ export function createXmlTools(log: Log) {
 		);
 	}
 
-	function parseHeadInfo(metaObjects: XmlHeadObject, regions: RegionsObject, triggerList: TriggerList) {
+	type ParseHeadInfoOptions = {
+		metaObjects: XmlHeadObject;
+		regions: RegionsObject;
+		triggerList: TriggerList;
+	};
+
+	function parseHeadInfo({ metaObjects, regions, triggerList }: ParseHeadInfoOptions) {
 		if (!isNil(metaObjects.meta)) {
 			parseMetaInfo(metaObjects.meta, regions);
 		}

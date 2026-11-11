@@ -1,4 +1,4 @@
-import { noopLog } from '../../../src/logger';
+import { noopLog } from '@signageos/smil-logger';
 import { promises as fsPromise } from 'fs';
 import * as path from 'path';
 import { XmlParser } from '../../../src/components/xmlParser/xmlParser';

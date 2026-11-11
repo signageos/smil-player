@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { ENDTIME_REPEAT_THRESHOLD, PriorityRule } from '../../../enums/priorityEnums';
 import { PriorityObject } from '../../../models/priorityModels';
 import { CurrentlyPlayingRegion } from '../../../models/playlistModels';
@@ -7,16 +7,21 @@ import { SMILMedia } from '../../../models/mediaModels';
 export type PriorityRelation = 'higher' | 'peer' | 'lower';
 
 export function createPriorityDecisionEngine(log: Log) {
+	type DeterminePriorityRelationOptions = {
+		incomingLevel: number;
+		existingLevel: number;
+	};
+
 	/**
 	 * Determines the relationship between an incoming element and an existing (previously playing) element.
 	 * "higher" means the incoming element has higher priority (higher number = higher priority).
 	 * "lower" means the incoming element has lower priority.
 	 * "peer" means they have the same priority level.
 	 */
-	function determinePriorityRelation(
-		incomingLevel: number,
-		existingLevel: number,
-	): PriorityRelation {
+	function determinePriorityRelation({
+		incomingLevel,
+		existingLevel,
+	}: DeterminePriorityRelationOptions): PriorityRelation {
 		let relation: PriorityRelation;
 		if (existingLevel < incomingLevel) {
 			relation = 'higher';
@@ -132,7 +137,7 @@ export function createPriorityDecisionEngine(log: Log) {
 			log.debug('[priority-engine] stop waiting: endTime expired (endTime=%d)', params.endTime);
 			return false;
 		}
-		if (isRepeatCountExpired(params.timesPlayed, params.endTime)) {
+		if (isRepeatCountExpired({ timesPlayed: params.timesPlayed, endTime: params.endTime })) {
 			log.debug(
 				'[priority-engine] stop waiting: repeat count expired (played=%d, endTime=%d)',
 				params.timesPlayed,
@@ -143,17 +148,31 @@ export function createPriorityDecisionEngine(log: Log) {
 		return true;
 	}
 
-	function findMatchingEntryIndex(
-		entries: CurrentlyPlayingRegion[],
-		media: SMILMedia,
-		parent: string,
-		version: number,
-	): { matchIndex: number; matchType: 'exact' | 'parent' | 'none' } {
+	type FindMatchingEntryIndexOptions = {
+		entries: CurrentlyPlayingRegion[];
+		media: SMILMedia;
+		parent: string;
+		version: number;
+	};
+
+	/**
+	 * Finds the index of an existing entry in the tracking array that matches the given info.
+	 * Prefers exact match (media+parent+version) over parent-only match (parent+version).
+	 * Returns an object with:
+	 * - matchIndex: the index of the matching entry (-1 if not found)
+	 * - matchType: 'exact' if media+parent+version match, 'parent' if parent+version match, 'none' if new entry
+	 */
+	function findMatchingEntryIndex({
+		entries,
+		media,
+		parent,
+		version,
+	}: FindMatchingEntryIndexOptions): { matchIndex: number; matchType: 'exact' | 'parent' | 'none' } {
 		let parentMatchIndex = -1;
 		for (let i = 0; i < entries.length; i++) {
 			const elem = entries[i];
 			if (elem.parent === parent && elem.version === version) {
-				if (isMediaMatch(elem.media, media)) {
+				if (isMediaMatch({ a: elem.media, b: media })) {
 					return { matchIndex: i, matchType: 'exact' };
 				}
 				if (parentMatchIndex === -1) {
@@ -188,6 +207,11 @@ export function isEndTimeExpired(endTime: number): boolean {
 	return endTime <= Date.now() && endTime > ENDTIME_REPEAT_THRESHOLD;
 }
 
+type IsRepeatCountExpiredOptions = {
+	timesPlayed: number;
+	endTime: number;
+};
+
 /**
  * Checks if the repeat count has been exceeded.
  * Returns false if endTime is 0 (indefinite) — indefinite playlists are never
@@ -196,23 +220,21 @@ export function isEndTimeExpired(endTime: number): boolean {
  * guard, causing indefinite playlists to cycle playing=false→true every iteration,
  * which unnecessarily resolved deferreds and unpaused controlled playlists.
  */
-export function isRepeatCountExpired(timesPlayed: number, endTime: number): boolean {
+export function isRepeatCountExpired({ timesPlayed, endTime }: IsRepeatCountExpiredOptions): boolean {
 	return timesPlayed >= endTime && endTime !== 0;
 }
 
-/**
- * Finds the index of an existing entry in the tracking array that matches the given info.
- * Prefers exact match (media+parent+version) over parent-only match (parent+version).
- * Returns an object with:
- * - matchIndex: the index of the matching entry (-1 if not found)
- * - matchType: 'exact' if media+parent+version match, 'parent' if parent+version match, 'none' if new entry
- */
+type IsMediaMatchOptions = {
+	a: SMILMedia;
+	b: SMILMedia;
+};
+
 /**
  * Checks if two SMILMedia objects represent the same playlist entry.
  * Uses targeted field comparison instead of deep equality — the match is for
  * identity (is this the same element?), not change detection.
  */
-export function isMediaMatch(a: SMILMedia, b: SMILMedia): boolean {
+export function isMediaMatch({ a, b }: IsMediaMatchOptions): boolean {
 	return a.src === b.src
 		&& a.regionInfo?.regionName === b.regionInfo?.regionName
 		&& a.dynamicValue === b.dynamicValue

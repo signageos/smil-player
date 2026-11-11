@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { isNil, cloneDeep } from 'lodash';
 import { CurrentlyPlayingPriority, CurrentlyPlayingRegion, PromiseAwaiting, PromiseAwaitingEntry } from '../../../models/playlistModels';
 import { PAUSE_CONTENT_VALUE, PriorityBehaviour } from '../../../enums/priorityEnums';
@@ -8,6 +8,83 @@ import { ensurePlayingDeferred, resolvePlayingDeferred, waitForPlayingToComplete
 import { Deferred } from '../tools/Deferred';
 import { createPlaylistTools, PlaylistTools } from '../tools/playlistTools';
 import { createPriorityDecisionEngine, PriorityDecisionEngine } from './priorityDecisionEngine';
+
+type WaitForTurnOptions = {
+	regionName: string;
+	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
+	priorityLevel: number;
+};
+
+type HasConflictOptions = {
+	regionName: string;
+	currentIndex: number;
+	previousIndex: number;
+};
+
+type EnsurePromiseAwaitingOptions = {
+	regionName: string;
+	version: number;
+	triggerValue?: string;
+};
+
+type RegisterOrUpdateOptions = {
+	regionName: string;
+	value: SMILMedia;
+	parent: string;
+	endTime: number;
+	priorityObject: PriorityObject;
+	version: number;
+};
+
+type SetPausedOptions = {
+	regionName: string;
+	index: number;
+	controllerIndex: number;
+};
+
+type MarkFinishedOptions = {
+	regionName: string;
+	index: number;
+	keepPlaying?: boolean;
+};
+
+type AliasRegionOptions = {
+	fromRegion: string;
+	toRegion: string;
+};
+
+type CloneRegionOptions = {
+	fromRegion: string;
+	toRegion: string;
+};
+
+type UpdatePriorityTrackingOptions = {
+	regionName: string;
+	version: number;
+	priority: number;
+};
+
+type SetTriggerValueOptions = {
+	regionName: string;
+	triggerValue: string;
+};
+
+type CleanupPriorityTrackingOptions = {
+	regionName: string;
+	version: number;
+	priorityLevel?: number;
+};
+
+export type CleanupExpiredPriorityOptions = {
+	version: number;
+	priorityLevel: number;
+};
+
+type RegisterWaiterOptions = {
+	regionName: string;
+	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
+	priorityLevel?: number;
+};
 
 interface RegionWaiter {
 	predicate: (entries: CurrentlyPlayingRegion[]) => boolean;
@@ -38,12 +115,12 @@ export class PriorityStateManager {
 
 	/** Unordered wait — resolves ALL matching waiters when predicate is satisfied. */
 	public waitUntil(regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean): Promise<void> {
-		return this._registerWaiter(regionName, predicate, undefined);
+		return this._registerWaiter({ regionName, predicate });
 	}
 
 	/** Priority-ordered wait — only the highest-priority satisfied waiter wakes. */
-	public waitForTurn(regionName: string, predicate: (entries: CurrentlyPlayingRegion[]) => boolean, priorityLevel: number): Promise<void> {
-		return this._registerWaiter(regionName, predicate, priorityLevel);
+	public waitForTurn({ regionName, predicate, priorityLevel }: WaitForTurnOptions): Promise<void> {
+		return this._registerWaiter({ regionName, predicate, priorityLevel });
 	}
 
 	// --- Accessors ---
@@ -71,7 +148,7 @@ export class PriorityStateManager {
 		return this.state[regionName]?.length ?? 0;
 	}
 
-	public hasConflict(regionName: string, currentIndex: number, previousIndex: number): boolean {
+	public hasConflict({ regionName, currentIndex, previousIndex }: HasConflictOptions): boolean {
 		return (
 			this.getRegionLength(regionName) > 1 &&
 			currentIndex !== previousIndex &&
@@ -85,7 +162,11 @@ export class PriorityStateManager {
 		return this.promiseAwaiting[regionName];
 	}
 
-	public ensurePromiseAwaiting(regionName: string, version: number, triggerValue?: string): PromiseAwaitingEntry {
+	public ensurePromiseAwaiting({
+		regionName,
+		version,
+		triggerValue,
+	}: EnsurePromiseAwaitingOptions): PromiseAwaitingEntry {
 		if (isNil(this.promiseAwaiting[regionName])) {
 			this.promiseAwaiting[regionName] = {
 				promiseFunction: [],
@@ -106,14 +187,14 @@ export class PriorityStateManager {
 	 * Registers a new element or updates an existing one in the tracking array.
 	 * Returns the current and previous playing indices.
 	 */
-	public registerOrUpdate(
-		regionName: string,
-		value: SMILMedia,
-		parent: string,
-		endTime: number,
-		priorityObject: PriorityObject,
-		version: number,
-	): { currentIndex: number; previousPlayingIndex: number } {
+	public registerOrUpdate({
+		regionName,
+		value,
+		parent,
+		endTime,
+		priorityObject,
+		version,
+	}: RegisterOrUpdateOptions): { currentIndex: number; previousPlayingIndex: number } {
 		const infoObject: CurrentlyPlayingRegion = {
 			media: value,
 			player: {
@@ -148,7 +229,12 @@ export class PriorityStateManager {
 
 		if (!skipLoop) {
 			const entries = this.state[regionName];
-			const { matchIndex, matchType } = this.engine.findMatchingEntryIndex(entries, value, parent, version);
+			const { matchIndex, matchType } = this.engine.findMatchingEntryIndex({
+				entries,
+				media: value,
+				parent,
+				version,
+			});
 
 			if (matchType === 'exact') {
 				// Same element re-registering (cycling): preserve play/pause state
@@ -232,7 +318,7 @@ export class PriorityStateManager {
 		this.notifyWaiters(regionName);
 	}
 
-	public setPaused(regionName: string, index: number, controllerIndex: number): void {
+	public setPaused({ regionName, index, controllerIndex }: SetPausedOptions): void {
 		const entry = this.state[regionName][index];
 		this.log.debug(
 			'[priority-state] setPaused: region=%s, index=%d, src=%s, controllerIndex=%d',
@@ -285,7 +371,11 @@ export class PriorityStateManager {
 		// lower-priority element parked on `tracked <= myPriority` waits until the next
 		// successful pass of this level (or the window end). Harmless when this level
 		// does not hold the claim.
-		this.cleanupPriorityTracking(regionName, entry.version, entry.priority?.priorityLevel);
+		this.cleanupPriorityTracking({
+			regionName,
+			version: entry.version,
+			priorityLevel: entry.priority?.priorityLevel,
+		});
 		this.notifyWaiters(regionName);
 	}
 
@@ -336,7 +426,7 @@ export class PriorityStateManager {
 	 * Returns the indexes of playlists this entry is holding paused (copy — release them via
 	 * unpauseAllControlled, which also clears the tracking list).
 	 */
-	public markFinished(regionName: string, index: number, keepPlaying: boolean = false): { pausedIndexes: number[] } {
+	public markFinished({ regionName, index, keepPlaying = false }: MarkFinishedOptions): { pausedIndexes: number[] } {
 		const entry = this.state[regionName][index];
 		const pausedIndexes = [...entry.controlledPlaylists];
 		this.log.debug(
@@ -407,11 +497,11 @@ export class PriorityStateManager {
 		this.notifyWaiters(regionName);
 	}
 
-	public aliasRegion(fromRegion: string, toRegion: string): void {
+	public aliasRegion({ fromRegion, toRegion }: AliasRegionOptions): void {
 		this.state[toRegion] = this.state[fromRegion];
 	}
 
-	public cloneRegion(fromRegion: string, toRegion: string): void {
+	public cloneRegion({ fromRegion, toRegion }: CloneRegionOptions): void {
 		const cloned = cloneDeep(this.state[fromRegion]);
 		// lodash cloneDeep does NOT deep-copy Promise instances or function refs:
 		// a cloned Deferred shares its `promise` and `_resolve` with the original.
@@ -449,7 +539,11 @@ export class PriorityStateManager {
 	 * Updates priority version/level tracking for a region.
 	 * Returns the current highest priority level being processed.
 	 */
-	public updatePriorityTracking(regionName: string, version: number, priority: number): { currentHighest: number } {
+	public updatePriorityTracking({
+		regionName,
+		version,
+		priority,
+	}: UpdatePriorityTrackingOptions): { currentHighest: number } {
 		const promiseObj = this.promiseAwaiting[regionName];
 		if (!promiseObj.version || promiseObj.version < version) {
 			promiseObj.version = version;
@@ -462,7 +556,7 @@ export class PriorityStateManager {
 		return { currentHighest: promiseObj.highestProcessingPriority ?? -1 };
 	}
 
-	public setTriggerValue(regionName: string, triggerValue: string): void {
+	public setTriggerValue({ regionName, triggerValue }: SetTriggerValueOptions): void {
 		this.promiseAwaiting[regionName].triggerValue = triggerValue;
 	}
 
@@ -471,7 +565,7 @@ export class PriorityStateManager {
 	/**
 	 * Cleans up priority tracking after an element finishes waiting or gets skipped.
 	 */
-	public cleanupPriorityTracking(regionName: string, version: number, priorityLevel?: number): void {
+	public cleanupPriorityTracking({ regionName, version, priorityLevel }: CleanupPriorityTrackingOptions): void {
 		if (!this.promiseAwaiting[regionName]) {
 			return;
 		}
@@ -498,7 +592,7 @@ export class PriorityStateManager {
 	 * Called when an endless loop breaks due to allExpired — no media element was playing
 	 * to trigger handlePriorityWhenDone, so the deferred lower-priority content would wait forever.
 	 */
-	public cleanupExpiredPriority(version: number, priorityLevel: number): void {
+	public cleanupExpiredPriority({ version, priorityLevel }: CleanupExpiredPriorityOptions): void {
 		for (const [regionName, priorityRegion] of Object.entries(this.state)) {
 			if (Array.isArray(priorityRegion)) {
 				for (const entry of priorityRegion) {
@@ -525,7 +619,7 @@ export class PriorityStateManager {
 					}
 				}
 			}
-			this.cleanupPriorityTracking(regionName, version, priorityLevel);
+			this.cleanupPriorityTracking({ regionName, version, priorityLevel });
 			this.notifyWaiters(regionName);
 		}
 	}
@@ -545,11 +639,7 @@ export class PriorityStateManager {
 		}
 	}
 
-	private _registerWaiter(
-		regionName: string,
-		predicate: (entries: CurrentlyPlayingRegion[]) => boolean,
-		priorityLevel?: number,
-	): Promise<void> {
+	private _registerWaiter({ regionName, predicate, priorityLevel }: RegisterWaiterOptions): Promise<void> {
 		const entries = this.state[regionName];
 		if (entries && predicate(entries)) {
 			return Promise.resolve();

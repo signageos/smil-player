@@ -13,7 +13,7 @@
  * listeners through `add()`, and calls `removeAll()` whenever its setup phase
  * is about to re-run (so the next setup starts from a clean slate).
  */
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 export interface ListenerEntry {
 	target: EventTarget;
@@ -22,17 +22,19 @@ export interface ListenerEntry {
 	options?: AddEventListenerOptions | boolean;
 }
 
+type ListenerScopeAddOptions<E extends Event> = {
+	target: EventTarget;
+	type: string;
+	listener: (event: E) => unknown;
+	options?: AddEventListenerOptions | boolean;
+};
+
 export class ListenerScope {
 	private entries: ListenerEntry[] = [];
 
 	constructor(protected readonly log: Log) {}
 
-	public add<E extends Event = Event>(
-		target: EventTarget,
-		type: string,
-		listener: (event: E) => unknown,
-		options?: AddEventListenerOptions | boolean,
-	): void {
+	public add<E extends Event = Event>({ target, type, listener, options }: ListenerScopeAddOptions<E>): void {
 		// One internal cast absorbs the contravariance between the
 		// narrower call-site event types (CustomEvent, KeyboardEvent, ...)
 		// and the base `EventListener` signature the DOM API expects.

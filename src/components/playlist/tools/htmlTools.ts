@@ -18,7 +18,7 @@ import { copyQueryParameters, createVersionedUrl } from '../../files/tools';
 import { CssElementsPosition } from '../../../models/htmlModels';
 import { BillboardTransition, BillboardTransitionDirection } from '../../../enums/transitionEnums';
 import { createScheduleTools } from './scheduleTools';
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 
 export interface BillboardColumn {
 	/** strip width in px: regionWidth / columnCount + 2 (the +2 overlaps strips so seams don't show) */
@@ -27,12 +27,20 @@ export interface BillboardColumn {
 	offset: number;
 }
 
+type ComputeBillboardColumnsOptions = {
+	regionWidth: number;
+	columnCount: number;
+};
+
 /**
  * Pure column geometry for the billboard image transition: one descriptor per
  * vertical strip of the source image. See createHtmlElement for how each maps
  * onto an <li><div> strip element.
  */
-export function computeBillboardColumns(regionWidth: number, columnCount: number): BillboardColumn[] {
+export function computeBillboardColumns({
+	regionWidth,
+	columnCount,
+}: ComputeBillboardColumnsOptions): BillboardColumn[] {
 	const stripOffset = regionWidth / columnCount;
 	const columns: BillboardColumn[] = [];
 	for (let i = 0; i < columnCount; i++) {
@@ -44,15 +52,25 @@ export function computeBillboardColumns(regionWidth: number, columnCount: number
 export function createHtmlTools(log: Log) {
 	const { setElementDuration } = createScheduleTools(log);
 
-	function createHtmlElement(
-		value: SMILImage | SMILWidget,
-		htmlElement: string,
-		filepath: string,
-		regionInfo: RegionAttributes,
-		key: string,
-		elementSrc: string,
-		isSpecial: boolean = false,
-	): HTMLElement {
+	type CreateHtmlElementOptions = {
+		value: SMILImage | SMILWidget;
+		htmlElement: string;
+		filepath: string;
+		regionInfo: RegionAttributes;
+		key: string;
+		elementSrc: string;
+		isSpecial?: boolean;
+	};
+
+	function createHtmlElement({
+		value,
+		htmlElement,
+		filepath,
+		regionInfo,
+		key,
+		elementSrc,
+		isSpecial = false,
+	}: CreateHtmlElementOptions): HTMLElement {
 		let element: HTMLElement;
 		// special case when image is represented as <ol><li> object due to billboard transition
 		if (htmlElement === HtmlEnum.img && value.transitionInfo?.type === 'billboard') {
@@ -62,7 +80,7 @@ export function createHtmlTools(log: Log) {
 			element.style.padding = '0px';
 			element.style.margin = '0px';
 
-			for (const column of computeBillboardColumns(regionInfo.width, columnCount)) {
+			for (const column of computeBillboardColumns({ regionWidth: regionInfo.width, columnCount })) {
 				const liElement = document.createElement('li');
 				const divElement = document.createElement('div');
 				liElement.style.display = 'inline';
@@ -84,7 +102,7 @@ export function createHtmlTools(log: Log) {
 			element = document.createElement(htmlElement);
 		}
 
-		element.id = generateElementId(filepath, regionInfo.regionName, key);
+		element.id = generateElementId({ filepath, regionName: regionInfo.regionName, key });
 		Object.keys(regionInfo).forEach((attr: string) => {
 			if (XmlTags.cssElementsPosition.includes(attr)) {
 				element.style[attr as keyof CssElementsPosition] =
@@ -104,7 +122,7 @@ export function createHtmlTools(log: Log) {
 		element.style.visibility = 'hidden';
 		// set filePAth for trigger images immediately
 		if (isSpecial) {
-			let src = generateElementSrc(elementSrc, filepath);
+			let src = generateElementSrc({ elementSrc, localFilePath: filepath });
 			element.setAttribute('src', src);
 		}
 
@@ -115,12 +133,14 @@ export function createHtmlTools(log: Log) {
 		return element;
 	}
 
-	function changeZIndex(
-		value: SMILMediaNoVideo,
-		element: HTMLElement,
-		transitionConstant: number,
-		useValueZIndex: boolean = true,
-	): void {
+	type ChangeZIndexOptions = {
+		value: SMILMediaNoVideo;
+		element: HTMLElement;
+		transitionConstant: number;
+		useValueZIndex?: boolean;
+	};
+
+	function changeZIndex({ value, element, transitionConstant, useValueZIndex = true }: ChangeZIndexOptions): void {
 		const valueZIndex = HtmlEnum.zIndex in value ? parseInt(value[HtmlEnum.zIndex]) : 0;
 		const currentElementZIndex = parseInt(element?.style.getPropertyValue(HtmlEnum.zIndex));
 		let resultZIndex = useValueZIndex ? valueZIndex : 0;
@@ -146,6 +166,13 @@ export function createHtmlTools(log: Log) {
 		element?.style.setProperty(HtmlEnum.zIndex, `${currentElementZIndex + resultZIndex}`);
 	}
 
+	type CreateDomElementOptions = {
+		value: SMILImage | SMILWidget;
+		htmlElement: string;
+		key: string;
+		isSpecial?: boolean;
+	};
+
 	/**
 	 * Creates DOM elements for all images and widgets in playlist ( without src, just placeholders )
 	 * @param value - Smil image or Smil widget
@@ -154,20 +181,27 @@ export function createHtmlTools(log: Log) {
 	 * @param isSpecial - determines if element is trigger element, dynamic playlist or ordinary one
 	 * ( trigger and dynamic playlist is played on demand )
 	 */
-	function createDomElement(
-		value: SMILImage | SMILWidget,
-		htmlElement: string,
-		key: string,
-		isSpecial: boolean = false,
-	): string {
-		const elementId = generateElementId(value.localFilePath, value.regionInfo.regionName, key);
+	function createDomElement({ value, htmlElement, key, isSpecial = false }: CreateDomElementOptions): string {
+		const elementId = generateElementId({
+			filepath: value.localFilePath,
+			regionName: value.regionInfo.regionName,
+			key,
+		});
 		log.debug('[html] creating element: id=%s', elementId);
 		if (document.getElementById(elementId)) {
 			log.debug('[html] reusing existing element: id=%s', elementId);
 			return elementId;
 		}
 		const localFilePath = value.localFilePath !== '' ? value.localFilePath : value.src;
-		const element = createHtmlElement(value, htmlElement, localFilePath, value.regionInfo, key, value.src, isSpecial);
+		const element = createHtmlElement({
+			value,
+			htmlElement,
+			filepath: localFilePath,
+			regionInfo: value.regionInfo,
+			key,
+			elementSrc: value.src,
+			isSpecial,
+		});
 		document.body.appendChild(element);
 		return element.id;
 	}
@@ -192,12 +226,14 @@ export function createHtmlTools(log: Log) {
 		document.body.style.background = 'none';
 	}
 
-	function setTransitionCss(
-		element: SosHtmlElement,
-		htmlElement: HTMLElement,
-		nextElementId: string,
-		transitionDuration: number,
-	) {
+	type SetTransitionCssOptions = {
+		element: SosHtmlElement;
+		htmlElement: HTMLElement;
+		nextElementId: string;
+		transitionDuration: number;
+	};
+
+	function setTransitionCss({ element, htmlElement, nextElementId, transitionDuration }: SetTransitionCssOptions) {
 		const nextElementHtml = document.getElementById(nextElementId);
 		nextElementHtml?.style.setProperty('visibility', 'visible');
 		// because of seamless update next element sometimes does not have zIndex set to original value
@@ -235,18 +271,27 @@ export function createHtmlTools(log: Log) {
 }
 export type HtmlTools = ReturnType<typeof createHtmlTools>;
 
-export function generateElementSrc(
-	elementSrc: string,
-	localFilePath: string,
-	playlistVersion: number = 0,
-	smilUrlVersion: string | null = null,
-	isWidget: boolean = false,
-	wasUpdated: boolean = false,
-): string {
+type GenerateElementSrcOptions = {
+	elementSrc: string;
+	localFilePath: string;
+	playlistVersion?: number;
+	smilUrlVersion?: string | null;
+	isWidget?: boolean;
+	wasUpdated?: boolean;
+};
+
+export function generateElementSrc({
+	elementSrc,
+	localFilePath,
+	playlistVersion = 0,
+	smilUrlVersion = null,
+	isWidget = false,
+	wasUpdated = false,
+}: GenerateElementSrcOptions): string {
 	// BrightSign does not support query parameters in filesystem
-	let src = createVersionedUrl(localFilePath, playlistVersion, smilUrlVersion, isWidget, wasUpdated);
+	let src = createVersionedUrl({ sourceUrl: localFilePath, playlistVersion, smilUrlVersion, isWidget, wasUpdated });
 	// TODO this would not work & break BS. Solve it other way in future before merge
-	src = copyQueryParameters(elementSrc, src);
+	src = copyQueryParameters({ fromUrl: elementSrc, toUrl: src });
 	return src;
 }
 
@@ -350,37 +395,54 @@ export function removeTransitionCss(element: HTMLElement) {
 	element.style.removeProperty('-webkit-backface-visibility');
 }
 
-export function addEventOnTriggerWidget(
-	elem: PlaylistElement,
-	triggerEndless: TriggerEndless,
-	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
-	scope: ListenerScope,
-): void {
+type AddEventOnTriggerWidgetOptions = {
+	elem: PlaylistElement;
+	triggerEndless: TriggerEndless;
+	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string };
+	scope: ListenerScope;
+};
+
+export function addEventOnTriggerWidget({
+	elem,
+	triggerEndless,
+	triggerInfo,
+	scope,
+}: AddEventOnTriggerWidgetOptions): void {
 	for (let [key, value] of Object.entries(elem)) {
 		if (removeDigits(key) === 'ref') {
-			setupIframeEventListeners(get(value, 'id'), triggerEndless, triggerInfo, scope);
+			setupIframeEventListeners({ iframeId: get(value, 'id'), triggerEndless, triggerInfo, scope });
 		}
 		if (isObject(value)) {
-			return addEventOnTriggerWidget(value, triggerEndless, triggerInfo, scope);
+			return addEventOnTriggerWidget({ elem: value, triggerEndless, triggerInfo, scope });
 		}
 	}
 }
 
-function setupIframeEventListeners(
-	iframeId: string,
-	triggerEndless: TriggerEndless,
-	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string },
-	scope: ListenerScope,
-) {
+type SetupIframeEventListenersOptions = {
+	iframeId: string;
+	triggerEndless: TriggerEndless;
+	triggerInfo: { condition: ParsedTriggerCondition[]; stringCondition: string; trigger: string };
+	scope: ListenerScope;
+};
+
+function setupIframeEventListeners({ iframeId, triggerEndless, triggerInfo, scope }: SetupIframeEventListenersOptions) {
 	const iframe: any = document.getElementById(iframeId);
 	let iDoc = iframe.contentWindow || iframe.contentDocument;
 	if (iDoc.document) {
 		iDoc = iDoc.document;
-		scope.add(iDoc.body, SMILTriggersEnum.mouseEventType, async () => {
-			set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+		scope.add({
+			target: iDoc.body,
+			type: SMILTriggersEnum.mouseEventType as string,
+			listener: async () => {
+				set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+			},
 		});
-		scope.add(iDoc.body, SMILTriggersEnum.touchEventType, async () => {
-			set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+		scope.add({
+			target: iDoc.body,
+			type: SMILTriggersEnum.touchEventType as string,
+			listener: async () => {
+				set(triggerEndless, `${triggerInfo.trigger}.latestEventFired`, Date.now());
+			},
 		});
 	}
 }

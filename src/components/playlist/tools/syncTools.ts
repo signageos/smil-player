@@ -1,4 +1,4 @@
-import { Log } from '../../../logger';
+import { Log } from '@signageos/smil-logger';
 import { ISos } from '../../../models/sosModels';
 import { Synchronization } from '../../../models/syncModels';
 import { SyncEngine } from '@signageos/front-applet/es6/FrontApplet/Sync/Sync';
@@ -23,7 +23,13 @@ export function initSyncObject(): Synchronization {
 }
 
 export function createSyncTools(log: Log) {
-	async function createSyncGroup(sos: ISos, groupName: string, deviceId?: string): Promise<SyncGroup> {
+	type CreateSyncGroupOptions = {
+		sos: ISos;
+		groupName: string;
+		deviceId?: string;
+	};
+
+	async function createSyncGroup({ sos, groupName, deviceId }: CreateSyncGroupOptions): Promise<SyncGroup> {
 		if (syncGroups.has(groupName)) {
 			return syncGroups.get(groupName)!;
 		}
@@ -35,11 +41,17 @@ export function createSyncTools(log: Log) {
 		return syncGroup;
 	}
 
-	async function createTriggerSyncGroups(
-		sos: ISos,
-		synchronization: Synchronization,
-		triggerInfo: ParsedTriggerInfo,
-	): Promise<boolean> {
+	type CreateTriggerSyncGroupsOptions = {
+		sos: ISos;
+		synchronization: Synchronization;
+		triggerInfo: ParsedTriggerInfo;
+	};
+
+	async function createTriggerSyncGroups({
+		sos,
+		synchronization,
+		triggerInfo,
+	}: CreateTriggerSyncGroupsOptions): Promise<boolean> {
 		for (let [key] of Object.entries(triggerInfo)) {
 			if (key.startsWith('sync-')) {
 				log.debug(
@@ -48,7 +60,11 @@ export function createSyncTools(log: Log) {
 					synchronization.syncDeviceId,
 				);
 
-				await createSyncGroup(sos, `${synchronization.syncGroupName}`, synchronization.syncDeviceId);
+				await createSyncGroup({
+					sos,
+					groupName: `${synchronization.syncGroupName}`,
+					deviceId: synchronization.syncDeviceId,
+				});
 				// create just once is enough for sync triggers since all share same sync group
 				return true;
 			}
@@ -56,7 +72,13 @@ export function createSyncTools(log: Log) {
 		return false;
 	}
 
-	async function createRegionSyncGroups(sos: ISos, synchronization: Synchronization, smilObject: SMILFileObject) {
+	type CreateRegionSyncGroupsOptions = {
+		sos: ISos;
+		synchronization: Synchronization;
+		smilObject: SMILFileObject;
+	};
+
+	async function createRegionSyncGroups({ sos, synchronization, smilObject }: CreateRegionSyncGroupsOptions) {
 		let result = false;
 		for (let [key, value] of Object.entries(smilObject.region)) {
 			if (!isNil(value.region)) {
@@ -70,11 +92,11 @@ export function createSyncTools(log: Log) {
 							`${synchronization.syncGroupName}-${nestedValue.regionName}`,
 							synchronization.syncDeviceId,
 						);
-						await createSyncGroup(
+						await createSyncGroup({
 							sos,
-							`${synchronization.syncGroupName}-${nestedValue.regionName}`,
-							synchronization.syncDeviceId,
-						);
+							groupName: `${synchronization.syncGroupName}-${nestedValue.regionName}`,
+							deviceId: synchronization.syncDeviceId,
+						});
 						result = true;
 					}
 				}
@@ -85,7 +107,11 @@ export function createSyncTools(log: Log) {
 					`${synchronization.syncGroupName}-${key}`,
 					synchronization.syncDeviceId,
 				);
-				await createSyncGroup(sos, `${synchronization.syncGroupName}-${key}`, synchronization.syncDeviceId);
+				await createSyncGroup({
+					sos,
+					groupName: `${synchronization.syncGroupName}-${key}`,
+					deviceId: synchronization.syncDeviceId,
+				});
 				result = true;
 
 				log.debug('[sync] sync groups created for region: %s', `${synchronization.syncGroupName}-${key}`);
@@ -94,18 +120,28 @@ export function createSyncTools(log: Log) {
 		return result;
 	}
 
-	async function joinAllSyncGroupsOnSmilStart(
-		sos: ISos,
-		synchronization: Synchronization,
-		smilObject: SMILFileObject,
-	): Promise<void> {
+	type JoinAllSyncGroupsOnSmilStartOptions = {
+		sos: ISos;
+		synchronization: Synchronization;
+		smilObject: SMILFileObject;
+	};
+
+	async function joinAllSyncGroupsOnSmilStart({
+		sos,
+		synchronization,
+		smilObject,
+	}: JoinAllSyncGroupsOnSmilStartOptions): Promise<void> {
 		synchronization.syncGroupName = getConfigString(sos.config, 'syncGroupName') ?? '';
 		synchronization.syncGroupIds = getConfigString(sos.config, 'syncGroupIds')?.split(',') ?? [];
 		synchronization.syncDeviceId = getConfigString(sos.config, 'syncDeviceId') ?? '';
 		synchronization.syncGroupIds.sort();
 
-		const triggerSync = await createTriggerSyncGroups(sos, synchronization, smilObject.triggerSensorInfo);
-		const regionSync = await createRegionSyncGroups(sos, synchronization, smilObject);
+		const triggerSync = await createTriggerSyncGroups({
+			sos,
+			synchronization,
+			triggerInfo: smilObject.triggerSensorInfo,
+		});
+		const regionSync = await createRegionSyncGroups({ sos, synchronization, smilObject });
 
 		if (triggerSync || regionSync) {
 			// smil has some sync region, turn on sync
@@ -149,22 +185,28 @@ export function createSyncTools(log: Log) {
 		}
 	}
 
-	async function broadcastEndActionToAllDynamics(
-		sos: ISos,
-		synchronization: Synchronization,
-		smilObject: SMILFileObject,
-	) {
+	type BroadcastEndActionToAllDynamicsOptions = {
+		sos: ISos;
+		synchronization: Synchronization;
+		smilObject: SMILFileObject;
+	};
+
+	async function broadcastEndActionToAllDynamics({
+		sos,
+		synchronization,
+		smilObject,
+	}: BroadcastEndActionToAllDynamicsOptions) {
 		const dynamicInPlaylist = getDynamicTagsFromPlaylist(smilObject.playlist);
 		log.debug('[sync] dynamic tags in playlist: count=%d', dynamicInPlaylist.length);
 		for (let dynamicId in smilObject.dynamic) {
 			if (dynamicInPlaylist.includes(dynamicId)) {
 				log.debug('[sync] sending end event for dynamic tag: id=%s', dynamicId);
-				await dynamic.broadcastSyncValue(
+				await dynamic.broadcastSyncValue({
 					sos,
-					{ data: dynamicId },
-					`${synchronization.syncGroupName}-fullScreenTrigger`,
-					'end',
-				);
+					dynamicPlaylistConfig: { data: dynamicId },
+					groupName: `${synchronization.syncGroupName}-fullScreenTrigger`,
+					action: 'end',
+				});
 			}
 		}
 	}
