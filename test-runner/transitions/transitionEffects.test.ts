@@ -185,4 +185,47 @@ test.describe('transition effects (crossfade/default/billboard)', () => {
 			await mode.assert(page, frame, monitor);
 		});
 	}
+
+	// Each campaign of a priorityClass is its own wallclock <seq>, so the incoming image is a
+	// priority peer of the playing one. It must still sit underneath the outgoing image while
+	// that one animates; otherwise the columns flip over an empty (black) region and the next
+	// image hard-cuts in afterwards. Only the DOM overlap shows this — durations stay correct.
+	test('billboard reveals the next image across campaigns of one priorityClass', async ({ page, context, smilUrls }) => {
+		await context.addInitScript((url: string) => {
+			(window as unknown as { __SMIL_URL__?: string }).__SMIL_URL__ = url;
+		}, smilUrls.billboardPriorityTransition);
+
+		await page.goto(`/?duid=${DUID}`);
+		const frame = page.frameLocator('iframe');
+		await waitForLoaderOrSkip(page);
+		await expect(frame.locator('ol[id*="landscape1"]')).toBeVisible({ timeout: Timeouts.firstElement });
+
+		// Both directions: the second handover re-uses state left by the first loop pass.
+		for (const [outgoing, incoming] of [['landscape1', 'landscape2'], ['landscape2', 'landscape1']]) {
+			await expect
+				.poll(
+					async () =>
+						frame
+							.locator('body')
+							.evaluate((_body, [out, inc]) => {
+								const outgoingOl = document.querySelector<HTMLElement>(`ol[id*="${out}"]`);
+								const incomingOl = document.querySelector<HTMLElement>(`ol[id*="${inc}"]`);
+								const column = outgoingOl?.querySelector<HTMLElement>('li > div');
+								return (
+									!!column?.style.getPropertyValue('-webkit-animation').includes('rotate') &&
+									incomingOl?.style.visibility === 'visible' &&
+									!!incomingOl.querySelector<HTMLElement>('li > div')?.style.backgroundImage &&
+									Number(incomingOl.style.zIndex) === Number(outgoingOl!.style.zIndex) - 1
+								);
+							}, [outgoing, incoming])
+							.catch(() => false),
+					{
+						timeout: 12_000,
+						intervals: [50],
+						message: `${incoming} must be visible right under ${outgoing} while its columns rotate`,
+					},
+				)
+				.toBe(true);
+		}
+	});
 });

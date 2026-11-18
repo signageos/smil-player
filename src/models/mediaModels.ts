@@ -94,6 +94,8 @@ export type SMILImage = {
 	dynamicValue?: string;
 	syncGroupName?: string;
 	wasUpdated?: boolean;
+	/** prepared while waiting behind a priority peer; playElement must not prepare it again */
+	preparedAhead?: boolean;
 	useInReportUrlStale?: boolean;
 	'z-index': string;
 } & PoPAttributes &

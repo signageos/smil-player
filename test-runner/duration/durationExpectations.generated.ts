@@ -14,6 +14,11 @@ export const GENERATED = {
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 6 },
 		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 6 },
 	],
+	"billboardPriority": [
+		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 3 },
+	],
 	"brokenXml": [
 
 	],

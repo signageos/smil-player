@@ -228,6 +228,64 @@ describe('PriorityConflictResolver', () => {
 
 			expect(state.main[0].player.stop).to.equal(true);
 		});
+
+		const runPeerConflict = (peer: PriorityRule, waiter: Partial<CurrentlyPlayingPriority[string][number]> = {}) => {
+			state.main = [
+				makeRegion({
+					priority: makePriorityObject({ priorityLevel: 1, peer }),
+					parent: 'seq-111',
+					player: { contentPause: 0, stop: false, endTime: 0, playing: true, timesPlayed: 0 },
+				}),
+				makeRegion({ priority: makePriorityObject({ priorityLevel: 1 }), parent: 'seq-222', ...waiter }),
+			];
+			stateManager.setPlaying('main', 0);
+			const events: string[] = [];
+			const done = resolver
+				.handlePriorityBeforePlay({
+					elementKey: 'img1',
+					priorityObject: makePriorityObject({ priorityLevel: 1 }),
+					priorityRegionName: 'main',
+					currentIndex: 1,
+					previousPlayingIndex: 0,
+					parent: 'seq-222',
+					endTime: Date.now() + 10000,
+					onPeerBlocked: () => events.push('announced'),
+				})
+				.then(() => events.push('released'));
+			return { events, done };
+		};
+
+		[PriorityRule.never, PriorityRule.defer].forEach((rule) => {
+			it(`announces a peer held by the ${rule} rule while its blocker is still playing`, async () => {
+				const { events, done } = runPeerConflict(rule);
+				await new Promise((resolve) => setTimeout(resolve, 20));
+				expect(events).to.deep.equal(['announced']);
+
+				stateManager.markFinished({ regionName: 'main', index: 0 });
+				await done;
+				expect(events).to.deep.equal(['announced', 'released']);
+			});
+		});
+
+		it('announces a peer that resumes after a higher-priority stop and waits behind its sibling', async () => {
+			// peer rule "stop" would not announce on its own; the wait comes from the earlier stop
+			const { events, done } = runPeerConflict(PriorityRule.stop, {
+				behaviour: PriorityBehaviour.stop,
+				player: { contentPause: 0, stop: true, endTime: 0, playing: false, timesPlayed: 0 },
+			});
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			expect(events).to.deep.equal(['announced']);
+
+			stateManager.markFinished({ regionName: 'main', index: 0 });
+			await done;
+			expect(events).to.deep.equal(['announced', 'released']);
+		});
+
+		it('does not announce a peer that takes over at once (stop rule)', async () => {
+			const { events, done } = runPeerConflict(PriorityRule.stop);
+			await done;
+			expect(events).to.deep.equal(['released']);
+		});
 	});
 
 	describe('handleDeferBehaviour', () => {

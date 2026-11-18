@@ -1,0 +1,49 @@
+<smil>
+    <head>
+        <meta http-equiv="refresh" content="60"/>
+        <meta defaultTransition="billboard1"/>
+        <layout>
+            <transition xml:id="billboard1" type="billboard" subtype="billboard" dur="1s"
+                        columnCount="50" direction="left"/>
+            <root-layout width="1920" height="1080" backgroundColor="#000000"/>
+            <region regionName="main" left="0" top="0" width="1920" height="1080" z-index="1"/>
+        </layout>
+    </head>
+    <body>
+        <par>
+            <seq end="__prefetchEnd.endEvent">
+                <seq repeatCount="indefinite">
+                    <video src="https://demo.signageos.io/smil/samples/assets/loader.mp4"/>
+                </seq>
+            </seq>
+            <seq>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"/>
+                <prefetch src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"/>
+                <seq id="__prefetchEnd" dur="1s"/>
+            </seq>
+            <par begin="__prefetchEnd.endEvent" repeatCount="indefinite">
+                <excl>
+                    <par>
+                        <seq repeatCount="indefinite">
+                            <priorityClass higher="pause" pauseDisplay="hide">
+                                <seq repeatCount="indefinite">
+                                    <!-- every campaign is its own wallclock seq: each handover crosses a seq boundary -->
+                                    <seq repeatCount="1" begin="wallclock(2020-01-01T00:00)" end="wallclock(2099-12-31T23:59)">
+                                        <img dur="3s"
+                                             src="https://demo.signageos.io/smil/samples/assets/landscape1.jpg"
+                                             region="main" fit="fill"/>
+                                    </seq>
+                                    <seq repeatCount="1" begin="wallclock(2020-01-01T00:00)" end="wallclock(2099-12-31T23:59)">
+                                        <img dur="3s"
+                                             src="https://demo.signageos.io/smil/samples/assets/landscape2.jpg"
+                                             region="main" fit="fill"/>
+                                    </seq>
+                                </seq>
+                            </priorityClass>
+                        </seq>
+                    </par>
+                </excl>
+            </par>
+        </par>
+    </body>
+</smil>

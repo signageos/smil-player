@@ -102,6 +102,7 @@ export function getSmilUrls(port: number = 3000) {
 		triggersStop: `${base}/triggers/triggersStop.smil`,
 		crossfadeTransition: `${base}/transitions/simpleCrossfade.smil`,
 		billboardTransition: `${base}/transitions/simpleBillboard.smil`,
+		billboardPriorityTransition: `${base}/transitions/billboardPriority.smil`,
 		defaultTransition: `${base}/transitions/defaultTransition.smil`,
 		playModeOne: `${base}/playback/playModeOne.smil`,
 		playModeOneFiniteRepeat: `${base}/playback/playModeOneFiniteRepeat.smil`,

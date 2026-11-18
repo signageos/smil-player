@@ -20,6 +20,7 @@ Entries should be short and human-readable; for longer entries, use an indented 
 - (public) The player no longer freezes with new content never appearing after a SMIL content update that adds a `repeatCount="indefinite"` sequence while the new media is still downloading; previously only a restart recovered it
 - (public) Media removed by a SMIL content update is no longer deleted from the device while the previous playlist is still playing it, which could show a blank region and send a failed playback report until the new playlist took over
 - (public) Two content changes recorded at the same moment can no longer overwrite each other; previously the losing one was downloaded a second time and its playback reports could carry the previous content URL until then
+- (public) Image transitions again reveal the next image when consecutive images belong to different sequences of one `priorityClass` (for example wallclock-scheduled campaigns); since 4.0.0 the outgoing image animated over an empty region and the next image cut in afterwards
 
 ## [4.0.2] - 2026-10-23
 
