@@ -18,6 +18,7 @@ type HandlePriorityBeforePlayOptions = {
 	parent: string;
 	endTime: number;
 	depth?: number;
+	onPeerBlocked?: () => void;
 };
 
 type HandlePrecedingContentStopOptions = {
@@ -49,6 +50,7 @@ type HandleDeferBehaviourOptions = {
 	parent: string;
 	endTime: number;
 	depth?: number;
+	onPeerBlocked?: () => void;
 };
 
 type HandlePriorityRulesOptions = {
@@ -61,6 +63,7 @@ type HandlePriorityRulesOptions = {
 	endTime: number;
 	priorityRule: PriorityRule;
 	depth: number;
+	onPeerBlocked?: () => void;
 };
 
 export class PriorityConflictResolver {
@@ -90,6 +93,7 @@ export class PriorityConflictResolver {
 		parent,
 		endTime,
 		depth = 0,
+		onPeerBlocked,
 	}: HandlePriorityBeforePlayOptions): Promise<void> => {
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
 		const previousIndexPriority = this.stateManager.getEntry(priorityRegionName, previousPlayingIndex);
@@ -109,6 +113,10 @@ export class PriorityConflictResolver {
 
 		// if attempted to play playlist which was stopped by higher priority, wait till end of higher priority playlist and try again
 		if (currentIndexPriority.parent === parent && currentIndexPriority.behaviour === PriorityBehaviour.stop) {
+			// this wait can be behind a peer as well (the higher class is gone, a sibling plays)
+			if (peerConflict) {
+				onPeerBlocked?.();
+			}
 			await this.handlePrecedingContentStop({
 				priorityObject,
 				priorityRegionName,
@@ -142,6 +150,7 @@ export class PriorityConflictResolver {
 				endTime,
 				priorityRule: rule,
 				depth,
+				onPeerBlocked,
 			});
 		} else if (peerConflict) {
 			const rule = this.engine.selectApplicableRule('peer', previousIndexPriority.priority);
@@ -153,6 +162,12 @@ export class PriorityConflictResolver {
 				previousIndexPriority.media.src,
 				previousIndexPriority.priority.priorityLevel,
 			);
+			// never/defer hold the incoming peer here until the playing one ends, i.e. before it
+			// is prepared and queued behind it. Whatever needs the successor earlier than that
+			// (the outgoing element's transition) has to learn about it now.
+			if (rule === PriorityRule.never || rule === PriorityRule.defer) {
+				onPeerBlocked?.();
+			}
 			await this.handlePriorityRules({
 				elementKey,
 				priorityObject,
@@ -163,6 +178,7 @@ export class PriorityConflictResolver {
 				endTime,
 				priorityRule: rule,
 				depth,
+				onPeerBlocked,
 			});
 		} else if (relation === 'lower' && previousIndexPriority.player.playing) {
 			const rule = this.engine.selectApplicableRule('lower', previousIndexPriority.priority);
@@ -184,6 +200,7 @@ export class PriorityConflictResolver {
 				endTime,
 				priorityRule: rule,
 				depth,
+				onPeerBlocked,
 			});
 		}
 
@@ -330,6 +347,7 @@ export class PriorityConflictResolver {
 		parent,
 		endTime,
 		depth = 0,
+		onPeerBlocked,
 	}: HandleDeferBehaviourOptions): Promise<void> => {
 		const currentPriorityRegion = this.stateManager.getRegion(priorityRegionName)!;
 		const currentIndexPriority = this.stateManager.getEntry(priorityRegionName, currentIndex);
@@ -401,6 +419,7 @@ export class PriorityConflictResolver {
 					parent,
 					endTime,
 					depth: depth + 1,
+					onPeerBlocked,
 				});
 			}
 		}
@@ -416,6 +435,7 @@ export class PriorityConflictResolver {
 		endTime,
 		priorityRule,
 		depth,
+		onPeerBlocked,
 	}: HandlePriorityRulesOptions): Promise<void> => {
 		this.log.debug('[priority] applying rule: %s, region=%s', priorityRule, priorityRegionName);
 		switch (priorityRule) {
@@ -443,6 +463,7 @@ export class PriorityConflictResolver {
 					parent,
 					endTime,
 					depth,
+					onPeerBlocked,
 				});
 				break;
 			default:

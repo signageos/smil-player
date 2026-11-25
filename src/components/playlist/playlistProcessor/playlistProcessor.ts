@@ -407,13 +407,11 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		});
 		downloadPromises = downloadPromises.concat(result.promises);
 
-		// Get the mediaInfoObject for this file
-		const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([
-			this.smilObject.intro[0][introMedia],
-		] as MergedDownloadList[]);
-
-		// Update the mediaInfoObject after download completes
-		await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+		// Record the download in mediaInfo
+		await this.files.updateMediaInfoAfterDownloads(
+			[this.smilObject.intro[0][introMedia]] as MergedDownloadList[],
+			result.filesToUpdate,
+		);
 
 		await Promise.all(downloadPromises);
 		this.log.debug('[processor] intro media downloaded: src=%s', this.smilObject.intro[0]?.src);
@@ -661,6 +659,8 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 
 			// Stop all currently playing content
 			await this.stopAllContent();
+			// the retired version no longer plays: files the new SMIL dropped can go now
+			this.files.runPendingUnusedFilesCleanup();
 
 			// Clear old promises for ALL regions since we just cancelled everything
 			this.log.debug('[processor] clearing old promises for all regions after version update');
@@ -1944,7 +1944,12 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 				timedDebug.debug('[processor] video preparation completed');
 				break;
 			case 'img':
-				this.handleHtmlElementPrepare({ value: value as SMILImage, element, version, timedDebug });
+				if ((value as SMILImage).preparedAhead) {
+					// announceBlockedPeerImage already prepared it while it waited behind its peer
+					(value as SMILImage).preparedAhead = false;
+				} else {
+					this.handleHtmlElementPrepare({ value: value as SMILImage, element, version, timedDebug });
+				}
 				timedDebug.debug('[processor] image preparation completed');
 				break;
 			case 'ref':
@@ -2259,6 +2264,46 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 		timedDebug.debug('[processor] html element preparation completed');
 	};
 
+	/**
+	 * An image held back by the priority engine behind a playing peer (each wallclock campaign seq of
+	 * one priorityClass is such a peer) reaches playElement only after that peer ended. The outgoing
+	 * image's transition needs its successor prepared and recorded as nextElement before that, so do
+	 * both here; playElement then skips its own prepare (z-index is bumped relatively, not idempotent).
+	 */
+	private announceBlockedPeerImage = (value: SMILMedia, key: string, version: number): void => {
+		const image = value as SMILImage;
+		if (!image.transitionInfo || removeDigits(key) !== 'img') {
+			return;
+		}
+		const element = document.getElementById(image.id ?? '');
+		if (
+			!element ||
+			image.preparedAhead ||
+			!image.localFilePath ||
+			image.hasOwnProperty(SMILTriggersEnum.triggerValue) ||
+			!isNil(image.dynamicValue) ||
+			// playElement may still reject it after a network check (resolveContentAvailability);
+			// an image revealed under the outgoing one must be one that is certain to play next
+			!isNil(image.playCheckUrl) ||
+			(this.smilObject.checkBeforePlay && !this.smilObject.checkAheadCount)
+		) {
+			return;
+		}
+		const regionName = image.regionInfo.regionName;
+		this.handleHtmlElementPrepare({
+			value: image,
+			element,
+			version,
+			timedDebug: new TimedDebugger(`announcePeer_${version}_${image.id}`, this.log),
+		});
+		image.preparedAhead = true;
+		if (isNil(this.currentlyPlaying[regionName])) {
+			this.currentlyPlaying[regionName] = <PlayingInfo>{};
+		}
+		this.currentlyPlaying[regionName].nextElement = cloneDeep(image);
+		this.currentlyPlaying[regionName].nextElement.type = 'html';
+	};
+
 	private createEngine(): IPlaylistEngine {
 		const self = this;
 		return {
@@ -2271,7 +2316,18 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			},
 			actions: {
 				playElement: self.playElement,
-				priorityBehaviour: (options) => self.priority.priorityBehaviour(options),
+				priorityBehaviour: (options) =>
+					self.priority.priorityBehaviour({
+						...options,
+						onPeerBlocked: () => {
+							try {
+								self.announceBlockedPeerImage(options.value, options.elementKey, options.version);
+							} catch (err) {
+								// cosmetic only: a failed early prepare must never disturb the priority wait
+								self.log.debug('[processor] announcing blocked peer image failed: %O', err);
+							}
+						},
+					}),
 				storePriorityBounds: self.storePriorityBounds,
 				coordinatePlayModeSync: (options) => self.elementController.coordinatePlayModeSync(options),
 				processDynamicPlaylist: self.processDynamicPlaylist,
@@ -2417,6 +2473,7 @@ export class PlaylistProcessor extends PlaylistCommon implements IPlaylistProces
 			this.setCheckFilesLoop(true);
 			this.foundNewPlaylist = false;
 			await this.stopAllContent();
+			this.files.runPendingUnusedFilesCleanup();
 			return;
 		}
 

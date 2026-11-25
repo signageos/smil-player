@@ -176,11 +176,8 @@ export class SmilPlayer implements ISmilPlayer {
 
 			await Promise.all(result.promises);
 
-			// Get the mediaInfoObject for this file
-			const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([backupImageObject]);
-
-			// Update the mediaInfoObject after download completes
-			await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+			// Record the download in mediaInfo
+			await this.files.updateMediaInfoAfterDownloads([backupImageObject], result.filesToUpdate);
 		} catch (err) {
 			this.log.warn('[smil] failed to download backup image: %O', err);
 		}
@@ -247,6 +244,10 @@ export class SmilPlayer implements ISmilPlayer {
 			});
 		}
 
+		// A cleanup still pending from the previous content update was computed for that SMIL and
+		// would delete what this run is about to download.
+		await this.files.settleUnusedFilesCleanup();
+
 		// Download backup image if configured
 		await this.downloadBackupImage();
 
@@ -267,11 +268,8 @@ export class SmilPlayer implements ISmilPlayer {
 					});
 					await Promise.all(result.promises);
 
-					// Get the mediaInfoObject for this file
-					const mediaInfoObject = await this.files.getOrCreateMediaInfoFile([smilFile]);
-
-					// Update the mediaInfoObject after download completes
-					await this.files.updateMediaInfoAfterDownloads(mediaInfoObject, result.filesToUpdate);
+					// Record the download in mediaInfo
+					await this.files.updateMediaInfoAfterDownloads([smilFile], result.filesToUpdate);
 				} catch (downloadErr) {
 					this.log.warn('[smil] download failed, trying cached version: %O', downloadErr);
 				}
@@ -335,7 +333,7 @@ export class SmilPlayer implements ISmilPlayer {
 						(async () => {
 							await this.files.prepareDownloadMediaSetup(smilObject);
 							// prepares everything needed for processing playlist
-							await this.dataPrepare.manageFilesAndInfo(smilObject, smilUrl);
+							await this.dataPrepare.manageFilesAndInfo({ smilObject, smilUrl });
 							// all files are downloaded, stop intro
 							this.log.debug('[smil] media download complete, stopping intro');
 						})(),
@@ -347,7 +345,13 @@ export class SmilPlayer implements ISmilPlayer {
 					this.log.debug('[smil] no intro element, skipping intro');
 					await this.files.prepareDownloadMediaSetup(smilObject);
 					this.log.debug('[smil] media download complete');
-					await this.dataPrepare.manageFilesAndInfo(smilObject, smilUrl);
+					// On a content update the previous version's loop keeps playing until the new loop cancels it,
+					// so files the new SMIL dropped are deleted only then, not here.
+					await this.dataPrepare.manageFilesAndInfo({
+						smilObject,
+						smilUrl,
+						deferUnusedFilesCleanup: !firstIteration,
+					});
 					// Publish the new SMIL to the processor only once it is fully prepared: on a content
 					// update the previous version's loop is still running and reads the processor's
 					// smilObject on every pass.

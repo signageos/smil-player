@@ -21,6 +21,12 @@ import { PlaylistCommon } from '../playlistCommon/playlistCommon';
 import { IPlaylistDataPrepare } from './IPlaylistDataPrepare';
 import { SMILDynamicEnum } from '../../../enums/dynamicEnums';
 
+export type ManageFilesAndInfoOptions = {
+	smilObject: SMILFileObject;
+	smilUrl: string;
+	deferUnusedFilesCleanup?: boolean;
+};
+
 export type GetAllInfoOptions = {
 	playlist: PlaylistElement | PlaylistElement[] | TriggerList;
 	smilObject: SMILFileObject;
@@ -233,18 +239,20 @@ export class PlaylistDataPrepare extends PlaylistCommon implements IPlaylistData
 	 * Performs all necessary actions needed to process playlist ( delete unused files, extract widgets, extract regionInfo for each media )
 	 * @param smilObject - JSON representation of parsed smil file
 	 * @param smilUrl - url for SMIL file so its not deleted as unused file ( actual smil file url is not present in smil file itself )
+	 * @param deferUnusedFilesCleanup - live content update: keep files the new SMIL dropped until the previous playlist loop is cancelled
 	 */
-	public manageFilesAndInfo = async (
-		smilObject: SMILFileObject,
-		smilUrl: string,
-	) => {
+	public manageFilesAndInfo = async ({
+		smilObject,
+		smilUrl,
+		deferUnusedFilesCleanup = false,
+	}: ManageFilesAndInfoOptions) => {
 		// Reset sync index for fresh playlist processing
 		this.globalRegionSyncIndex = {};
 		if (this.synchronization) {
 			this.synchronization.playModeSyncRanges = {};
 		}
 
-		await this.files.currentFilesSetup({ widgets: smilObject.ref, smilObject, smilUrl });
+		await this.files.currentFilesSetup({ widgets: smilObject.ref, smilObject, smilUrl, deferUnusedFilesCleanup });
 
 		// has to before getAllInfo for generic playlist, because src attribute for triggers is specified during intro
 		await this.getAllInfo({ playlist: smilObject.triggers, smilObject, smilUrl, isSpecial: true });

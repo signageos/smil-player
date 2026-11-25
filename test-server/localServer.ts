@@ -51,6 +51,13 @@ export function createTestServer(serverPort: number = TestServer.port) {
 
 	// Content version served by the /storage-cache harness; POST /storage-cache/set/:v.
 	let storageCacheVersion = 1;
+	// /unused-cleanup harness state: which SMIL the playlist URL serves (1 = before the
+	// update, 2 = after), when the phase-2 playlist is allowed to start, and which content
+	// version the kept slot resolves to.
+	let cleanupPhase = 1;
+	let cleanupGateBegin = '';
+	let cleanupGateEnd = '';
+	let cleanupKeptVersion = 1;
 	// Origin of the /swap-stress time buckets; reset per test via POST /reset.
 	let swapOrigin = Date.now();
 
@@ -72,6 +79,10 @@ export function createTestServer(serverPort: number = TestServer.port) {
 		reportFailMode = false;
 		movedVersion = 1;
 		storageCacheVersion = 1;
+		cleanupPhase = 1;
+		cleanupGateBegin = '';
+		cleanupGateEnd = '';
+		cleanupKeptVersion = 1;
 		swapOrigin = Date.now();
 		res.json({ ok: true });
 	});
@@ -1040,6 +1051,76 @@ export function createTestServer(serverPort: number = TestServer.port) {
 			'Cache-Control': 'no-cache, no-store',
 		});
 		res.send(fileString);
+	});
+
+	// --- Unused-files cleanup harness (live SMIL update that drops media, location strategy) ---
+	// One playlist URL serves unusedFilesCleanup.smil until POST /unused-cleanup/phase/2, then
+	// unusedFilesCleanupAfter.smil, which drops one video, adds another and may not start before
+	// a wallclock gate. Until that gate opens the PREVIOUS playlist keeps playing although the
+	// new one is already downloaded and prepared — the window in which a dropped file must
+	// survive on disk. Every slot HEAD answers with a Location naming a versioned content file,
+	// and every content file is a different real video, so a playback report's URL can be
+	// checked against the duration of the video that was on screen.
+	const CLEANUP_CONTENT: Record<string, string> = {
+		'kept_v1.mp4': 'video-test-1.mp4',
+		'kept_v2.mp4': 'loader.mp4',
+		'dropped_v1.mp4': 'video-test-2.mp4',
+		'added_v1.mp4': 'landscape1.mp4',
+	};
+
+	// Stable within a phase, different across phases: exactly one SMIL update is detected.
+	const cleanupSmilLastModified = (): string => new Date(1_700_000_000_000 + cleanupPhase * 60_000).toUTCString();
+
+	app.post('/unused-cleanup/phase/2', (req, res) => {
+		const gateBegin = moment().add(Number(req.body?.gateSeconds) || 0, 'seconds').startOf('second');
+		cleanupGateBegin = `wallclock(${formatDate(gateBegin)})`;
+		cleanupGateEnd = `wallclock(${formatDate(gateBegin.clone().add(12, 'hours'))})`;
+		cleanupPhase = 2;
+		res.json({ ok: true, gateBeginMs: gateBegin.valueOf() });
+	});
+
+	app.post('/unused-cleanup/kept-version/:version', (req, res) => {
+		cleanupKeptVersion = Number(req.params.version);
+		res.json({ ok: true, cleanupKeptVersion });
+	});
+
+	app.head('/unused-cleanup/playlist.smil', (_req, res) => {
+		res.set({ 'Content-type': 'text/xml', 'Last-Modified': cleanupSmilLastModified(), 'Cache-Control': 'no-cache, no-store' });
+		res.end();
+	});
+
+	app.get('/unused-cleanup/playlist.smil', async (_req, res) => {
+		const fileName = cleanupPhase === 1 ? 'unusedFilesCleanup.smil' : 'unusedFilesCleanupAfter.smil';
+		let fileString = await fs.readFile(`./${TestServer.testFilesPath}/contentUpdate/${fileName}`, 'utf8');
+		fileString = rewriteSmilPort(
+			fileString.replace('CLEANUP_V2_BEGIN', cleanupGateBegin).replace('CLEANUP_V2_END', cleanupGateEnd),
+		);
+		res.set({ 'Content-type': 'text/xml', 'Last-Modified': cleanupSmilLastModified(), 'Cache-Control': 'no-cache, no-store' });
+		res.send(fileString);
+	});
+
+	// HEAD only: a GET on the slot itself 404s, so a player that fails to read the Location
+	// header (and falls back to downloading the src) fails loudly instead of passing.
+	app.head('/unused-cleanup/slot/:name', (req, res) => {
+		const slot = req.params.name.replace('.mp4', '');
+		const contentFile = `${slot}_v${slot === 'kept' ? cleanupKeptVersion : 1}.mp4`;
+		if (!CLEANUP_CONTENT[contentFile]) {
+			res.status(404).end();
+			return;
+		}
+		res.set({ ...CBP_CORS_HEADERS, 'Location': `http://localhost:${port}/unused-cleanup/content/${contentFile}` });
+		res.status(200).end();
+	});
+
+	app.get('/unused-cleanup/content/:fileName', async (req, res) => {
+		const asset = CLEANUP_CONTENT[req.params.fileName];
+		if (!asset) {
+			res.status(404).end();
+			return;
+		}
+		const buf = await fs.readFile(`./${TestServer.assetsPath}/${asset}`);
+		res.set({ ...CBP_CORS_HEADERS, 'Content-Type': 'video/mp4', 'Content-Length': String(buf.length) });
+		res.send(buf);
 	});
 
 	// Serve .smil files from any folder with fillWallclock templating and port rewriting,

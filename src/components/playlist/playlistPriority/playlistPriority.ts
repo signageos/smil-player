@@ -24,6 +24,8 @@ export type PriorityBehaviourOptions = {
 	parent?: string;
 	endTime?: number;
 	priorityObject?: PriorityObject;
+	/** called when the element is about to wait behind a playing peer of its own priority class */
+	onPeerBlocked?: () => void;
 };
 
 export type HandlePriorityWhenDoneOptions = {
@@ -87,6 +89,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 		parent = '0',
 		endTime = 0,
 		priorityObject = <PriorityObject>{},
+		onPeerBlocked,
 	}: PriorityBehaviourOptions): Promise<{
 		currentIndex: number;
 		previousPlayingIndex: number;
@@ -126,6 +129,7 @@ export class PlaylistPriority implements IPlaylistPriority {
 				previousPlayingIndex,
 				parent,
 				endTime,
+				onPeerBlocked,
 			});
 		}
 

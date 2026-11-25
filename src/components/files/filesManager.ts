@@ -117,6 +117,7 @@ export type CurrentFilesSetupOptions = {
 	widgets: SMILWidget[];
 	smilObject: SMILFileObject;
 	smilUrl: string;
+	deferUnusedFilesCleanup?: boolean;
 };
 
 export type GetFileDetailsOptions = {
@@ -278,8 +279,11 @@ export class FilesManager implements IFilesManager {
 	private batchUpdates: Map<string, string | number> = new Map();
 	// Track files downloaded to temp folders: filename -> temp path
 	private tempDownloads: Map<string, string> = new Map();
-	// Serialize prePlayCheck batch operations across concurrent regions
-	private prePlayLock: Promise<void> = Promise.resolve();
+	// Serializes every read-modify-write of the mediaInfo file (promise-chain mutex)
+	private mediaInfoLock: Promise<void> = Promise.resolve();
+	// Unused-files cleanup of a live content update, held back until the retiring loop is cancelled
+	private pendingUnusedFilesCleanup: (() => Promise<void>) | null = null;
+	private unusedFilesCleanupInFlight: Promise<void> = Promise.resolve();
 	// Track in-progress background downloads to prevent duplicates
 	private activePrePlayDownloads: Map<string, Promise<void>> = new Map();
 	// playCheckGate re-runs every ~100ms in an all-skipped loop; warn about missing meta only once
@@ -579,12 +583,48 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
-	public currentFilesSetup = async ({ widgets, smilObject, smilUrl }: CurrentFilesSetupOptions) => {
-		await this.deleteUnusedFiles(smilObject, smilUrl);
-		this.log.debug('[files] unused files deleted');
+	public currentFilesSetup = async ({
+		widgets,
+		smilObject,
+		smilUrl,
+		deferUnusedFilesCleanup = false,
+	}: CurrentFilesSetupOptions) => {
+		if (deferUnusedFilesCleanup) {
+			// Live content update: the retiring playlist loop still plays files the new SMIL dropped.
+			// The processor runs this once that loop is cancelled (runPendingUnusedFilesCleanup).
+			this.pendingUnusedFilesCleanup = () => this.deleteUnusedFiles(smilObject, smilUrl);
+		} else {
+			await this.deleteUnusedFiles(smilObject, smilUrl);
+			this.log.debug('[files] unused files deleted');
+		}
 
 		await this.extractWidgets(widgets);
 		this.log.debug('[files] widgets extracted');
+	};
+
+	/**
+	 * Starts the cleanup deferred by currentFilesSetup, if any. Not awaited by design: it runs between
+	 * stopping the retired content and playing the new one, where waiting would show as a blank gap.
+	 */
+	public runPendingUnusedFilesCleanup = (): void => {
+		const cleanup = this.pendingUnusedFilesCleanup;
+		if (!cleanup) {
+			return;
+		}
+		this.pendingUnusedFilesCleanup = null;
+		this.unusedFilesCleanupInFlight = cleanup().then(
+			() => this.log.debug('[files] unused files deleted'),
+			(err) => this.log.warn('[files] deferred unused files cleanup failed: %O', err),
+		);
+	};
+
+	/**
+	 * Drops a cleanup that has not started and waits for a running one. Called before the next content
+	 * update downloads anything: a cleanup computed for an older SMIL would delete the newer one's files.
+	 */
+	public settleUnusedFilesCleanup = async (): Promise<void> => {
+		this.pendingUnusedFilesCleanup = null;
+		await this.unusedFilesCleanupInFlight;
 	};
 
 	public getFileDetails = async ({ media, fileStructure, suffix = '' }: GetFileDetailsOptions) => {
@@ -1800,20 +1840,24 @@ export class FilesManager implements IFilesManager {
 		return { promises, filesToUpdate };
 	};
 
-	// New method to update mediaInfoObject after downloads complete
+	/**
+	 * Records freshly downloaded files in mediaInfo. Reads the stored mediaInfo itself, under the
+	 * mediaInfo lock, so a value written by another writer in the meantime is never lost.
+	 * @param filesList - the downloaded files, used to create mediaInfo when none is stored yet
+	 * @param filesToUpdate - file name → update value of every successful download
+	 */
 	public updateMediaInfoAfterDownloads = async (
-		mediaInfoObject: MediaInfoObject,
+		filesList: MergedDownloadList[],
 		filesToUpdate: Map<string, number | string>,
-	): Promise<void> => {
-		// Update mediaInfoObject with successful downloads
-		filesToUpdate.forEach((value, fileName) => {
-			this.log.debug('[files] updating mediaInfo: file=%s', fileName);
-			updateJsonObject({ jsonObject: mediaInfoObject, attr: fileName, value });
+	): Promise<void> =>
+		this.withMediaInfoLock(async () => {
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
+			filesToUpdate.forEach((value, fileName) => {
+				this.log.debug('[files] updating mediaInfo: file=%s', fileName);
+				updateJsonObject({ jsonObject: mediaInfoObject, attr: fileName, value });
+			});
+			await this.writeMediaInfoFile(mediaInfoObject);
 		});
-
-		// Save/update mediaInfoObject to persistent storage
-		await this.writeMediaInfoFile(mediaInfoObject);
-	};
 
 	/**
 	 * prepare folder structure for media files, does not support recursive create
@@ -2063,14 +2107,15 @@ export class FilesManager implements IFilesManager {
 	 * never written again). Safe to call on every boot — a no-op once the file
 	 * is clean, and it never touches a bare key that lacks a sibling.
 	 */
-	public pruneStaleMediaInfoKeys = async (): Promise<void> => {
-		const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
-		const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
-		if (removed.length > 0) {
-			this.log.debug('Pruned %d stale extensionless mediaInfo keys: %O', removed.length, removed);
-			await this.writeMediaInfoFile(mediaInfoObject);
-		}
-	};
+	public pruneStaleMediaInfoKeys = async (): Promise<void> =>
+		this.withMediaInfoLock(async () => {
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
+			const removed = pruneShadowedMediaInfoKeys(mediaInfoObject);
+			if (removed.length > 0) {
+				this.log.debug('Pruned %d stale extensionless mediaInfo keys: %O', removed.length, removed);
+				await this.writeMediaInfoFile(mediaInfoObject);
+			}
+		});
 
 	// Batch update methods for atomic mediaInfoObject updates
 	public startBatch = (): void => {
@@ -2109,65 +2154,69 @@ export class FilesManager implements IFilesManager {
 			}
 		}
 
-		// Read current mediaInfoObject from disk
-		const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
+		// Read-modify-write of mediaInfo is serialized with every other mediaInfo writer
+		const preUpdateMediaInfo = await this.withMediaInfoLock(async () => {
+			// Read current mediaInfoObject from disk
+			const mediaInfoObject = await this.getOrCreateMediaInfoFile(filesList);
 
-		// Save pre-update state so migration can compare old vs new for movement detection
-		const preUpdateMediaInfo = { ...mediaInfoObject };
+			// Save pre-update state so migration can compare old vs new for movement detection
+			const preUpdate = { ...mediaInfoObject };
 
-		// ── Phase B: SYNCHRONOUS STATE SWAP (no await = no interleaving) ──
+			// ── Phase B: SYNCHRONOUS STATE SWAP (no await = no interleaving) ──
 
-		// Apply batchUpdates to mediaInfoObject (in-memory)
-		for (const [fileName, value] of this.batchUpdates) {
-			const oldValue = mediaInfoObject[fileName];
-			mediaInfoObject[fileName] = value;
-			this.log.debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
-		}
+			// Apply batchUpdates to mediaInfoObject (in-memory)
+			for (const [fileName, value] of this.batchUpdates) {
+				const oldValue = mediaInfoObject[fileName];
+				mediaInfoObject[fileName] = value;
+				this.log.debug('Batch update: mediaInfoObject[%s] from %s to %s', fileName, oldValue, value);
+			}
 
-		// Swap localFilePath to temp URIs so playlist reads NEW content immediately
-		for (const file of filesList) {
-			if ('src' in file && 'localFilePath' in file) {
-				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
-				const tempUri = tempUriMap.get(fileName);
-				if (tempUri) {
-					file.localFilePath = tempUri;
-					this.log.debug('commitBatch: Swapped localFilePath for %s to temp URI: %s', fileName, tempUri);
+			// Swap localFilePath to temp URIs so playlist reads NEW content immediately
+			for (const file of filesList) {
+				if ('src' in file && 'localFilePath' in file) {
+					const fileName = getCanonicalFileName(file.src, mediaInfoObject);
+					const tempUri = tempUriMap.get(fileName);
+					if (tempUri) {
+						file.localFilePath = tempUri;
+						this.log.debug('commitBatch: Swapped localFilePath for %s to temp URI: %s', fileName, tempUri);
+					}
 				}
 			}
-		}
 
-		// Set wasUpdated for all pending files
-		for (const file of this.pendingWasUpdated) {
-			if ('localFilePath' in file) {
-				(file as any).wasUpdated = true;
-			}
-		}
-
-		// Safety net: any file whose mediaInfoObject entry changed in this batch but is NOT
-		// in pendingWasUpdated had a mapping-only update (e.g. same content, different query
-		// params). Flag it so playlistProcessor refreshes useInReportUrl on next play without
-		// triggering a full video re-prepare.
-		for (const file of filesList) {
-			if ('src' in file && 'localFilePath' in file) {
-				const fileName = getCanonicalFileName(file.src, mediaInfoObject);
-				if (this.batchUpdates.has(fileName) && !this.pendingWasUpdated.has(file)) {
-					(file as any).useInReportUrlStale = true;
+			// Set wasUpdated for all pending files
+			for (const file of this.pendingWasUpdated) {
+				if ('localFilePath' in file) {
+					(file as any).wasUpdated = true;
 				}
 			}
-		}
 
-		this.pendingWasUpdated.clear();
+			// Safety net: any file whose mediaInfoObject entry changed in this batch but is NOT
+			// in pendingWasUpdated had a mapping-only update (e.g. same content, different query
+			// params). Flag it so playlistProcessor refreshes useInReportUrl on next play without
+			// triggering a full video re-prepare.
+			for (const file of filesList) {
+				if ('src' in file && 'localFilePath' in file) {
+					const fileName = getCanonicalFileName(file.src, mediaInfoObject);
+					if (this.batchUpdates.has(fileName) && !this.pendingWasUpdated.has(file)) {
+						(file as any).useInReportUrlStale = true;
+					}
+				}
+			}
 
-		// NOTE: useInReportUrl is NOT set here. In-flight elements (currently playing or
-		// already prepared) must keep their OLD useInReportUrl until they finish, so that
-		// sendMediaReport matches the content that actually played. useInReportUrl is
-		// refreshed in playElement when wasUpdated=true or useInReportUrlStale=true triggers
-		// a re-read from mediaInfoObject.
+			this.pendingWasUpdated.clear();
 
-		// ── End synchronous block ──
+			// NOTE: useInReportUrl is NOT set here. In-flight elements (currently playing or
+			// already prepared) must keep their OLD useInReportUrl until they finish, so that
+			// sendMediaReport matches the content that actually played. useInReportUrl is
+			// refreshed in playElement when wasUpdated=true or useInReportUrlStale=true triggers
+			// a re-read from mediaInfoObject.
 
-		// ── Phase C: Persist and migrate (async, state already consistent) ──
-		await this.writeMediaInfoFile(mediaInfoObject);
+			// ── End synchronous block ──
+
+			// ── Phase C: Persist and migrate (async, state already consistent) ──
+			await this.writeMediaInfoFile(mediaInfoObject);
+			return preUpdate;
+		});
 
 		// Migrate temp → standard (file copy + cleanup)
 		// State already points to temp/new content, so playlist is consistent
@@ -2500,8 +2549,8 @@ export class FilesManager implements IFilesManager {
 					const ourBatchValue = fileResult?.updateValue;
 					const hadPendingUpdate = fileResult?.needsWasUpdated ?? false;
 
-					// Phase 4: Commit — serialized via prePlayLock (promise-chain mutex).
-					const commit = this.prePlayLock.then(async () => {
+					// Phase 4: Commit — serialized via mediaInfoLock (promise-chain mutex).
+					await this.withMediaInfoLock(async () => {
 						const mediaInfoObject = await this.getOrCreateMediaInfoFile(allMediaList);
 
 						// Step 4a: Migrate our single temp file to the standard folder.
@@ -2556,8 +2605,6 @@ export class FilesManager implements IFilesManager {
 
 						this.log.debug('prePlayCheck: Commit complete for %s', fileName);
 					});
-					this.prePlayLock = commit.catch(() => {/* errors surface via the awaited commit below */});
-					await commit;
 				} catch (error) {
 					this.log.warn('Background prePlayCheck download failed for %s: %O', media.src, error);
 				} finally {
@@ -4105,6 +4152,12 @@ export class FilesManager implements IFilesManager {
 		}
 	};
 
+	private withMediaInfoLock = <T>(fn: () => Promise<T>): Promise<T> => {
+		const run = this.mediaInfoLock.then(fn);
+		this.mediaInfoLock = run.then(() => undefined, () => undefined);
+		return run;
+	};
+
 	/**
 	 * when display changes one smil for another, keep only media which occur in both smils, rest is deleted from disk
 	 * @param smilObject - JSON representation of parsed smil file
@@ -4167,15 +4220,17 @@ export class FilesManager implements IFilesManager {
 		}
 
 		if (deletedMediaKeys.length > 0) {
-			const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
-			const pruned = deletedMediaKeys.filter((key) => key in mediaInfoObject);
-			for (const key of pruned) {
-				delete mediaInfoObject[key];
-			}
-			if (pruned.length > 0) {
-				this.log.debug('[files] pruned %d mediaInfo entries of deleted files: %O', pruned.length, pruned);
-				await this.writeMediaInfoFile(mediaInfoObject);
-			}
+			await this.withMediaInfoLock(async () => {
+				const mediaInfoObject = await this.getOrCreateMediaInfoFile([]);
+				const pruned = deletedMediaKeys.filter((key) => key in mediaInfoObject);
+				for (const key of pruned) {
+					delete mediaInfoObject[key];
+				}
+				if (pruned.length > 0) {
+					this.log.debug('[files] pruned %d mediaInfo entries of deleted files: %O', pruned.length, pruned);
+					await this.writeMediaInfoFile(mediaInfoObject);
+				}
+			});
 		}
 	};
 

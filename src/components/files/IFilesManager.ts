@@ -52,6 +52,8 @@ export interface IFilesManager {
 	sendSmiFileReport: (options: SendSmiFileReportOptions) => Promise<void>;
 	sendOptInEventReport: (options: SendOptInEventReportOptions) => Promise<void>;
 	currentFilesSetup: (options: CurrentFilesSetupOptions) => Promise<void>;
+	runPendingUnusedFilesCleanup: () => void;
+	settleUnusedFilesCleanup: () => Promise<void>;
 	getFileDetails: (options: GetFileDetailsOptions) => Promise<IFile | null>;
 	shouldUpdateLocalFile: (options: ShouldUpdateLocalFileOptions) => Promise<UpdateCheckResult>;
 	writeMediaInfoFile: (mediaInfoObject: object) => Promise<void>;

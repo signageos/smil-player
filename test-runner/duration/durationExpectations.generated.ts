@@ -14,6 +14,11 @@ export const GENERATED = {
 		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 6 },
 		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 6 },
 	],
+	"billboardPriority": [
+		{ key: "loader_871e2ff0.mp4", srcContains: "loader_871e2ff0.mp4", layer: 'page', expectedSec: 0, minOccurrences: 0 },
+		{ key: "landscape1_fe944bd5.jpg", srcContains: "landscape1_fe944bd5.jpg", layer: 'frame', expectedSec: 3 },
+		{ key: "landscape2_2d654451.jpg", srcContains: "landscape2_2d654451.jpg", layer: 'frame', expectedSec: 3 },
+	],
 	"brokenXml": [
 
 	],
@@ -659,6 +664,14 @@ export const GENERATED = {
 		{ key: "img_2_18b5d21f.jpg", srcContains: "img_2_18b5d21f.jpg", layer: 'frame', expectedSec: 5 },
 		{ key: "video-test_0b02adc4.mp4", srcContains: "video-test_0b02adc4.mp4", layer: 'page', expectedSec: 0 },
 		{ key: "img_4_d0d404bb.jpg", srcContains: "img_4_d0d404bb.jpg", layer: 'frame', expectedSec: 5 },
+	],
+	"unusedFilesCleanup": [
+		{ key: "kept_76e10a96.mp4", srcContains: "kept_76e10a96.mp4", layer: 'page', expectedSec: 0 },
+		{ key: "dropped_4891be76.mp4", srcContains: "dropped_4891be76.mp4", layer: 'page', expectedSec: 0 },
+	],
+	"unusedFilesCleanupAfter": [
+		{ key: "added_09f99883.mp4", srcContains: "added_09f99883.mp4", layer: 'page', expectedSec: 5 },
+		{ key: "kept_76e10a96.mp4", srcContains: "kept_76e10a96.mp4", layer: 'page', expectedSec: 0 },
 	],
 	"updateCheckInterval": [
 		{ key: "landscape1_a51817d5.jpg", srcContains: "landscape1_a51817d5.jpg", layer: 'frame', expectedSec: 3 },

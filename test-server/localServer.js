@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.createTestServer = void 0;
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
@@ -40,6 +41,13 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
     let movedVersion = 1;
     // Content version served by the /storage-cache harness; POST /storage-cache/set/:v.
     let storageCacheVersion = 1;
+    // /unused-cleanup harness state: which SMIL the playlist URL serves (1 = before the
+    // update, 2 = after), when the phase-2 playlist is allowed to start, and which content
+    // version the kept slot resolves to.
+    let cleanupPhase = 1;
+    let cleanupGateBegin = '';
+    let cleanupGateEnd = '';
+    let cleanupKeptVersion = 1;
     // Origin of the /swap-stress time buckets; reset per test via POST /reset.
     let swapOrigin = Date.now();
     // Allow cross-origin requests from the emulator (localhost:8090)
@@ -59,6 +67,10 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
         reportFailMode = false;
         movedVersion = 1;
         storageCacheVersion = 1;
+        cleanupPhase = 1;
+        cleanupGateBegin = '';
+        cleanupGateEnd = '';
+        cleanupKeptVersion = 1;
         swapOrigin = Date.now();
         res.json({ ok: true });
     });
@@ -71,7 +83,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
     app.get('/dynamic/:fileName', async (req, res) => {
         const fileName = req.params.fileName;
         let fileString = await fs.readFile(`./${enums_1.TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
-        fileString = localServerTools_1.fillWallclock(fileString, fileName);
+        fileString = (0, localServerTools_1.fillWallclock)(fileString, fileName);
         fileString = rewriteSmilPort(fileString);
         res.set({ 'Content-Disposition': `attachment; filename=\"${fileName}\"`, 'Content-type': 'text/xml' });
         res.send(fileString);
@@ -95,7 +107,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
         const fileName = req.params.fileName;
         const count = (requestCounts[fileName] = (requestCounts[fileName] || 0) + 1);
         let fileString = await fs.readFile(`./${enums_1.TestServer.dynamicTestFilesPath}/${fileName}`, 'utf8');
-        fileString = localServerTools_1.fillWallclock(fileString, fileName, count);
+        fileString = (0, localServerTools_1.fillWallclock)(fileString, fileName, count);
         fileString = rewriteSmilPort(fileString);
         // After Phase 2 (count >= 2), return stable Last-Modified matching HEAD to stop reloads.
         const lastModified = count >= 2
@@ -149,7 +161,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
     const swapBucket = () => Math.floor((Date.now() - swapOrigin) / SWAP_PERIOD_MS);
     const swapLastModified = () => new Date(swapOrigin + swapBucket() * SWAP_PERIOD_MS).toUTCString();
     const renderSwapStress = () => {
-        const wc = (m) => `wallclock(${localServerTools_1.formatDate(m)})`;
+        const wc = (m) => `wallclock(${(0, localServerTools_1.formatDate)(m)})`;
         const swapVideo = swapBucket() % 2 === 0 ? 'assets/loader.mp4' : 'assets/landscape1.mp4';
         const region = 'cm1kk7rmk0005bfefhlh9hqb6';
         const video = (src) => `<video src="http://localhost:3000/${src}" soundLevel="0%" region="${region}"/>`;
@@ -222,7 +234,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
             res.status(404).end();
             return;
         }
-        res.set('Last-Modified', new Date(localServerTools_1.deterministicLastModifiedMs(req.params.fileName) + 3600000).toUTCString());
+        res.set('Last-Modified', new Date((0, localServerTools_1.deterministicLastModifiedMs)(req.params.fileName) + 3600000).toUTCString());
         res.sendFile(filePath, { lastModified: false });
     });
     // Location header endpoint: returns 204 with Location header pointing to the actual static asset.
@@ -874,6 +886,67 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
         });
         res.send(fileString);
     });
+    // --- Unused-files cleanup harness (live SMIL update that drops media, location strategy) ---
+    // One playlist URL serves unusedFilesCleanup.smil until POST /unused-cleanup/phase/2, then
+    // unusedFilesCleanupAfter.smil, which drops one video, adds another and may not start before
+    // a wallclock gate. Until that gate opens the PREVIOUS playlist keeps playing although the
+    // new one is already downloaded and prepared — the window in which a dropped file must
+    // survive on disk. Every slot HEAD answers with a Location naming a versioned content file,
+    // and every content file is a different real video, so a playback report's URL can be
+    // checked against the duration of the video that was on screen.
+    const CLEANUP_CONTENT = {
+        'kept_v1.mp4': 'video-test-1.mp4',
+        'kept_v2.mp4': 'loader.mp4',
+        'dropped_v1.mp4': 'video-test-2.mp4',
+        'added_v1.mp4': 'landscape1.mp4',
+    };
+    // Stable within a phase, different across phases: exactly one SMIL update is detected.
+    const cleanupSmilLastModified = () => new Date(1700000000000 + cleanupPhase * 60000).toUTCString();
+    app.post('/unused-cleanup/phase/2', (req, res) => {
+        var _a;
+        const gateBegin = moment().add(Number((_a = req.body) === null || _a === void 0 ? void 0 : _a.gateSeconds) || 0, 'seconds').startOf('second');
+        cleanupGateBegin = `wallclock(${(0, localServerTools_1.formatDate)(gateBegin)})`;
+        cleanupGateEnd = `wallclock(${(0, localServerTools_1.formatDate)(gateBegin.clone().add(12, 'hours'))})`;
+        cleanupPhase = 2;
+        res.json({ ok: true, gateBeginMs: gateBegin.valueOf() });
+    });
+    app.post('/unused-cleanup/kept-version/:version', (req, res) => {
+        cleanupKeptVersion = Number(req.params.version);
+        res.json({ ok: true, cleanupKeptVersion });
+    });
+    app.head('/unused-cleanup/playlist.smil', (_req, res) => {
+        res.set({ 'Content-type': 'text/xml', 'Last-Modified': cleanupSmilLastModified(), 'Cache-Control': 'no-cache, no-store' });
+        res.end();
+    });
+    app.get('/unused-cleanup/playlist.smil', async (_req, res) => {
+        const fileName = cleanupPhase === 1 ? 'unusedFilesCleanup.smil' : 'unusedFilesCleanupAfter.smil';
+        let fileString = await fs.readFile(`./${enums_1.TestServer.testFilesPath}/contentUpdate/${fileName}`, 'utf8');
+        fileString = rewriteSmilPort(fileString.replace('CLEANUP_V2_BEGIN', cleanupGateBegin).replace('CLEANUP_V2_END', cleanupGateEnd));
+        res.set({ 'Content-type': 'text/xml', 'Last-Modified': cleanupSmilLastModified(), 'Cache-Control': 'no-cache, no-store' });
+        res.send(fileString);
+    });
+    // HEAD only: a GET on the slot itself 404s, so a player that fails to read the Location
+    // header (and falls back to downloading the src) fails loudly instead of passing.
+    app.head('/unused-cleanup/slot/:name', (req, res) => {
+        const slot = req.params.name.replace('.mp4', '');
+        const contentFile = `${slot}_v${slot === 'kept' ? cleanupKeptVersion : 1}.mp4`;
+        if (!CLEANUP_CONTENT[contentFile]) {
+            res.status(404).end();
+            return;
+        }
+        res.set(Object.assign(Object.assign({}, CBP_CORS_HEADERS), { 'Location': `http://localhost:${port}/unused-cleanup/content/${contentFile}` }));
+        res.status(200).end();
+    });
+    app.get('/unused-cleanup/content/:fileName', async (req, res) => {
+        const asset = CLEANUP_CONTENT[req.params.fileName];
+        if (!asset) {
+            res.status(404).end();
+            return;
+        }
+        const buf = await fs.readFile(`./${enums_1.TestServer.assetsPath}/${asset}`);
+        res.set(Object.assign(Object.assign({}, CBP_CORS_HEADERS), { 'Content-Type': 'video/mp4', 'Content-Length': String(buf.length) }));
+        res.send(buf);
+    });
     // Serve .smil files from any folder with fillWallclock templating and port rewriting,
     // so fixtures can live in whichever semantic folder makes sense regardless of whether
     // they need wallclock substitution. fillWallclock is a no-op for filenames it doesn't
@@ -884,7 +957,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
         const fileName = path.basename(req.path);
         try {
             let content = await fs.readFile(filePath, 'utf8');
-            content = localServerTools_1.fillWallclock(content, fileName);
+            content = (0, localServerTools_1.fillWallclock)(content, fileName);
             content = rewriteSmilPort(content);
             res.set('Content-type', 'text/xml');
             res.send(content);
@@ -901,7 +974,7 @@ function createTestServer(serverPort = enums_1.TestServer.port) {
     app.use(express.static(path.join(process.env.PWD, enums_1.TestServer.testFilesPath), {
         lastModified: false,
         setHeaders: (res, filePath) => {
-            res.set('Last-Modified', new Date(localServerTools_1.deterministicLastModifiedMs(path.basename(filePath))).toUTCString());
+            res.set('Last-Modified', new Date((0, localServerTools_1.deterministicLastModifiedMs)(path.basename(filePath))).toUTCString());
         },
     }));
     return {
