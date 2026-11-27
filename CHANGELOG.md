@@ -10,6 +10,8 @@ Entries should be short and human-readable; for longer entries, use an indented 
 
 ## [Unreleased]
 
+## [4.0.3] - 2026-11-27
+
 ### Added
 
 - (public) The `logger` applet config accepts several comma-separated names (for example `console,remote`) and logs to all of them
