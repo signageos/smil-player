@@ -16,6 +16,11 @@ Entries should be short and human-readable; for longer entries, use an indented 
 
 - (public) The `logger` applet config accepts several comma-separated names (for example `console,remote`) and logs to all of them
 
+### Changed
+
+- (public) Custom loggers live in `packages/logger/loggers/` instead of `src/loggers/`: move your logger file there, register it in `packages/logger/loggers/index.ts` and import nothing from `src/` (type the host as `LoggerHost` instead of `ISos`); see the Custom logger reference
+- (public) The applet is built with esbuild + swc instead of webpack 4 (`webpack.config.js` is gone), with TypeScript 5.3 instead of 3.8 and Node 22 instead of 16 in `.nvmrc`; the `build-test` script and the `CORS_ANYWHERE` dev proxy are removed
+
 ### Fixed
 
 - (public) Custom endpoint reports are delivered on older devices without native `fetch` (e.g. Chrome 38 based webOS), instead of failing into the offline queue on every attempt
